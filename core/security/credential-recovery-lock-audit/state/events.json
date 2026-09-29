@@ -1,0 +1,40 @@
+﻿[
+    {
+        "EventId":  "AUDIT-69D80C57D5E749EEA0130F953CEBE06E",
+        "FinalizationId":  "FINAL-8A32-001",
+        "RecoveryId":  "REC-8A32-001",
+        "TenantId":  "TENANT-001",
+        "ClientId":  "CLIENT-001",
+        "ProjectId":  "PROJECT-001",
+        "WorkerId":  "SAM",
+        "EventType":  "PERMANENT_LOCK_FINALIZED",
+        "Decision":  "ALLOW",
+        "Actor":  "SYSTEM",
+        "TimestampUtc":  "2026-09-11T12:10:27.9728769Z",
+        "PreviousHash":  "GENESIS",
+        "EventHash":  "270c134e5569c344f06e24df715a4052a4165231d822f88ff573e762bd267f69",
+        "Immutable":  true,
+        "AppendOnly":  true,
+        "RawSecret":  null,
+        "RawCredential":  null
+    },
+    {
+        "EventId":  "AUDIT-138EA95F8BF741D982732CDF40068C0E",
+        "FinalizationId":  "FINAL-8A32-001",
+        "RecoveryId":  "REC-8A32-001",
+        "TenantId":  "TENANT-001",
+        "ClientId":  "CLIENT-001",
+        "ProjectId":  "PROJECT-001",
+        "WorkerId":  "SAM",
+        "EventType":  "PERMANENT_LOCK_VERIFIED",
+        "Decision":  "ALLOW",
+        "Actor":  "SYSTEM",
+        "TimestampUtc":  "2026-09-11T12:10:28.0402216Z",
+        "PreviousHash":  "270c134e5569c344f06e24df715a4052a4165231d822f88ff573e762bd267f69",
+        "EventHash":  "96a5b65b99002a2e57476cf34dc507cbbbbca7f32729e4569f7e5ab75280d69b",
+        "Immutable":  true,
+        "AppendOnly":  true,
+        "RawSecret":  null,
+        "RawCredential":  null
+    }
+]

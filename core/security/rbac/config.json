@@ -1,0 +1,35 @@
+﻿{
+    "version":  "1.0",
+    "system":  "BK-AI-WORKERS",
+    "enabled":  true,
+    "rbacEnabled":  true,
+    "hierarchicalScopeEnabled":  true,
+    "denyPrecedence":  true,
+    "explicitPermissionRequired":  true,
+    "allowedScopes":  [
+                          "KADER",
+                          "TENANT",
+                          "CLIENT",
+                          "PROJECT",
+                          "WORKER",
+                          "TASK"
+                      ],
+    "allowedActions":  [
+                           "READ",
+                           "WRITE",
+                           "EXECUTE",
+                           "APPROVE",
+                           "DELETE",
+                           "MANAGE_USERS",
+                           "MANAGE_ROLES",
+                           "MANAGE_CONNECTORS",
+                           "MANAGE_BILLING"
+                       ],
+    "financialApprovalRequired":  true,
+    "capturePasswords":  false,
+    "captureSecrets":  false,
+    "capturePayloads":  false,
+    "liveExecutionEnabled":  false,
+    "maxRoles":  100,
+    "maxBindings":  100000
+}

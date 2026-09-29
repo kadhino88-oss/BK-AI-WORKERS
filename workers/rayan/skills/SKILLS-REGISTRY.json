@@ -1,0 +1,62 @@
+{
+    "worker": "RAYAN",
+    "role": "Automation & Integrations",
+    "version": "1.0.0",
+    "description": "Catalogue professionnel de compétences pour RAYAN.",
+    "skills": {
+        "WORKFLOW_AUTOMATION_DESIGN": {
+            "enabled": true,
+            "category": "AUTOMATION_CORE",
+            "description": "Compétence WORKFLOW_AUTOMATION_DESIGN de RAYAN."
+        },
+        "SCENARIO_DESIGN": {
+            "enabled": true,
+            "category": "AUTOMATION_CORE",
+            "description": "Compétence SCENARIO_DESIGN de RAYAN."
+        },
+        "TRIGGER_ACTION_MAPPING": {
+            "enabled": true,
+            "category": "AUTOMATION_CORE",
+            "description": "Compétence TRIGGER_ACTION_MAPPING de RAYAN."
+        },
+        "API_INTEGRATION_MAPPING": {
+            "enabled": true,
+            "category": "INTEGRATIONS",
+            "description": "Compétence API_INTEGRATION_MAPPING de RAYAN."
+        },
+        "WEBHOOK_MANAGEMENT": {
+            "enabled": true,
+            "category": "INTEGRATIONS",
+            "description": "Compétence WEBHOOK_MANAGEMENT de RAYAN."
+        },
+        "DATA_SYNC_BETWEEN_TOOLS": {
+            "enabled": true,
+            "category": "INTEGRATIONS",
+            "description": "Compétence DATA_SYNC_BETWEEN_TOOLS de RAYAN."
+        },
+        "AUTOMATION_TESTING": {
+            "enabled": true,
+            "category": "AUTOMATION_RELIABILITY",
+            "description": "Compétence AUTOMATION_TESTING de RAYAN."
+        },
+        "AUTOMATION_ERROR_MONITORING": {
+            "enabled": true,
+            "category": "AUTOMATION_RELIABILITY",
+            "description": "Compétence AUTOMATION_ERROR_MONITORING de RAYAN."
+        },
+        "INTEGRATION_DOCUMENTATION": {
+            "enabled": true,
+            "category": "AUTOMATION_RELIABILITY",
+            "description": "Compétence INTEGRATION_DOCUMENTATION de RAYAN."
+        }
+    },
+    "governance": {
+        "security_status": "VALID",
+        "client_isolation": true,
+        "project_isolation": true,
+        "worker_isolation": true,
+        "secret_exposure": false,
+        "financial_actions": false,
+        "external_actions": false
+    }
+}

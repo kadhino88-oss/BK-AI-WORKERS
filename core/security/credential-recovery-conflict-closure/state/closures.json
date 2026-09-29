@@ -1,0 +1,30 @@
+﻿[
+    {
+        "ClosureId":  "CLOSURE-E17B3F9A58984BE0B03AA96512B33F5F",
+        "IntegrityHash":  "13c614ff0ce686f2dbb2a61be58bc8fd79d59f8bc599ecb3912626d78463e598",
+        "ConflictId":  "CONFLICT-8A39-001",
+        "EnforcementId":  "ENF-8A39-001",
+        "RecoveryId":  "REC-8A39-001",
+        "TenantId":  "TENANT-001",
+        "ExecutionId":  "EXEC-8A39-001",
+        "ResolvedEnforcement":  "REVOKED",
+        "ResolvedConsumption":  "REVOKED",
+        "ResolvedAuthorization":  "REVOKED",
+        "ResolvedExecution":  "BLOCKED",
+        "ResolutionStatus":  "RESOLVED",
+        "ClosureStatus":  "CLOSED",
+        "Decision":  "BLOCK",
+        "Immutable":  true,
+        "PermanentClosure":  true,
+        "ReopenAllowed":  false,
+        "MutationAllowed":  false,
+        "ReactivationAllowed":  false,
+        "ResolutionRewriteAllowed":  false,
+        "SourceRevoked":  true,
+        "ExecutionBlocked":  true,
+        "CreatedAtUtc":  "2026-09-11T12:23:13.9184634Z",
+        "ClosedAtUtc":  "2026-09-11T12:23:13.9184634Z",
+        "RawSecret":  null,
+        "RawCredential":  null
+    }
+]

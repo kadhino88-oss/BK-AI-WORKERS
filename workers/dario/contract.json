@@ -1,0 +1,228 @@
+{
+  "schema": "BK-AI-WORKERS-CONTRACT-V3",
+  "generated_from": [
+    "identity.json",
+    "SKILLS-REGISTRY.json",
+    "CAPABILITY-MATRIX.json",
+    "COLLABORATION-MAP.md"
+  ],
+  "generated_at": "2026-09-14",
+  "identity": {
+    "id": "dario",
+    "name": "Dario",
+    "displayName": "Dario",
+    "avatar": "workers/dario/identity/portrait-3d.jpg",
+    "visualIdentity": {
+      "status": "REAL_2D_BRANDED",
+      "note": "Portrait fourni par l'utilisateur le 2026-09-14 (planche des 18 avatars), decoupe individuellement, tenue et decor de bureau specifiques au metier."
+    },
+    "role": "Finance & Contrôle de gestion",
+    "profession": "Finance & Contrôle de gestion",
+    "description": "Rigoureux, prudent, ne prend jamais de raccourci sur un chiffre. Prépare, ne décide jamais seul."
+  },
+  "mission": {
+    "primaryMission": "Finance & Contrôle de gestion",
+    "objectives": [],
+    "responsibilities": [
+      "BUDGET_TRACKING",
+      "EXPENSE_CATEGORIZATION",
+      "INVOICE_RECONCILIATION",
+      "CASH_FLOW_FORECAST",
+      "FINANCIAL_REPORTING",
+      "COST_ANALYSIS",
+      "VARIANCE_ANALYSIS",
+      "KPI_DASHBOARD_FINANCE",
+      "AUDIT_PREPARATION",
+      "TAX_DOCUMENT_PREPARATION",
+      "SUPPLIER_PAYMENT_PREPARATION"
+    ]
+  },
+  "skills": {
+    "skills": [
+      "BUDGET_TRACKING",
+      "EXPENSE_CATEGORIZATION",
+      "INVOICE_RECONCILIATION",
+      "CASH_FLOW_FORECAST",
+      "FINANCIAL_REPORTING",
+      "COST_ANALYSIS",
+      "VARIANCE_ANALYSIS",
+      "KPI_DASHBOARD_FINANCE",
+      "AUDIT_PREPARATION",
+      "TAX_DOCUMENT_PREPARATION",
+      "SUPPLIER_PAYMENT_PREPARATION"
+    ],
+    "capabilities": [
+      {
+        "tool": "GOOGLE_DRIVE",
+        "actions": [
+          "READ",
+          "CREATE"
+        ],
+        "skillDomains": [
+          "FINANCE_REPORTING",
+          "FINANCE_COMPLIANCE"
+        ]
+      },
+      {
+        "tool": "QUICKBOOKS",
+        "actions": [
+          "READ",
+          "REPORT"
+        ],
+        "skillDomains": [
+          "FINANCE_CORE",
+          "FINANCE_REPORTING"
+        ]
+      },
+      {
+        "tool": "XERO",
+        "actions": [
+          "READ",
+          "REPORT"
+        ],
+        "skillDomains": [
+          "FINANCE_CORE",
+          "FINANCE_COMPLIANCE"
+        ]
+      },
+      {
+        "tool": "STRIPE",
+        "actions": [
+          "READ",
+          "REPORT"
+        ],
+        "skillDomains": [
+          "FINANCE_CORE"
+        ]
+      }
+    ],
+    "supportedTaskTypes": [
+      "FINANCE_COMPLIANCE",
+      "FINANCE_CORE",
+      "FINANCE_REPORTING"
+    ]
+  },
+  "tools": {
+    "allowedTools": [
+      "GOOGLE_DRIVE",
+      "QUICKBOOKS",
+      "STRIPE",
+      "XERO"
+    ],
+    "connectors": [
+      "GOOGLE_DRIVE",
+      "QUICKBOOKS",
+      "STRIPE",
+      "XERO"
+    ],
+    "permissions": {
+      "financial_actions": false,
+      "external_actions": false,
+      "live_execution": false
+    }
+  },
+  "memory": {
+    "workerMemory": "memory/data/<client_id>/<project_id>/DARIO/",
+    "clientMemoryAccess": true,
+    "projectMemoryAccess": true,
+    "missionMemory": true,
+    "retentionPolicy": "Voir memory/engine/Memory-Lifecycle.ps1 — aucune retention illimitee non documentee."
+  },
+  "reasoning": {
+    "reasoningEnabled": true,
+    "planningEnabled": false,
+    "selfCheckEnabled": true,
+    "confidenceAssessment": false
+  },
+  "execution": {
+    "executionEnabled": true,
+    "maxAutonomyLevel": 2,
+    "approvalRequiredFor": [
+      "financial_transaction",
+      "credential_exposure",
+      "permission_escalation",
+      "unsafe_external_action"
+    ],
+    "retryPolicy": "Aucune retry automatique documentee au 2026-09-14 (execution simple, un essai, statut NEEDS_HUMAN si echec).",
+    "rollbackPolicy": "Non applicable en mode SIMULATION (aucune action reelle a annuler).",
+    "errorRecovery": [
+      "SUCCESS",
+      "PARTIAL_SUCCESS",
+      "BLOCKED",
+      "NEEDS_HUMAN",
+      "ERROR"
+    ],
+    "autonomousActions": [
+      "GOOGLE_DRIVE.READ",
+      "GOOGLE_DRIVE.CREATE",
+      "QUICKBOOKS.READ",
+      "QUICKBOOKS.REPORT",
+      "XERO.READ",
+      "XERO.REPORT",
+      "STRIPE.READ",
+      "STRIPE.REPORT"
+    ],
+    "chloeVerificationRequired": [],
+    "approvalRequiredActions": []
+  },
+  "collaboration": {
+    "canCollaborate": true,
+    "compatibleWorkers": [
+      "INES",
+      "ALEX",
+      "YANIS"
+    ],
+    "escalationWorkers": [
+      "SAM",
+      "CHLOE"
+    ],
+    "receivesTasksFrom": "CHLOE_OR_ORCHESTRATOR",
+    "delegatesTo": []
+  },
+  "security": {
+    "tenantScope": true,
+    "clientScope": true,
+    "projectScope": true,
+    "workerScope": true,
+    "allowedActions": [
+      "READ",
+      "SEARCH",
+      "REPORT",
+      "CREATE",
+      "UPDATE"
+    ],
+    "prohibitedActions": [
+      "FINANCIAL_COMMIT",
+      "EXTERNAL_PUBLISH_UNSUPERVISED",
+      "SECRET_EXPOSURE",
+      "LIVE_EXECUTION"
+    ],
+    "humanApprovalRequired": true
+  },
+  "output": {
+    "outputTypes": [
+      "deliverable",
+      "recommendations",
+      "next_action",
+      "status"
+    ],
+    "reportFormat": "structured_json_plus_summary",
+    "evidenceRequired": true,
+    "statusReporting": [
+      "PREPARED",
+      "EXECUTED",
+      "VERIFIED",
+      "FAILED",
+      "BLOCKED",
+      "NEEDS_HUMAN"
+    ]
+  },
+  "observability": {
+    "taskId": "genere par Invoke-Orchestrator.ps1 / Invoke-Worker-AI.ps1 (TASK-<GUID>)",
+    "missionId": "non formalise au 2026-09-14 (une mission = 1..N task_id)",
+    "executionId": "genere par Invoke-Orchestrator.ps1 (EXEC-...)",
+    "logs": "runtime/tasks/*.json",
+    "auditTrail": ".bk-mcp/audit/events.jsonl",
+    "metrics": []
+  }
+}

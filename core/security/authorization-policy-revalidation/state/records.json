@@ -1,0 +1,20 @@
+﻿{
+    "version":  "1.0",
+    "items":  [
+                  {
+                      "PolicyRecordId":  "POLICY-58D0E21DFCAB4D0092CBF4CC2294C2E7",
+                      "AuthorizationDecisionId":  "AUTHZ-B5EEA8A35F83449B84ABC99FE83A4294",
+                      "ContextHash":  "7DC27DD55348DDDC6F87563D618ABEA9C5399325D91B5DCA93A52DCEC77C1259",
+                      "UserId":  "8A11-USER",
+                      "SessionId":  "5f5ec268-2d17-4120-beba-8ee357fd7823",
+                      "Action":  "READ",
+                      "TenantId":  "8A11-TENANT",
+                      "ClientId":  "8A11-CLIENT",
+                      "ProjectId":  "8A11-PROJECT",
+                      "Status":  "INVALIDATED",
+                      "Decision":  "ALLOW",
+                      "CreatedAtUtc":  "2026-09-11T07:39:48.5107080Z",
+                      "LastVerifiedAtUtc":  null
+                  }
+              ]
+}

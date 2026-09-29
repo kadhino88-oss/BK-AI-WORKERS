@@ -1,0 +1,20 @@
+{
+  "version":"1.0",
+  "system":"BK-AI-WORKERS",
+  "enabled":true,
+  "authorizationGatewayEnabled":true,
+  "defaultDecision":"BLOCK",
+  "requireIdentity":true,
+  "requireAuthentication":true,
+  "requireSession":true,
+  "requireTokenWhenProvided":true,
+  "requireTenantBinding":true,
+  "requireClientBinding":true,
+  "requireRBACDecision":true,
+  "financialApprovalRequired":true,
+  "capturePasswords":false,
+  "captureSecrets":false,
+  "capturePayloads":false,
+  "liveExecutionEnabled":false,
+  "maxDecisions":100000
+}

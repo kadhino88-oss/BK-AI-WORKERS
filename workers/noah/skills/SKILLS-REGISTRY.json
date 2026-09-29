@@ -1,0 +1,197 @@
+{
+    "worker":  "NOAH",
+    "role":  "Assistant Exécutif \u0026 Administratif",
+    "version":  "1.0.0",
+    "description":  "Catalogue professionnel de compétences pour NOAH.",
+    "skills":  {
+                   "EMAIL_MANAGEMENT":  {
+                                            "enabled":  true,
+                                            "category":  "EMAIL",
+                                            "description":  "Compétence EMAIL_MANAGEMENT de NOAH."
+                                        },
+                   "EMAIL_TRIAGE":  {
+                                        "enabled":  true,
+                                        "category":  "EMAIL",
+                                        "description":  "Compétence EMAIL_TRIAGE de NOAH."
+                                    },
+                   "EMAIL_DRAFTING":  {
+                                          "enabled":  true,
+                                          "category":  "EMAIL",
+                                          "description":  "Compétence EMAIL_DRAFTING de NOAH."
+                                      },
+                   "EMAIL_FOLLOW_UP":  {
+                                           "enabled":  true,
+                                           "category":  "EMAIL",
+                                           "description":  "Compétence EMAIL_FOLLOW_UP de NOAH."
+                                       },
+                   "EMAIL_PRIORITIZATION":  {
+                                                "enabled":  true,
+                                                "category":  "EMAIL",
+                                                "description":  "Compétence EMAIL_PRIORITIZATION de NOAH."
+                                            },
+                   "EXECUTIVE_BRIEFING":  {
+                                              "enabled":  true,
+                                              "category":  "ASSISTANCE_EXECUTIVE",
+                                              "description":  "Compétence EXECUTIVE_BRIEFING de NOAH."
+                                          },
+                   "TRAVEL_RESEARCH":  {
+                                           "enabled":  true,
+                                           "category":  "ASSISTANCE_EXECUTIVE",
+                                           "description":  "Compétence TRAVEL_RESEARCH de NOAH."
+                                       },
+                   "CALL_PREPARATION":  {
+                                            "enabled":  true,
+                                            "category":  "ASSISTANCE_EXECUTIVE",
+                                            "description":  "Compétence CALL_PREPARATION de NOAH."
+                                        },
+                   "FOLLOW_UP_MANAGEMENT":  {
+                                                "enabled":  true,
+                                                "category":  "ASSISTANCE_EXECUTIVE",
+                                                "description":  "Compétence FOLLOW_UP_MANAGEMENT de NOAH."
+                                            },
+                   "DECISION_SUPPORT":  {
+                                            "enabled":  true,
+                                            "category":  "ASSISTANCE_EXECUTIVE",
+                                            "description":  "Compétence DECISION_SUPPORT de NOAH."
+                                        },
+                   "CALENDAR_MANAGEMENT":  {
+                                               "enabled":  true,
+                                               "category":  "AGENDA",
+                                               "description":  "Compétence CALENDAR_MANAGEMENT de NOAH."
+                                           },
+                   "APPOINTMENT_SCHEDULING":  {
+                                                  "enabled":  true,
+                                                  "category":  "AGENDA",
+                                                  "description":  "Compétence APPOINTMENT_SCHEDULING de NOAH."
+                                              },
+                   "SCHEDULING_OPTIMIZATION":  {
+                                                   "enabled":  true,
+                                                   "category":  "AGENDA",
+                                                   "description":  "Compétence SCHEDULING_OPTIMIZATION de NOAH."
+                                               },
+                   "REMINDER_MANAGEMENT":  {
+                                               "enabled":  true,
+                                               "category":  "AGENDA",
+                                               "description":  "Compétence REMINDER_MANAGEMENT de NOAH."
+                                           },
+                   "AVAILABILITY_COORDINATION":  {
+                                                     "enabled":  true,
+                                                     "category":  "AGENDA",
+                                                     "description":  "Compétence AVAILABILITY_COORDINATION de NOAH."
+                                                 },
+                   "TASK_MANAGEMENT":  {
+                                           "enabled":  true,
+                                           "category":  "ORGANISATION",
+                                           "description":  "Compétence TASK_MANAGEMENT de NOAH."
+                                       },
+                   "PRIORITY_MANAGEMENT":  {
+                                               "enabled":  true,
+                                               "category":  "ORGANISATION",
+                                               "description":  "Compétence PRIORITY_MANAGEMENT de NOAH."
+                                           },
+                   "DAILY_PLANNING":  {
+                                          "enabled":  true,
+                                          "category":  "ORGANISATION",
+                                          "description":  "Compétence DAILY_PLANNING de NOAH."
+                                      },
+                   "WEEKLY_PLANNING":  {
+                                           "enabled":  true,
+                                           "category":  "ORGANISATION",
+                                           "description":  "Compétence WEEKLY_PLANNING de NOAH."
+                                       },
+                   "DEADLINE_TRACKING":  {
+                                             "enabled":  true,
+                                             "category":  "ORGANISATION",
+                                             "description":  "Compétence DEADLINE_TRACKING de NOAH."
+                                         },
+                   "WORKLOAD_COORDINATION":  {
+                                                 "enabled":  true,
+                                                 "category":  "ORGANISATION",
+                                                 "description":  "Compétence WORKLOAD_COORDINATION de NOAH."
+                                             },
+                   "ADMINISTRATION":  {
+                                          "enabled":  true,
+                                          "category":  "ADMINISTRATION",
+                                          "description":  "Compétence ADMINISTRATION de NOAH."
+                                      },
+                   "DOCUMENT_MANAGEMENT":  {
+                                               "enabled":  true,
+                                               "category":  "ADMINISTRATION",
+                                               "description":  "Compétence DOCUMENT_MANAGEMENT de NOAH."
+                                           },
+                   "DATA_ENTRY":  {
+                                      "enabled":  true,
+                                      "category":  "ADMINISTRATION",
+                                      "description":  "Compétence DATA_ENTRY de NOAH."
+                                  },
+                   "PROCESS_ADMINISTRATION":  {
+                                                  "enabled":  true,
+                                                  "category":  "ADMINISTRATION",
+                                                  "description":  "Compétence PROCESS_ADMINISTRATION de NOAH."
+                                              },
+                   "DOCUMENT_CLASSIFICATION":  {
+                                                   "enabled":  true,
+                                                   "category":  "ADMINISTRATION",
+                                                   "description":  "Compétence DOCUMENT_CLASSIFICATION de NOAH."
+                                               },
+                   "DOCUMENT_DRAFTING":  {
+                                             "enabled":  true,
+                                             "category":  "DOCUMENTS",
+                                             "description":  "Compétence DOCUMENT_DRAFTING de NOAH."
+                                         },
+                   "REPORT_CREATION":  {
+                                           "enabled":  true,
+                                           "category":  "DOCUMENTS",
+                                           "description":  "Compétence REPORT_CREATION de NOAH."
+                                       },
+                   "PROCEDURE_WRITING":  {
+                                             "enabled":  true,
+                                             "category":  "DOCUMENTS",
+                                             "description":  "Compétence PROCEDURE_WRITING de NOAH."
+                                         },
+                   "TEMPLATE_MANAGEMENT":  {
+                                               "enabled":  true,
+                                               "category":  "DOCUMENTS",
+                                               "description":  "Compétence TEMPLATE_MANAGEMENT de NOAH."
+                                           },
+                   "DOCUMENT_REVIEW":  {
+                                           "enabled":  true,
+                                           "category":  "DOCUMENTS",
+                                           "description":  "Compétence DOCUMENT_REVIEW de NOAH."
+                                       },
+                   "MEETING_PREPARATION":  {
+                                               "enabled":  true,
+                                               "category":  "REUNIONS",
+                                               "description":  "Compétence MEETING_PREPARATION de NOAH."
+                                           },
+                   "MEETING_AGENDA":  {
+                                          "enabled":  true,
+                                          "category":  "REUNIONS",
+                                          "description":  "Compétence MEETING_AGENDA de NOAH."
+                                      },
+                   "MEETING_NOTES":  {
+                                         "enabled":  true,
+                                         "category":  "REUNIONS",
+                                         "description":  "Compétence MEETING_NOTES de NOAH."
+                                     },
+                   "MEETING_SUMMARY":  {
+                                           "enabled":  true,
+                                           "category":  "REUNIONS",
+                                           "description":  "Compétence MEETING_SUMMARY de NOAH."
+                                       },
+                   "ACTION_ITEM_TRACKING":  {
+                                                "enabled":  true,
+                                                "category":  "REUNIONS",
+                                                "description":  "Compétence ACTION_ITEM_TRACKING de NOAH."
+                                            }
+               },
+    "governance":  {
+                       "security_status":  "VALID",
+                       "client_isolation":  true,
+                       "project_isolation":  true,
+                       "worker_isolation":  true,
+                       "secret_exposure":  false,
+                       "financial_actions":  false,
+                       "external_actions":  false
+                   }
+}

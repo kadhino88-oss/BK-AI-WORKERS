@@ -1,0 +1,29 @@
+{
+    "tool_id":  "MONITORING",
+    "category":  "IT",
+    "description":  "Surveiller systÃ¨mes, services et disponibilitÃ©.",
+    "authorized_workers":  [
+                               "SAM",
+                               "LUCAS"
+                           ],
+    "allowed_actions":  [
+                            "READ",
+                            "CHECK",
+                            "ALERT",
+                            "REPORT"
+                        ],
+    "financial_action":  false,
+    "external_action":  true,
+    "secret_required":  true,
+    "permission_check":  true,
+    "client_isolation":  true,
+    "project_isolation":  true,
+    "worker_isolation":  true,
+    "audit_logging":  true,
+    "human_override":  true,
+    "security":  {
+                     "secret_exposure":  false,
+                     "financial_actions":  false,
+                     "unsafe_external_action":  false
+                 }
+}

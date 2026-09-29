@@ -1,0 +1,261 @@
+{
+  "worker": "MAYA",
+  "role": "Directrice Marketing & Growth",
+  "version": "2.0.0",
+  "description": "Moteur marketing IA destiné aux TPE, PME, indépendants et organisations.",
+  "skills": {
+    "MARKETING_STRATEGY": {
+      "enabled": true,
+      "category": "STRATEGIE",
+      "description": "Construire une stratégie marketing globale."
+    },
+    "GO_TO_MARKET": {
+      "enabled": true,
+      "category": "STRATEGIE",
+      "description": "Construire un plan de mise sur le marché."
+    },
+    "PRODUCT_LAUNCH": {
+      "enabled": true,
+      "category": "STRATEGIE",
+      "description": "Préparer le lancement marketing d'un produit ou service."
+    },
+    "BRAND_POSITIONING": {
+      "enabled": true,
+      "category": "STRATEGIE",
+      "description": "Définir le positionnement et la différenciation de marque."
+    },
+    "COMPETITOR_ANALYSIS": {
+      "enabled": true,
+      "category": "STRATEGIE",
+      "description": "Analyser les concurrents et leurs positionnements."
+    },
+
+    "CUSTOMER_ACQUISITION": {
+      "enabled": true,
+      "category": "ACQUISITION",
+      "description": "Développer une stratégie d'acquisition."
+    },
+    "LEAD_GENERATION": {
+      "enabled": true,
+      "category": "ACQUISITION",
+      "description": "Concevoir des systèmes de génération de leads."
+    },
+    "PROSPECT_SEGMENTATION": {
+      "enabled": true,
+      "category": "ACQUISITION",
+      "description": "Segmenter les prospects selon leurs profils et intentions."
+    },
+    "FUNNEL_OPTIMIZATION": {
+      "enabled": true,
+      "category": "ACQUISITION",
+      "description": "Optimiser les parcours d'acquisition et de conversion."
+    },
+    "LANDING_PAGE_STRATEGY": {
+      "enabled": true,
+      "category": "ACQUISITION",
+      "description": "Définir la structure marketing des landing pages."
+    },
+    "PARTNERSHIP_MARKETING": {
+      "enabled": true,
+      "category": "ACQUISITION",
+      "description": "Développer des stratégies de partenariats et co-marketing."
+    },
+
+    "CRM_STRATEGY": {
+      "enabled": true,
+      "category": "CRM_AUTOMATION",
+      "description": "Structurer la stratégie CRM marketing."
+    },
+    "LEAD_SCORING": {
+      "enabled": true,
+      "category": "CRM_AUTOMATION",
+      "description": "Définir des règles de qualification et scoring des leads."
+    },
+    "LEAD_NURTURING": {
+      "enabled": true,
+      "category": "CRM_AUTOMATION",
+      "description": "Construire des parcours de nurturing."
+    },
+    "MARKETING_AUTOMATION": {
+      "enabled": true,
+      "category": "CRM_AUTOMATION",
+      "description": "Concevoir des workflows marketing automatisés."
+    },
+    "CUSTOMER_JOURNEY": {
+      "enabled": true,
+      "category": "CRM_AUTOMATION",
+      "description": "Cartographier et optimiser le parcours client."
+    },
+    "REACTIVATION": {
+      "enabled": true,
+      "category": "CRM_AUTOMATION",
+      "description": "Réactiver les prospects et clients inactifs."
+    },
+
+    "EMAIL_MARKETING": {
+      "enabled": true,
+      "category": "EMAIL",
+      "description": "Construire des stratégies d'email marketing."
+    },
+    "EMAIL_CAMPAIGN": {
+      "enabled": true,
+      "category": "EMAIL",
+      "description": "Concevoir des campagnes email."
+    },
+    "NEWSLETTER": {
+      "enabled": true,
+      "category": "EMAIL",
+      "description": "Structurer une newsletter régulière."
+    },
+    "LIFECYCLE_EMAIL": {
+      "enabled": true,
+      "category": "EMAIL",
+      "description": "Créer des communications liées au cycle de vie client."
+    },
+
+    "CONTENT_STRATEGY": {
+      "enabled": true,
+      "category": "CONTENU_SOCIAL",
+      "description": "Construire une stratégie éditoriale."
+    },
+    "SOCIAL_MEDIA_STRATEGY": {
+      "enabled": true,
+      "category": "CONTENU_SOCIAL",
+      "description": "Construire une stratégie réseaux sociaux."
+    },
+    "SOCIAL_CAMPAIGN": {
+      "enabled": true,
+      "category": "CONTENU_SOCIAL",
+      "description": "Préparer des campagnes sociales."
+    },
+    "COMMUNITY_GROWTH": {
+      "enabled": true,
+      "category": "CONTENU_SOCIAL",
+      "description": "Développer et engager une communauté."
+    },
+    "UGC_STRATEGY": {
+      "enabled": true,
+      "category": "CONTENU_SOCIAL",
+      "description": "Développer une stratégie de contenu généré par les utilisateurs."
+    },
+    "INFLUENCER_MARKETING": {
+      "enabled": true,
+      "category": "CONTENU_SOCIAL",
+      "description": "Préparer des campagnes avec créateurs et influenceurs."
+    },
+
+    "SEO_STRATEGY": {
+      "enabled": true,
+      "category": "SEO_SEA",
+      "description": "Construire une stratégie SEO."
+    },
+    "LOCAL_SEO": {
+      "enabled": true,
+      "category": "SEO_SEA",
+      "description": "Optimiser la visibilité locale."
+    },
+    "PAID_MARKETING": {
+      "enabled": true,
+      "category": "SEO_SEA",
+      "description": "Construire une stratégie publicitaire payante."
+    },
+    "GOOGLE_ADS": {
+      "enabled": true,
+      "category": "SEO_SEA",
+      "description": "Préparer une stratégie Google Ads."
+    },
+    "META_ADS": {
+      "enabled": true,
+      "category": "SEO_SEA",
+      "description": "Préparer une stratégie Meta Ads."
+    },
+    "RETARGETING": {
+      "enabled": true,
+      "category": "SEO_SEA",
+      "description": "Construire des stratégies de retargeting."
+    },
+    "AI_SEARCH_VISIBILITY": {
+      "enabled": true,
+      "category": "SEO_SEA",
+      "description": "Optimiser la visibilité d'une marque dans les moteurs et expériences de recherche assistées par IA."
+    },
+
+    "MARKETING_ANALYTICS": {
+      "enabled": true,
+      "category": "ANALYTICS",
+      "description": "Analyser les performances marketing."
+    },
+    "CONVERSION_OPTIMIZATION": {
+      "enabled": true,
+      "category": "ANALYTICS",
+      "description": "Optimiser le taux de conversion."
+    },
+    "A_B_TESTING": {
+      "enabled": true,
+      "category": "ANALYTICS",
+      "description": "Concevoir et analyser des tests A/B."
+    },
+    "ATTRIBUTION": {
+      "enabled": true,
+      "category": "ANALYTICS",
+      "description": "Analyser l'attribution des résultats marketing."
+    },
+    "CAMPAIGN_REPORTING": {
+      "enabled": true,
+      "category": "ANALYTICS",
+      "description": "Produire des rapports de campagnes."
+    },
+    "GROWTH_OPTIMIZATION": {
+      "enabled": true,
+      "category": "ANALYTICS",
+      "description": "Identifier les leviers de croissance."
+    },
+
+    "CUSTOMER_RETENTION": {
+      "enabled": true,
+      "category": "FIDELISATION",
+      "description": "Améliorer la rétention client."
+    },
+    "CUSTOMER_LOYALTY": {
+      "enabled": true,
+      "category": "FIDELISATION",
+      "description": "Construire des programmes de fidélisation."
+    },
+    "UPSELL_CROSS_SELL": {
+      "enabled": true,
+      "category": "FIDELISATION",
+      "description": "Développer les opportunités d'upsell et cross-sell."
+    },
+    "WIN_BACK": {
+      "enabled": true,
+      "category": "FIDELISATION",
+      "description": "Reconquérir les anciens clients."
+    },
+
+    "OFFER_STRATEGY": {
+      "enabled": true,
+      "category": "COMMERCIAL_MARKETING",
+      "description": "Structurer l'offre marketing."
+    },
+    "PRICING_POSITIONING": {
+      "enabled": true,
+      "category": "COMMERCIAL_MARKETING",
+      "description": "Travailler le positionnement marketing du prix."
+    },
+    "SALES_ENABLEMENT": {
+      "enabled": true,
+      "category": "COMMERCIAL_MARKETING",
+      "description": "Fournir aux équipes commerciales les supports et arguments nécessaires."
+    },
+    "B2B_MARKETING": {
+      "enabled": true,
+      "category": "COMMERCIAL_MARKETING",
+      "description": "Construire des stratégies marketing B2B."
+    }
+  },
+  "governance": {
+    "financial_actions": false,
+    "external_actions": false,
+    "security_status": "VALID"
+  }
+}

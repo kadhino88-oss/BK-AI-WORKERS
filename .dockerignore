@@ -1,0 +1,10 @@
+_archive
+.git
+.env
+.secrets/*.dpapi
+dashboard/.gate
+runtime
+memory/runtime
+workers/_portrait-backup-*
+**/backups
+**/*.bak

@@ -1,0 +1,28 @@
+{
+    "tool_id":  "DESIGN",
+    "category":  "CREATIVE",
+    "description":  "Produire et gÃ©rer les ressources crÃ©atives.",
+    "authorized_workers":  [
+                               "LEA"
+                           ],
+    "allowed_actions":  [
+                            "CREATE",
+                            "UPDATE",
+                            "EXPORT",
+                            "REVIEW"
+                        ],
+    "financial_action":  false,
+    "external_action":  false,
+    "secret_required":  false,
+    "permission_check":  true,
+    "client_isolation":  true,
+    "project_isolation":  true,
+    "worker_isolation":  true,
+    "audit_logging":  true,
+    "human_override":  true,
+    "security":  {
+                     "secret_exposure":  false,
+                     "financial_actions":  false,
+                     "unsafe_external_action":  false
+                 }
+}

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <linearGradient id="bg-sam" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2B2E33"/>
+      <stop offset="100%" stop-color="#3FBAC2"/>
+    </linearGradient>
+  </defs>
+  <circle cx="100" cy="100" r="98" fill="url(#bg-sam)"/>
+  <circle cx="100" cy="100" r="98" fill="none" stroke="#E7FBFC" stroke-width="2" opacity="0.5"/>
+  <text x="100" y="72" font-family="Georgia, 'Times New Roman', serif" font-size="46" font-weight="bold"
+        text-anchor="middle" fill="#E7FBFC" opacity="0.9">S</text>
+  <g transform="translate(100 128)">
+    <path d="M 0 -18 L 16 -10 V 4 C 16 14 8 20 0 22 C -8 20 -16 14 -16 4 V -10 Z" fill="#E7FBFC" opacity="0.95"/>
+  </g>
+  <text x="100" y="182" font-family="Arial, sans-serif" font-size="13" letter-spacing="3"
+        text-anchor="middle" fill="#E7FBFC" opacity="0.85">SAM</text>
+</svg>

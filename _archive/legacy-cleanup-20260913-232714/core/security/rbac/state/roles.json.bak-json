@@ -1,0 +1,99 @@
+﻿[
+    {
+        "RoleId":  "ROLE-OWNER",
+        "Name":  "OWNER",
+        "System":  true,
+        "Permissions":  [
+                            "READ",
+                            "WRITE",
+                            "EXECUTE",
+                            "APPROVE",
+                            "DELETE",
+                            "MANAGE_USERS",
+                            "MANAGE_ROLES",
+                            "MANAGE_CONNECTORS",
+                            "MANAGE_BILLING"
+                        ],
+        "Description":  "Controle complet du périmètre autorise."
+    },
+    {
+        "RoleId":  "ROLE-ADMIN",
+        "Name":  "ADMIN",
+        "System":  true,
+        "Permissions":  [
+                            "READ",
+                            "WRITE",
+                            "EXECUTE",
+                            "DELETE",
+                            "MANAGE_USERS",
+                            "MANAGE_ROLES",
+                            "MANAGE_CONNECTORS"
+                        ],
+        "Description":  "Administration opérationnelle."
+    },
+    {
+        "RoleId":  "ROLE-MANAGER",
+        "Name":  "MANAGER",
+        "System":  true,
+        "Permissions":  [
+                            "READ",
+                            "WRITE",
+                            "EXECUTE",
+                            "APPROVE"
+                        ],
+        "Description":  "Gestion opérationnelle et validation autorisée."
+    },
+    {
+        "RoleId":  "ROLE-OPERATOR",
+        "Name":  "OPERATOR",
+        "System":  true,
+        "Permissions":  [
+                            "READ",
+                            "WRITE",
+                            "EXECUTE"
+                        ],
+        "Description":  "Exécution opérationnelle."
+    },
+    {
+        "RoleId":  "ROLE-AUDITOR",
+        "Name":  "AUDITOR",
+        "System":  true,
+        "Permissions":  [
+                            "READ"
+                        ],
+        "Description":  "Lecture et audit uniquement."
+    },
+    {
+        "RoleId":  "ROLE-VIEWER",
+        "Name":  "VIEWER",
+        "System":  true,
+        "Permissions":  [
+                            "READ"
+                        ],
+        "Description":  "Consultation uniquement."
+    },
+    {
+        "RoleId":  "ROLE-WORKER",
+        "Name":  "WORKER",
+        "System":  true,
+        "Permissions":  [
+                            "READ",
+                            "EXECUTE"
+                        ],
+        "Description":  "Identité d\u0027exécution pour les workers."
+    },
+    {
+        "RoleId":  "ROLE-SYSTEM",
+        "Name":  "SYSTEM",
+        "System":  true,
+        "Permissions":  [
+                            "READ",
+                            "WRITE",
+                            "EXECUTE",
+                            "MANAGE_USERS",
+                            "MANAGE_ROLES",
+                            "MANAGE_CONNECTORS"
+                        ],
+        "Description":  "Contrôle interne du système."
+    }
+]

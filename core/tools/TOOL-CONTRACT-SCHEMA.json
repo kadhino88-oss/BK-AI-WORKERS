@@ -1,0 +1,19 @@
+{
+  "version": "1.0.0",
+  "required_fields": [
+    "tool_id",
+    "category",
+    "description",
+    "authorized_workers",
+    "allowed_actions",
+    "financial_action",
+    "external_action",
+    "secret_required",
+    "permission_check",
+    "client_isolation",
+    "project_isolation",
+    "worker_isolation",
+    "audit_logging",
+    "human_override"
+  ]
+}

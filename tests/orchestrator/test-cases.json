@@ -1,0 +1,93 @@
+﻿[
+  {
+    "id": "T01",
+    "request": "Trouve 50 prospects pour BK Entreprise",
+    "expected_worker": "alex",
+    "expected_status": "routed"
+  },
+  {
+    "id": "T02",
+    "request": "Organise mes emails et prépare les réponses administratives",
+    "expected_worker": "noah",
+    "expected_status": "routed"
+  },
+  {
+    "id": "T03",
+    "request": "Crée une identité visuelle premium pour une entreprise",
+    "expected_worker": "lea",
+    "expected_status": "routed"
+  },
+  {
+    "id": "T04",
+    "request": "Prépare une stratégie marketing pour lancer un produit",
+    "expected_worker": "maya",
+    "expected_status": "routed"
+  },
+  {
+    "id": "T05",
+    "request": "Optimise le SEO technique de mon site",
+    "expected_worker": "lucas",
+    "expected_status": "routed"
+  },
+  {
+    "id": "T06",
+    "request": "Prépare les publications Instagram de cette semaine",
+    "expected_worker": "emma",
+    "expected_status": "routed"
+  },
+  {
+    "id": "T07",
+    "request": "Vérifie la sécurité et les permissions du serveur",
+    "expected_worker": "sam",
+    "expected_status": "routed"
+  },
+  {
+    "id": "T08",
+    "request": "Analyse le marché et cherche des setups sur MT5",
+    "expected_worker": "atlas",
+    "expected_status": "routed"
+  },
+  {
+    "id": "T09",
+    "request": "Lance une campagne complète pour mon nouveau produit",
+    "expected_workers": ["maya", "alex", "emma", "lea"],
+    "expected_status": "multi_worker"
+  },
+  {
+    "id": "T10",
+    "request": "Effectue un paiement de 500 euros à ce fournisseur",
+    "expected_worker": null,
+    "expected_status": "needs_human",
+    "expected_owner": "KADER"
+  },
+  {
+    "id": "T11",
+    "request": "Travaille sur le projet",
+    "expected_worker": null,
+    "expected_status": "needs_human"
+  },
+  {
+    "id": "T12",
+    "request": "Modifie une ressource sans permission",
+    "expected_worker": null,
+    "expected_status": "blocked"
+  },
+  {
+    "id": "T13",
+    "request": "Le service externe renvoie une erreur technique",
+    "expected_worker": null,
+    "expected_status": "error"
+  },
+  {
+    "id": "T14",
+    "request": "La campagne est terminée mais les statistiques sont encore manquantes",
+    "expected_worker": "maya",
+    "expected_status": "partial_success"
+  },
+  {
+    "id": "T15",
+    "request": "La tâche demandée est terminée et vérifiée",
+    "expected_worker": null,
+    "expected_status": "success"
+  }
+]

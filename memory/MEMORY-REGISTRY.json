@@ -1,0 +1,24 @@
+{
+  "version": "1.0",
+  "system": "BK-AI-WORKERS",
+  "memory_levels": [
+    "global",
+    "client",
+    "project",
+    "worker",
+    "task"
+  ],
+  "isolation": {
+    "enabled": true,
+    "client_isolation": true,
+    "project_isolation": true,
+    "worker_scope": true
+  },
+  "financial_boundary": {
+    "owner": "KADER",
+    "worker_real_financial_actions": false
+  },
+  "secret_policy": {
+    "store_secrets_in_memory": false
+  }
+}

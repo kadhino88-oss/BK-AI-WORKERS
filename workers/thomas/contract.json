@@ -1,0 +1,216 @@
+{
+  "schema": "BK-AI-WORKERS-CONTRACT-V3",
+  "generated_from": [
+    "identity.json",
+    "SKILLS-REGISTRY.json",
+    "CAPABILITY-MATRIX.json",
+    "COLLABORATION-MAP.md"
+  ],
+  "generated_at": "2026-09-14",
+  "identity": {
+    "id": "thomas",
+    "name": "Thomas",
+    "displayName": "Thomas",
+    "avatar": "workers/thomas/identity/portrait-3d.jpg",
+    "visualIdentity": {
+      "status": "REAL_2D_BRANDED",
+      "note": "Portrait fourni par l'utilisateur le 2026-09-14 (planche des 18 avatars), decoupe individuellement, tenue et decor de bureau specifiques au metier."
+    },
+    "role": "E-commerce & Marketplace",
+    "profession": "E-commerce & Marketplace",
+    "description": "Orienté conversion, attentif au détail produit (fiche, prix, stock), pragmatique."
+  },
+  "mission": {
+    "primaryMission": "E-commerce & Marketplace",
+    "objectives": [],
+    "responsibilities": [
+      "PRODUCT_LISTING_OPTIMIZATION",
+      "PRODUCT_CATEGORIZATION",
+      "INVENTORY_SYNC_MONITORING",
+      "MARKETPLACE_MANAGEMENT",
+      "MARKETPLACE_SEO",
+      "REVIEW_MANAGEMENT_MONITORING",
+      "PRICING_STRATEGY_PREP",
+      "PROMOTIONS_CALENDAR",
+      "CART_ABANDONMENT_ANALYSIS",
+      "CHECKOUT_OPTIMIZATION"
+    ]
+  },
+  "skills": {
+    "skills": [
+      "PRODUCT_LISTING_OPTIMIZATION",
+      "PRODUCT_CATEGORIZATION",
+      "INVENTORY_SYNC_MONITORING",
+      "MARKETPLACE_MANAGEMENT",
+      "MARKETPLACE_SEO",
+      "REVIEW_MANAGEMENT_MONITORING",
+      "PRICING_STRATEGY_PREP",
+      "PROMOTIONS_CALENDAR",
+      "CART_ABANDONMENT_ANALYSIS",
+      "CHECKOUT_OPTIMIZATION"
+    ],
+    "capabilities": [
+      {
+        "tool": "SHOPIFY",
+        "actions": [
+          "READ",
+          "CREATE",
+          "UPDATE"
+        ],
+        "skillDomains": [
+          "ECOMMERCE_CATALOG",
+          "MARKETPLACE_OPS"
+        ]
+      },
+      {
+        "tool": "WOOCOMMERCE",
+        "actions": [
+          "READ",
+          "CREATE",
+          "UPDATE"
+        ],
+        "skillDomains": [
+          "ECOMMERCE_CATALOG"
+        ]
+      },
+      {
+        "tool": "WEB_ANALYTICS",
+        "actions": [
+          "READ",
+          "REPORT"
+        ],
+        "skillDomains": [
+          "ECOMMERCE_GROWTH"
+        ]
+      }
+    ],
+    "supportedTaskTypes": [
+      "ECOMMERCE_CATALOG",
+      "ECOMMERCE_GROWTH",
+      "MARKETPLACE_OPS"
+    ]
+  },
+  "tools": {
+    "allowedTools": [
+      "SHOPIFY",
+      "WEB_ANALYTICS",
+      "WOOCOMMERCE"
+    ],
+    "connectors": [
+      "SHOPIFY",
+      "WEB_ANALYTICS",
+      "WOOCOMMERCE"
+    ],
+    "permissions": {
+      "financial_actions": false,
+      "external_actions": false,
+      "live_execution": false
+    }
+  },
+  "memory": {
+    "workerMemory": "memory/data/<client_id>/<project_id>/THOMAS/",
+    "clientMemoryAccess": true,
+    "projectMemoryAccess": true,
+    "missionMemory": true,
+    "retentionPolicy": "Voir memory/engine/Memory-Lifecycle.ps1 — aucune retention illimitee non documentee."
+  },
+  "reasoning": {
+    "reasoningEnabled": true,
+    "planningEnabled": false,
+    "selfCheckEnabled": true,
+    "confidenceAssessment": false
+  },
+  "execution": {
+    "executionEnabled": true,
+    "maxAutonomyLevel": 2,
+    "approvalRequiredFor": [
+      "financial_transaction",
+      "credential_exposure",
+      "permission_escalation",
+      "unsafe_external_action"
+    ],
+    "retryPolicy": "Aucune retry automatique documentee au 2026-09-14 (execution simple, un essai, statut NEEDS_HUMAN si echec).",
+    "rollbackPolicy": "Non applicable en mode SIMULATION (aucune action reelle a annuler).",
+    "errorRecovery": [
+      "SUCCESS",
+      "PARTIAL_SUCCESS",
+      "BLOCKED",
+      "NEEDS_HUMAN",
+      "ERROR"
+    ],
+    "autonomousActions": [
+      "SHOPIFY.READ",
+      "SHOPIFY.CREATE",
+      "SHOPIFY.UPDATE",
+      "WOOCOMMERCE.READ",
+      "WOOCOMMERCE.CREATE",
+      "WOOCOMMERCE.UPDATE",
+      "WEB_ANALYTICS.READ",
+      "WEB_ANALYTICS.REPORT"
+    ],
+    "chloeVerificationRequired": [],
+    "approvalRequiredActions": []
+  },
+  "collaboration": {
+    "canCollaborate": true,
+    "compatibleWorkers": [
+      "ALEX",
+      "MAYA",
+      "EMMA",
+      "SEOYA",
+      "DARIO"
+    ],
+    "escalationWorkers": [
+      "SAM",
+      "CHLOE"
+    ],
+    "receivesTasksFrom": "CHLOE_OR_ORCHESTRATOR",
+    "delegatesTo": []
+  },
+  "security": {
+    "tenantScope": true,
+    "clientScope": true,
+    "projectScope": true,
+    "workerScope": true,
+    "allowedActions": [
+      "READ",
+      "SEARCH",
+      "REPORT",
+      "CREATE",
+      "UPDATE"
+    ],
+    "prohibitedActions": [
+      "FINANCIAL_COMMIT",
+      "EXTERNAL_PUBLISH_UNSUPERVISED",
+      "SECRET_EXPOSURE",
+      "LIVE_EXECUTION"
+    ],
+    "humanApprovalRequired": true
+  },
+  "output": {
+    "outputTypes": [
+      "deliverable",
+      "recommendations",
+      "next_action",
+      "status"
+    ],
+    "reportFormat": "structured_json_plus_summary",
+    "evidenceRequired": true,
+    "statusReporting": [
+      "PREPARED",
+      "EXECUTED",
+      "VERIFIED",
+      "FAILED",
+      "BLOCKED",
+      "NEEDS_HUMAN"
+    ]
+  },
+  "observability": {
+    "taskId": "genere par Invoke-Orchestrator.ps1 / Invoke-Worker-AI.ps1 (TASK-<GUID>)",
+    "missionId": "non formalise au 2026-09-14 (une mission = 1..N task_id)",
+    "executionId": "genere par Invoke-Orchestrator.ps1 (EXEC-...)",
+    "logs": "runtime/tasks/*.json",
+    "auditTrail": ".bk-mcp/audit/events.jsonl",
+    "metrics": []
+  }
+}

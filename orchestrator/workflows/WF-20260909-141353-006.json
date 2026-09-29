@@ -1,0 +1,100 @@
+﻿{
+    "workflow_id":  "WF-20260909-141353-006",
+    "created_at":  "2026-09-09T14:13:53.0095895+02:00",
+    "mode":  "SIMULATION",
+    "execution":  "SIMULATION_ONLY",
+    "status":  "READY",
+    "client":  "bk-entreprise",
+    "project":  "general",
+    "objective":  "Lance mon nouveau service IA pour BK Entreprise",
+    "type":  "MARKETING_LAUNCH",
+    "financial_authority":  "KADER",
+    "financial_actions":  {
+                              "workers_allowed":  false,
+                              "owner":  "KADER",
+                              "approval":  "KADER_APPROVAL"
+                          },
+    "tasks":  [
+                  {
+                      "id":  "TASK-001",
+                      "worker":  "MAYA",
+                      "title":  "Stratégie marketing",
+                      "description":  "Définir la stratégie, le positionnement, la cible, les objectifs et le plan d\u0027action.",
+                      "status":  "READY",
+                      "depends_on":  [
+
+                                     ]
+                  },
+                  {
+                      "id":  "TASK-002",
+                      "worker":  "ALEX",
+                      "title":  "Prospection",
+                      "description":  "Identifier, qualifier et organiser les prospects correspondant à l\u0027offre.",
+                      "status":  "PENDING",
+                      "depends_on":  [
+                                         "TASK-001"
+                                     ]
+                  },
+                  {
+                      "id":  "TASK-003",
+                      "worker":  "EMMA",
+                      "title":  "Contenu",
+                      "description":  "Préparer les contenus marketing, publications et messages commerciaux.",
+                      "status":  "PENDING",
+                      "depends_on":  [
+                                         "TASK-001"
+                                     ]
+                  },
+                  {
+                      "id":  "TASK-004",
+                      "worker":  "LEA",
+                      "title":  "Design",
+                      "description":  "Créer les éléments visuels nécessaires à la campagne et à la communication.",
+                      "status":  "PENDING",
+                      "depends_on":  [
+                                         "TASK-001"
+                                     ]
+                  },
+                  {
+                      "id":  "TASK-005",
+                      "worker":  "LUCAS",
+                      "title":  "Landing page",
+                      "description":  "Préparer ou optimiser la landing page, le SEO et les performances techniques.",
+                      "status":  "PENDING",
+                      "depends_on":  [
+                                         "TASK-001",
+                                         "TASK-003",
+                                         "TASK-004"
+                                     ]
+                  },
+                  {
+                      "id":  "TASK-006",
+                      "worker":  "SAM",
+                      "title":  "Sécurité",
+                      "description":  "Contrôler la sécurité, les permissions, les accès et les risques techniques.",
+                      "status":  "PENDING",
+                      "depends_on":  [
+                                         "TASK-005"
+                                     ]
+                  }
+              ],
+    "final_step":  {
+                       "id":  "TASK-007",
+                       "worker":  "ORCHESTRATOR",
+                       "title":  "Rapport final",
+                       "description":  "Compiler les résultats de tous les Workers et produire le rapport final.",
+                       "status":  "PENDING",
+                       "depends_on":  [
+                                          "TASK-002",
+                                          "TASK-003",
+                                          "TASK-004",
+                                          "TASK-005",
+                                          "TASK-006"
+                                      ]
+                   },
+    "safety":  {
+                   "external_actions":  false,
+                   "financial_actions":  false,
+                   "real_execution":  false
+               }
+}

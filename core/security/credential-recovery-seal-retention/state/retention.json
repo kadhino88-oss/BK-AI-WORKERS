@@ -1,0 +1,29 @@
+﻿[
+    {
+        "RetentionId":  "RETENTION-449046FF11B04FF980EFD7D480550416",
+        "RetentionHash":  "99a28fb209db8873fd9107742fef26239f8c880ba8f9add457808e6162dd8b78",
+        "EvidenceId":  "EVIDENCE-8A44-001",
+        "SealId":  "SEAL-8A44-001",
+        "EvidenceHash":  "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "TenantId":  "TENANT-001",
+        "ClientId":  "CLIENT-001",
+        "ProjectId":  "PROJECT-001",
+        "ExecutionId":  "EXEC-8A44-001",
+        "EvidenceStatus":  "VALID",
+        "PermanentEvidence":  true,
+        "ImmutableEvidence":  true,
+        "IntegrityValid":  true,
+        "RetentionState":  "RETAINED",
+        "AvailabilityState":  "AVAILABLE",
+        "DeletionAllowed":  false,
+        "MutationAllowed":  false,
+        "RewriteAllowed":  false,
+        "PrematureExpiry":  false,
+        "RetentionBypass":  false,
+        "Decision":  "ALLOW",
+        "CreatedAtUtc":  "2026-09-11T16:34:10.8160729Z",
+        "RetainedAtUtc":  "2026-09-11T16:34:10.8160729Z",
+        "RawSecret":  null,
+        "RawCredential":  null
+    }
+]

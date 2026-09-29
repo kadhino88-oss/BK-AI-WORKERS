@@ -1,0 +1,19 @@
+{
+  "version":"1.0",
+  "system":"BK-AI-WORKERS",
+  "enabled":true,
+  "revocationCascadeEnabled":true,
+  "sessionRevocationBlocksAuthorization":true,
+  "grantRevocationBlocksAuthorization":true,
+  "executionBindingRevocationAware":true,
+  "requireIdentityState":true,
+  "requireSessionState":true,
+  "requireGrantState":true,
+  "requireExecutionBindingState":true,
+  "defaultDecision":"BLOCK",
+  "maxRecords":100000,
+  "capturePasswords":false,
+  "captureSecrets":false,
+  "capturePayloads":false,
+  "liveExecutionEnabled":false
+}

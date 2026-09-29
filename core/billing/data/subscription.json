@@ -1,0 +1,48 @@
+{
+  "planId": "essai",
+  "cycleStartUtc": "2026-09-15T20:35:33.899123Z",
+  "extraCredits": 0,
+  "history": [
+    {
+      "dateUtc": "2026-09-15T19:38:42.089128Z",
+      "event": "Compte cree — plan Essai (3 jours, gratuit, sans carte)."
+    },
+    {
+      "dateUtc": "2026-09-15T19:39:03.331116Z",
+      "event": "Changement de plan : Essai -> Business (simulation, aucun paiement reel)."
+    },
+    {
+      "dateUtc": "2026-09-15T19:39:11.371103Z",
+      "event": "Recharge volontaire de 50 credits (simulation, aucun paiement reel — pas de majoration automatique)."
+    },
+    {
+      "dateUtc": "2026-09-15T19:39:22.367714Z",
+      "event": "Abonnement annule (Business) — retour au plan Essai (simulation, aucun paiement reel)."
+    },
+    {
+      "dateUtc": "2026-09-15T19:54:28.041675Z",
+      "event": "Changement de plan : Essai -> Starter (simulation, aucun paiement reel)."
+    },
+    {
+      "dateUtc": "2026-09-15T19:54:32.351771Z",
+      "event": "Abonnement annule (Starter) — retour au plan Essai (simulation, aucun paiement reel)."
+    },
+    {
+      "dateUtc": "2026-09-15T20:31:32.746194Z",
+      "event": "Changement de plan : Essai -> Starter (paiement Stripe confirme)."
+    },
+    {
+      "dateUtc": "2026-09-15T20:34:22.974289Z",
+      "event": "Abonnement annule (Starter) — retour au plan Essai (simulation, aucun paiement reel)."
+    },
+    {
+      "dateUtc": "2026-09-15T20:35:12.712430Z",
+      "event": "Changement de plan : Essai -> Starter (paiement Stripe confirme)."
+    },
+    {
+      "dateUtc": "2026-09-15T20:35:33.899123Z",
+      "event": "Abonnement annule (Starter) — retour au plan Essai (abonnement Stripe reellement annule)."
+    }
+  ],
+  "stripeSubscriptionId": null
+}

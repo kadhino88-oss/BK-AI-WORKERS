@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <linearGradient id="bg-emma" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#E86C66"/>
+      <stop offset="100%" stop-color="#F6C8CE"/>
+    </linearGradient>
+  </defs>
+  <circle cx="100" cy="100" r="98" fill="url(#bg-emma)"/>
+  <circle cx="100" cy="100" r="98" fill="none" stroke="#3A1B1B" stroke-width="2" opacity="0.5"/>
+  <text x="100" y="72" font-family="Georgia, 'Times New Roman', serif" font-size="46" font-weight="bold"
+        text-anchor="middle" fill="#3A1B1B" opacity="0.9">E</text>
+  <g transform="translate(100 128)">
+    <path d="M -20 -10 h 40 a 6 6 0 0 1 6 6 v 10 a 6 6 0 0 1 -6 6 h -24 l -10 8 v -8 h -6 a 6 6 0 0 1 -6 -6 v -10 a 6 6 0 0 1 6 -6 Z" fill="#3A1B1B" opacity="0.95"/>
+  </g>
+  <text x="100" y="182" font-family="Arial, sans-serif" font-size="13" letter-spacing="3"
+        text-anchor="middle" fill="#3A1B1B" opacity="0.85">EMMA</text>
+</svg>

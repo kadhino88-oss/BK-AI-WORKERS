@@ -1,0 +1,1068 @@
+﻿function Get-SessionTokenSecurityConfig {
+    $path = Join-Path $PSScriptRoot "config.json"
+
+    return (
+        Get-Content -Raw -Path $path |
+        ConvertFrom-Json
+    )
+}
+
+function Get-SessionTokenSecurityField {
+    param(
+        [Parameter(Mandatory=$false)]
+        [AllowEmptyString()]
+        [string]$Name
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Name)) {
+        return $null
+    }
+
+    $cfg = Get-SessionTokenSecurityConfig
+    $prop = $cfg.PSObject.Properties[$Name]
+
+    if ($null -eq $prop) {
+        return $null
+    }
+
+    return $prop.Value
+}
+
+function Get-SessionTokenRecords {
+    $path = Join-Path $PSScriptRoot "state\tokens.json"
+
+    if (-not (Test-Path $path)) {
+        return @()
+    }
+
+    $raw = Get-Content -Raw -Path $path
+
+    if ([string]::IsNullOrWhiteSpace($raw)) {
+        return @()
+    }
+
+    $parsed = $raw | ConvertFrom-Json
+
+    if ($null -eq $parsed) {
+        return @()
+    }
+
+    $result = @()
+
+    foreach ($item in @($parsed)) {
+        $result += ,$item
+    }
+
+    return $result
+}
+
+function Save-SessionTokenRecords {
+    param(
+        [Parameter(Mandatory=$false)]
+        $Records
+    )
+
+    $path = Join-Path $PSScriptRoot "state\tokens.json"
+
+    $normalized = @()
+
+    foreach ($item in @($Records)) {
+        $normalized += ,$item
+    }
+
+    $json = ConvertTo-Json `
+        -InputObject $normalized `
+        -Depth 100
+
+    [System.IO.File]::WriteAllText(
+        $path,
+        $json,
+        [System.Text.Encoding]::UTF8
+    )
+
+    return $true
+}
+
+function Get-SessionSecurityRecords {
+    $path = Join-Path $PSScriptRoot "state\sessions.json"
+
+    if (-not (Test-Path $path)) {
+        return @()
+    }
+
+    $raw = Get-Content -Raw -Path $path
+
+    if ([string]::IsNullOrWhiteSpace($raw)) {
+        return @()
+    }
+
+    $parsed = $raw | ConvertFrom-Json
+
+    if ($null -eq $parsed) {
+        return @()
+    }
+
+    $result = @()
+
+    foreach ($item in @($parsed)) {
+        $result += ,$item
+    }
+
+    return $result
+}
+
+function Save-SessionSecurityRecords {
+    param(
+        [Parameter(Mandatory=$false)]
+        $Records
+    )
+
+    $path = Join-Path $PSScriptRoot "state\sessions.json"
+
+    $normalized = @()
+
+    foreach ($item in @($Records)) {
+        $normalized += ,$item
+    }
+
+    $json = ConvertTo-Json `
+        -InputObject $normalized `
+        -Depth 100
+
+    [System.IO.File]::WriteAllText(
+        $path,
+        $json,
+        [System.Text.Encoding]::UTF8
+    )
+
+    return $true
+}
+
+function Get-SHA256TokenHash {
+    param(
+        [Parameter(Mandatory=$false)]
+        [AllowEmptyString()]
+        [string]$Token
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Token)) {
+        return $null
+    }
+
+    $sha = New-Object System.Security.Cryptography.SHA256Managed
+
+    try {
+        $bytes = [System.Text.Encoding]::UTF8.GetBytes(
+            $Token
+        )
+
+        return (
+            [System.BitConverter]::ToString(
+                $sha.ComputeHash($bytes)
+            ) -replace "-", ""
+        ).ToLowerInvariant()
+    }
+    finally {
+        $sha.Dispose()
+    }
+}
+
+function Get-SessionTokenRecord {
+    param(
+        [Parameter(Mandatory=$false)]
+        [AllowEmptyString()]
+        [string]$TokenId
+    )
+
+    if ([string]::IsNullOrWhiteSpace($TokenId)) {
+        return $null
+    }
+
+    $records = @(Get-SessionTokenRecords)
+
+    foreach ($record in $records) {
+        if ([string]$record.TokenId -eq $TokenId) {
+            return $record
+        }
+    }
+
+    return $null
+}
+
+function Get-SessionSecurityRecord {
+    param(
+        [Parameter(Mandatory=$false)]
+        [AllowEmptyString()]
+        [string]$SessionId
+    )
+
+    if ([string]::IsNullOrWhiteSpace($SessionId)) {
+        return $null
+    }
+
+    $records = @(Get-SessionSecurityRecords)
+
+    foreach ($record in $records) {
+        if ([string]$record.SessionId -eq $SessionId) {
+            return $record
+        }
+    }
+
+    return $null
+}
+
+function Test-SessionTokenContext {
+    param(
+        [Parameter(Mandatory=$false)]
+        [AllowEmptyString()]
+        [string]$TokenId,
+
+        [Parameter(Mandatory=$false)]
+        [AllowEmptyString()]
+        [string]$SessionId,
+
+        [Parameter(Mandatory=$false)]
+        [AllowEmptyString()]
+        [string]$UserId,
+
+        [Parameter(Mandatory=$false)]
+        [AllowEmptyString()]
+        [string]$TenantId,
+
+        [Parameter(Mandatory=$false)]
+        [AllowEmptyString()]
+        [string]$ClientId
+    )
+
+    $cfg = Get-SessionTokenSecurityConfig
+
+    if (-not $cfg.enabled -or -not $cfg.tokenSecurityEnabled) {
+        return [pscustomobject]@{
+            Success = $false
+            Status  = "BLOCKED"
+            Reason  = "TOKEN_SECURITY_DISABLED"
+        }
+    }
+
+    if ([string]::IsNullOrWhiteSpace($TokenId)) {
+        return [pscustomobject]@{
+            Success = $false
+            Status  = "BLOCKED"
+            Reason  = "TOKEN_ID_REQUIRED"
+        }
+    }
+
+    if ($cfg.requireSessionBinding) {
+        if ([string]::IsNullOrWhiteSpace($SessionId)) {
+            return [pscustomobject]@{
+                Success = $false
+                Status  = "BLOCKED"
+                Reason  = "SESSION_ID_REQUIRED"
+            }
+        }
+    }
+
+    if ([string]::IsNullOrWhiteSpace($UserId)) {
+        return [pscustomobject]@{
+            Success = $false
+            Status  = "BLOCKED"
+            Reason  = "USER_ID_REQUIRED"
+        }
+    }
+
+    if ($cfg.requireTenantBinding) {
+        if ([string]::IsNullOrWhiteSpace($TenantId)) {
+            return [pscustomobject]@{
+                Success = $false
+                Status  = "BLOCKED"
+                Reason  = "TENANT_ID_REQUIRED"
+            }
+        }
+    }
+
+    if ($cfg.requireClientBinding) {
+        if ([string]::IsNullOrWhiteSpace($ClientId)) {
+            return [pscustomobject]@{
+                Success = $false
+                Status  = "BLOCKED"
+                Reason  = "CLIENT_ID_REQUIRED"
+            }
+        }
+    }
+
+    return [pscustomobject]@{
+        Success = $true
+        Status  = "VALID"
+        Reason  = "TOKEN_CONTEXT_VALID"
+    }
+}
+
+function New-SessionSecurityToken {
+    param(
+        [Parameter(Mandatory=$false)]
+        [AllowEmptyString()]
+        [string]$TokenId,
+
+        [Parameter(Mandatory=$false)]
+        [AllowEmptyString()]
+        [string]$SessionId,
+
+        [Parameter(Mandatory=$false)]
+        [AllowEmptyString()]
+        [string]$UserId,
+
+        [Parameter(Mandatory=$false)]
+        [AllowEmptyString()]
+        [string]$TenantId,
+
+        [Parameter(Mandatory=$false)]
+        [AllowEmptyString()]
+        [string]$ClientId,
+
+        [Parameter(Mandatory=$false)]
+        [AllowEmptyString()]
+        [string]$ProjectId = ""
+    )
+
+    $cfg = Get-SessionTokenSecurityConfig
+
+    $check = Test-SessionTokenContext `
+        -TokenId $TokenId `
+        -SessionId $SessionId `
+        -UserId $UserId `
+        -TenantId $TenantId `
+        -ClientId $ClientId
+
+    if (-not $check.Success) {
+        return $check
+    }
+
+    if ([string]::IsNullOrWhiteSpace($TokenId)) {
+        $TokenId = [guid]::NewGuid().ToString()
+    }
+
+    $records = @(Get-SessionTokenRecords)
+
+    foreach ($existing in $records) {
+        if ([string]$existing.TokenId -eq $TokenId) {
+            return [pscustomobject]@{
+                Success = $false
+                Status  = "DUPLICATE"
+                Reason  = "TOKEN_ID_ALREADY_EXISTS"
+                TokenId = $TokenId
+            }
+        }
+
+        if ([string]$existing.SessionId -eq $SessionId -and
+            [string]$existing.Status -eq "ACTIVE") {
+
+            return [pscustomobject]@{
+                Success = $false
+                Status  = "DUPLICATE"
+                Reason  = "ACTIVE_TOKEN_ALREADY_EXISTS_FOR_SESSION"
+                SessionId = $SessionId
+            }
+        }
+    }
+
+    if (@($records).Length -ge [int]$cfg.maxTokenRecords) {
+        return [pscustomobject]@{
+            Success = $false
+            Status  = "BLOCKED"
+            Reason  = "TOKEN_RECORD_LIMIT_REACHED"
+        }
+    }
+
+    # Token brut généré en mémoire uniquement.
+    $rawToken = (
+        [guid]::NewGuid().ToString("N") +
+        [guid]::NewGuid().ToString("N")
+    )
+
+    $tokenHash = Get-SHA256TokenHash -Token $rawToken
+
+    $now = [DateTime]::UtcNow
+    $expires = $now.AddSeconds(
+        [double]$cfg.tokenDurationSeconds
+    )
+
+    $record = [pscustomobject]@{
+        TokenId       = $TokenId
+        SessionId     = $SessionId
+        UserId        = $UserId
+        TenantId      = $TenantId
+        ClientId      = $ClientId
+        ProjectId     = $ProjectId
+        TokenHash     = $tokenHash
+        Status        = "ACTIVE"
+        CreatedAtUtc  = $now.ToString("o")
+        ExpiresAtUtc  = $expires.ToString("o")
+        RotatedFrom   = ""
+        RevokedAtUtc  = ""
+    }
+
+    $records += ,$record
+
+    $null = Save-SessionTokenRecords $records
+
+    # Le raw token n'est jamais stocké ni retourné dans l'état.
+    return [pscustomobject]@{
+        Success      = $true
+        Status       = "CREATED"
+        Reason       = "TOKEN_CREATED"
+        TokenId      = $TokenId
+        SessionId    = $SessionId
+        UserId       = $UserId
+        TenantId     = $TenantId
+        ClientId     = $ClientId
+        ProjectId    = $ProjectId
+        Token        = $rawToken
+        TokenHash    = $tokenHash
+        ExpiresAtUtc = $expires.ToString("o")
+    }
+}
+
+function Test-SessionSecurityToken {
+    param(
+        [Parameter(Mandatory=$false)]
+        [AllowEmptyString()]
+        [string]$TokenId,
+
+        [Parameter(Mandatory=$false)]
+        [AllowEmptyString()]
+        [string]$Token,
+
+        [Parameter(Mandatory=$false)]
+        [AllowEmptyString()]
+        [string]$SessionId,
+
+        [Parameter(Mandatory=$false)]
+        [AllowEmptyString()]
+        [string]$UserId,
+
+        [Parameter(Mandatory=$false)]
+        [AllowEmptyString()]
+        [string]$TenantId,
+
+        [Parameter(Mandatory=$false)]
+        [AllowEmptyString()]
+        [string]$ClientId,
+
+        [Parameter(Mandatory=$false)]
+        [datetime]$ReferenceTime = [DateTime]::UtcNow
+    )
+
+    $cfg = Get-SessionTokenSecurityConfig
+
+    if (-not $cfg.tokenSecurityEnabled) {
+        return [pscustomobject]@{
+            Success = $false
+            Status  = "BLOCKED"
+            Reason  = "TOKEN_SECURITY_DISABLED"
+        }
+    }
+
+    if ([string]::IsNullOrWhiteSpace($TokenId)) {
+        return [pscustomobject]@{
+            Success = $false
+            Status  = "BLOCKED"
+            Reason  = "TOKEN_ID_REQUIRED"
+        }
+    }
+
+    if ([string]::IsNullOrWhiteSpace($Token)) {
+        return [pscustomobject]@{
+            Success = $false
+            Status  = "BLOCKED"
+            Reason  = "RAW_TOKEN_REQUIRED"
+        }
+    }
+
+    $record = Get-SessionTokenRecord `
+        -TokenId $TokenId
+
+    if ($null -eq $record) {
+        return [pscustomobject]@{
+            Success = $false
+            Status  = "BLOCKED"
+            Reason  = "TOKEN_NOT_FOUND"
+        }
+    }
+
+    if ([string]$record.SessionId -ne [string]$SessionId) {
+        return [pscustomobject]@{
+            Success = $false
+            Status  = "BLOCKED"
+            Reason  = "TOKEN_SESSION_MISMATCH"
+        }
+    }
+
+    if ([string]$record.UserId -ne [string]$UserId) {
+        return [pscustomobject]@{
+            Success = $false
+            Status  = "BLOCKED"
+            Reason  = "TOKEN_USER_MISMATCH"
+        }
+    }
+
+    if ([string]$record.TenantId -ne [string]$TenantId) {
+        return [pscustomobject]@{
+            Success = $false
+            Status  = "BLOCKED"
+            Reason  = "TOKEN_TENANT_MISMATCH"
+        }
+    }
+
+    if ([string]$record.ClientId -ne [string]$ClientId) {
+        return [pscustomobject]@{
+            Success = $false
+            Status  = "BLOCKED"
+            Reason  = "TOKEN_CLIENT_MISMATCH"
+        }
+    }
+
+    if ($record.Status -eq "REVOKED" -and
+        -not $cfg.allowRevokedToken) {
+
+        return [pscustomobject]@{
+            Success = $false
+            Status  = "BLOCKED"
+            Reason  = "TOKEN_REVOKED"
+        }
+    }
+
+    try {
+        $expires = [DateTime]::Parse(
+            [string]$record.ExpiresAtUtc
+        )
+    }
+    catch {
+        return [pscustomobject]@{
+            Success = $false
+            Status  = "BLOCKED"
+            Reason  = "TOKEN_EXPIRATION_INVALID"
+        }
+    }
+
+    if ($cfg.sessionExpirationEnabled -and
+        $ReferenceTime -ge $expires -and
+        -not $cfg.allowExpiredToken) {
+
+        return [pscustomobject]@{
+            Success = $false
+            Status  = "BLOCKED"
+            Reason  = "TOKEN_EXPIRED"
+        }
+    }
+
+    $calculatedHash = Get-SHA256TokenHash -Token $Token
+
+    if ($calculatedHash -ne [string]$record.TokenHash) {
+        return [pscustomobject]@{
+            Success = $false
+            Status  = "BLOCKED"
+            Reason  = "TOKEN_HASH_MISMATCH"
+        }
+    }
+
+    return [pscustomobject]@{
+        Success   = $true
+        Status    = "VALID"
+        Reason    = "TOKEN_VALID"
+        TokenId   = $record.TokenId
+        SessionId = $record.SessionId
+        UserId    = $record.UserId
+        TenantId  = $record.TenantId
+        ClientId  = $record.ClientId
+        ProjectId = $record.ProjectId
+        ExpiresAtUtc = $expires.ToString("o")
+    }
+}
+
+function Revoke-SessionSecurityToken {
+    param(
+        [Parameter(Mandatory=$false)]
+        [AllowEmptyString()]
+        [string]$TokenId
+    )
+
+    if ([string]::IsNullOrWhiteSpace($TokenId)) {
+        return [pscustomobject]@{
+            Success = $false
+            Status  = "BLOCKED"
+            Reason  = "TOKEN_ID_REQUIRED"
+        }
+    }
+
+    $records = @(Get-SessionTokenRecords)
+
+    foreach ($record in $records) {
+
+        if ([string]$record.TokenId -eq $TokenId) {
+
+            if ([string]$record.Status -eq "REVOKED") {
+                return [pscustomobject]@{
+                    Success = $false
+                    Status  = "DUPLICATE"
+                    Reason  = "TOKEN_ALREADY_REVOKED"
+                }
+            }
+
+            $record.Status = "REVOKED"
+
+            $revokedAt = [DateTime]::UtcNow.ToString("o")
+
+            if ($null -eq $record.PSObject.Properties["RevokedAtUtc"]) {
+                $record | Add-Member `
+                    -MemberType NoteProperty `
+                    -Name "RevokedAtUtc" `
+                    -Value $revokedAt `
+                    -Force
+            }
+            else {
+                $record.RevokedAtUtc = $revokedAt
+            }
+
+            $null = Save-SessionTokenRecords $records
+
+            return [pscustomobject]@{
+                Success = $true
+                Status  = "REVOKED"
+                Reason  = "TOKEN_REVOKED"
+                TokenId = $TokenId
+                RevokedAtUtc = $revokedAt
+            }
+        }
+    }
+
+    return [pscustomobject]@{
+        Success = $false
+        Status  = "BLOCKED"
+        Reason  = "TOKEN_NOT_FOUND"
+    }
+}
+
+function Rotate-SessionSecurityToken {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$TokenId,
+
+        [Parameter(Mandatory = $true)]
+        [string]$SessionId,
+
+        [Parameter(Mandatory = $true)]
+        [string]$UserId,
+
+        [Parameter(Mandatory = $true)]
+        [string]$TenantId,
+
+        [Parameter(Mandatory = $true)]
+        [string]$ClientId,
+
+        [Parameter(Mandatory = $false)]
+        [string]$ProjectId
+    )
+
+    # -----------------------------------------------
+    # VALIDATION DU CONTEXTE
+    # -----------------------------------------------
+
+    if ([string]::IsNullOrWhiteSpace($TokenId)) {
+        return [pscustomobject]@{
+            Success = $false
+            Status  = "BLOCKED"
+            Reason  = "TOKEN_ID_REQUIRED"
+        }
+    }
+
+    if ([string]::IsNullOrWhiteSpace($SessionId)) {
+        return [pscustomobject]@{
+            Success = $false
+            Status  = "BLOCKED"
+            Reason  = "SESSION_ID_REQUIRED"
+        }
+    }
+
+    if ([string]::IsNullOrWhiteSpace($UserId)) {
+        return [pscustomobject]@{
+            Success = $false
+            Status  = "BLOCKED"
+            Reason  = "USER_ID_REQUIRED"
+        }
+    }
+
+    if ([string]::IsNullOrWhiteSpace($TenantId)) {
+        return [pscustomobject]@{
+            Success = $false
+            Status  = "BLOCKED"
+            Reason  = "TENANT_ID_REQUIRED"
+        }
+    }
+
+    if ([string]::IsNullOrWhiteSpace($ClientId)) {
+        return [pscustomobject]@{
+            Success = $false
+            Status  = "BLOCKED"
+            Reason  = "CLIENT_ID_REQUIRED"
+        }
+    }
+
+    # -----------------------------------------------
+    # RECUPERATION ANCIEN TOKEN
+    # -----------------------------------------------
+
+    $Records = @(Get-SessionTokenRecords)
+
+    $OldRecord = $null
+
+    foreach ($Record in $Records) {
+        if ([string]$Record.TokenId -eq $TokenId) {
+            $OldRecord = $Record
+            break
+        }
+    }
+
+    if ($null -eq $OldRecord) {
+        return [pscustomobject]@{
+            Success = $false
+            Status  = "BLOCKED"
+            Reason  = "TOKEN_NOT_FOUND"
+            TokenId = $TokenId
+        }
+    }
+
+    # -----------------------------------------------
+    # ETAT ACTIF OBLIGATOIRE
+    # -----------------------------------------------
+
+    if ([string]$OldRecord.Status -ne "ACTIVE") {
+        return [pscustomobject]@{
+            Success = $false
+            Status  = "BLOCKED"
+            Reason  = "TOKEN_NOT_ACTIVE"
+            TokenId = $TokenId
+        }
+    }
+
+    # -----------------------------------------------
+    # CONTEXTE DU TOKEN
+    # -----------------------------------------------
+
+    if ([string]$OldRecord.SessionId -ne $SessionId) {
+        return [pscustomobject]@{
+            Success = $false
+            Status  = "BLOCKED"
+            Reason  = "SESSION_BINDING_MISMATCH"
+            TokenId = $TokenId
+        }
+    }
+
+    if ([string]$OldRecord.UserId -ne $UserId) {
+        return [pscustomobject]@{
+            Success = $false
+            Status  = "BLOCKED"
+            Reason  = "USER_BINDING_MISMATCH"
+            TokenId = $TokenId
+        }
+    }
+
+    if ([string]$OldRecord.TenantId -ne $TenantId) {
+        return [pscustomobject]@{
+            Success = $false
+            Status  = "BLOCKED"
+            Reason  = "TENANT_BINDING_MISMATCH"
+            TokenId = $TokenId
+        }
+    }
+
+    if ([string]$OldRecord.ClientId -ne $ClientId) {
+        return [pscustomobject]@{
+            Success = $false
+            Status  = "BLOCKED"
+            Reason  = "CLIENT_BINDING_MISMATCH"
+            TokenId = $TokenId
+        }
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($ProjectId)) {
+        if ([string]$OldRecord.ProjectId -ne $ProjectId) {
+            return [pscustomobject]@{
+                Success = $false
+                Status  = "BLOCKED"
+                Reason  = "PROJECT_BINDING_MISMATCH"
+                TokenId = $TokenId
+            }
+        }
+    }
+
+    # -----------------------------------------------
+    # GENERATION DU NOUVEAU TOKEN
+    #
+    # IMPORTANT :
+    # On ne passe PAS par New-SessionSecurityToken
+    # car cette fonction bloque un second token actif.
+    # -----------------------------------------------
+
+    $NewTokenId = "TOK-ROT-" + (
+        [guid]::NewGuid().ToString("N").ToUpperInvariant()
+    )
+
+    $NewRawToken = [guid]::NewGuid().ToString("N") +
+                   [guid]::NewGuid().ToString("N")
+
+    $NewRawToken = $NewRawToken.ToLowerInvariant()
+
+    # -----------------------------------------------
+    # HASH SHA-256
+    # -----------------------------------------------
+
+    if (Get-Command Get-SHA256TokenHash -ErrorAction SilentlyContinue) {
+        $NewTokenHash = Get-SHA256TokenHash -Token $NewRawToken
+    }
+    else {
+        $Sha = [System.Security.Cryptography.SHA256]::Create()
+
+        try {
+            $Bytes = [System.Text.Encoding]::UTF8.GetBytes($NewRawToken)
+            $HashBytes = $Sha.ComputeHash($Bytes)
+            $NewTokenHash = [System.BitConverter]::ToString($HashBytes).Replace("-", "").ToLowerInvariant()
+        }
+        finally {
+            $Sha.Dispose()
+        }
+    }
+
+    # -----------------------------------------------
+    # EXPIRATION
+    # -----------------------------------------------
+
+    $Config = Get-SessionTokenSecurityConfig
+
+    $DurationSeconds = 3600
+
+    if ($null -ne $Config) {
+        if ($null -ne $Config.tokenDurationSeconds) {
+            $ParsedDuration = 0
+
+            if (
+                [int]::TryParse(
+                    [string]$Config.tokenDurationSeconds,
+                    [ref]$ParsedDuration
+                )
+            ) {
+                if ($ParsedDuration -gt 0) {
+                    $DurationSeconds = $ParsedDuration
+                }
+            }
+        }
+    }
+
+    $NowUtc = [DateTime]::UtcNow
+    $ExpiresAtUtc = $NowUtc.AddSeconds($DurationSeconds).ToString("o")
+
+    # -----------------------------------------------
+    # NOUVEAU RECORD
+    # -----------------------------------------------
+
+    $NewRecord = [pscustomobject]@{
+        TokenId      = $NewTokenId
+        SessionId    = $SessionId
+        UserId       = $UserId
+        TenantId     = $TenantId
+        ClientId     = $ClientId
+        ProjectId    = $ProjectId
+        TokenHash    = $NewTokenHash
+        Status       = "ACTIVE"
+        CreatedAtUtc = $NowUtc.ToString("o")
+        ExpiresAtUtc = $ExpiresAtUtc
+        RotatedFrom  = $TokenId
+        RevokedAtUtc = $null
+    }
+
+    # -----------------------------------------------
+    # PREPARATION ANCIEN RECORD
+    # -----------------------------------------------
+
+    Add-Member `
+        -InputObject $OldRecord `
+        -MemberType NoteProperty `
+        -Name "Status" `
+        -Value "REVOKED" `
+        -Force
+
+    Add-Member `
+        -InputObject $OldRecord `
+        -MemberType NoteProperty `
+        -Name "RevokedAtUtc" `
+        -Value $NowUtc.ToString("o") `
+        -Force
+
+    Add-Member `
+        -InputObject $OldRecord `
+        -MemberType NoteProperty `
+        -Name "RevokedReason" `
+        -Value "ROTATED" `
+        -Force
+
+    # -----------------------------------------------
+    # CONSTRUCTION DE L'ETAT FINAL
+    # -----------------------------------------------
+
+    $UpdatedRecords = @()
+
+    foreach ($Record in $Records) {
+
+        if ([string]$Record.TokenId -eq $TokenId) {
+            $UpdatedRecords += $OldRecord
+        }
+
+        if ([string]$Record.TokenId -ne $TokenId) {
+            $UpdatedRecords += $Record
+        }
+    }
+
+    $UpdatedRecords += $NewRecord
+
+    # -----------------------------------------------
+    # SAUVEGARDE UNIQUE
+    # -----------------------------------------------
+
+    Save-SessionTokenRecords -Records @($UpdatedRecords)
+
+    # -----------------------------------------------
+    # RESULTAT
+    # -----------------------------------------------
+
+    return [pscustomobject]@{
+        Success         = $true
+        Status          = "ROTATED"
+        Reason          = "TOKEN_ROTATED"
+        TokenId         = $NewTokenId
+        PreviousTokenId = $TokenId
+        SessionId       = $SessionId
+        UserId          = $UserId
+        TenantId        = $TenantId
+        ClientId        = $ClientId
+        ProjectId       = $ProjectId
+        Token           = $NewRawToken
+        TokenHash       = $NewTokenHash
+        ExpiresAtUtc    = $ExpiresAtUtc
+    }
+}
+
+function New-SessionSecurityBinding {
+    param(
+        [Parameter(Mandatory=$false)]
+        [AllowEmptyString()]
+        [string]$SessionId,
+
+        [Parameter(Mandatory=$false)]
+        [AllowEmptyString()]
+        [string]$UserId,
+
+        [Parameter(Mandatory=$false)]
+        [AllowEmptyString()]
+        [string]$TenantId,
+
+        [Parameter(Mandatory=$false)]
+        [AllowEmptyString()]
+        [string]$ClientId,
+
+        [Parameter(Mandatory=$false)]
+        [AllowEmptyString()]
+        [string]$ProjectId = ""
+    )
+
+    $cfg = Get-SessionTokenSecurityConfig
+
+    if ([string]::IsNullOrWhiteSpace($SessionId)) {
+        return [pscustomobject]@{
+            Success = $false
+            Status  = "BLOCKED"
+            Reason  = "SESSION_ID_REQUIRED"
+        }
+    }
+
+    if ([string]::IsNullOrWhiteSpace($UserId)) {
+        return [pscustomobject]@{
+            Success = $false
+            Status  = "BLOCKED"
+            Reason  = "USER_ID_REQUIRED"
+        }
+    }
+
+    if ($cfg.requireTenantBinding -and
+        [string]::IsNullOrWhiteSpace($TenantId)) {
+
+        return [pscustomobject]@{
+            Success = $false
+            Status  = "BLOCKED"
+            Reason  = "TENANT_ID_REQUIRED"
+        }
+    }
+
+    if ($cfg.requireClientBinding -and
+        [string]::IsNullOrWhiteSpace($ClientId)) {
+
+        return [pscustomobject]@{
+            Success = $false
+            Status  = "BLOCKED"
+            Reason  = "CLIENT_ID_REQUIRED"
+        }
+    }
+
+    $records = @(Get-SessionSecurityRecords)
+
+    foreach ($record in $records) {
+
+        if ([string]$record.SessionId -eq $SessionId) {
+            return [pscustomobject]@{
+                Success = $false
+                Status  = "DUPLICATE"
+                Reason  = "SESSION_BINDING_ALREADY_EXISTS"
+            }
+        }
+    }
+
+    $cfg = Get-SessionTokenSecurityConfig
+
+    if (@($records).Length -ge [int]$cfg.maxSessions) {
+        return [pscustomobject]@{
+            Success = $false
+            Status  = "BLOCKED"
+            Reason  = "SESSION_LIMIT_REACHED"
+        }
+    }
+
+    $record = [pscustomobject]@{
+        SessionId    = $SessionId
+        UserId       = $UserId
+        TenantId     = $TenantId
+        ClientId     = $ClientId
+        ProjectId    = $ProjectId
+        Status       = "ACTIVE"
+        CreatedAtUtc = [DateTime]::UtcNow.ToString("o")
+    }
+
+    $records += ,$record
+
+    $null = Save-SessionSecurityRecords $records
+
+    return [pscustomobject]@{
+        Success   = $true
+        Status    = "BOUND"
+        Reason    = "SESSION_BOUND"
+        SessionId = $SessionId
+        UserId    = $UserId
+        TenantId  = $TenantId
+        ClientId  = $ClientId
+        ProjectId = $ProjectId
+    }
+}
+
+function Reset-SessionTokenSecurity {
+    $null = Save-SessionTokenRecords @()
+    $null = Save-SessionSecurityRecords @()
+    return $true
+}

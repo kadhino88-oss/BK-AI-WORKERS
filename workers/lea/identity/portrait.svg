@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <linearGradient id="bg-lea" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#141414"/>
+      <stop offset="100%" stop-color="#C9A227"/>
+    </linearGradient>
+  </defs>
+  <circle cx="100" cy="100" r="98" fill="url(#bg-lea)"/>
+  <circle cx="100" cy="100" r="98" fill="none" stroke="#FAF7EF" stroke-width="2" opacity="0.5"/>
+  <text x="100" y="72" font-family="Georgia, 'Times New Roman', serif" font-size="46" font-weight="bold"
+        text-anchor="middle" fill="#FAF7EF" opacity="0.9">L</text>
+  <g transform="translate(100 128)">
+    <path d="M -18 14 C -18 -10 18 -10 18 14 C 10 6 -10 6 -18 14 Z" fill="#FAF7EF" opacity="0.95"/><circle cx="10" cy="-10" r="4" fill="#FAF7EF" opacity="0.95"/>
+  </g>
+  <text x="100" y="182" font-family="Arial, sans-serif" font-size="13" letter-spacing="3"
+        text-anchor="middle" fill="#FAF7EF" opacity="0.85">LEA</text>
+</svg>

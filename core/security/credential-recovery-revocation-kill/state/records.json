@@ -1,0 +1,32 @@
+﻿[
+    {
+        "EnforcementId":  "ENF-8A36-001",
+        "RecoveryId":  "REC-8A36-001",
+        "ConsumptionId":  "CONSUME-8A36-001",
+        "AuthorizationId":  "CAUTH-8A36-001",
+        "ExecutionId":  "EXEC-8A36-001",
+        "TenantId":  "TENANT-001",
+        "ClientId":  "CLIENT-001",
+        "ProjectId":  "PROJECT-001",
+        "UserId":  "USER-001",
+        "WorkerId":  "SAM",
+        "IntegrityHash":  "0c0f63e6bf05f27a97d04b56faae70a9e957255ddabcebcae92de7a31d90d9b4",
+        "EnforcementStatus":  "REVOKED",
+        "ConsumptionStatus":  "REVOKED",
+        "AuthorizationStatus":  "REVOKED",
+        "ExecutionStatus":  "BLOCKED",
+        "RevocationStatus":  "REVOKED",
+        "KillSwitchActive":  true,
+        "ReactivationAllowed":  false,
+        "ReopenAllowed":  false,
+        "Decision":  "BLOCK",
+        "CreatedAtUtc":  "2026-09-11T12:18:47.7969100Z",
+        "RevokedAtUtc":  "2026-09-11T12:18:47.9673968Z",
+        "RevocationReason":  "SECURITY_POLICY_TEST",
+        "RevocationActor":  "SYSTEM",
+        "RevocationEventId":  "REV-0F4E7099583A444884CDB30B187F84DB",
+        "RevocationHash":  "0acbb188b32676cc7b91d5acd73e20e37774f592f85b3b9fe48e3b17944596d0",
+        "RawSecret":  null,
+        "RawCredential":  null
+    }
+]

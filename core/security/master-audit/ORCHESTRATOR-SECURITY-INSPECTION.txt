@@ -1,0 +1,250 @@
+============================================================
+ORCHESTRATOR SECURITY INSPECTION
+FILE: C:\Users\FEUCOM\BK-AI-WORKERS\orchestrator\runtime\Invoke-Orchestrator.ps1
+============================================================
+
+=== PARAMETRES / IDENTITE ===
+LINE 5: [string]$ClientId = "bk-entreprise",
+LINE 7: [string]$ProjectId = "general",
+LINE 72: client_id = $ClientId
+LINE 73: project_id = $ProjectId
+LINE 113: client_id = $ClientId
+LINE 114: project_id = $ProjectId
+LINE 148: client_id = $ClientId
+LINE 149: project_id = $ProjectId
+LINE 181: client_id = $ClientId
+LINE 182: project_id = $ProjectId
+LINE 211: Write-Host "CLIENT       : $ClientId"
+LINE 212: Write-Host "PROJECT      : $ProjectId"
+
+=== SECURITE ===
+
+=== EXECUTION / ORCHESTRATION ===
+
+=== LIVE / ENVIRONNEMENT ===
+
+=== VALEURS CODEES EN DUR ===
+LINE 5: [string]$ClientId = "bk-entreprise",
+LINE 7: [string]$ProjectId = "general",
+
+=== FICHIER COMPLET ===
+param(
+    [Parameter(Mandatory=$true)]
+    [string]$Request,
+
+    [string]$ClientId = "bk-entreprise",
+
+    [string]$ProjectId = "general",
+
+    [ValidateSet("critical","high","normal","low")]
+    [string]$Priority = "normal"
+)
+
+$timestamp = Get-Date -Format "yyyy-MM-ddTHH:mm:ss"
+
+$requestLower = $Request.ToLower()
+
+$worker = $null
+$intent = "unknown"
+$status = "routed"
+
+# ==========================================
+# 1. CLASSIFICATION
+# ==========================================
+
+if ($requestLower -match "prospect|prospection|lead|commercial|vente|relance") {
+    $worker = "ALEX"
+    $intent = "sales"
+}
+elseif ($requestLower -match "email|agenda|rendez-vous|document|administratif|organisation") {
+    $worker = "NOAH"
+    $intent = "administration"
+}
+elseif ($requestLower -match "design|logo|branding|identité visuelle|graphique|ui|ux") {
+    $worker = "LÉA"
+    $intent = "creative"
+}
+elseif ($requestLower -match "marketing|campagne|acquisition|growth|publicité|ads") {
+    $worker = "MAYA"
+    $intent = "marketing"
+}
+elseif ($requestLower -match "site|website|web|seo|référencement|search console|landing page") {
+    $worker = "LUCAS"
+    $intent = "web_seo"
+}
+elseif ($requestLower -match "instagram|facebook|linkedin|contenu|newsletter|publication|réseaux sociaux|rédaction") {
+    $worker = "EMMA"
+    $intent = "content_social"
+}
+elseif ($requestLower -match "cybersécurité|sécurité informatique|serveur|infrastructure|git|monitoring|incident|permission") {
+    $worker = "SAM"
+    $intent = "it_security"
+}
+elseif ($requestLower -match "trading|mt5|marché|marches|setup|stop loss|take profit|position") {
+    $worker = "ATLAS"
+    $intent = "trading"
+}
+
+# ==========================================
+# 2. FINANCIAL BOUNDARY
+# ==========================================
+
+$financial = $requestLower -match `
+    "paie|payer|paiement|virement|transfert d'argent|investis|investissement réel|rembourse|remboursement|facture.*payer|achat.*payer|commande.*payer|dépense"
+
+if ($financial) {
+
+    $taskId = "TASK-" + (Get-Date -Format "yyyyMMdd-HHmmss-fff")
+
+    $output = [ordered]@{
+        task_id = $taskId
+        timestamp = $timestamp
+        client_id = $ClientId
+        project_id = $ProjectId
+        source = "runtime"
+        intent = "financial_action"
+        target_worker = $null
+        priority = $Priority
+        status = "needs_human"
+        owner = "KADER"
+        next_action = "KADER_APPROVAL"
+        execution = "REFUSED"
+        reason = "Financial actions require human approval."
+    }
+
+    $json = $output | ConvertTo-Json -Depth 10
+
+    $json | Set-Content -Encoding UTF8 "$RUNTIME\$taskId.json"
+
+    Write-Host ""
+    Write-Host "============================================" -ForegroundColor Red
+    Write-Host " ACTION FINANCIERE BLOQUEE" -ForegroundColor Red
+    Write-Host "============================================" -ForegroundColor Red
+    Write-Host ""
+    Write-Host "STATUS       : NEEDS_HUMAN"
+    Write-Host "OWNER        : KADER"
+    Write-Host "NEXT ACTION  : KADER_APPROVAL"
+    Write-Host "EXECUTION    : REFUSED"
+    Write-Host ""
+    return
+}
+
+# ==========================================
+# 3. AMBIGUITY
+# ==========================================
+
+if ($requestLower -match "^travaille sur le projet$|^fais le nécessaire$|^occupe-toi de ça$|^gère ça$") {
+
+    $taskId = "TASK-" + (Get-Date -Format "yyyyMMdd-HHmmss-fff")
+
+    $output = [ordered]@{
+        task_id = $taskId
+        timestamp = $timestamp
+        client_id = $ClientId
+        project_id = $ProjectId
+        source = "runtime"
+        intent = "unknown"
+        target_worker = $null
+        priority = $Priority
+        status = "needs_human"
+        owner = "KADER"
+        next_action = "CLARIFY_REQUEST"
+        execution = "NOT_EXECUTED"
+        reason = "Request is too ambiguous."
+    }
+
+    $output | ConvertTo-Json -Depth 10 |
+        Set-Content -Encoding UTF8 "$RUNTIME\$taskId.json"
+
+    Write-Host ""
+    Write-Host "DEMANDE AMBIGUE" -ForegroundColor Yellow
+    Write-Host "STATUS      : NEEDS_HUMAN"
+    Write-Host "NEXT ACTION : CLARIFY_REQUEST"
+    Write-Host ""
+    return
+}
+
+# ==========================================
+# 4. NO ROUTE
+# ==========================================
+
+if ($null -eq $worker) {
+
+    $taskId = "TASK-" + (Get-Date -Format "yyyyMMdd-HHmmss-fff")
+
+    $output = [ordered]@{
+        task_id = $taskId
+        timestamp = $timestamp
+        client_id = $ClientId
+        project_id = $ProjectId
+        source = "runtime"
+        intent = $intent
+        target_worker = $null
+        priority = $Priority
+        status = "blocked"
+        owner = "ORCHESTRATOR"
+        next_action = "REQUEST_CLARIFICATION"
+        execution = "NOT_EXECUTED"
+        reason = "No suitable Worker detected."
+    }
+
+    $output | ConvertTo-Json -Depth 10 |
+        Set-Content -Encoding UTF8 "$RUNTIME\$taskId.json"
+
+    Write-Host ""
+    Write-Host "AUCUN WORKER IDENTIFIE" -ForegroundColor Yellow
+    Write-Host "STATUS      : BLOCKED"
+    Write-Host "NEXT ACTION : REQUEST_CLARIFICATION"
+    Write-Host ""
+    return
+}
+
+# ==========================================
+# 5. CREATE TASK
+# ==========================================
+
+$taskId = "TASK-" + (Get-Date -Format "yyyyMMdd-HHmmss-fff")
+
+$output = [ordered]@{
+    task_id = $taskId
+    timestamp = $timestamp
+    client_id = $ClientId
+    project_id = $ProjectId
+    source = "runtime"
+    target_worker = $worker
+    intent = $intent
+    objective = $Request
+    priority = $Priority
+    status = "routed"
+    execution = "SIMULATION"
+    result = @{
+        message = "Task correctly routed to $worker."
+        external_action = $false
+    }
+    blocker = $null
+    next_action = "EXECUTE_WITH_$worker"
+}
+
+$output | ConvertTo-Json -Depth 10 |
+    Set-Content -Encoding UTF8 "$RUNTIME\$taskId.json"
+
+# ==========================================
+# 6. DISPLAY
+# ==========================================
+
+Write-Host ""
+Write-Host "============================================" -ForegroundColor Cyan
+Write-Host " ORCHESTRATOR — SIMULATION" -ForegroundColor Cyan
+Write-Host "============================================" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "TASK ID      : $taskId"
+Write-Host "CLIENT       : $ClientId"
+Write-Host "PROJECT      : $ProjectId"
+Write-Host "INTENT       : $intent"
+Write-Host "WORKER       : $worker" -ForegroundColor Green
+Write-Host "PRIORITY     : $Priority"
+Write-Host "STATUS       : ROUTED"
+Write-Host "EXECUTION    : SIMULATION"
+Write-Host ""
+Write-Host "Aucune action externe n'a été exécutée."
+Write-Host ""

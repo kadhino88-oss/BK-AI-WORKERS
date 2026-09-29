@@ -1,0 +1,30 @@
+{
+    "tool_id":  "SOCIAL_MEDIA",
+    "category":  "SOCIAL",
+    "description":  "GÃ©rer les comptes sociaux et publications.",
+    "authorized_workers":  [
+                               "EMMA",
+                               "MAYA"
+                           ],
+    "allowed_actions":  [
+                            "READ",
+                            "CREATE",
+                            "SCHEDULE",
+                            "PUBLISH",
+                            "MODERATE"
+                        ],
+    "financial_action":  false,
+    "external_action":  true,
+    "secret_required":  true,
+    "permission_check":  true,
+    "client_isolation":  true,
+    "project_isolation":  true,
+    "worker_isolation":  true,
+    "audit_logging":  true,
+    "human_override":  true,
+    "security":  {
+                     "secret_exposure":  false,
+                     "financial_actions":  false,
+                     "unsafe_external_action":  false
+                 }
+}

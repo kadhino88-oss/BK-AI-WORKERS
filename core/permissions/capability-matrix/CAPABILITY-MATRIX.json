@@ -1,0 +1,974 @@
+{
+  "version": "7H-10",
+  "description": "Capability Matrix centrale BK-AI-WORKERS : Worker + Skill + Tool + Action.",
+  "globalRules": {
+    "tenantIsolationRequired": true,
+    "clientIsolationRequired": true,
+    "projectIsolationRequired": true,
+    "workerAuthorizationRequired": true,
+    "skillAuthorizationRequired": true,
+    "toolAuthorizationRequired": true,
+    "actionAuthorizationRequired": true,
+    "secretExposureToWorker": false,
+    "financialOperationsRequireHumanApproval": true,
+    "irreversibleFinancialActionsAllowedAutonomously": false,
+    "simulationAllowed": true,
+    "liveExecutionDefault": false
+  },
+  "actionClasses": {
+    "READ": {
+      "risk": "LOW"
+    },
+    "SEARCH": {
+      "risk": "LOW"
+    },
+    "REPORT": {
+      "risk": "LOW"
+    },
+    "CREATE": {
+      "risk": "MEDIUM"
+    },
+    "UPDATE": {
+      "risk": "MEDIUM"
+    },
+    "DELETE": {
+      "risk": "HIGH"
+    },
+    "SEND": {
+      "risk": "HIGH"
+    },
+    "PUBLISH": {
+      "risk": "HIGH"
+    },
+    "EXECUTE": {
+      "risk": "HIGH"
+    },
+    "FINANCIAL_PREPARE": {
+      "risk": "HIGH",
+      "humanApproval": true
+    },
+    "FINANCIAL_COMMIT": {
+      "risk": "CRITICAL",
+      "humanApproval": true,
+      "autonomous": false
+    }
+  },
+  "workers": [
+    {
+      "workerId": "MAYA",
+      "skillsSource": "workers/maya/skills/SKILLS-REGISTRY.json",
+      "capabilities": [
+        {
+          "tool": "WEB_ANALYTICS",
+          "actions": [
+            "READ",
+            "SEARCH",
+            "REPORT",
+            "CREATE"
+          ],
+          "skillDomains": [
+            "ANALYTICS",
+            "STRATEGIE",
+            "ACQUISITION",
+            "SEO_SEA",
+            "FIDELISATION"
+          ]
+        },
+        {
+          "tool": "CRM",
+          "actions": [
+            "READ",
+            "SEARCH",
+            "CREATE",
+            "UPDATE"
+          ],
+          "skillDomains": [
+            "CRM_AUTOMATION",
+            "ACQUISITION",
+            "FIDELISATION",
+            "COMMERCIAL_MARKETING"
+          ]
+        },
+        {
+          "tool": "SEARCH_ENGINE",
+          "actions": [
+            "READ",
+            "SEARCH",
+            "REPORT"
+          ],
+          "skillDomains": [
+            "SEO_SEA",
+            "ACQUISITION",
+            "ANALYTICS"
+          ]
+        },
+        {
+          "tool": "SOCIAL_MEDIA",
+          "actions": [
+            "READ",
+            "CREATE",
+            "UPDATE",
+            "PUBLISH"
+          ],
+          "skillDomains": [
+            "CONTENU_SOCIAL",
+            "ACQUISITION",
+            "FIDELISATION"
+          ]
+        },
+        {
+          "tool": "DOCUMENTS",
+          "actions": [
+            "READ",
+            "CREATE",
+            "UPDATE"
+          ],
+          "skillDomains": [
+            "STRATEGIE",
+            "COMMERCIAL_MARKETING",
+            "ANALYTICS"
+          ]
+        }
+      ]
+    },
+    {
+      "workerId": "ALEX",
+      "skillsSource": "workers/alex/skills/SKILLS-REGISTRY.json",
+      "capabilities": [
+        {
+          "tool": "CRM",
+          "actions": [
+            "READ",
+            "SEARCH",
+            "CREATE",
+            "UPDATE"
+          ],
+          "skillDomains": [
+            "CRM",
+            "PROSPECTION",
+            "SALES",
+            "ACQUISITION"
+          ]
+        },
+        {
+          "tool": "WEB_ANALYTICS",
+          "actions": [
+            "READ",
+            "SEARCH",
+            "REPORT"
+          ],
+          "skillDomains": [
+            "SALES",
+            "ANALYTICS"
+          ]
+        },
+        {
+          "tool": "SEARCH_ENGINE",
+          "actions": [
+            "READ",
+            "SEARCH",
+            "REPORT"
+          ],
+          "skillDomains": [
+            "PROSPECTION",
+            "RESEARCH"
+          ]
+        },
+        {
+          "tool": "DOCUMENTS",
+          "actions": [
+            "READ",
+            "CREATE",
+            "UPDATE"
+          ],
+          "skillDomains": [
+            "SALES",
+            "PROPOSAL",
+            "REPORTING"
+          ]
+        }
+      ]
+    },
+    {
+      "workerId": "EMMA",
+      "skillsSource": "workers/emma/skills/SKILLS-REGISTRY.json",
+      "capabilities": [
+        {
+          "tool": "SOCIAL_MEDIA",
+          "actions": [
+            "READ",
+            "CREATE",
+            "UPDATE",
+            "PUBLISH"
+          ],
+          "skillDomains": [
+            "CONTENU_SOCIAL",
+            "COMMUNITY",
+            "CONTENT"
+          ]
+        },
+        {
+          "tool": "DESIGN",
+          "actions": [
+            "READ",
+            "CREATE",
+            "UPDATE"
+          ],
+          "skillDomains": [
+            "CONTENT",
+            "CREATIVE",
+            "SOCIAL"
+          ]
+        },
+        {
+          "tool": "DOCUMENTS",
+          "actions": [
+            "READ",
+            "CREATE",
+            "UPDATE"
+          ],
+          "skillDomains": [
+            "CONTENT",
+            "SOCIAL",
+            "EDITORIAL"
+          ]
+        },
+        {
+          "tool": "WEB_ANALYTICS",
+          "actions": [
+            "READ",
+            "SEARCH",
+            "REPORT"
+          ],
+          "skillDomains": [
+            "ANALYTICS",
+            "CONTENT",
+            "SOCIAL"
+          ]
+        }
+      ]
+    },
+    {
+      "workerId": "LUCAS",
+      "skillsSource": "workers/lucas/skills/SKILLS-REGISTRY.json",
+      "capabilities": [
+        {
+          "tool": "WORDPRESS",
+          "actions": [
+            "READ",
+            "CREATE",
+            "UPDATE",
+            "PUBLISH"
+          ],
+          "skillDomains": [
+            "WEBMASTER",
+            "CMS",
+            "ACCESSIBILITE",
+            "ANALYTICS_WEB",
+            "CONVERSION_WEB",
+            "LANDING_PAGES",
+            "MAINTENANCE",
+            "PERFORMANCE_WEB",
+            "WEBFLOW",
+            "WEB_DEVELOPMENT",
+            "WORDPRESS"
+          ]
+        },
+        {
+          "tool": "WEBFLOW",
+          "actions": [
+            "READ",
+            "CREATE",
+            "UPDATE",
+            "PUBLISH"
+          ],
+          "skillDomains": [
+            "WEBMASTER",
+            "CMS",
+            "WEB_DESIGN",
+            "ACCESSIBILITE",
+            "ANALYTICS_WEB",
+            "CONVERSION_WEB",
+            "LANDING_PAGES",
+            "MAINTENANCE",
+            "PERFORMANCE_WEB",
+            "WEBFLOW",
+            "WEB_DEVELOPMENT",
+            "WORDPRESS"
+          ]
+        },
+        {
+          "tool": "WEB_ANALYTICS",
+          "actions": [
+            "READ",
+            "SEARCH",
+            "REPORT"
+          ],
+          "skillDomains": [
+            "ANALYTICS",
+            "PERFORMANCE",
+            "ACCESSIBILITE",
+            "ANALYTICS_WEB",
+            "CONVERSION_WEB",
+            "LANDING_PAGES",
+            "MAINTENANCE",
+            "PERFORMANCE_WEB",
+            "WEBFLOW",
+            "WEB_DEVELOPMENT",
+            "WORDPRESS"
+          ]
+        },
+        {
+          "tool": "SEARCH_ENGINE",
+          "actions": [
+            "READ",
+            "SEARCH",
+            "REPORT"
+          ],
+          "skillDomains": [
+            "SEA",
+            "SEARCH",
+            "ACCESSIBILITE",
+            "ANALYTICS_WEB",
+            "CONVERSION_WEB",
+            "LANDING_PAGES",
+            "MAINTENANCE",
+            "PERFORMANCE_WEB",
+            "WEBFLOW",
+            "WEB_DEVELOPMENT",
+            "WORDPRESS"
+          ]
+        },
+        {
+          "tool": "DOCUMENTS",
+          "actions": [
+            "READ",
+            "CREATE",
+            "UPDATE"
+          ],
+          "skillDomains": [
+            "WEBMASTER",
+            "REPORTING",
+            "ACCESSIBILITE",
+            "ANALYTICS_WEB",
+            "CONVERSION_WEB",
+            "LANDING_PAGES",
+            "MAINTENANCE",
+            "PERFORMANCE_WEB",
+            "WEBFLOW",
+            "WEB_DEVELOPMENT",
+            "WORDPRESS"
+          ]
+        }
+      ]
+    },
+    {
+      "workerId": "SAM",
+      "skillsSource": "workers/sam/skills/SKILLS-REGISTRY.json",
+      "capabilities": [
+        {
+          "tool": "MONITORING",
+          "actions": [
+            "READ",
+            "SEARCH",
+            "CREATE",
+            "UPDATE"
+          ],
+          "skillDomains": [
+            "MONITORING",
+            "INFRASTRUCTURE",
+            "OPERATIONS"
+          ]
+        },
+        {
+          "tool": "SECURITY_SCANNER",
+          "actions": [
+            "READ",
+            "SEARCH",
+            "EXECUTE"
+          ],
+          "skillDomains": [
+            "SECURITY",
+            "CYBERSECURITY",
+            "AUDIT"
+          ]
+        },
+        {
+          "tool": "CLOUD_INFRASTRUCTURE",
+          "actions": [
+            "READ",
+            "SEARCH",
+            "CREATE",
+            "UPDATE",
+            "EXECUTE"
+          ],
+          "skillDomains": [
+            "CLOUD",
+            "INFRASTRUCTURE",
+            "DEVOPS"
+          ]
+        },
+        {
+          "tool": "DOCUMENTS",
+          "actions": [
+            "READ",
+            "CREATE",
+            "UPDATE"
+          ],
+          "skillDomains": [
+            "SECURITY",
+            "INFRASTRUCTURE",
+            "AUDIT"
+          ]
+        }
+      ]
+    },
+    {
+      "workerId": "NOAH",
+      "skillsSource": "workers/noah/skills/SKILLS-REGISTRY.json",
+      "capabilities": [
+        {
+          "tool": "CALENDAR",
+          "actions": [
+            "READ",
+            "SEARCH",
+            "CREATE",
+            "UPDATE",
+            "DELETE"
+          ],
+          "skillDomains": [
+            "ADMINISTRATION",
+            "PLANNING",
+            "SCHEDULING"
+          ]
+        },
+        {
+          "tool": "EMAIL",
+          "actions": [
+            "READ",
+            "CREATE",
+            "SEND"
+          ],
+          "skillDomains": [
+            "ADMINISTRATION",
+            "EMAIL",
+            "COMMUNICATION"
+          ]
+        },
+        {
+          "tool": "DOCUMENTS",
+          "actions": [
+            "READ",
+            "CREATE",
+            "UPDATE"
+          ],
+          "skillDomains": [
+            "ADMINISTRATION",
+            "DOCUMENTS",
+            "REPORTING"
+          ]
+        },
+        {
+          "tool": "CRM",
+          "actions": [
+            "READ",
+            "SEARCH",
+            "CREATE",
+            "UPDATE"
+          ],
+          "skillDomains": [
+            "ADMINISTRATION",
+            "CRM"
+          ]
+        }
+      ]
+    },
+    {
+      "workerId": "LEA",
+      "skillsSource": "workers/lea/skills/SKILLS-REGISTRY.json",
+      "capabilities": [
+        {
+          "tool": "DESIGN",
+          "actions": [
+            "READ",
+            "CREATE",
+            "UPDATE"
+          ],
+          "skillDomains": [
+            "CREATIVE",
+            "BRAND",
+            "DESIGN",
+            "ART_DIRECTION",
+            "BRANDING",
+            "CAMPAGNE_CREATIVE",
+            "DESIGN_GRAPHIQUE",
+            "DIRECTION_ARTISTIQUE",
+            "IDENTITE_VISUELLE",
+            "UX_UI"
+          ]
+        },
+        {
+          "tool": "DOCUMENTS",
+          "actions": [
+            "READ",
+            "CREATE",
+            "UPDATE"
+          ],
+          "skillDomains": [
+            "CREATIVE",
+            "BRAND",
+            "PRESENTATION",
+            "BRANDING",
+            "CAMPAGNE_CREATIVE",
+            "DESIGN_GRAPHIQUE",
+            "DIRECTION_ARTISTIQUE",
+            "IDENTITE_VISUELLE",
+            "UX_UI"
+          ]
+        },
+        {
+          "tool": "SOCIAL_MEDIA",
+          "actions": [
+            "READ",
+            "CREATE",
+            "UPDATE"
+          ],
+          "skillDomains": [
+            "DESIGN",
+            "CONTENT",
+            "SOCIAL",
+            "BRANDING",
+            "CAMPAGNE_CREATIVE",
+            "DESIGN_GRAPHIQUE",
+            "DIRECTION_ARTISTIQUE",
+            "IDENTITE_VISUELLE",
+            "UX_UI"
+          ]
+        },
+        {
+          "tool": "WEB_ANALYTICS",
+          "actions": [
+            "READ",
+            "SEARCH",
+            "REPORT"
+          ],
+          "skillDomains": [
+            "CREATIVE",
+            "OPTIMIZATION",
+            "BRANDING",
+            "CAMPAGNE_CREATIVE",
+            "DESIGN_GRAPHIQUE",
+            "DIRECTION_ARTISTIQUE",
+            "IDENTITE_VISUELLE",
+            "UX_UI"
+          ]
+        }
+      ]
+    },
+    {
+      "workerId": "SEOYA",
+      "skillsSource": "workers/seoya/skills/SKILLS-REGISTRY.json",
+      "capabilities": [
+        {
+          "tool": "GOOGLE_SEARCH_CONSOLE",
+          "actions": [
+            "READ",
+            "SEARCH",
+            "REPORT"
+          ],
+          "skillDomains": [
+            "SEO",
+            "SEO_TECHNIQUE",
+            "SEO_ON_PAGE",
+            "SEO_ANALYTICS",
+            "SEO_STRATEGIQUE",
+            "SEO_OFF_PAGE",
+            "LOCAL_SEO"
+          ]
+        },
+        {
+          "tool": "WEB_ANALYTICS",
+          "actions": [
+            "READ",
+            "SEARCH",
+            "REPORT"
+          ],
+          "skillDomains": [
+            "SEO_ANALYTICS",
+            "ANALYTICS",
+            "PERFORMANCE",
+            "SEO_TECHNIQUE"
+          ]
+        },
+        {
+          "tool": "WORDPRESS",
+          "actions": [
+            "READ"
+          ],
+          "skillDomains": [
+            "SEO_TECHNIQUE",
+            "SEO_ON_PAGE",
+            "LOCAL_SEO"
+          ]
+        }
+      ]
+    },
+    {
+      "workerId": "NORA",
+      "skillsSource": "workers/nora/skills/SKILLS-REGISTRY.json",
+      "capabilities": [
+        {
+          "tool": "ZENDESK",
+          "actions": [
+            "READ",
+            "CREATE",
+            "UPDATE"
+          ],
+          "skillDomains": [
+            "SUPPORT_OPERATIONS",
+            "SUPPORT_CHANNELS",
+            "KNOWLEDGE_BASE"
+          ]
+        },
+        {
+          "tool": "INTERCOM",
+          "actions": [
+            "READ",
+            "CREATE",
+            "UPDATE"
+          ],
+          "skillDomains": [
+            "SUPPORT_CHANNELS",
+            "CUSTOMER_INSIGHT"
+          ]
+        },
+        {
+          "tool": "WHATSAPP_BUSINESS",
+          "actions": [
+            "READ",
+            "CREATE"
+          ],
+          "skillDomains": [
+            "SUPPORT_CHANNELS"
+          ]
+        }
+      ]
+    },
+    {
+      "workerId": "SOPHIE",
+      "skillsSource": "workers/sophie/skills/SKILLS-REGISTRY.json",
+      "capabilities": [
+        {
+          "tool": "HR_PLATFORM",
+          "actions": [
+            "READ",
+            "CREATE",
+            "UPDATE"
+          ],
+          "skillDomains": [
+            "RECRUITMENT",
+            "RECRUITMENT_TOOLS",
+            "EMPLOYEE_LIFECYCLE",
+            "HR_ANALYTICS",
+            "RECRUITMENT_AI_ANALYSIS",
+            "RECRUITMENT_AI_MATCHING",
+            "RECRUITMENT_AI_SCREENING",
+            "RECRUITMENT_AI_INTELLIGENCE",
+            "RECRUITMENT_COMPLIANCE"
+          ]
+        },
+        {
+          "tool": "LINKEDIN",
+          "actions": [
+            "READ",
+            "CREATE"
+          ],
+          "skillDomains": [
+            "HR_MARKETING",
+            "RECRUITMENT"
+          ]
+        },
+        {
+          "tool": "GOOGLE_DRIVE",
+          "actions": [
+            "READ",
+            "CREATE"
+          ],
+          "skillDomains": [
+            "EMPLOYEE_LIFECYCLE"
+          ]
+        }
+      ]
+    },
+    {
+      "workerId": "DARIO",
+      "skillsSource": "workers/dario/skills/SKILLS-REGISTRY.json",
+      "capabilities": [
+        {
+          "tool": "GOOGLE_DRIVE",
+          "actions": [
+            "READ",
+            "CREATE"
+          ],
+          "skillDomains": [
+            "FINANCE_REPORTING",
+            "FINANCE_COMPLIANCE"
+          ]
+        },
+        {
+          "tool": "QUICKBOOKS",
+          "actions": [
+            "READ",
+            "REPORT"
+          ],
+          "skillDomains": [
+            "FINANCE_CORE",
+            "FINANCE_REPORTING"
+          ]
+        },
+        {
+          "tool": "XERO",
+          "actions": [
+            "READ",
+            "REPORT"
+          ],
+          "skillDomains": [
+            "FINANCE_CORE",
+            "FINANCE_COMPLIANCE"
+          ]
+        },
+        {
+          "tool": "STRIPE",
+          "actions": [
+            "READ",
+            "REPORT"
+          ],
+          "skillDomains": [
+            "FINANCE_CORE"
+          ]
+        }
+      ]
+    },
+    {
+      "workerId": "INES",
+      "skillsSource": "workers/ines/skills/SKILLS-REGISTRY.json",
+      "capabilities": [
+        {
+          "tool": "WEB_ANALYTICS",
+          "actions": [
+            "READ",
+            "SEARCH",
+            "REPORT"
+          ],
+          "skillDomains": [
+            "DATA_ANALYSIS",
+            "DATA_VISUALIZATION"
+          ]
+        },
+        {
+          "tool": "MONITORING",
+          "actions": [
+            "READ",
+            "REPORT"
+          ],
+          "skillDomains": [
+            "DATA_ENGINEERING",
+            "DATA_SCIENCE_PREP"
+          ]
+        },
+        {
+          "tool": "GOOGLE_DRIVE",
+          "actions": [
+            "READ",
+            "CREATE"
+          ],
+          "skillDomains": [
+            "DATA_VISUALIZATION"
+          ]
+        }
+      ]
+    },
+    {
+      "workerId": "YANIS",
+      "skillsSource": "workers/yanis/skills/SKILLS-REGISTRY.json",
+      "capabilities": [
+        {
+          "tool": "ASANA",
+          "actions": [
+            "READ",
+            "CREATE",
+            "UPDATE"
+          ],
+          "skillDomains": [
+            "PROJECT_PLANNING",
+            "PROJECT_EXECUTION"
+          ]
+        },
+        {
+          "tool": "TRELLO",
+          "actions": [
+            "READ",
+            "CREATE",
+            "UPDATE"
+          ],
+          "skillDomains": [
+            "PROJECT_EXECUTION"
+          ]
+        },
+        {
+          "tool": "MICROSOFT_TEAMS",
+          "actions": [
+            "READ",
+            "CREATE",
+            "REPORT"
+          ],
+          "skillDomains": [
+            "PROJECT_GOVERNANCE"
+          ]
+        }
+      ]
+    },
+    {
+      "workerId": "CLARA",
+      "skillsSource": "workers/clara/skills/SKILLS-REGISTRY.json",
+      "capabilities": [
+        {
+          "tool": "GOOGLE_DRIVE",
+          "actions": [
+            "READ",
+            "CREATE",
+            "UPDATE"
+          ],
+          "skillDomains": [
+            "CONTRACTS",
+            "LEGAL_DOCUMENTATION"
+          ]
+        },
+        {
+          "tool": "DROPBOX",
+          "actions": [
+            "READ",
+            "CREATE"
+          ],
+          "skillDomains": [
+            "LEGAL_DOCUMENTATION"
+          ]
+        }
+      ]
+    },
+    {
+      "workerId": "AMINA",
+      "skillsSource": "workers/amina/skills/SKILLS-REGISTRY.json",
+      "capabilities": [
+        {
+          "tool": "GOOGLE_DRIVE",
+          "actions": [
+            "READ",
+            "CREATE"
+          ],
+          "skillDomains": [
+            "RESEARCH_OUTPUT"
+          ]
+        },
+        {
+          "tool": "WEB_ANALYTICS",
+          "actions": [
+            "READ",
+            "SEARCH",
+            "REPORT"
+          ],
+          "skillDomains": [
+            "RESEARCH_CORE"
+          ]
+        },
+        {
+          "tool": "MONITORING",
+          "actions": [
+            "READ",
+            "REPORT"
+          ],
+          "skillDomains": [
+            "RESEARCH_CORE",
+            "RESEARCH_METHODS"
+          ]
+        }
+      ]
+    },
+    {
+      "workerId": "THOMAS",
+      "skillsSource": "workers/thomas/skills/SKILLS-REGISTRY.json",
+      "capabilities": [
+        {
+          "tool": "SHOPIFY",
+          "actions": [
+            "READ",
+            "CREATE",
+            "UPDATE"
+          ],
+          "skillDomains": [
+            "ECOMMERCE_CATALOG",
+            "MARKETPLACE_OPS"
+          ]
+        },
+        {
+          "tool": "WOOCOMMERCE",
+          "actions": [
+            "READ",
+            "CREATE",
+            "UPDATE"
+          ],
+          "skillDomains": [
+            "ECOMMERCE_CATALOG"
+          ]
+        },
+        {
+          "tool": "WEB_ANALYTICS",
+          "actions": [
+            "READ",
+            "REPORT"
+          ],
+          "skillDomains": [
+            "ECOMMERCE_GROWTH"
+          ]
+        }
+      ]
+    },
+    {
+      "workerId": "RAYAN",
+      "skillsSource": "workers/rayan/skills/SKILLS-REGISTRY.json",
+      "capabilities": [
+        {
+          "tool": "MONITORING",
+          "actions": [
+            "READ",
+            "REPORT"
+          ],
+          "skillDomains": [
+            "AUTOMATION_RELIABILITY"
+          ]
+        },
+        {
+          "tool": "SLACK",
+          "actions": [
+            "READ",
+            "CREATE"
+          ],
+          "skillDomains": [
+            "AUTOMATION_CORE",
+            "INTEGRATIONS"
+          ]
+        },
+        {
+          "tool": "GOOGLE_DRIVE",
+          "actions": [
+            "READ",
+            "CREATE"
+          ],
+          "skillDomains": [
+            "AUTOMATION_RELIABILITY"
+          ]
+        }
+      ]
+    }
+  ]
+}

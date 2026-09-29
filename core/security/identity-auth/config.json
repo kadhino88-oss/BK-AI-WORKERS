@@ -1,0 +1,21 @@
+﻿{
+  "version": "1.0",
+  "system": "BK-AI-WORKERS",
+  "enabled": true,
+  "identityEnabled": true,
+  "authenticationEnabled": true,
+  "sessionEnabled": true,
+  "tenantBindingRequired": true,
+  "clientBindingRequired": true,
+  "projectBindingRequired": false,
+  "accountStatusRequired": true,
+  "allowDisabledAccount": false,
+  "allowExpiredSession": false,
+  "sessionDurationSeconds": 3600,
+  "maxUsers": 50000,
+  "maxSessions": 100000,
+  "capturePasswords": false,
+  "captureSecrets": false,
+  "capturePayloads": false,
+  "liveExecutionEnabled": false
+}

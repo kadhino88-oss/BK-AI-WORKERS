@@ -1,0 +1,91 @@
+﻿{
+    "workflow_id":  "WF-20260909-200136-9fbad2",
+    "client_id":  "bk-entreprise",
+    "project_id":  "service-ia",
+    "source_task_id":  "TASK-7G5-MAYA-001",
+    "campaign_task_id":  "TASK-7G6-CAMPAIGN-001",
+    "type":  "MARKETING_CAMPAIGN",
+    "objective":  "Préparer et lancer une campagne marketing pour le nouveau service IA",
+    "created_by":  "MAYA",
+    "status":  "READY",
+    "execution_mode":  "CONTROLLED",
+    "financial_actions":  false,
+    "external_actions":  false,
+    "security_status":  "VALID",
+    "provider":  "NONE",
+    "model":  "NONE",
+    "source_maya_result":  "C:\\Users\\FEUCOM\\BK-AI-WORKERS\\memory\\runtime\\MAYA-TASK-7G5-MAYA-001.json",
+    "steps":  [
+                  {
+                      "id":  "STEP-01",
+                      "worker":  "MAYA",
+                      "objective":  "Finaliser la stratÃ©gie marketing et les prioritÃ©s de campagne.",
+                      "depends_on":  [
+
+                                     ],
+                      "status":  "READY",
+                      "source_task_id":  "TASK-7G5-MAYA-001"
+                  },
+                  {
+                      "id":  "STEP-02",
+                      "worker":  "ALEX",
+                      "objective":  "Transformer la stratÃ©gie en plan de prospection et liste de prospects prioritaires.",
+                      "depends_on":  [
+                                         "STEP-01"
+                                     ],
+                      "status":  "BLOCKED"
+                  },
+                  {
+                      "id":  "STEP-03",
+                      "worker":  "EMMA",
+                      "objective":  "Transformer la stratÃ©gie en calendrier Ã©ditorial et contenus sociaux.",
+                      "depends_on":  [
+                                         "STEP-01"
+                                     ],
+                      "status":  "BLOCKED"
+                  },
+                  {
+                      "id":  "STEP-04",
+                      "worker":  "LEA",
+                      "objective":  "DÃ©cliner la stratÃ©gie en direction artistique et assets crÃ©atifs.",
+                      "depends_on":  [
+                                         "STEP-01"
+                                     ],
+                      "status":  "BLOCKED"
+                  },
+                  {
+                      "id":  "STEP-05",
+                      "worker":  "LUCAS",
+                      "objective":  "CrÃ©er la structure de landing page et le plan SEO Ã  partir de la stratÃ©gie et des livrables disponibles.",
+                      "depends_on":  [
+                                         "STEP-01",
+                                         "STEP-03",
+                                         "STEP-04"
+                                     ],
+                      "status":  "BLOCKED"
+                  },
+                  {
+                      "id":  "STEP-06",
+                      "worker":  "SAM",
+                      "objective":  "Effectuer le contrÃ´le sÃ©curitÃ© avant mise en production.",
+                      "depends_on":  [
+                                         "STEP-05"
+                                     ],
+                      "status":  "BLOCKED"
+                  },
+                  {
+                      "id":  "STEP-07",
+                      "worker":  "ORCHESTRATOR",
+                      "objective":  "Consolider les rÃ©sultats et produire le rapport final de campagne.",
+                      "depends_on":  [
+                                         "STEP-02",
+                                         "STEP-03",
+                                         "STEP-04",
+                                         "STEP-05",
+                                         "STEP-06"
+                                     ],
+                      "status":  "BLOCKED"
+                  }
+              ],
+    "created_at":  "2026-09-09T20:01:36.7023822+02:00"
+}

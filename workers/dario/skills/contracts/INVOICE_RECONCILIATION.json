@@ -1,0 +1,97 @@
+{
+    "skill_id": "INVOICE_RECONCILIATION",
+    "worker": "DARIO",
+    "category": "FINANCE_CORE",
+    "mission": {
+        "objective": "Compétence INVOICE_RECONCILIATION de DARIO.",
+        "success_condition": "Livrable exploitable produit selon le contexte client et projet."
+    },
+    "inputs": [
+        "client_id",
+        "project_id",
+        "task_id",
+        "objective",
+        "validated_context",
+        "validated_memory"
+    ],
+    "outputs": [
+        "deliverable",
+        "recommendations",
+        "next_action",
+        "status"
+    ],
+    "tools": [
+        "AI_GATEWAY",
+        "PROVIDER_ENGINE",
+        "MEMORY_ENGINE",
+        "ORCHESTRATOR"
+    ],
+    "memory": {
+        "global": true,
+        "client": true,
+        "project": true,
+        "worker": true,
+        "task": true,
+        "execution": true,
+        "raw_secret_access": false
+    },
+    "permissions": {
+        "read": true,
+        "write": true,
+        "create": true,
+        "modify": true,
+        "send": true,
+        "financial_actions": false,
+        "external_actions": false
+    },
+    "dependencies": [
+        "CONTEXT_VALIDATION",
+        "CLIENT_ISOLATION",
+        "PROJECT_ISOLATION",
+        "WORKER_ISOLATION"
+    ],
+    "collaborators": [
+        "NOAH",
+        "MAYA",
+        "SAM"
+    ],
+    "kpis": [
+        "deliverable_quality",
+        "task_completion",
+        "execution_time",
+        "business_relevance"
+    ],
+    "security": {
+        "status": "VALID",
+        "financial_actions": false,
+        "external_actions": false,
+        "secret_exposure": false,
+        "client_isolation": true,
+        "project_isolation": true,
+        "worker_isolation": true
+    },
+    "escalation": {
+        "human_required_for": [
+            "financial_transaction",
+            "credential_exposure",
+            "permission_escalation",
+            "unsafe_external_action"
+        ],
+        "default_status": "NEEDS_HUMAN"
+    },
+    "error_handling": {
+        "states": [
+            "SUCCESS",
+            "PARTIAL_SUCCESS",
+            "BLOCKED",
+            "NEEDS_HUMAN",
+            "ERROR"
+        ],
+        "no_false_success": true
+    },
+    "lifecycle": {
+        "enabled": true,
+        "version": "1.0.0",
+        "generated_by": "GENERIC-SKILL-CONTRACT-BUILDER"
+    }
+}

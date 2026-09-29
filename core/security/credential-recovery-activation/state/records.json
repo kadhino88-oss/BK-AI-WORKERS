@@ -1,0 +1,27 @@
+﻿[
+    {
+        "ActivationId":  "ACT-1E0FD8DD69994418A1C5EE7028D5831D",
+        "ActivationHash":  "234f2772600e8e9102b20cafb2619547d3aa78e977e2a3baa0e8cb378776e6db",
+        "AuthorizationId":  "RAUTH-8A26-001",
+        "ContextId":  "CTX-8A26-001",
+        "OldChainId":  "CHAIN-8A26-OLD",
+        "NewChainId":  "CHAIN-8A26-NEW",
+        "NewLeaseId":  "LEASE-8A26-NEW",
+        "NewMaterializationId":  "MAT-8A26-NEW",
+        "NewUsageId":  "USE-8A26-NEW",
+        "NewExecutionId":  "EXEC-8A26-NEW",
+        "UserId":  "USER-001",
+        "TenantId":  "TENANT-001",
+        "ClientId":  "CLIENT-001",
+        "ProjectId":  "PROJECT-001",
+        "WorkerId":  "SAM",
+        "Action":  "CONNECTOR_USE",
+        "Connector":  "CONTROLLED-API",
+        "Status":  "CONSUMED",
+        "Decision":  "BLOCK",
+        "CreatedAtUtc":  "2026-09-11T12:01:42.2527126Z",
+        "ConsumedAtUtc":  "2026-09-11T12:01:42.4420372Z",
+        "RawSecret":  null,
+        "RawCredential":  null
+    }
+]

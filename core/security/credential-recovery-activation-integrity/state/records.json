@@ -1,0 +1,28 @@
+﻿[
+    {
+        "IntegrityId":  "INT-CBF981B5E30D432391A474654947037F",
+        "IntegrityHash":  "4c6a1fb58eb433fe314075d025e5958cfe7a0dec2c2c273afd19db8af9582b87",
+        "AuthorizationId":  "RAUTH-8A27-001",
+        "ContextId":  "CTX-8A27-001",
+        "OldChainId":  "CHAIN-8A27-OLD",
+        "NewChainId":  "CHAIN-8A27-NEW",
+        "NewLeaseId":  "LEASE-8A27-NEW",
+        "NewMaterializationId":  "MAT-8A27-NEW",
+        "NewUsageId":  "USE-8A27-NEW",
+        "NewExecutionId":  "EXEC-8A27-NEW",
+        "UserId":  "USER-001",
+        "TenantId":  "TENANT-001",
+        "ClientId":  "CLIENT-001",
+        "ProjectId":  "PROJECT-001",
+        "WorkerId":  "SAM",
+        "Action":  "CONNECTOR_USE",
+        "Connector":  "CONTROLLED-API",
+        "Status":  "TAMPERED",
+        "Decision":  "BLOCK",
+        "Immutable":  true,
+        "CreatedAtUtc":  "2026-09-11T12:03:18.2946350Z",
+        "TamperDetectedAtUtc":  "2026-09-11T12:03:18.4241920Z",
+        "RawSecret":  null,
+        "RawCredential":  null
+    }
+]

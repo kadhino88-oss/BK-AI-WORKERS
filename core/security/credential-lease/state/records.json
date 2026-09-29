@@ -1,0 +1,23 @@
+﻿{
+    "version":  "1.0",
+    "items":  [
+                  {
+                      "LeaseId":  "LEASE-8161A85E115E49C5A4A68E964C954394",
+                      "CredentialAuthorizationId":  "CRED-AUTH-4D502DA7B9784ECFBD5D332976177293",
+                      "UserId":  "8A16-USER",
+                      "SessionId":  "958d8c54-c580-4867-83da-bfe2c044a4c2",
+                      "TenantId":  "8A16-TENANT",
+                      "ClientId":  "8A16-CLIENT",
+                      "ProjectId":  "8A16-PROJECT",
+                      "WorkerId":  "LUCAS",
+                      "Action":  "READ",
+                      "ConnectorId":  "google-drive",
+                      "CredentialRef":  "CREDREF-8A16-001",
+                      "ExecutionId":  "EXEC-8A16-001",
+                      "IssuedAtUtc":  "2026-09-11T08:21:33.9266920Z",
+                      "ExpiresAtUtc":  "2026-09-11T08:26:33.9266920Z",
+                      "Status":  "CONSUMED",
+                      "ConsumedAtUtc":  "2026-09-11T08:21:34.3482371Z"
+                  }
+              ]
+}

@@ -1,0 +1,21 @@
+﻿{
+  "version": "1.0",
+  "module": "EvidencePurgeReuseSecurityGuard",
+  "enabled": true,
+  "purgeGuardEnabled": true,
+  "reuseGuardEnabled": true,
+  "failClosed": true,
+  "requireEvidenceIdentity": true,
+  "requireRetentionIdentity": true,
+  "requireTenantBinding": true,
+  "requireClientBinding": true,
+  "requireProjectBinding": true,
+  "requireExecutionBinding": true,
+  "requireImmutableEvidence": true,
+  "requireIntegrityValid": true,
+  "denyPurge": true,
+  "denyReuse": true,
+  "denyMutation": true,
+  "secretsProtectionEnabled": true,
+  "maxRecords": 10000
+}

@@ -1,0 +1,31 @@
+{
+    "tool_id":  "SEARCH_ENGINE",
+    "category":  "RESEARCH",
+    "description":  "Effectuer des recherches web autorisÃ©es.",
+    "authorized_workers":  [
+                               "MAYA",
+                               "ALEX",
+                               "LUCAS",
+                               "EMMA",
+                               "NOAH"
+                           ],
+    "allowed_actions":  [
+                            "SEARCH",
+                            "READ",
+                            "REPORT"
+                        ],
+    "financial_action":  false,
+    "external_action":  true,
+    "secret_required":  false,
+    "permission_check":  true,
+    "client_isolation":  true,
+    "project_isolation":  true,
+    "worker_isolation":  true,
+    "audit_logging":  true,
+    "human_override":  true,
+    "security":  {
+                     "secret_exposure":  false,
+                     "financial_actions":  false,
+                     "unsafe_external_action":  false
+                 }
+}

@@ -1,0 +1,22 @@
+﻿{
+  "version": "1.0",
+  "system": "BK-AI-WORKERS",
+  "enabled": true,
+  "tokenSecurityEnabled": true,
+  "hashTokensBeforeStorage": true,
+  "sessionExpirationEnabled": true,
+  "revocationEnabled": true,
+  "rotationEnabled": true,
+  "requireTenantBinding": true,
+  "requireClientBinding": true,
+  "requireSessionBinding": true,
+  "tokenDurationSeconds": 3600,
+  "maxSessions": 100000,
+  "maxTokenRecords": 100000,
+  "allowExpiredToken": false,
+  "allowRevokedToken": false,
+  "captureRawTokens": false,
+  "captureSecrets": false,
+  "capturePayloads": false,
+  "liveExecutionEnabled": false
+}

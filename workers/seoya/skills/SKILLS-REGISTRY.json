@@ -1,0 +1,147 @@
+{
+    "worker": "SEOYA",
+    "role": "SEO & Search Intelligence",
+    "version": "1.0.0",
+    "description": "Catalogue professionnel de compétences pour SEOYA.",
+    "skills": {
+        "TECHNICAL_SEO": {
+            "enabled": true,
+            "category": "SEO_TECHNIQUE",
+            "description": "Compétence TECHNICAL_SEO de SEOYA."
+        },
+        "CRAWL_ANALYSIS": {
+            "enabled": true,
+            "category": "SEO_TECHNIQUE",
+            "description": "Compétence CRAWL_ANALYSIS de SEOYA."
+        },
+        "INDEXATION": {
+            "enabled": true,
+            "category": "SEO_TECHNIQUE",
+            "description": "Compétence INDEXATION de SEOYA."
+        },
+        "STRUCTURED_DATA": {
+            "enabled": true,
+            "category": "SEO_TECHNIQUE",
+            "description": "Compétence STRUCTURED_DATA de SEOYA."
+        },
+        "SITEMAP": {
+            "enabled": true,
+            "category": "SEO_TECHNIQUE",
+            "description": "Compétence SITEMAP de SEOYA."
+        },
+        "ROBOTS_TXT": {
+            "enabled": true,
+            "category": "SEO_TECHNIQUE",
+            "description": "Compétence ROBOTS_TXT de SEOYA."
+        },
+        "KEYWORD_RESEARCH": {
+            "enabled": true,
+            "category": "SEO_ON_PAGE",
+            "description": "Compétence KEYWORD_RESEARCH de SEOYA."
+        },
+        "CONTENT_OPTIMIZATION": {
+            "enabled": true,
+            "category": "SEO_ON_PAGE",
+            "description": "Compétence CONTENT_OPTIMIZATION de SEOYA."
+        },
+        "TITLE_META_OPTIMIZATION": {
+            "enabled": true,
+            "category": "SEO_ON_PAGE",
+            "description": "Compétence TITLE_META_OPTIMIZATION de SEOYA."
+        },
+        "INTERNAL_LINKING": {
+            "enabled": true,
+            "category": "SEO_ON_PAGE",
+            "description": "Compétence INTERNAL_LINKING de SEOYA."
+        },
+        "SEARCH_INTENT": {
+            "enabled": true,
+            "category": "SEO_ON_PAGE",
+            "description": "Compétence SEARCH_INTENT de SEOYA."
+        },
+        "SEARCH_CONSOLE": {
+            "enabled": true,
+            "category": "SEO_ANALYTICS",
+            "description": "Compétence SEARCH_CONSOLE de SEOYA."
+        },
+        "TRAFFIC_ANALYSIS": {
+            "enabled": true,
+            "category": "SEO_ANALYTICS",
+            "description": "Compétence TRAFFIC_ANALYSIS de SEOYA."
+        },
+        "LOCAL_SEO": {
+            "enabled": true,
+            "category": "LOCAL_SEO",
+            "description": "Compétence LOCAL_SEO de SEOYA."
+        },
+        "GOOGLE_BUSINESS_PROFILE": {
+            "enabled": true,
+            "category": "LOCAL_SEO",
+            "description": "Compétence GOOGLE_BUSINESS_PROFILE de SEOYA."
+        },
+        "LOCAL_CITATIONS": {
+            "enabled": true,
+            "category": "LOCAL_SEO",
+            "description": "Compétence LOCAL_CITATIONS de SEOYA."
+        },
+        "LOCAL_LANDING_PAGES": {
+            "enabled": true,
+            "category": "LOCAL_SEO",
+            "description": "Compétence LOCAL_LANDING_PAGES de SEOYA."
+        },
+        "LOCAL_REVIEWS": {
+            "enabled": true,
+            "category": "LOCAL_SEO",
+            "description": "Compétence LOCAL_REVIEWS de SEOYA."
+        },
+        "CORE_WEB_VITALS": {
+            "enabled": true,
+            "category": "SEO_TECHNIQUE",
+            "description": "Compétence CORE_WEB_VITALS de SEOYA."
+        },
+        "SERP_ANALYSIS": {
+            "enabled": true,
+            "category": "SEO_STRATEGIQUE",
+            "description": "Compétence SERP_ANALYSIS de SEOYA."
+        },
+        "INTERNATIONAL_SEO": {
+            "enabled": true,
+            "category": "SEO_STRATEGIQUE",
+            "description": "Compétence INTERNATIONAL_SEO de SEOYA."
+        },
+        "ECOMMERCE_SEO": {
+            "enabled": true,
+            "category": "SEO_STRATEGIQUE",
+            "description": "Compétence ECOMMERCE_SEO de SEOYA."
+        },
+        "COMPETITIVE_ANALYSIS": {
+            "enabled": true,
+            "category": "SEO_STRATEGIQUE",
+            "description": "Compétence COMPETITIVE_ANALYSIS de SEOYA."
+        },
+        "ORGANIC_STRATEGY": {
+            "enabled": true,
+            "category": "SEO_STRATEGIQUE",
+            "description": "Compétence ORGANIC_STRATEGY de SEOYA."
+        },
+        "BACKLINK_ANALYSIS": {
+            "enabled": true,
+            "category": "SEO_OFF_PAGE",
+            "description": "Compétence BACKLINK_ANALYSIS de SEOYA."
+        },
+        "RANK_TRACKING": {
+            "enabled": true,
+            "category": "SEO_OFF_PAGE",
+            "description": "Compétence RANK_TRACKING de SEOYA."
+        }
+    },
+    "governance": {
+        "security_status": "VALID",
+        "client_isolation": true,
+        "project_isolation": true,
+        "worker_isolation": true,
+        "secret_exposure": false,
+        "financial_actions": false,
+        "external_actions": false
+    }
+}

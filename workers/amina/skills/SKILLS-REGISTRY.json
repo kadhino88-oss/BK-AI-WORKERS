@@ -1,0 +1,62 @@
+{
+    "worker": "AMINA",
+    "role": "Research & Intelligence",
+    "version": "1.0.0",
+    "description": "Catalogue professionnel de compétences pour AMINA.",
+    "skills": {
+        "MARKET_RESEARCH": {
+            "enabled": true,
+            "category": "RESEARCH_CORE",
+            "description": "Compétence MARKET_RESEARCH de AMINA."
+        },
+        "COMPETITIVE_INTELLIGENCE": {
+            "enabled": true,
+            "category": "RESEARCH_CORE",
+            "description": "Compétence COMPETITIVE_INTELLIGENCE de AMINA."
+        },
+        "INDUSTRY_TREND_MONITORING": {
+            "enabled": true,
+            "category": "RESEARCH_CORE",
+            "description": "Compétence INDUSTRY_TREND_MONITORING de AMINA."
+        },
+        "BENCHMARK_ANALYSIS": {
+            "enabled": true,
+            "category": "RESEARCH_CORE",
+            "description": "Compétence BENCHMARK_ANALYSIS de AMINA."
+        },
+        "SURVEY_DESIGN": {
+            "enabled": true,
+            "category": "RESEARCH_METHODS",
+            "description": "Compétence SURVEY_DESIGN de AMINA."
+        },
+        "LITERATURE_REVIEW": {
+            "enabled": true,
+            "category": "RESEARCH_METHODS",
+            "description": "Compétence LITERATURE_REVIEW de AMINA."
+        },
+        "PERSONA_RESEARCH": {
+            "enabled": true,
+            "category": "RESEARCH_METHODS",
+            "description": "Compétence PERSONA_RESEARCH de AMINA."
+        },
+        "REPORT_SYNTHESIS": {
+            "enabled": true,
+            "category": "RESEARCH_OUTPUT",
+            "description": "Compétence REPORT_SYNTHESIS de AMINA."
+        },
+        "DATA_SOURCING": {
+            "enabled": true,
+            "category": "RESEARCH_OUTPUT",
+            "description": "Compétence DATA_SOURCING de AMINA."
+        }
+    },
+    "governance": {
+        "security_status": "VALID",
+        "client_isolation": true,
+        "project_isolation": true,
+        "worker_isolation": true,
+        "secret_exposure": false,
+        "financial_actions": false,
+        "external_actions": false
+    }
+}

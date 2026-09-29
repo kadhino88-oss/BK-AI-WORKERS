@@ -1,0 +1,177 @@
+{
+    "worker": "SOPHIE",
+    "role": "RH & Recrutement",
+    "version": "1.1.0",
+    "description": "Catalogue professionnel de compétences pour SOPHIE. Étendu le 2026-09-22 avec un moteur ATS IA (analyse d'offres, parsing de CV, matching multi-critères, gap analysis, screening et intelligence recruteur).",
+    "skills": {
+        "JOB_DESCRIPTION_WRITING": {
+            "enabled": true,
+            "category": "RECRUITMENT",
+            "description": "Compétence JOB_DESCRIPTION_WRITING de SOPHIE."
+        },
+        "SOURCING": {
+            "enabled": true,
+            "category": "RECRUITMENT",
+            "description": "Compétence SOURCING de SOPHIE."
+        },
+        "CV_SCREENING": {
+            "enabled": true,
+            "category": "RECRUITMENT",
+            "description": "Compétence CV_SCREENING de SOPHIE."
+        },
+        "INTERVIEW_SCHEDULING": {
+            "enabled": true,
+            "category": "RECRUITMENT",
+            "description": "Compétence INTERVIEW_SCHEDULING de SOPHIE."
+        },
+        "REFERENCE_CHECK_PREP": {
+            "enabled": true,
+            "category": "RECRUITMENT",
+            "description": "Compétence REFERENCE_CHECK_PREP de SOPHIE."
+        },
+        "ATS_MANAGEMENT": {
+            "enabled": true,
+            "category": "RECRUITMENT_TOOLS",
+            "description": "Compétence ATS_MANAGEMENT de SOPHIE."
+        },
+        "CANDIDATE_EXPERIENCE": {
+            "enabled": true,
+            "category": "RECRUITMENT_TOOLS",
+            "description": "Compétence CANDIDATE_EXPERIENCE de SOPHIE."
+        },
+        "ONBOARDING_CHECKLIST": {
+            "enabled": true,
+            "category": "EMPLOYEE_LIFECYCLE",
+            "description": "Compétence ONBOARDING_CHECKLIST de SOPHIE."
+        },
+        "OFFBOARDING_CHECKLIST": {
+            "enabled": true,
+            "category": "EMPLOYEE_LIFECYCLE",
+            "description": "Compétence OFFBOARDING_CHECKLIST de SOPHIE."
+        },
+        "CONTRACT_PREPARATION_HR": {
+            "enabled": true,
+            "category": "EMPLOYEE_LIFECYCLE",
+            "description": "Compétence CONTRACT_PREPARATION_HR de SOPHIE."
+        },
+        "EMPLOYER_BRANDING": {
+            "enabled": true,
+            "category": "HR_MARKETING",
+            "description": "Compétence EMPLOYER_BRANDING de SOPHIE."
+        },
+        "JOB_POSTING": {
+            "enabled": true,
+            "category": "HR_MARKETING",
+            "description": "Compétence JOB_POSTING de SOPHIE."
+        },
+        "DIVERSITY_REPORTING": {
+            "enabled": true,
+            "category": "HR_ANALYTICS",
+            "description": "Compétence DIVERSITY_REPORTING de SOPHIE."
+        },
+        "HEADCOUNT_TRACKING": {
+            "enabled": true,
+            "category": "HR_ANALYTICS",
+            "description": "Compétence HEADCOUNT_TRACKING de SOPHIE."
+        },
+        "TURNOVER_ANALYSIS": {
+            "enabled": true,
+            "category": "HR_ANALYTICS",
+            "description": "Compétence TURNOVER_ANALYSIS de SOPHIE."
+        },
+        "JOB_DESCRIPTION_ANALYSIS": {
+            "enabled": true,
+            "category": "RECRUITMENT_AI_ANALYSIS",
+            "description": "Analyse une offre d'emploi existante et en extrait la structure : intitulé, missions, responsabilités, compétences, expérience, diplômes, certifications, langues, localisation, disponibilité, critères obligatoires et critères souhaités."
+        },
+        "REQUIREMENTS_EXTRACTION": {
+            "enabled": true,
+            "category": "RECRUITMENT_AI_ANALYSIS",
+            "description": "Transforme une offre d'emploi analysée en exigences structurées (critères obligatoires vs souhaités) exploitables par le moteur de matching."
+        },
+        "CV_PARSING": {
+            "enabled": true,
+            "category": "RECRUITMENT_AI_ANALYSIS",
+            "description": "Extrait et structure automatiquement un CV (PDF, DOCX, TXT, scan OCR) en profil candidat exploitable : identité, expérience, formation, compétences, certifications, langues, localisation, disponibilité, sans inventer d'information absente du document."
+        },
+        "EXPERIENCE_ANALYSIS": {
+            "enabled": true,
+            "category": "RECRUITMENT_AI_ANALYSIS",
+            "description": "Interprète le contenu réel d'une expérience professionnelle (secteur, environnement de travail, responsabilités implicites) au-delà de la simple correspondance de mots-clés avec l'intitulé de poste."
+        },
+        "SKILL_MATCHING": {
+            "enabled": true,
+            "category": "RECRUITMENT_AI_MATCHING",
+            "description": "Compare les compétences exigées par le poste aux compétences réelles et démontrées du candidat."
+        },
+        "EXPERIENCE_MATCHING": {
+            "enabled": true,
+            "category": "RECRUITMENT_AI_MATCHING",
+            "description": "Compare l'expérience professionnelle exigée par le poste (durée, secteur, nature des missions) à l'expérience réelle du candidat."
+        },
+        "EDUCATION_MATCHING": {
+            "enabled": true,
+            "category": "RECRUITMENT_AI_MATCHING",
+            "description": "Compare la formation, les diplômes et les certifications du candidat aux exigences académiques du poste."
+        },
+        "LOCATION_MATCHING": {
+            "enabled": true,
+            "category": "RECRUITMENT_AI_MATCHING",
+            "description": "Évalue la compatibilité géographique entre le poste et le candidat : localisation, mobilité déclarée, distance, possibilité de télétravail."
+        },
+        "LANGUAGE_MATCHING": {
+            "enabled": true,
+            "category": "RECRUITMENT_AI_MATCHING",
+            "description": "Compare les langues et niveaux requis par le poste aux langues déclarées par le candidat, lorsque le niveau est disponible."
+        },
+        "GAP_ANALYSIS": {
+            "enabled": true,
+            "category": "RECRUITMENT_AI_MATCHING",
+            "description": "Consolide les résultats de matching en une analyse d'écarts exploitable par le recruteur : correspondances confirmées, manques identifiés, points à vérifier."
+        },
+        "SCREENING_QUESTIONS": {
+            "enabled": true,
+            "category": "RECRUITMENT_AI_SCREENING",
+            "description": "Génère des questions de présélection spécifiques au poste et aux écarts identifiés dans le profil du candidat."
+        },
+        "INTERVIEW_PREPARATION": {
+            "enabled": true,
+            "category": "RECRUITMENT_AI_SCREENING",
+            "description": "Prépare le recruteur avant l'entretien : résumé du candidat, points forts du parcours, points à clarifier, questions techniques et comportementales liées au poste."
+        },
+        "INTERVIEW_SUMMARY": {
+            "enabled": true,
+            "category": "RECRUITMENT_AI_SCREENING",
+            "description": "Structure la synthèse d'un entretien à partir des observations transmises par le recruteur, en séparant clairement les faits observés des interprétations humaines."
+        },
+        "CANDIDATE_COMPARISON": {
+            "enabled": true,
+            "category": "RECRUITMENT_AI_INTELLIGENCE",
+            "description": "Compare plusieurs profils candidats selon les critères définis par l'offre, sous forme de tableau factuel ; la décision de sélection reste au recruteur."
+        },
+        "RECRUITMENT_REPORT": {
+            "enabled": true,
+            "category": "RECRUITMENT_AI_INTELLIGENCE",
+            "description": "Produit un rapport de recrutement structuré : poste, besoin, critères, candidats analysés, correspondances, écarts, questions de présélection, synthèse."
+        },
+        "RECRUITMENT_ANALYTICS": {
+            "enabled": true,
+            "category": "RECRUITMENT_AI_INTELLIGENCE",
+            "description": "Fournit des indicateurs de pipeline de recrutement pour l'entreprise : volume de candidatures, CV analysés, taux de correspondance aux critères, délais de traitement, sources de candidatures."
+        },
+        "RECRUITMENT_COMPLIANCE": {
+            "enabled": true,
+            "category": "RECRUITMENT_COMPLIANCE",
+            "description": "Contrôle l'accès aux CV et données personnelles, la séparation client/projet, la traçabilité, et interdit la transformation automatique de caractéristiques personnelles ou protégées en critères de sélection."
+        }
+    },
+    "governance": {
+        "security_status": "VALID",
+        "client_isolation": true,
+        "project_isolation": true,
+        "worker_isolation": true,
+        "secret_exposure": false,
+        "financial_actions": false,
+        "external_actions": false
+    }
+}

@@ -1,0 +1,24 @@
+﻿[
+    {
+        "UsageId":  "USE-8A9A036D37184B089261A5076B512012",
+        "UsageHash":  "c2b60ebd460e39bde44ca2098d2ef1a2128a3bf83c4d877a043903dfb7d02bc0",
+        "MaterializationId":  "MAT-8A18-001",
+        "LeaseId":  "LEASE-8A18-001",
+        "ExecutionId":  "EXEC-8A18-001",
+        "WorkerId":  "SAM",
+        "Action":  "CONNECTOR_USE",
+        "Connector":  "CONTROLLED-API",
+        "ProjectId":  "PROJECT-001",
+        "ClientId":  "CLIENT-001",
+        "TenantId":  "TENANT-001",
+        "CreatedAtUtc":  "2026-09-11T10:38:57.9516129Z",
+        "ExpiresAtUtc":  "2026-09-11T10:39:27.9516129Z",
+        "ConsumedAtUtc":  "2026-09-11T10:38:58.1688636Z",
+        "RevokedAtUtc":  null,
+        "Status":  "CONSUMED",
+        "Used":  true,
+        "Decision":  "ALLOW",
+        "RawSecret":  null,
+        "RawCredential":  null
+    }
+]

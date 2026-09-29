@@ -1,0 +1,30 @@
+﻿[
+    {
+        "ConsumptionId":  "CONSUME-AAB8BB1FEF4A471BA4E8445D1F468534",
+        "EnforcementId":  "ENF-8A34-001",
+        "RecoveryId":  "REC-8A34-001",
+        "TenantId":  "TENANT-001",
+        "ClientId":  "CLIENT-001",
+        "ProjectId":  "PROJECT-001",
+        "UserId":  "USER-001",
+        "WorkerId":  "SAM",
+        "ExecutionId":  "EXEC-8A34-001",
+        "Action":  "CONNECTOR_USE",
+        "Connector":  "CONTROLLED-API",
+        "ContextHash":  "f7bf9012b87d785b1a1fd5f92cca4b3a41ce4b75ae877b869ddbd310ad89e0d2",
+        "Nonce":  "c132439b8473444ea9166074bc560f6c",
+        "Enforced":  true,
+        "PermanentLock":  true,
+        "Immutable":  true,
+        "FreshBinding":  true,
+        "Decision":  "ALLOW",
+        "ConsumptionStatus":  "CONSUMED",
+        "OneTimeUse":  true,
+        "ReplayBlocked":  true,
+        "CreatedAtUtc":  "2026-09-11T12:12:46.4277132Z",
+        "ConsumedAtUtc":  "2026-09-11T12:12:46.4277132Z",
+        "IntegrityHash":  "cab698e1934083cccbb4461a1b11729c1bfdbf11a6ff9ef4928aea790141d6ad",
+        "RawSecret":  null,
+        "RawCredential":  null
+    }
+]

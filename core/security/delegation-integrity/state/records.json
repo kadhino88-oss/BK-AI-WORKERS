@@ -1,0 +1,26 @@
+﻿{
+    "version":  "1.0",
+    "items":  [
+                  {
+                      "DelegationId":  "DELEG-2A86F831312042709FD6E1D7EE0A3AAC",
+                      "ParentAuthorityId":  "WTA-BFCD94698A044E7C9B4B6C29183FB6F9",
+                      "ParentWorkerId":  "LUCAS",
+                      "ParentTaskId":  "TASK-001",
+                      "ChildWorkerId":  "LUCAS",
+                      "ChildTaskId":  "TASK-CHILD-001",
+                      "UserId":  "8A14-USER",
+                      "TenantId":  "8A14-TENANT",
+                      "ClientId":  "8A14-CLIENT",
+                      "ProjectId":  "8A14-PROJECT",
+                      "SessionId":  "cf2eb6cf-d11d-425e-a6da-ebde0d9c92f2",
+                      "GrantId":  "GRANT-E1FDF1575E2A4D5CB6849F8AD1ED6E22",
+                      "BindingId":  "GEB-E8B3DFB31114482B8A912BCB0455A4DF",
+                      "ExecutionId":  "EXEC-8A14-001",
+                      "Action":  "READ",
+                      "FreshnessId":  "FRESH-D6EF699595AE4F829D150EF6772C8A38",
+                      "IntegrityId":  "CTXINT-550594C37B2B4C8F9DFEF871F07DB287",
+                      "CreatedAtUtc":  "2026-09-11T08:03:30.8574200Z",
+                      "Status":  "ACTIVE"
+                  }
+              ]
+}

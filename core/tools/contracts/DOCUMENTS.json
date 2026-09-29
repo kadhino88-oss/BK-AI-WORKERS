@@ -1,0 +1,34 @@
+{
+    "tool_id":  "DOCUMENTS",
+    "category":  "PRODUCTIVITY",
+    "description":  "CrÃ©er et gÃ©rer des documents professionnels.",
+    "authorized_workers":  [
+                               "NOAH",
+                               "MAYA",
+                               "ALEX",
+                               "LUCAS",
+                               "EMMA",
+                               "LEA"
+                           ],
+    "allowed_actions":  [
+                            "READ",
+                            "CREATE",
+                            "UPDATE",
+                            "EXPORT",
+                            "REVIEW"
+                        ],
+    "financial_action":  false,
+    "external_action":  false,
+    "secret_required":  false,
+    "permission_check":  true,
+    "client_isolation":  true,
+    "project_isolation":  true,
+    "worker_isolation":  true,
+    "audit_logging":  true,
+    "human_override":  true,
+    "security":  {
+                     "secret_exposure":  false,
+                     "financial_actions":  false,
+                     "unsafe_external_action":  false
+                 }
+}

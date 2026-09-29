@@ -1,0 +1,99 @@
+﻿{
+    "skill_id":  "LIFECYCLE_EMAIL",
+    "worker":  "MAYA",
+    "category":  "EMAIL",
+    "mission":  {
+                    "objective":  "CrÃ©er des communications liÃ©es au cycle de vie client.",
+                    "success_condition":  "Livrable exploitable produit conformÃ©ment au contexte client et projet."
+                },
+    "inputs":  [
+                   "client_id",
+                   "project_id",
+                   "task_id",
+                   "objective",
+                   "validated_context",
+                   "validated_memory"
+               ],
+    "outputs":  [
+                    "deliverable",
+                    "recommendations",
+                    "next_action",
+                    "kpi_targets",
+                    "status"
+                ],
+    "tools":  [
+                  "AI_GATEWAY",
+                  "PROVIDER_ENGINE",
+                  "MEMORY_ENGINE",
+                  "ORCHESTRATOR"
+              ],
+    "memory":  {
+                   "raw_secret_access":  false,
+                   "task":  true,
+                   "global":  true,
+                   "client":  true,
+                   "execution":  true,
+                   "worker":  true,
+                   "project":  true
+               },
+    "permissions":  {
+                        "create":  true,
+                        "send":  true,
+                        "financial_actions":  false,
+                        "write":  true,
+                        "read":  true,
+                        "modify":  true,
+                        "external_actions":  false
+                    },
+    "dependencies":  [
+                         "CONTEXT_VALIDATION",
+                         "CLIENT_ISOLATION",
+                         "PROJECT_ISOLATION"
+                     ],
+    "collaborators":  [
+                          "ALEX",
+                          "EMMA",
+                          "LEA",
+                          "LUCAS",
+                          "NOAH"
+                      ],
+    "kpis":  [
+                 "deliverable_quality",
+                 "execution_time",
+                 "task_completion",
+                 "business_relevance"
+             ],
+    "security":  {
+                     "financial_actions":  false,
+                     "client_isolation":  true,
+                     "project_isolation":  true,
+                     "worker_isolation":  true,
+                     "secret_exposure":  false,
+                     "status":  "VALID",
+                     "external_actions":  false
+                 },
+    "escalation":  {
+                       "default_status":  "NEEDS_HUMAN",
+                       "human_required_for":  [
+                                                  "financial_transaction",
+                                                  "credential_exposure",
+                                                  "permission_escalation",
+                                                  "unsafe_external_action"
+                                              ]
+                   },
+    "error_handling":  {
+                           "no_false_success":  true,
+                           "states":  [
+                                          "SUCCESS",
+                                          "PARTIAL_SUCCESS",
+                                          "BLOCKED",
+                                          "NEEDS_HUMAN",
+                                          "ERROR"
+                                      ]
+                       },
+    "lifecycle":  {
+                      "generated_by":  "MAYA-SKILL-CONTRACT-BUILDER",
+                      "version":  "1.0.0",
+                      "enabled":  true
+                  }
+}

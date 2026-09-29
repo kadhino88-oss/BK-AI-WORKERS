@@ -1,0 +1,28 @@
+﻿[
+    {
+        "AuthorizationId":  "RAUTH-D3720323187F43E5A2F77E70FC30902C",
+        "AuthorizationHash":  "67df6bd1d038b53781de76511586c2af7deb6d6a9ba74522a91ce7a69418681d",
+        "ParentRecoveryId":  "REC-8A24-PARENT",
+        "ParentChainId":  "CHAIN-8A24-OLD",
+        "UserId":  "USER-001",
+        "TenantId":  "TENANT-001",
+        "ClientId":  "CLIENT-001",
+        "ProjectId":  "PROJECT-001",
+        "WorkerId":  "SAM",
+        "Action":  "CONNECTOR_USE",
+        "Connector":  "CONTROLLED-API",
+        "NewChainId":  "CHAIN-D7D9975E52BD4B889864610F0C50E881",
+        "NewLeaseId":  "LEASE-C3CDDCA38AA64F8298C7390D5104C051",
+        "NewMaterializationId":  "MAT-2131907D3AF341B6934B1EDD6E7F60E8",
+        "NewUsageId":  "USE-E1492A2C753D47409D94697FA136CB96",
+        "NewExecutionId":  "EXEC-9A500C91304E4693984BC14CAC03865B",
+        "ParentChainStatus":  "REVOKED",
+        "AuthorizationStatus":  "CONSUMED",
+        "Decision":  "BLOCK",
+        "CreatedAtUtc":  "2026-09-11T11:58:09.1453085Z",
+        "ConsumedAtUtc":  "2026-09-11T11:58:09.3114970Z",
+        "RevokedAtUtc":  null,
+        "RawSecret":  null,
+        "RawCredential":  null
+    }
+]

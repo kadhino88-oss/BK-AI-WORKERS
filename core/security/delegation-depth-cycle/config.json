@@ -1,0 +1,21 @@
+{
+  "version":"1.0",
+  "system":"BK-AI-WORKERS",
+  "enabled":true,
+  "delegationDepthCycleGuardEnabled":true,
+  "cycleDetectionEnabled":true,
+  "ancestorReuseDetectionEnabled":true,
+  "maxDepthEnabled":true,
+  "maxDelegationDepth":8,
+  "failClosed":true,
+  "requireParentDelegation":true,
+  "requireSameUser":true,
+  "requireSameTenant":true,
+  "requireSameClient":true,
+  "requireSameProject":true,
+  "defaultDecision":"BLOCK",
+  "maxRecords":100000,
+  "captureSecrets":false,
+  "capturePayloads":false,
+  "liveExecutionEnabled":false
+}

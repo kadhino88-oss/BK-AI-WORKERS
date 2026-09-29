@@ -1,0 +1,661 @@
+{
+    "Schema":  "BK-AI-WORKERS-MASTER-PRE-LIVE-SECURITY-AUDIT",
+    "Version":  "1.0",
+    "Root":  "C:\\Users\\FEUCOM\\BK-AI-WORKERS",
+    "TimestampUtc":  "2026-09-12T13:16:14.4882507Z",
+    "Summary":  {
+                    "Total":  80,
+                    "Pass":  80,
+                    "Fail":  0,
+                    "Unknown":  0
+                },
+    "Decision":  "VALIDEE",
+    "Pass":  [
+                 {
+                     "Id":  "A01",
+                     "Area":  "PROJECT",
+                     "Name":  "Project root present",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "B01",
+                     "Area":  "SECURITY SURFACE",
+                     "Name":  "Required file: core\\security\\rbac\\RBAC.ps1",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "B01",
+                     "Area":  "SECURITY SURFACE",
+                     "Name":  "Required file: core\\security\\session-token-security\\runtime.ps1",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "B01",
+                     "Area":  "SECURITY SURFACE",
+                     "Name":  "Required file: core\\runtime\\security-gate\\Global-Security-Enforcement-Gate.ps1",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "B01",
+                     "Area":  "SECURITY SURFACE",
+                     "Name":  "Required file: core\\runtime\\security-gate\\Invoke-Secure-Execution.ps1",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "B01",
+                     "Area":  "SECURITY SURFACE",
+                     "Name":  "Required file: core\\runtime\\security-gate\\execution-context-integrity\\Execution-Context-Integrity-Guard.ps1",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "B01",
+                     "Area":  "SECURITY SURFACE",
+                     "Name":  "Required file: core\\runtime\\security-gate\\authorization-proof-integrity\\Authorization-Proof-Integrity-Guard.ps1",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "B01",
+                     "Area":  "SECURITY SURFACE",
+                     "Name":  "Required file: core\\runtime\\security-gate\\authorization-proof-freshness\\Authorization-Proof-Freshness-Guard.ps1",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "B01",
+                     "Area":  "SECURITY SURFACE",
+                     "Name":  "Required file: core\\runtime\\security-gate\\authorization-proof-atomic-consumption\\Authorization-Proof-Atomic-Consumption-Guard.ps1",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "B01",
+                     "Area":  "SECURITY SURFACE",
+                     "Name":  "Required file: core\\runtime\\security-gate\\authorization-proof-lifecycle\\Authorization-Proof-Lifecycle-Guard.ps1",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "B01",
+                     "Area":  "SECURITY SURFACE",
+                     "Name":  "Required file: core\\ai\\AI-GATEWAY.ps1",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "B01",
+                     "Area":  "SECURITY SURFACE",
+                     "Name":  "Required file: core\\ai\\AI-PROVIDER-ENGINE.ps1",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "B01",
+                     "Area":  "SECURITY SURFACE",
+                     "Name":  "Required file: orchestrator\\runtime\\Invoke-Orchestrator.ps1",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "C01",
+                     "Area":  "INVENTORY",
+                     "Name":  "Production PowerShell inventory",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  "COUNT=207"
+                 },
+                 {
+                     "Id":  "C02",
+                     "Area":  "INVENTORY",
+                     "Name":  "JS/TS inventory",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  "NO_JS_TS_IN_PRODUCTION"
+                 },
+                 {
+                     "Id":  "C03",
+                     "Area":  "INVENTORY",
+                     "Name":  "JSON inventory",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  "COUNT=663"
+                 },
+                 {
+                     "Id":  "D01",
+                     "Area":  "CODE INTEGRITY",
+                     "Name":  "All production PowerShell files parse successfully",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "E01",
+                     "Area":  "GLOBAL GATE",
+                     "Name":  "Invoke-GlobalSecurityGate available",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "E02",
+                     "Area":  "GLOBAL GATE",
+                     "Name":  "Assert-GlobalSecurityGate available",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "F01",
+                     "Area":  "GLOBAL GATE",
+                     "Name":  "Valid certification chain =\u003e ALLOW",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "F02",
+                     "Area":  "GLOBAL GATE",
+                     "Name":  "Bypass test: SessionValid",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "F02",
+                     "Area":  "GLOBAL GATE",
+                     "Name":  "Bypass test: RBACAuthorized",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "F02",
+                     "Area":  "GLOBAL GATE",
+                     "Name":  "Bypass test: ScopeValid",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "F02",
+                     "Area":  "GLOBAL GATE",
+                     "Name":  "Bypass test: AuthorizationValid",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "F02",
+                     "Area":  "GLOBAL GATE",
+                     "Name":  "Bypass test: CapabilityAuthorized",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "F02",
+                     "Area":  "GLOBAL GATE",
+                     "Name":  "Bypass test: AuthorityAuthorized",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "F02",
+                     "Area":  "GLOBAL GATE",
+                     "Name":  "Bypass test: PolicyAuthorized",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "F02",
+                     "Area":  "GLOBAL GATE",
+                     "Name":  "Bypass test: WorkerTaskAuthorized",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "F02",
+                     "Area":  "GLOBAL GATE",
+                     "Name":  "Bypass test: CredentialAuthorized",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "F02",
+                     "Area":  "GLOBAL GATE",
+                     "Name":  "Bypass test: ConnectorAuthorized",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "F02",
+                     "Area":  "GLOBAL GATE",
+                     "Name":  "Bypass test: ProviderAuthorized",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "F02",
+                     "Area":  "GLOBAL GATE",
+                     "Name":  "Bypass test: EvidenceAuthorized",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "F02",
+                     "Area":  "GLOBAL GATE",
+                     "Name":  "Bypass test: RetentionValid",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "F02",
+                     "Area":  "GLOBAL GATE",
+                     "Name":  "Bypass test: PurgeReuseValid",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "F03",
+                     "Area":  "GLOBAL GATE",
+                     "Name":  "Direct provider execution blocked",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "F04",
+                     "Area":  "GLOBAL GATE",
+                     "Name":  "Direct connector execution blocked",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "F05",
+                     "Area":  "GLOBAL GATE",
+                     "Name":  "Secrets-present execution blocked",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "F06",
+                     "Area":  "GLOBAL GATE",
+                     "Name":  "LIVE without production flag blocked",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "G01",
+                     "Area":  "EXECUTION",
+                     "Name":  "No direct Invoke-WebRequest in critical paths",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "G01",
+                     "Area":  "EXECUTION",
+                     "Name":  "No direct Invoke-RestMethod in critical paths",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "G01",
+                     "Area":  "EXECUTION",
+                     "Name":  "No direct Start-Process in critical paths",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "G01",
+                     "Area":  "EXECUTION",
+                     "Name":  "No direct Start-BitsTransfer in critical paths",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "H01",
+                     "Area":  "CODE EXECUTION",
+                     "Name":  "No production reference: Invoke-Expression",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "H01",
+                     "Area":  "CODE EXECUTION",
+                     "Name":  "No production reference: FromBase64String",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "H01",
+                     "Area":  "CODE EXECUTION",
+                     "Name":  "No production reference: [ScriptBlock]::Create",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "H01",
+                     "Area":  "CODE EXECUTION",
+                     "Name":  "No production reference: Add-Type",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "I01",
+                     "Area":  "AI SECURITY",
+                     "Name":  "AI Gateway references Global Security Gate",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "I02",
+                     "Area":  "AI SECURITY",
+                     "Name":  "AI Gateway provider boundary present",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "I03",
+                     "Area":  "AI SECURITY",
+                     "Name":  "AI Provider security boundary present",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "J01",
+                     "Area":  "MULTI-TENANT",
+                     "Name":  "Orchestrator references TenantId",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "J01",
+                     "Area":  "MULTI-TENANT",
+                     "Name":  "Orchestrator references ClientId",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "J01",
+                     "Area":  "MULTI-TENANT",
+                     "Name":  "Orchestrator references ProjectId",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "J01",
+                     "Area":  "MULTI-TENANT",
+                     "Name":  "Orchestrator references ExecutionId",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "J02",
+                     "Area":  "ORCHESTRATOR",
+                     "Name":  "Security boundary referenced",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "J03",
+                     "Area":  "MULTI-TENANT",
+                     "Name":  "No obvious hardcoded execution identity",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "K01",
+                     "Area":  "SECRETS",
+                     "Name":  "No high-confidence embedded secret pattern",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "K01",
+                     "Area":  "SECRETS",
+                     "Name":  "No high-confidence embedded secret pattern",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "K01",
+                     "Area":  "SECRETS",
+                     "Name":  "No high-confidence embedded secret pattern",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "K01",
+                     "Area":  "SECRETS",
+                     "Name":  "No high-confidence embedded secret pattern",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "K01",
+                     "Area":  "SECRETS",
+                     "Name":  "No high-confidence embedded secret pattern",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "K01",
+                     "Area":  "SECRETS",
+                     "Name":  "No high-confidence embedded secret pattern",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "L01",
+                     "Area":  "SUPPLY CHAIN",
+                     "Name":  ".env protection present in .gitignore",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "M01",
+                     "Area":  "JS/TS SECURITY",
+                     "Name":  "No production reference: child_process",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "M01",
+                     "Area":  "JS/TS SECURITY",
+                     "Name":  "No production reference: exec(",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "M01",
+                     "Area":  "JS/TS SECURITY",
+                     "Name":  "No production reference: execSync(",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "M01",
+                     "Area":  "JS/TS SECURITY",
+                     "Name":  "No production reference: spawn(",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "M01",
+                     "Area":  "JS/TS SECURITY",
+                     "Name":  "No production reference: eval(",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "M01",
+                     "Area":  "JS/TS SECURITY",
+                     "Name":  "No production reference: new Function(",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "N01",
+                     "Area":  "LIVE SECURITY",
+                     "Name":  "LIVE control surface: liveExecutionEnabled",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "N01",
+                     "Area":  "LIVE SECURITY",
+                     "Name":  "LIVE control surface: LiveExecutionAllowed",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "N01",
+                     "Area":  "LIVE SECURITY",
+                     "Name":  "LIVE control surface: ProductionFlag",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "N01",
+                     "Area":  "LIVE SECURITY",
+                     "Name":  "LIVE control surface: HumanApproval",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "N01",
+                     "Area":  "LIVE SECURITY",
+                     "Name":  "LIVE control surface: Environment-Guard",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "N01",
+                     "Area":  "LIVE SECURITY",
+                     "Name":  "LIVE control surface: CONTROLLED-LIVE-ACTIVATION",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  "CONTROLLED-LIVE-ACTIVATION.ps1 PRESENT"
+                 },
+                 {
+                     "Id":  "N01",
+                     "Area":  "LIVE SECURITY",
+                     "Name":  "LIVE control surface: LIVE-PROVIDER-SAFETY-GATE",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "O01",
+                     "Area":  "SUPPLY CHAIN",
+                     "Name":  "Backup/legacy artifacts identified",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  "COUNT=71"
+                 },
+                 {
+                     "Id":  "P01",
+                     "Area":  "CONFIG",
+                     "Name":  "Production JSON files parse",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "Q01",
+                     "Area":  "CERTIFICATION",
+                     "Name":  "Certification structure: core\\runtime\\certification-gate\\CERTIFICATION-READINESS-GATE.ps1",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "Q01",
+                     "Area":  "CERTIFICATION",
+                     "Name":  "Certification structure: core\\runtime\\certification-gate\\CERTIFICATION-EVIDENCE-INTEGRITY-GATE.ps1",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 },
+                 {
+                     "Id":  "Q01",
+                     "Area":  "CERTIFICATION",
+                     "Name":  "Certification structure: core\\runtime\\certification-gate\\CERTIFICATION-SECURITY-INTEGRATION-GATE.ps1",
+                     "Status":  "PASS",
+                     "Reason":  "",
+                     "Evidence":  ""
+                 }
+             ],
+    "Fail":  [
+
+             ],
+    "Unknown":  [
+
+                ]
+}

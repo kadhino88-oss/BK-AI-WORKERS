@@ -1,0 +1,267 @@
+{
+    "worker":  "EMMA",
+    "role":  "Responsable Contenu \u0026 Social Media",
+    "version":  "1.0.0",
+    "description":  "Catalogue professionnel de compétences pour EMMA.",
+    "skills":  {
+                   "SOCIAL_LISTENING":  {
+                                            "enabled":  true,
+                                            "category":  "REPUTATION",
+                                            "description":  "Compétence SOCIAL_LISTENING de EMMA."
+                                        },
+                   "REPUTATION_MONITORING":  {
+                                                 "enabled":  true,
+                                                 "category":  "REPUTATION",
+                                                 "description":  "Compétence REPUTATION_MONITORING de EMMA."
+                                             },
+                   "REPUTATION_RESPONSE":  {
+                                               "enabled":  true,
+                                               "category":  "REPUTATION",
+                                               "description":  "Compétence REPUTATION_RESPONSE de EMMA."
+                                           },
+                   "CRISIS_COMMUNICATION":  {
+                                                "enabled":  true,
+                                                "category":  "REPUTATION",
+                                                "description":  "Compétence CRISIS_COMMUNICATION de EMMA."
+                                            },
+                   "SHORT_FORM_VIDEO":  {
+                                            "enabled":  true,
+                                            "category":  "VIDEO_SHORT_FORM",
+                                            "description":  "Compétence SHORT_FORM_VIDEO de EMMA."
+                                        },
+                   "VIDEO_SCRIPT":  {
+                                        "enabled":  true,
+                                        "category":  "VIDEO_SHORT_FORM",
+                                        "description":  "Compétence VIDEO_SCRIPT de EMMA."
+                                    },
+                   "HOOK_CREATION":  {
+                                         "enabled":  true,
+                                         "category":  "VIDEO_SHORT_FORM",
+                                         "description":  "Compétence HOOK_CREATION de EMMA."
+                                     },
+                   "VIDEO_CONTENT_PLANNING":  {
+                                                  "enabled":  true,
+                                                  "category":  "VIDEO_SHORT_FORM",
+                                                  "description":  "Compétence VIDEO_CONTENT_PLANNING de EMMA."
+                                              },
+                   "INSTAGRAM":  {
+                                     "enabled":  true,
+                                     "category":  "RESEAUX_SOCIAUX",
+                                     "description":  "Compétence INSTAGRAM de EMMA."
+                                 },
+                   "FACEBOOK":  {
+                                    "enabled":  true,
+                                    "category":  "RESEAUX_SOCIAUX",
+                                    "description":  "Compétence FACEBOOK de EMMA."
+                                },
+                   "LINKEDIN":  {
+                                    "enabled":  true,
+                                    "category":  "RESEAUX_SOCIAUX",
+                                    "description":  "Compétence LINKEDIN de EMMA."
+                                },
+                   "TIKTOK":  {
+                                  "enabled":  true,
+                                  "category":  "RESEAUX_SOCIAUX",
+                                  "description":  "Compétence TIKTOK de EMMA."
+                              },
+                   "YOUTUBE_SHORTS":  {
+                                          "enabled":  true,
+                                          "category":  "RESEAUX_SOCIAUX",
+                                          "description":  "Compétence YOUTUBE_SHORTS de EMMA."
+                                      },
+                   "INFLUENCER_IDENTIFICATION":  {
+                                                     "enabled":  true,
+                                                     "category":  "INFLUENCE",
+                                                     "description":  "Compétence INFLUENCER_IDENTIFICATION de EMMA."
+                                                 },
+                   "INFLUENCER_OUTREACH":  {
+                                               "enabled":  true,
+                                               "category":  "INFLUENCE",
+                                               "description":  "Compétence INFLUENCER_OUTREACH de EMMA."
+                                           },
+                   "CREATOR_BRIEF":  {
+                                         "enabled":  true,
+                                         "category":  "INFLUENCE",
+                                         "description":  "Compétence CREATOR_BRIEF de EMMA."
+                                     },
+                   "INFLUENCER_CAMPAIGN":  {
+                                               "enabled":  true,
+                                               "category":  "INFLUENCE",
+                                               "description":  "Compétence INFLUENCER_CAMPAIGN de EMMA."
+                                           },
+                   "COPYWRITING":  {
+                                       "enabled":  true,
+                                       "category":  "COPYWRITING",
+                                       "description":  "Compétence COPYWRITING de EMMA."
+                                   },
+                   "AD_COPY":  {
+                                   "enabled":  true,
+                                   "category":  "COPYWRITING",
+                                   "description":  "Compétence AD_COPY de EMMA."
+                               },
+                   "SOCIAL_COPY":  {
+                                       "enabled":  true,
+                                       "category":  "COPYWRITING",
+                                       "description":  "Compétence SOCIAL_COPY de EMMA."
+                                   },
+                   "EMAIL_COPY":  {
+                                      "enabled":  true,
+                                      "category":  "COPYWRITING",
+                                      "description":  "Compétence EMAIL_COPY de EMMA."
+                                  },
+                   "HEADLINE_WRITING":  {
+                                            "enabled":  true,
+                                            "category":  "COPYWRITING",
+                                            "description":  "Compétence HEADLINE_WRITING de EMMA."
+                                        },
+                   "CTA_WRITING":  {
+                                       "enabled":  true,
+                                       "category":  "COPYWRITING",
+                                       "description":  "Compétence CTA_WRITING de EMMA."
+                                   },
+                   "SOCIAL_MEDIA_STRATEGY":  {
+                                                 "enabled":  true,
+                                                 "category":  "SOCIAL_MEDIA",
+                                                 "description":  "Compétence SOCIAL_MEDIA_STRATEGY de EMMA."
+                                             },
+                   "SOCIAL_MEDIA_PLANNING":  {
+                                                 "enabled":  true,
+                                                 "category":  "SOCIAL_MEDIA",
+                                                 "description":  "Compétence SOCIAL_MEDIA_PLANNING de EMMA."
+                                             },
+                   "PLATFORM_STRATEGY":  {
+                                             "enabled":  true,
+                                             "category":  "SOCIAL_MEDIA",
+                                             "description":  "Compétence PLATFORM_STRATEGY de EMMA."
+                                         },
+                   "SOCIAL_PUBLISHING":  {
+                                             "enabled":  true,
+                                             "category":  "SOCIAL_MEDIA",
+                                             "description":  "Compétence SOCIAL_PUBLISHING de EMMA."
+                                         },
+                   "SOCIAL_ANALYTICS":  {
+                                            "enabled":  true,
+                                            "category":  "SOCIAL_MEDIA",
+                                            "description":  "Compétence SOCIAL_ANALYTICS de EMMA."
+                                        },
+                   "CONTENT_STRATEGY":  {
+                                            "enabled":  true,
+                                            "category":  "CONTENT",
+                                            "description":  "Compétence CONTENT_STRATEGY de EMMA."
+                                        },
+                   "CONTENT_PLANNING":  {
+                                            "enabled":  true,
+                                            "category":  "CONTENT",
+                                            "description":  "Compétence CONTENT_PLANNING de EMMA."
+                                        },
+                   "CONTENT_REPURPOSING":  {
+                                               "enabled":  true,
+                                               "category":  "CONTENT",
+                                               "description":  "Compétence CONTENT_REPURPOSING de EMMA."
+                                           },
+                   "CONTENT_CALENDAR":  {
+                                            "enabled":  true,
+                                            "category":  "CONTENT",
+                                            "description":  "Compétence CONTENT_CALENDAR de EMMA."
+                                        },
+                   "EDITORIAL_GUIDELINES":  {
+                                                "enabled":  true,
+                                                "category":  "CONTENT",
+                                                "description":  "Compétence EDITORIAL_GUIDELINES de EMMA."
+                                            },
+                   "UGC_STRATEGY":  {
+                                        "enabled":  true,
+                                        "category":  "UGC",
+                                        "description":  "Compétence UGC_STRATEGY de EMMA."
+                                    },
+                   "UGC_CAMPAIGN":  {
+                                        "enabled":  true,
+                                        "category":  "UGC",
+                                        "description":  "Compétence UGC_CAMPAIGN de EMMA."
+                                    },
+                   "UGC_MODERATION":  {
+                                          "enabled":  true,
+                                          "category":  "UGC",
+                                          "description":  "Compétence UGC_MODERATION de EMMA."
+                                      },
+                   "CREATOR_CONTENT":  {
+                                           "enabled":  true,
+                                           "category":  "UGC",
+                                           "description":  "Compétence CREATOR_CONTENT de EMMA."
+                                       },
+                   "EDITORIAL_CALENDAR":  {
+                                              "enabled":  true,
+                                              "category":  "CALENDRIER_EDITORIAL",
+                                              "description":  "Compétence EDITORIAL_CALENDAR de EMMA."
+                                          },
+                   "CONTENT_SCHEDULING":  {
+                                              "enabled":  true,
+                                              "category":  "CALENDRIER_EDITORIAL",
+                                              "description":  "Compétence CONTENT_SCHEDULING de EMMA."
+                                          },
+                   "CAMPAIGN_PLANNING":  {
+                                             "enabled":  true,
+                                             "category":  "CALENDRIER_EDITORIAL",
+                                             "description":  "Compétence CAMPAIGN_PLANNING de EMMA."
+                                         },
+                   "CONTENT_PIPELINE":  {
+                                            "enabled":  true,
+                                            "category":  "CALENDRIER_EDITORIAL",
+                                            "description":  "Compétence CONTENT_PIPELINE de EMMA."
+                                        },
+                   "ENGAGEMENT_STRATEGY":  {
+                                               "enabled":  true,
+                                               "category":  "ENGAGEMENT",
+                                               "description":  "Compétence ENGAGEMENT_STRATEGY de EMMA."
+                                           },
+                   "AUDIENCE_GROWTH":  {
+                                           "enabled":  true,
+                                           "category":  "ENGAGEMENT",
+                                           "description":  "Compétence AUDIENCE_GROWTH de EMMA."
+                                       },
+                   "COMMUNITY_ACTIVATION":  {
+                                                "enabled":  true,
+                                                "category":  "ENGAGEMENT",
+                                                "description":  "Compétence COMMUNITY_ACTIVATION de EMMA."
+                                            },
+                   "CONTENT_ENGAGEMENT":  {
+                                              "enabled":  true,
+                                              "category":  "ENGAGEMENT",
+                                              "description":  "Compétence CONTENT_ENGAGEMENT de EMMA."
+                                          },
+                   "COMMUNITY_MANAGEMENT":  {
+                                                "enabled":  true,
+                                                "category":  "COMMUNITY_MANAGEMENT",
+                                                "description":  "Compétence COMMUNITY_MANAGEMENT de EMMA."
+                                            },
+                   "COMMENT_MANAGEMENT":  {
+                                              "enabled":  true,
+                                              "category":  "COMMUNITY_MANAGEMENT",
+                                              "description":  "Compétence COMMENT_MANAGEMENT de EMMA."
+                                          },
+                   "MESSAGE_MANAGEMENT":  {
+                                              "enabled":  true,
+                                              "category":  "COMMUNITY_MANAGEMENT",
+                                              "description":  "Compétence MESSAGE_MANAGEMENT de EMMA."
+                                          },
+                   "COMMUNITY_ENGAGEMENT":  {
+                                                "enabled":  true,
+                                                "category":  "COMMUNITY_MANAGEMENT",
+                                                "description":  "Compétence COMMUNITY_ENGAGEMENT de EMMA."
+                                            },
+                   "ESCALATION_MANAGEMENT":  {
+                                                 "enabled":  true,
+                                                 "category":  "COMMUNITY_MANAGEMENT",
+                                                 "description":  "Compétence ESCALATION_MANAGEMENT de EMMA."
+                                             }
+               },
+    "governance":  {
+                       "security_status":  "VALID",
+                       "client_isolation":  true,
+                       "project_isolation":  true,
+                       "worker_isolation":  true,
+                       "secret_exposure":  false,
+                       "financial_actions":  false,
+                       "external_actions":  false
+                   }
+}

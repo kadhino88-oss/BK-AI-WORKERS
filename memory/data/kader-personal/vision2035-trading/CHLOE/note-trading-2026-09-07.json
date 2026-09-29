@@ -1,0 +1,8 @@
+﻿{
+    "memory_key":  "note-trading-2026-09-07",
+    "client_id":  "kader-personal",
+    "project_id":  "vision2035-trading",
+    "worker_id":  "CHLOE",
+    "value":  "- [22:33] **Kader veut faire avancer le projet trading en prioritÃ©** (Vision 2035) - statut: en attente (info)\n  Contexte : le pipeline mean-reversion (module 4) est valide (backtest + walk-forward + sensibilite horizon,\n  tous significatifs), le scan quotidien et le filtre de stress tournent, et la premiere validation manuelle\n  bout en bout (scan -\u003e validation manuelle sur MT5 demo, XAUUSD/XAUEUR) a ete faite le 04/09/2026.\n  Kader dit vouloir investir bientot et que l\u0027analyse/l\u0027agent continuent d\u0027avancer. Rappel a respecter dans\n  toute reponse sur ce sujet : jamais d\u0027ordre reel envoye automatiquement, toujours confirmation manuelle\n  de Kader avant toute execution, et aucun conseil financier personnalise a donner - seulement de l\u0027analyse,\n  du backtest et des outils.\n",
+    "updated_at":  "2026-09-14T20:19:08.9678211Z"
+}

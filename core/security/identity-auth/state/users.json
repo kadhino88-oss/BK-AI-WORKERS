@@ -1,0 +1,263 @@
+﻿[
+    {
+        "UserId":  "8A16-USER",
+        "Username":  "8A16-USER",
+        "TenantId":  "8A16-TENANT",
+        "ClientId":  "8A16-CLIENT",
+        "ProjectId":  "8A16-PROJECT",
+        "AccountStatus":  "ACTIVE",
+        "CreatedAtUtc":  "2026-09-11T08:21:32.3781680Z"
+    },
+    {
+        "UserId":  "USER-CLAUDE-TEST",
+        "Username":  "claude-test",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "AccountStatus":  "ACTIVE",
+        "CreatedAtUtc":  "2026-09-13T20:31:21.0271547Z"
+    },
+    {
+        "UserId":  "USER-DASHBOARD-SERVICE",
+        "Username":  "dashboard-service",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-DASHBOARD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "AccountStatus":  "ACTIVE",
+        "CreatedAtUtc":  "2026-09-14T10:29:56.1975253Z"
+    },
+    {
+        "UserId":  "USER-CLAUDE-TEST2",
+        "Username":  "claude-test2",
+        "TenantId":  "TEN-CLAUDE-TEST2",
+        "ClientId":  "CLI-CLAUDE-TEST2",
+        "ProjectId":  "PROJ-CLAUDE-TEST2",
+        "AccountStatus":  "ACTIVE",
+        "CreatedAtUtc":  "2026-09-14T20:04:38.6466589Z"
+    },
+    {
+        "UserId":  "USER-CLAUDE-TEST3",
+        "Username":  "claude-test3",
+        "TenantId":  "TEN-CLAUDE-TEST3",
+        "ClientId":  "CLI-CLAUDE-TEST3",
+        "ProjectId":  "PROJ-CLAUDE-TEST3",
+        "AccountStatus":  "ACTIVE",
+        "CreatedAtUtc":  "2026-09-14T20:22:02.1334501Z"
+    },
+    {
+        "UserId":  "USER-CLAUDE-TEST4",
+        "Username":  "claude-test4",
+        "TenantId":  "TEN-CLAUDE-TEST4",
+        "ClientId":  "CLI-CLAUDE-TEST4",
+        "ProjectId":  "PROJ-CLAUDE-TEST4",
+        "AccountStatus":  "ACTIVE",
+        "CreatedAtUtc":  "2026-09-14T20:23:02.4453505Z"
+    },
+    {
+        "UserId":  "USER-CLAUDE-TEST5",
+        "Username":  "claude-test5",
+        "TenantId":  "TEN-CLAUDE-TEST5",
+        "ClientId":  "CLI-CLAUDE-TEST5",
+        "ProjectId":  "PROJ-CLAUDE-TEST5",
+        "AccountStatus":  "ACTIVE",
+        "CreatedAtUtc":  "2026-09-14T20:29:56.9546517Z"
+    },
+    {
+        "UserId":  "USER-CLAUDE-TEST6",
+        "Username":  "claude-test6",
+        "TenantId":  "TEN-CLAUDE-TEST6",
+        "ClientId":  "CLI-CLAUDE-TEST6",
+        "ProjectId":  "PROJ-CLAUDE-TEST6",
+        "AccountStatus":  "ACTIVE",
+        "CreatedAtUtc":  "2026-09-14T20:33:00.1141662Z"
+    },
+    {
+        "UserId":  "USER-CLAUDE-TEST7",
+        "Username":  "claude-test7",
+        "TenantId":  "TEN-CLAUDE-TEST7",
+        "ClientId":  "CLI-CLAUDE-TEST7",
+        "ProjectId":  "PROJ-CLAUDE-TEST7",
+        "AccountStatus":  "ACTIVE",
+        "CreatedAtUtc":  "2026-09-14T20:33:50.9808784Z"
+    },
+    {
+        "UserId":  "USER-CLAUDE-TEST8",
+        "Username":  "claude-test8",
+        "TenantId":  "TEN-CLAUDE-TEST8",
+        "ClientId":  "CLI-CLAUDE-TEST8",
+        "ProjectId":  "PROJ-CLAUDE-TEST8",
+        "AccountStatus":  "ACTIVE",
+        "CreatedAtUtc":  "2026-09-14T20:35:17.8928157Z"
+    },
+    {
+        "UserId":  "USER-CLAUDE-TEST9",
+        "Username":  "claude-test9",
+        "TenantId":  "TEN-CLAUDE-TEST9",
+        "ClientId":  "CLI-CLAUDE-TEST9",
+        "ProjectId":  "PROJ-CLAUDE-TEST9",
+        "AccountStatus":  "ACTIVE",
+        "CreatedAtUtc":  "2026-09-14T20:36:27.3157485Z"
+    },
+    {
+        "UserId":  "USER-CLAUDE-TEST10",
+        "Username":  "claude-test10",
+        "TenantId":  "TEN-CLAUDE-TEST10",
+        "ClientId":  "CLI-CLAUDE-TEST10",
+        "ProjectId":  "PROJ-CLAUDE-TEST10",
+        "AccountStatus":  "ACTIVE",
+        "CreatedAtUtc":  "2026-09-14T20:37:22.4924778Z"
+    },
+    {
+        "UserId":  "USER-CLAUDE-FINAL",
+        "Username":  "claude-final",
+        "TenantId":  "TEN-CLAUDE-FINAL",
+        "ClientId":  "CLI-CLAUDE-FINAL",
+        "ProjectId":  "PROJ-CLAUDE-FINAL",
+        "AccountStatus":  "ACTIVE",
+        "CreatedAtUtc":  "2026-09-14T20:38:41.3548259Z"
+    },
+    {
+        "UserId":  "USER-CLAUDE-FINAL2",
+        "Username":  "claude-final2",
+        "TenantId":  "TEN-CLAUDE-FINAL2",
+        "ClientId":  "CLI-CLAUDE-FINAL2",
+        "ProjectId":  "PROJ-CLAUDE-FINAL2",
+        "AccountStatus":  "ACTIVE",
+        "CreatedAtUtc":  "2026-09-14T20:42:57.5603054Z"
+    },
+    {
+        "UserId":  "USER-CLAUDE-CHAIN",
+        "Username":  "claude-chain",
+        "TenantId":  "TEN-CLAUDE-CHAIN",
+        "ClientId":  "CLI-CLAUDE-CHAIN",
+        "ProjectId":  "PROJ-CLAUDE-CHAIN",
+        "AccountStatus":  "ACTIVE",
+        "CreatedAtUtc":  "2026-09-14T21:20:11.4504446Z"
+    },
+    {
+        "UserId":  "USER-CLAUDE-CHAIN2",
+        "Username":  "claude-chain2",
+        "TenantId":  "TEN-CLAUDE-CHAIN2",
+        "ClientId":  "CLI-CLAUDE-CHAIN2",
+        "ProjectId":  "PROJ-CLAUDE-CHAIN2",
+        "AccountStatus":  "ACTIVE",
+        "CreatedAtUtc":  "2026-09-14T21:21:39.2701683Z"
+    },
+    {
+        "UserId":  "USER-CLAUDE-REGR",
+        "Username":  "claude-regr",
+        "TenantId":  "TEN-CLAUDE-REGR",
+        "ClientId":  "CLI-CLAUDE-REGR",
+        "ProjectId":  "PROJ-CLAUDE-REGR",
+        "AccountStatus":  "ACTIVE",
+        "CreatedAtUtc":  "2026-09-14T21:42:14.3640579Z"
+    },
+    {
+        "UserId":  "USER-CLAUDE-FULLCHECK",
+        "Username":  "claude-fullcheck",
+        "TenantId":  "TEN-CLAUDE-FULLCHECK",
+        "ClientId":  "CLI-CLAUDE-FULLCHECK",
+        "ProjectId":  "PROJ-CLAUDE-FULLCHECK",
+        "AccountStatus":  "ACTIVE",
+        "CreatedAtUtc":  "2026-09-14T22:00:38.3380353Z"
+    },
+    {
+        "UserId":  "USER-CLAUDE-CHLOECHECK",
+        "Username":  "claude-chloecheck",
+        "TenantId":  "TEN-CLAUDE-CHLOECHECK",
+        "ClientId":  "CLI-CLAUDE-CHLOECHECK",
+        "ProjectId":  "PROJ-CLAUDE-CHLOECHECK",
+        "AccountStatus":  "ACTIVE",
+        "CreatedAtUtc":  "2026-09-14T22:01:27.1518069Z"
+    },
+    {
+        "UserId":  "USER-CLAUDE-PIPELINE",
+        "Username":  "claude-pipeline",
+        "TenantId":  "TEN-CLAUDE-PIPELINE",
+        "ClientId":  "CLI-CLAUDE-PIPELINE",
+        "ProjectId":  "PROJ-CLAUDE-PIPELINE",
+        "AccountStatus":  "ACTIVE",
+        "CreatedAtUtc":  "2026-09-14T22:25:34.6235661Z"
+    },
+    {
+        "UserId":  "USER-CLAUDE-PIPECHAIN",
+        "Username":  "claude-pipechain",
+        "TenantId":  "TEN-CLAUDE-PIPECHAIN",
+        "ClientId":  "CLI-CLAUDE-PIPECHAIN",
+        "ProjectId":  "PROJ-CLAUDE-PIPECHAIN",
+        "AccountStatus":  "ACTIVE",
+        "CreatedAtUtc":  "2026-09-14T22:26:22.2328972Z"
+    },
+    {
+        "UserId":  "USER-CLAUDE-GATE",
+        "Username":  "claude-gate",
+        "TenantId":  "TEN-CLAUDE-GATE",
+        "ClientId":  "CLI-CLAUDE-GATE",
+        "ProjectId":  "PROJ-CLAUDE-GATE",
+        "AccountStatus":  "ACTIVE",
+        "CreatedAtUtc":  "2026-09-14T22:36:13.8313992Z"
+    },
+    {
+        "UserId":  "USER-CLAUDE-GATE2",
+        "Username":  "claude-gate2",
+        "TenantId":  "TEN-CLAUDE-GATE2",
+        "ClientId":  "CLI-CLAUDE-GATE2",
+        "ProjectId":  "PROJ-CLAUDE-GATE2",
+        "AccountStatus":  "ACTIVE",
+        "CreatedAtUtc":  "2026-09-14T22:37:11.9660707Z"
+    },
+    {
+        "UserId":  "USER-SERVICE-CLI-TRIAL-PUBLIC",
+        "Username":  "service-cli-trial-public",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-TRIAL-PUBLIC",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "AccountStatus":  "ACTIVE",
+        "CreatedAtUtc":  "2026-09-22T19:02:24.5234820Z"
+    },
+    {
+        "UserId":  "USER-SERVICE-CLI-CUST-F6B73D2E",
+        "Username":  "service-cli-cust-f6b73d2e",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-CUST-F6B73D2E",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "AccountStatus":  "ACTIVE",
+        "CreatedAtUtc":  "2026-09-22T19:36:40.8522862Z"
+    },
+    {
+        "UserId":  "USER-SERVICE-CLI-CUST-36A34207",
+        "Username":  "service-cli-cust-36a34207",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-CUST-36A34207",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "AccountStatus":  "ACTIVE",
+        "CreatedAtUtc":  "2026-09-22T19:39:09.5179352Z"
+    },
+    {
+        "UserId":  "USER-SERVICE-CLI-CUST-655315BB",
+        "Username":  "service-cli-cust-655315bb",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-CUST-655315BB",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "AccountStatus":  "ACTIVE",
+        "CreatedAtUtc":  "2026-09-22T19:57:06.4306453Z"
+    },
+    {
+        "UserId":  "USER-SERVICE-CLI-CUST-21956946",
+        "Username":  "service-cli-cust-21956946",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-CUST-21956946",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "AccountStatus":  "ACTIVE",
+        "CreatedAtUtc":  "2026-09-22T20:32:43.1257705Z"
+    },
+    {
+        "UserId":  "USER-SERVICE-CLI-CUST-B32CE8DD",
+        "Username":  "service-cli-cust-b32ce8dd",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-CUST-B32CE8DD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "AccountStatus":  "ACTIVE",
+        "CreatedAtUtc":  "2026-09-23T17:32:16.7786760Z"
+    }
+]

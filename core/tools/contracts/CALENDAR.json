@@ -1,0 +1,30 @@
+{
+    "tool_id":  "CALENDAR",
+    "category":  "PRODUCTIVITY",
+    "description":  "GÃ©rer les agendas et rendez-vous.",
+    "authorized_workers":  [
+                               "NOAH",
+                               "ALEX",
+                               "MAYA"
+                           ],
+    "allowed_actions":  [
+                            "READ",
+                            "CREATE",
+                            "UPDATE",
+                            "CANCEL"
+                        ],
+    "financial_action":  false,
+    "external_action":  true,
+    "secret_required":  true,
+    "permission_check":  true,
+    "client_isolation":  true,
+    "project_isolation":  true,
+    "worker_isolation":  true,
+    "audit_logging":  true,
+    "human_override":  true,
+    "security":  {
+                     "secret_exposure":  false,
+                     "financial_actions":  false,
+                     "unsafe_external_action":  false
+                 }
+}

@@ -1,0 +1,77 @@
+{
+    "worker": "INES",
+    "role": "Data & Analytics",
+    "version": "1.0.0",
+    "description": "Catalogue professionnel de compétences pour INES.",
+    "skills": {
+        "DATA_CLEANING": {
+            "enabled": true,
+            "category": "DATA_ENGINEERING",
+            "description": "Compétence DATA_CLEANING de INES."
+        },
+        "DATA_QUALITY_AUDIT": {
+            "enabled": true,
+            "category": "DATA_ENGINEERING",
+            "description": "Compétence DATA_QUALITY_AUDIT de INES."
+        },
+        "REPORTING_AUTOMATION": {
+            "enabled": true,
+            "category": "DATA_ENGINEERING",
+            "description": "Compétence REPORTING_AUTOMATION de INES."
+        },
+        "DASHBOARD_BUILDING": {
+            "enabled": true,
+            "category": "DATA_VISUALIZATION",
+            "description": "Compétence DASHBOARD_BUILDING de INES."
+        },
+        "KPI_DEFINITION": {
+            "enabled": true,
+            "category": "DATA_VISUALIZATION",
+            "description": "Compétence KPI_DEFINITION de INES."
+        },
+        "DATA_STORYTELLING": {
+            "enabled": true,
+            "category": "DATA_VISUALIZATION",
+            "description": "Compétence DATA_STORYTELLING de INES."
+        },
+        "COHORT_ANALYSIS": {
+            "enabled": true,
+            "category": "DATA_ANALYSIS",
+            "description": "Compétence COHORT_ANALYSIS de INES."
+        },
+        "AB_TEST_ANALYSIS": {
+            "enabled": true,
+            "category": "DATA_ANALYSIS",
+            "description": "Compétence AB_TEST_ANALYSIS de INES."
+        },
+        "TREND_ANALYSIS": {
+            "enabled": true,
+            "category": "DATA_ANALYSIS",
+            "description": "Compétence TREND_ANALYSIS de INES."
+        },
+        "SEGMENTATION_ANALYSIS": {
+            "enabled": true,
+            "category": "DATA_ANALYSIS",
+            "description": "Compétence SEGMENTATION_ANALYSIS de INES."
+        },
+        "PREDICTIVE_MODELING_PREP": {
+            "enabled": true,
+            "category": "DATA_SCIENCE_PREP",
+            "description": "Compétence PREDICTIVE_MODELING_PREP de INES."
+        },
+        "ANOMALY_DETECTION": {
+            "enabled": true,
+            "category": "DATA_SCIENCE_PREP",
+            "description": "Compétence ANOMALY_DETECTION de INES."
+        }
+    },
+    "governance": {
+        "security_status": "VALID",
+        "client_isolation": true,
+        "project_isolation": true,
+        "worker_isolation": true,
+        "secret_exposure": false,
+        "financial_actions": false,
+        "external_actions": false
+    }
+}

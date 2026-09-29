@@ -1,0 +1,102 @@
+{
+    "worker": "NORA",
+    "role": "Customer Support",
+    "version": "1.0.0",
+    "description": "Catalogue professionnel de compétences pour NORA.",
+    "skills": {
+        "TICKET_TRIAGE": {
+            "enabled": true,
+            "category": "SUPPORT_OPERATIONS",
+            "description": "Compétence TICKET_TRIAGE de NORA."
+        },
+        "TICKET_RESOLUTION": {
+            "enabled": true,
+            "category": "SUPPORT_OPERATIONS",
+            "description": "Compétence TICKET_RESOLUTION de NORA."
+        },
+        "ESCALATION_MANAGEMENT": {
+            "enabled": true,
+            "category": "SUPPORT_OPERATIONS",
+            "description": "Compétence ESCALATION_MANAGEMENT de NORA."
+        },
+        "SLA_TRACKING": {
+            "enabled": true,
+            "category": "SUPPORT_OPERATIONS",
+            "description": "Compétence SLA_TRACKING de NORA."
+        },
+        "LIVE_CHAT": {
+            "enabled": true,
+            "category": "SUPPORT_CHANNELS",
+            "description": "Compétence LIVE_CHAT de NORA."
+        },
+        "EMAIL_SUPPORT": {
+            "enabled": true,
+            "category": "SUPPORT_CHANNELS",
+            "description": "Compétence EMAIL_SUPPORT de NORA."
+        },
+        "WHATSAPP_SUPPORT": {
+            "enabled": true,
+            "category": "SUPPORT_CHANNELS",
+            "description": "Compétence WHATSAPP_SUPPORT de NORA."
+        },
+        "MULTILINGUAL_SUPPORT": {
+            "enabled": true,
+            "category": "SUPPORT_CHANNELS",
+            "description": "Compétence MULTILINGUAL_SUPPORT de NORA."
+        },
+        "FAQ_MANAGEMENT": {
+            "enabled": true,
+            "category": "KNOWLEDGE_BASE",
+            "description": "Compétence FAQ_MANAGEMENT de NORA."
+        },
+        "KNOWLEDGE_BASE_WRITING": {
+            "enabled": true,
+            "category": "KNOWLEDGE_BASE",
+            "description": "Compétence KNOWLEDGE_BASE_WRITING de NORA."
+        },
+        "MACRO_TEMPLATES": {
+            "enabled": true,
+            "category": "KNOWLEDGE_BASE",
+            "description": "Compétence MACRO_TEMPLATES de NORA."
+        },
+        "SATISFACTION_SURVEY": {
+            "enabled": true,
+            "category": "CUSTOMER_INSIGHT",
+            "description": "Compétence SATISFACTION_SURVEY de NORA."
+        },
+        "CHURN_SIGNAL_DETECTION": {
+            "enabled": true,
+            "category": "CUSTOMER_INSIGHT",
+            "description": "Compétence CHURN_SIGNAL_DETECTION de NORA."
+        },
+        "FEEDBACK_ANALYSIS": {
+            "enabled": true,
+            "category": "CUSTOMER_INSIGHT",
+            "description": "Compétence FEEDBACK_ANALYSIS de NORA."
+        },
+        "RETURNS_PREPARATION": {
+            "enabled": true,
+            "category": "AFTER_SALES",
+            "description": "Compétence RETURNS_PREPARATION de NORA."
+        },
+        "REFUND_PREPARATION": {
+            "enabled": true,
+            "category": "AFTER_SALES",
+            "description": "Compétence REFUND_PREPARATION de NORA."
+        },
+        "WARRANTY_TRACKING": {
+            "enabled": true,
+            "category": "AFTER_SALES",
+            "description": "Compétence WARRANTY_TRACKING de NORA."
+        }
+    },
+    "governance": {
+        "security_status": "VALID",
+        "client_isolation": true,
+        "project_isolation": true,
+        "worker_isolation": true,
+        "secret_exposure": false,
+        "financial_actions": false,
+        "external_actions": false
+    }
+}

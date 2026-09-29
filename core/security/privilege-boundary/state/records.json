@@ -1,0 +1,23 @@
+﻿{
+    "version":  "1.0",
+    "items":  [
+                  {
+                      "BoundaryId":  "BOUNDARY-EF9B40FA0B134971BACA564D6D2F8422",
+                      "UserId":  "8A10-PRIMARY-USER",
+                      "SessionId":  "c9d96312-7edc-40c5-a510-425d92a9f652",
+                      "GrantId":  "GRANT-66DD6A1B6A2141A8833B6F8BAEE35F6F",
+                      "BindingId":  "GEB-38FFF146C0B449709C161A532D1CE84F",
+                      "ExecutionId":  "EXEC-8A10-PRIMARY-001",
+                      "Action":  "READ",
+                      "TenantId":  "8A10-PRIMARY-TENANT",
+                      "ClientId":  "8A10-PRIMARY-CLIENT",
+                      "ProjectId":  "8A10-PRIMARY-PROJECT",
+                      "AuthorizedScopeType":  "PROJECT",
+                      "AuthorizedScopeId":  "8A10-PRIMARY-PROJECT",
+                      "AuthorizedParentScopeType":  "CLIENT",
+                      "AuthorizedParentScopeId":  "8A10-PRIMARY-CLIENT",
+                      "IssuedAtUtc":  "2026-09-11T07:34:15.1184126Z",
+                      "Status":  "INVALIDATED"
+                  }
+              ]
+}

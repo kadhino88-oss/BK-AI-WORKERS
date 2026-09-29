@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <linearGradient id="bg-seoya" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0E7C7B"/>
+      <stop offset="100%" stop-color="#8FA6A5"/>
+    </linearGradient>
+  </defs>
+  <circle cx="100" cy="100" r="98" fill="url(#bg-seoya)"/>
+  <circle cx="100" cy="100" r="98" fill="none" stroke="#EAF6F5" stroke-width="2" opacity="0.5"/>
+  <text x="100" y="72" font-family="Georgia, 'Times New Roman', serif" font-size="46" font-weight="bold"
+        text-anchor="middle" fill="#EAF6F5" opacity="0.9">S</text>
+  <g transform="translate(100 128)">
+    <circle cx="-6" cy="-6" r="14" fill="none" stroke="#EAF6F5" stroke-width="3" opacity="0.95"/>
+    <line x1="5" y1="5" x2="18" y2="18" stroke="#EAF6F5" stroke-width="4" stroke-linecap="round" opacity="0.95"/>
+  </g>
+  <text x="100" y="182" font-family="Arial, sans-serif" font-size="13" letter-spacing="3"
+        text-anchor="middle" fill="#EAF6F5" opacity="0.85">SEOYA</text>
+</svg>

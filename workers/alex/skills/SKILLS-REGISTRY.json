@@ -1,0 +1,257 @@
+{
+    "worker":  "ALEX",
+    "role":  "Responsable Prospection \u0026 Sales",
+    "version":  "1.0.0",
+    "description":  "Catalogue professionnel de compétences pour ALEX.",
+    "skills":  {
+                   "PROSPECTING_STRATEGY":  {
+                                                "enabled":  true,
+                                                "category":  "PROSPECTION",
+                                                "description":  "Compétence PROSPECTING_STRATEGY de ALEX."
+                                            },
+                   "OUTBOUND_PROSPECTING":  {
+                                                "enabled":  true,
+                                                "category":  "PROSPECTION",
+                                                "description":  "Compétence OUTBOUND_PROSPECTING de ALEX."
+                                            },
+                   "INBOUND_LEAD_HANDLING":  {
+                                                 "enabled":  true,
+                                                 "category":  "PROSPECTION",
+                                                 "description":  "Compétence INBOUND_LEAD_HANDLING de ALEX."
+                                             },
+                   "PROSPECT_LIST_BUILDING":  {
+                                                  "enabled":  true,
+                                                  "category":  "PROSPECTION",
+                                                  "description":  "Compétence PROSPECT_LIST_BUILDING de ALEX."
+                                              },
+                   "TERRITORY_PLANNING":  {
+                                              "enabled":  true,
+                                              "category":  "PROSPECTION",
+                                              "description":  "Compétence TERRITORY_PLANNING de ALEX."
+                                          },
+                   "COLD_EMAIL":  {
+                                      "enabled":  true,
+                                      "category":  "EMAIL_OUTBOUND",
+                                      "description":  "Compétence COLD_EMAIL de ALEX."
+                                  },
+                   "EMAIL_SEQUENCE":  {
+                                          "enabled":  true,
+                                          "category":  "EMAIL_OUTBOUND",
+                                          "description":  "Compétence EMAIL_SEQUENCE de ALEX."
+                                      },
+                   "PERSONALIZED_OUTREACH":  {
+                                                 "enabled":  true,
+                                                 "category":  "EMAIL_OUTBOUND",
+                                                 "description":  "Compétence PERSONALIZED_OUTREACH de ALEX."
+                                             },
+                   "OUTBOUND_COPYWRITING":  {
+                                                "enabled":  true,
+                                                "category":  "EMAIL_OUTBOUND",
+                                                "description":  "Compétence OUTBOUND_COPYWRITING de ALEX."
+                                            },
+                   "EMAIL_DELIVERABILITY":  {
+                                                "enabled":  true,
+                                                "category":  "EMAIL_OUTBOUND",
+                                                "description":  "Compétence EMAIL_DELIVERABILITY de ALEX."
+                                            },
+                   "SALES_FORECAST":  {
+                                          "enabled":  true,
+                                          "category":  "FORECAST_COMMERCIAL",
+                                          "description":  "Compétence SALES_FORECAST de ALEX."
+                                      },
+                   "REVENUE_PIPELINE_ANALYSIS":  {
+                                                     "enabled":  true,
+                                                     "category":  "FORECAST_COMMERCIAL",
+                                                     "description":  "Compétence REVENUE_PIPELINE_ANALYSIS de ALEX."
+                                                 },
+                   "CONVERSION_FORECAST":  {
+                                               "enabled":  true,
+                                               "category":  "FORECAST_COMMERCIAL",
+                                               "description":  "Compétence CONVERSION_FORECAST de ALEX."
+                                           },
+                   "SALES_PERFORMANCE_ANALYSIS":  {
+                                                      "enabled":  true,
+                                                      "category":  "FORECAST_COMMERCIAL",
+                                                      "description":  "Compétence SALES_PERFORMANCE_ANALYSIS de ALEX."
+                                                  },
+                   "LEAD_GENERATION":  {
+                                           "enabled":  true,
+                                           "category":  "LEAD_GENERATION",
+                                           "description":  "Compétence LEAD_GENERATION de ALEX."
+                                       },
+                   "LEAD_RESEARCH":  {
+                                         "enabled":  true,
+                                         "category":  "LEAD_GENERATION",
+                                         "description":  "Compétence LEAD_RESEARCH de ALEX."
+                                     },
+                   "ICP_DEFINITION":  {
+                                          "enabled":  true,
+                                          "category":  "LEAD_GENERATION",
+                                          "description":  "Compétence ICP_DEFINITION de ALEX."
+                                      },
+                   "PROSPECT_DISCOVERY":  {
+                                              "enabled":  true,
+                                              "category":  "LEAD_GENERATION",
+                                              "description":  "Compétence PROSPECT_DISCOVERY de ALEX."
+                                          },
+                   "LEAD_ENRICHMENT":  {
+                                           "enabled":  true,
+                                           "category":  "LEAD_GENERATION",
+                                           "description":  "Compétence LEAD_ENRICHMENT de ALEX."
+                                       },
+                   "FOLLOW_UP_STRATEGY":  {
+                                              "enabled":  true,
+                                              "category":  "RELANCE",
+                                              "description":  "Compétence FOLLOW_UP_STRATEGY de ALEX."
+                                          },
+                   "FOLLOW_UP_EMAIL":  {
+                                           "enabled":  true,
+                                           "category":  "RELANCE",
+                                           "description":  "Compétence FOLLOW_UP_EMAIL de ALEX."
+                                       },
+                   "FOLLOW_UP_CALL":  {
+                                          "enabled":  true,
+                                          "category":  "RELANCE",
+                                          "description":  "Compétence FOLLOW_UP_CALL de ALEX."
+                                      },
+                   "REACTIVATION_SALES":  {
+                                              "enabled":  true,
+                                              "category":  "RELANCE",
+                                              "description":  "Compétence REACTIVATION_SALES de ALEX."
+                                          },
+                   "NO_RESPONSE_RECOVERY":  {
+                                                "enabled":  true,
+                                                "category":  "RELANCE",
+                                                "description":  "Compétence NO_RESPONSE_RECOVERY de ALEX."
+                                            },
+                   "SALES_SCRIPT":  {
+                                        "enabled":  true,
+                                        "category":  "SALES_ENABLEMENT",
+                                        "description":  "Compétence SALES_SCRIPT de ALEX."
+                                    },
+                   "SALES_ARGUMENTAIRE":  {
+                                              "enabled":  true,
+                                              "category":  "SALES_ENABLEMENT",
+                                              "description":  "Compétence SALES_ARGUMENTAIRE de ALEX."
+                                          },
+                   "OBJECTION_HANDLING":  {
+                                              "enabled":  true,
+                                              "category":  "SALES_ENABLEMENT",
+                                              "description":  "Compétence OBJECTION_HANDLING de ALEX."
+                                          },
+                   "PROPOSAL_SUPPORT":  {
+                                            "enabled":  true,
+                                            "category":  "SALES_ENABLEMENT",
+                                            "description":  "Compétence PROPOSAL_SUPPORT de ALEX."
+                                        },
+                   "DISCOVERY_CALL_PREPARATION":  {
+                                                      "enabled":  true,
+                                                      "category":  "SALES_ENABLEMENT",
+                                                      "description":  "Compétence DISCOVERY_CALL_PREPARATION de ALEX."
+                                                  },
+                   "SALES_PIPELINE":  {
+                                          "enabled":  true,
+                                          "category":  "SALES_PIPELINE",
+                                          "description":  "Compétence SALES_PIPELINE de ALEX."
+                                      },
+                   "STAGE_MANAGEMENT":  {
+                                            "enabled":  true,
+                                            "category":  "SALES_PIPELINE",
+                                            "description":  "Compétence STAGE_MANAGEMENT de ALEX."
+                                        },
+                   "FORECASTING":  {
+                                       "enabled":  true,
+                                       "category":  "SALES_PIPELINE",
+                                       "description":  "Compétence FORECASTING de ALEX."
+                                   },
+                   "DEAL_RISK_ANALYSIS":  {
+                                              "enabled":  true,
+                                              "category":  "SALES_PIPELINE",
+                                              "description":  "Compétence DEAL_RISK_ANALYSIS de ALEX."
+                                          },
+                   "OPPORTUNITY_PRIORITIZATION":  {
+                                                      "enabled":  true,
+                                                      "category":  "SALES_PIPELINE",
+                                                      "description":  "Compétence OPPORTUNITY_PRIORITIZATION de ALEX."
+                                                  },
+                   "CRM_MANAGEMENT":  {
+                                          "enabled":  true,
+                                          "category":  "CRM",
+                                          "description":  "Compétence CRM_MANAGEMENT de ALEX."
+                                      },
+                   "CRM_DATA_CLEANING":  {
+                                             "enabled":  true,
+                                             "category":  "CRM",
+                                             "description":  "Compétence CRM_DATA_CLEANING de ALEX."
+                                         },
+                   "PIPELINE_MANAGEMENT":  {
+                                               "enabled":  true,
+                                               "category":  "CRM",
+                                               "description":  "Compétence PIPELINE_MANAGEMENT de ALEX."
+                                           },
+                   "DEAL_TRACKING":  {
+                                         "enabled":  true,
+                                         "category":  "CRM",
+                                         "description":  "Compétence DEAL_TRACKING de ALEX."
+                                     },
+                   "CRM_REPORTING":  {
+                                         "enabled":  true,
+                                         "category":  "CRM",
+                                         "description":  "Compétence CRM_REPORTING de ALEX."
+                                     },
+                   "LINKEDIN_PROSPECTING":  {
+                                                "enabled":  true,
+                                                "category":  "LINKEDIN_OUTBOUND",
+                                                "description":  "Compétence LINKEDIN_PROSPECTING de ALEX."
+                                            },
+                   "SOCIAL_SELLING":  {
+                                          "enabled":  true,
+                                          "category":  "LINKEDIN_OUTBOUND",
+                                          "description":  "Compétence SOCIAL_SELLING de ALEX."
+                                      },
+                   "CONNECTION_STRATEGY":  {
+                                               "enabled":  true,
+                                               "category":  "LINKEDIN_OUTBOUND",
+                                               "description":  "Compétence CONNECTION_STRATEGY de ALEX."
+                                           },
+                   "LINKEDIN_MESSAGING":  {
+                                              "enabled":  true,
+                                              "category":  "LINKEDIN_OUTBOUND",
+                                              "description":  "Compétence LINKEDIN_MESSAGING de ALEX."
+                                          },
+                   "LEAD_QUALIFICATION":  {
+                                              "enabled":  true,
+                                              "category":  "QUALIFICATION",
+                                              "description":  "Compétence LEAD_QUALIFICATION de ALEX."
+                                          },
+                   "DISCOVERY_QUESTIONS":  {
+                                               "enabled":  true,
+                                               "category":  "QUALIFICATION",
+                                               "description":  "Compétence DISCOVERY_QUESTIONS de ALEX."
+                                           },
+                   "BANT_QUALIFICATION":  {
+                                              "enabled":  true,
+                                              "category":  "QUALIFICATION",
+                                              "description":  "Compétence BANT_QUALIFICATION de ALEX."
+                                          },
+                   "NEEDS_ANALYSIS":  {
+                                          "enabled":  true,
+                                          "category":  "QUALIFICATION",
+                                          "description":  "Compétence NEEDS_ANALYSIS de ALEX."
+                                      },
+                   "OPPORTUNITY_SCORING":  {
+                                               "enabled":  true,
+                                               "category":  "QUALIFICATION",
+                                               "description":  "Compétence OPPORTUNITY_SCORING de ALEX."
+                                           }
+               },
+    "governance":  {
+                       "security_status":  "VALID",
+                       "client_isolation":  true,
+                       "project_isolation":  true,
+                       "worker_isolation":  true,
+                       "secret_exposure":  false,
+                       "financial_actions":  false,
+                       "external_actions":  false
+                   }
+}

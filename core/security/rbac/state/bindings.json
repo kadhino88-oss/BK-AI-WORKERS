@@ -1,0 +1,493 @@
+﻿{
+    "version":  "1.0",
+    "items":  [
+                  {
+                      "BindingId":  "BIND-5B268FA32E904659AA60A7592C9DBF2D",
+                      "PrincipalId":  "8A16-USER",
+                      "RoleId":  "ROLE-OWNER",
+                      "ScopeType":  "TENANT",
+                      "ScopeId":  "8A16-TENANT",
+                      "Deny":  false,
+                      "CreatedAtUtc":  "2026-09-11T08:21:32.5737185Z",
+                      "Active":  true
+                  },
+                  {
+                      "BindingId":  "BIND-3DFD8650E9904DF69C5BB167B556C4C5",
+                      "PrincipalId":  "USER-CLAUDE-TEST",
+                      "RoleId":  "ROLE-OPERATOR",
+                      "ScopeType":  "TENANT",
+                      "ScopeId":  "TEN-CLAUDE-TEST",
+                      "Deny":  false,
+                      "CreatedAtUtc":  "2026-09-13T20:32:37.9721925Z",
+                      "Active":  false,
+                      "RevokedAtUtc":  "2026-09-14T09:16:34.6083210Z"
+                  },
+                  {
+                      "BindingId":  "BIND-E0EAA2EE6E46454D8EAD3F16AC019F57",
+                      "PrincipalId":  "USER-CLAUDE-TEST",
+                      "RoleId":  "ROLE-OPERATOR",
+                      "ScopeType":  "TENANT",
+                      "ScopeId":  "TEN-CLAUDE-TEST",
+                      "Deny":  false,
+                      "CreatedAtUtc":  "2026-09-13T21:00:27.9977275Z",
+                      "Active":  false,
+                      "RevokedAtUtc":  "2026-09-14T09:16:34.6552091Z"
+                  },
+                  {
+                      "BindingId":  "BIND-C325294F48BF48C99FEEA5510A410387",
+                      "PrincipalId":  "USER-CLAUDE-TEST",
+                      "RoleId":  "ROLE-OPERATOR",
+                      "ScopeType":  "TENANT",
+                      "ScopeId":  "TEN-CLAUDE-TEST",
+                      "Deny":  false,
+                      "CreatedAtUtc":  "2026-09-13T21:01:24.0483164Z",
+                      "Active":  false,
+                      "RevokedAtUtc":  "2026-09-14T09:16:34.6708420Z"
+                  },
+                  {
+                      "BindingId":  "BIND-658BE517F4DC42A692F0408187B72224",
+                      "PrincipalId":  "USER-CLAUDE-TEST",
+                      "RoleId":  "ROLE-OPERATOR",
+                      "ScopeType":  "TENANT",
+                      "ScopeId":  "TEN-CLAUDE-TEST",
+                      "Deny":  false,
+                      "CreatedAtUtc":  "2026-09-13T21:08:01.9133268Z",
+                      "Active":  false,
+                      "RevokedAtUtc":  "2026-09-14T09:16:34.7020852Z"
+                  },
+                  {
+                      "BindingId":  "BIND-5D9A55425CB7453686DF186D0A9AA5F9",
+                      "PrincipalId":  "USER-CLAUDE-TEST",
+                      "RoleId":  "ROLE-OPERATOR",
+                      "ScopeType":  "TENANT",
+                      "ScopeId":  "TEN-CLAUDE-TEST",
+                      "Deny":  false,
+                      "CreatedAtUtc":  "2026-09-13T21:09:33.9261876Z",
+                      "Active":  false,
+                      "RevokedAtUtc":  "2026-09-14T09:16:34.7220566Z"
+                  },
+                  {
+                      "BindingId":  "BIND-F1190D24D4984E6B824E772AADDDF4CB",
+                      "PrincipalId":  "USER-CLAUDE-TEST",
+                      "RoleId":  "ROLE-OPERATOR",
+                      "ScopeType":  "TENANT",
+                      "ScopeId":  "TEN-CLAUDE-TEST",
+                      "Deny":  false,
+                      "CreatedAtUtc":  "2026-09-13T21:11:40.1844795Z",
+                      "Active":  false,
+                      "RevokedAtUtc":  "2026-09-14T09:16:34.7335697Z"
+                  },
+                  {
+                      "BindingId":  "BIND-7795175000D7449B80B96F797492513B",
+                      "PrincipalId":  "USER-CLAUDE-TEST",
+                      "RoleId":  "ROLE-OPERATOR",
+                      "ScopeType":  "TENANT",
+                      "ScopeId":  "TEN-CLAUDE-TEST",
+                      "Deny":  false,
+                      "CreatedAtUtc":  "2026-09-13T21:13:36.0904048Z",
+                      "Active":  false,
+                      "RevokedAtUtc":  "2026-09-14T09:16:34.7648367Z"
+                  },
+                  {
+                      "BindingId":  "BIND-168631DC0E614B1BB7E9610CCE6D7AF4",
+                      "PrincipalId":  "USER-CLAUDE-TEST",
+                      "RoleId":  "ROLE-OPERATOR",
+                      "ScopeType":  "TENANT",
+                      "ScopeId":  "TEN-CLAUDE-TEST",
+                      "Deny":  false,
+                      "CreatedAtUtc":  "2026-09-13T21:18:09.9716550Z",
+                      "Active":  false,
+                      "RevokedAtUtc":  "2026-09-14T09:16:34.7804589Z"
+                  },
+                  {
+                      "BindingId":  "BIND-A96AA9E766784E24A4FFFB7C5D7E56B2",
+                      "PrincipalId":  "USER-CLAUDE-TEST",
+                      "RoleId":  "ROLE-OPERATOR",
+                      "ScopeType":  "TENANT",
+                      "ScopeId":  "TEN-CLAUDE-TEST",
+                      "Deny":  false,
+                      "CreatedAtUtc":  "2026-09-13T21:28:07.6473443Z",
+                      "Active":  false,
+                      "RevokedAtUtc":  "2026-09-14T09:16:34.8117127Z"
+                  },
+                  {
+                      "BindingId":  "BIND-C41D0BB7B4674322B7B4E05FA8C83AB5",
+                      "PrincipalId":  "USER-CLAUDE-TEST",
+                      "RoleId":  "ROLE-OPERATOR",
+                      "ScopeType":  "TENANT",
+                      "ScopeId":  "TEN-CLAUDE-TEST",
+                      "Deny":  false,
+                      "CreatedAtUtc":  "2026-09-14T01:15:08.9942296Z",
+                      "Active":  false,
+                      "RevokedAtUtc":  "2026-09-14T09:16:34.8273484Z"
+                  },
+                  {
+                      "BindingId":  "BIND-31E7AD0D879341CC9D4FDE82ADD0EFAC",
+                      "PrincipalId":  "USER-CLAUDE-TEST",
+                      "RoleId":  "ROLE-OPERATOR",
+                      "ScopeType":  "TENANT",
+                      "ScopeId":  "TEN-CLAUDE-TEST",
+                      "Deny":  false,
+                      "CreatedAtUtc":  "2026-09-14T01:16:46.4170528Z",
+                      "Active":  false,
+                      "RevokedAtUtc":  "2026-09-14T09:16:34.8447805Z"
+                  },
+                  {
+                      "BindingId":  "BIND-C419C8A1E0E9492F8A3970AC75A969FE",
+                      "PrincipalId":  "USER-CLAUDE-TEST",
+                      "RoleId":  "ROLE-OPERATOR",
+                      "ScopeType":  "TENANT",
+                      "ScopeId":  "TEN-CLAUDE-TEST",
+                      "Deny":  false,
+                      "CreatedAtUtc":  "2026-09-14T01:20:18.9994028Z",
+                      "Active":  false,
+                      "RevokedAtUtc":  "2026-09-14T09:16:34.8744481Z"
+                  },
+                  {
+                      "BindingId":  "BIND-B379D5AC96864C449270895E43D90953",
+                      "PrincipalId":  "USER-CLAUDE-TEST",
+                      "RoleId":  "ROLE-OPERATOR",
+                      "ScopeType":  "TENANT",
+                      "ScopeId":  "TEN-CLAUDE-TEST",
+                      "Deny":  false,
+                      "CreatedAtUtc":  "2026-09-14T07:34:56.9359707Z",
+                      "Active":  false,
+                      "RevokedAtUtc":  "2026-09-14T09:16:34.8900903Z"
+                  },
+                  {
+                      "BindingId":  "BIND-DB90DC90952F4112AB4E099FEB3F549E",
+                      "PrincipalId":  "USER-CLAUDE-TEST",
+                      "RoleId":  "ROLE-OPERATOR",
+                      "ScopeType":  "TENANT",
+                      "ScopeId":  "TEN-CLAUDE-TEST",
+                      "Deny":  false,
+                      "CreatedAtUtc":  "2026-09-14T07:35:50.1662311Z",
+                      "Active":  false,
+                      "RevokedAtUtc":  "2026-09-14T09:16:34.9223406Z"
+                  },
+                  {
+                      "BindingId":  "BIND-375DD50F61B74177ADEA43C4F63EB0C2",
+                      "PrincipalId":  "USER-CLAUDE-TEST",
+                      "RoleId":  "ROLE-OPERATOR",
+                      "ScopeType":  "TENANT",
+                      "ScopeId":  "TEN-CLAUDE-TEST",
+                      "Deny":  false,
+                      "CreatedAtUtc":  "2026-09-14T08:45:25.0795009Z",
+                      "Active":  false,
+                      "RevokedAtUtc":  "2026-09-14T09:16:34.9373533Z"
+                  },
+                  {
+                      "BindingId":  "BIND-383035D9FCDF4BFFBA871699286441EE",
+                      "PrincipalId":  "USER-CLAUDE-TEST",
+                      "RoleId":  "ROLE-OPERATOR",
+                      "ScopeType":  "TENANT",
+                      "ScopeId":  "TEN-CLAUDE-TEST",
+                      "Deny":  false,
+                      "CreatedAtUtc":  "2026-09-14T08:49:32.8499486Z",
+                      "Active":  false,
+                      "RevokedAtUtc":  "2026-09-14T09:16:34.9686144Z"
+                  },
+                  {
+                      "BindingId":  "BIND-676846FE3EE44382A2DFD202E70C89DD",
+                      "PrincipalId":  "USER-CLAUDE-TEST",
+                      "RoleId":  "ROLE-OPERATOR",
+                      "ScopeType":  "TENANT",
+                      "ScopeId":  "TEN-CLAUDE-TEST",
+                      "Deny":  false,
+                      "CreatedAtUtc":  "2026-09-14T09:01:50.1628588Z",
+                      "Active":  false,
+                      "RevokedAtUtc":  "2026-09-14T09:16:34.9842843Z"
+                  },
+                  {
+                      "BindingId":  "BIND-F9C0AF9A751A41999BCE4913225572E1",
+                      "PrincipalId":  "USER-CLAUDE-TEST",
+                      "RoleId":  "ROLE-OPERATOR",
+                      "ScopeType":  "TENANT",
+                      "ScopeId":  "TEN-CLAUDE-TEST",
+                      "Deny":  false,
+                      "CreatedAtUtc":  "2026-09-14T09:15:25.9008488Z",
+                      "Active":  false,
+                      "RevokedAtUtc":  "2026-09-14T09:16:34.9998785Z"
+                  },
+                  {
+                      "BindingId":  "BIND-2448A66A20084F6BBC1B75A8532DC09C",
+                      "PrincipalId":  "USER-DASHBOARD-SERVICE",
+                      "RoleId":  "ROLE-OPERATOR",
+                      "ScopeType":  "TENANT",
+                      "ScopeId":  "TEN-DASHBOARD",
+                      "Deny":  false,
+                      "CreatedAtUtc":  "2026-09-14T10:29:56.4826631Z",
+                      "Active":  true
+                  },
+                  {
+                      "BindingId":  "BIND-7911F84A54CB4BA3936FF1EF31904245",
+                      "PrincipalId":  "USER-CLAUDE-TEST",
+                      "RoleId":  "ROLE-OPERATOR",
+                      "ScopeType":  "TENANT",
+                      "ScopeId":  "TEN-CLAUDE-TEST",
+                      "Deny":  false,
+                      "CreatedAtUtc":  "2026-09-14T19:58:16.1042875Z",
+                      "Active":  true
+                  },
+                  {
+                      "BindingId":  "BIND-723C518929594058B539F01AC7BD6EBB",
+                      "PrincipalId":  "USER-CLAUDE-TEST2",
+                      "RoleId":  "ROLE-OPERATOR",
+                      "ScopeType":  "TENANT",
+                      "ScopeId":  "TEN-CLAUDE-TEST2",
+                      "Deny":  false,
+                      "CreatedAtUtc":  "2026-09-14T20:04:38.9633595Z",
+                      "Active":  true
+                  },
+                  {
+                      "BindingId":  "BIND-271782E3049A43488F97FCC5D02258A3",
+                      "PrincipalId":  "USER-CLAUDE-TEST3",
+                      "RoleId":  "ROLE-OPERATOR",
+                      "ScopeType":  "TENANT",
+                      "ScopeId":  "TEN-CLAUDE-TEST3",
+                      "Deny":  false,
+                      "CreatedAtUtc":  "2026-09-14T20:22:02.4429778Z",
+                      "Active":  true
+                  },
+                  {
+                      "BindingId":  "BIND-BF7696C1A105421A868DF53EB7354B25",
+                      "PrincipalId":  "USER-CLAUDE-TEST4",
+                      "RoleId":  "ROLE-OPERATOR",
+                      "ScopeType":  "TENANT",
+                      "ScopeId":  "TEN-CLAUDE-TEST4",
+                      "Deny":  false,
+                      "CreatedAtUtc":  "2026-09-14T20:23:02.6808060Z",
+                      "Active":  true
+                  },
+                  {
+                      "BindingId":  "BIND-886E831695E5481F8FF6B6CE687697BB",
+                      "PrincipalId":  "USER-CLAUDE-TEST5",
+                      "RoleId":  "ROLE-OPERATOR",
+                      "ScopeType":  "TENANT",
+                      "ScopeId":  "TEN-CLAUDE-TEST5",
+                      "Deny":  false,
+                      "CreatedAtUtc":  "2026-09-14T20:29:57.2225979Z",
+                      "Active":  true
+                  },
+                  {
+                      "BindingId":  "BIND-C1A01B699EA54853A4AEB28E9956DAD4",
+                      "PrincipalId":  "USER-CLAUDE-TEST6",
+                      "RoleId":  "ROLE-OPERATOR",
+                      "ScopeType":  "TENANT",
+                      "ScopeId":  "TEN-CLAUDE-TEST6",
+                      "Deny":  false,
+                      "CreatedAtUtc":  "2026-09-14T20:33:00.3573229Z",
+                      "Active":  true
+                  },
+                  {
+                      "BindingId":  "BIND-54A0474009EA4C7A8AF6E794FF21E2C9",
+                      "PrincipalId":  "USER-CLAUDE-TEST7",
+                      "RoleId":  "ROLE-OPERATOR",
+                      "ScopeType":  "TENANT",
+                      "ScopeId":  "TEN-CLAUDE-TEST7",
+                      "Deny":  false,
+                      "CreatedAtUtc":  "2026-09-14T20:33:51.2813669Z",
+                      "Active":  true
+                  },
+                  {
+                      "BindingId":  "BIND-7DE4D0E54A224C69A3DC8B8518DD6C61",
+                      "PrincipalId":  "USER-CLAUDE-TEST8",
+                      "RoleId":  "ROLE-OPERATOR",
+                      "ScopeType":  "TENANT",
+                      "ScopeId":  "TEN-CLAUDE-TEST8",
+                      "Deny":  false,
+                      "CreatedAtUtc":  "2026-09-14T20:35:18.1750338Z",
+                      "Active":  true
+                  },
+                  {
+                      "BindingId":  "BIND-810686E3348548A8AA5181595E3992A6",
+                      "PrincipalId":  "USER-CLAUDE-TEST9",
+                      "RoleId":  "ROLE-OPERATOR",
+                      "ScopeType":  "TENANT",
+                      "ScopeId":  "TEN-CLAUDE-TEST9",
+                      "Deny":  false,
+                      "CreatedAtUtc":  "2026-09-14T20:36:27.5977987Z",
+                      "Active":  true
+                  },
+                  {
+                      "BindingId":  "BIND-B5EA80C326DA4DC787F89288E6074D22",
+                      "PrincipalId":  "USER-CLAUDE-TEST10",
+                      "RoleId":  "ROLE-OPERATOR",
+                      "ScopeType":  "TENANT",
+                      "ScopeId":  "TEN-CLAUDE-TEST10",
+                      "Deny":  false,
+                      "CreatedAtUtc":  "2026-09-14T20:37:22.7875806Z",
+                      "Active":  true
+                  },
+                  {
+                      "BindingId":  "BIND-B392F948C42E4BEEB47094ACE6784F41",
+                      "PrincipalId":  "USER-CLAUDE-FINAL",
+                      "RoleId":  "ROLE-OPERATOR",
+                      "ScopeType":  "TENANT",
+                      "ScopeId":  "TEN-CLAUDE-FINAL",
+                      "Deny":  false,
+                      "CreatedAtUtc":  "2026-09-14T20:38:41.6365724Z",
+                      "Active":  true
+                  },
+                  {
+                      "BindingId":  "BIND-1707E47556214A1D86699E0727564475",
+                      "PrincipalId":  "USER-CLAUDE-FINAL2",
+                      "RoleId":  "ROLE-OPERATOR",
+                      "ScopeType":  "TENANT",
+                      "ScopeId":  "TEN-CLAUDE-FINAL2",
+                      "Deny":  false,
+                      "CreatedAtUtc":  "2026-09-14T20:42:57.8084712Z",
+                      "Active":  true
+                  },
+                  {
+                      "BindingId":  "BIND-DFDB959E8DB841DA918EF7E322D6876C",
+                      "PrincipalId":  "USER-CLAUDE-CHAIN",
+                      "RoleId":  "ROLE-OPERATOR",
+                      "ScopeType":  "TENANT",
+                      "ScopeId":  "TEN-CLAUDE-CHAIN",
+                      "Deny":  false,
+                      "CreatedAtUtc":  "2026-09-14T21:20:11.8305570Z",
+                      "Active":  true
+                  },
+                  {
+                      "BindingId":  "BIND-39BDED1190774DA1B50065D4DF4DFC58",
+                      "PrincipalId":  "USER-CLAUDE-CHAIN2",
+                      "RoleId":  "ROLE-OPERATOR",
+                      "ScopeType":  "TENANT",
+                      "ScopeId":  "TEN-CLAUDE-CHAIN2",
+                      "Deny":  false,
+                      "CreatedAtUtc":  "2026-09-14T21:21:39.5555122Z",
+                      "Active":  true
+                  },
+                  {
+                      "BindingId":  "BIND-2E08B26D7B614C21BDE850E1063ABF68",
+                      "PrincipalId":  "USER-CLAUDE-REGR",
+                      "RoleId":  "ROLE-OPERATOR",
+                      "ScopeType":  "TENANT",
+                      "ScopeId":  "TEN-CLAUDE-REGR",
+                      "Deny":  false,
+                      "CreatedAtUtc":  "2026-09-14T21:42:15.0009094Z",
+                      "Active":  true
+                  },
+                  {
+                      "BindingId":  "BIND-4F35D65E4D8B4D0E8E5C76549E89D49E",
+                      "PrincipalId":  "USER-CLAUDE-FULLCHECK",
+                      "RoleId":  "ROLE-OPERATOR",
+                      "ScopeType":  "TENANT",
+                      "ScopeId":  "TEN-CLAUDE-FULLCHECK",
+                      "Deny":  false,
+                      "CreatedAtUtc":  "2026-09-14T22:00:39.0003140Z",
+                      "Active":  true
+                  },
+                  {
+                      "BindingId":  "BIND-BA916BAD3D614F78978F73C10AAE4B8E",
+                      "PrincipalId":  "USER-CLAUDE-CHLOECHECK",
+                      "RoleId":  "ROLE-OPERATOR",
+                      "ScopeType":  "TENANT",
+                      "ScopeId":  "TEN-CLAUDE-CHLOECHECK",
+                      "Deny":  false,
+                      "CreatedAtUtc":  "2026-09-14T22:01:27.8331830Z",
+                      "Active":  true
+                  },
+                  {
+                      "BindingId":  "BIND-BFFEC35972924265B39E5886F29AC7BF",
+                      "PrincipalId":  "USER-CLAUDE-PIPELINE",
+                      "RoleId":  "ROLE-OPERATOR",
+                      "ScopeType":  "TENANT",
+                      "ScopeId":  "TEN-CLAUDE-PIPELINE",
+                      "Deny":  false,
+                      "CreatedAtUtc":  "2026-09-14T22:25:34.9626465Z",
+                      "Active":  true
+                  },
+                  {
+                      "BindingId":  "BIND-E67D7A09DA5046C0B1ADF12412447BB8",
+                      "PrincipalId":  "USER-CLAUDE-PIPECHAIN",
+                      "RoleId":  "ROLE-OPERATOR",
+                      "ScopeType":  "TENANT",
+                      "ScopeId":  "TEN-CLAUDE-PIPECHAIN",
+                      "Deny":  false,
+                      "CreatedAtUtc":  "2026-09-14T22:26:22.5540071Z",
+                      "Active":  true
+                  },
+                  {
+                      "BindingId":  "BIND-1A36D16497B7459AA37AE97045C10541",
+                      "PrincipalId":  "USER-CLAUDE-GATE",
+                      "RoleId":  "ROLE-OPERATOR",
+                      "ScopeType":  "TENANT",
+                      "ScopeId":  "TEN-CLAUDE-GATE",
+                      "Deny":  false,
+                      "CreatedAtUtc":  "2026-09-14T22:36:14.3442372Z",
+                      "Active":  true
+                  },
+                  {
+                      "BindingId":  "BIND-9147F0E5963F46F78A1E4982142CCA1F",
+                      "PrincipalId":  "USER-CLAUDE-GATE2",
+                      "RoleId":  "ROLE-OPERATOR",
+                      "ScopeType":  "TENANT",
+                      "ScopeId":  "TEN-CLAUDE-GATE2",
+                      "Deny":  false,
+                      "CreatedAtUtc":  "2026-09-14T22:37:12.5727433Z",
+                      "Active":  true
+                  },
+                  {
+                      "BindingId":  "BIND-738E276AE1404371A975DE056C3B78A4",
+                      "PrincipalId":  "USER-SERVICE-CLI-TRIAL-PUBLIC",
+                      "RoleId":  "ROLE-OPERATOR",
+                      "ScopeType":  "TENANT",
+                      "ScopeId":  "TEN-DASHBOARD",
+                      "Deny":  false,
+                      "CreatedAtUtc":  "2026-09-22T17:16:44.6035156Z",
+                      "Active":  true
+                  },
+                  {
+                      "BindingId":  "BIND-13C1E4BE07EE439CB12EA90FB0046DC7",
+                      "PrincipalId":  "USER-SERVICE-CLI-CUST-F6B73D2E",
+                      "RoleId":  "ROLE-OPERATOR",
+                      "ScopeType":  "TENANT",
+                      "ScopeId":  "TEN-DASHBOARD",
+                      "Deny":  false,
+                      "CreatedAtUtc":  "2026-09-22T19:36:40.9944897Z",
+                      "Active":  true
+                  },
+                  {
+                      "BindingId":  "BIND-6711A602B5BC49678204A65A044FC906",
+                      "PrincipalId":  "USER-SERVICE-CLI-CUST-36A34207",
+                      "RoleId":  "ROLE-OPERATOR",
+                      "ScopeType":  "TENANT",
+                      "ScopeId":  "TEN-DASHBOARD",
+                      "Deny":  false,
+                      "CreatedAtUtc":  "2026-09-22T19:39:09.6863470Z",
+                      "Active":  true
+                  },
+                  {
+                      "BindingId":  "BIND-36FCE0A91A81414BBA3619B94D5BA349",
+                      "PrincipalId":  "USER-SERVICE-CLI-CUST-655315BB",
+                      "RoleId":  "ROLE-OPERATOR",
+                      "ScopeType":  "TENANT",
+                      "ScopeId":  "TEN-DASHBOARD",
+                      "Deny":  false,
+                      "CreatedAtUtc":  "2026-09-22T19:57:06.6759939Z",
+                      "Active":  true
+                  },
+                  {
+                      "BindingId":  "BIND-AFB1F5A16E8347BF85DDF0D96A065D1B",
+                      "PrincipalId":  "USER-SERVICE-CLI-CUST-21956946",
+                      "RoleId":  "ROLE-OPERATOR",
+                      "ScopeType":  "TENANT",
+                      "ScopeId":  "TEN-DASHBOARD",
+                      "Deny":  false,
+                      "CreatedAtUtc":  "2026-09-22T20:32:43.3071777Z",
+                      "Active":  true
+                  },
+                  {
+                      "BindingId":  "BIND-9B6048F43D0448909C2D5293BF6D6DDA",
+                      "PrincipalId":  "USER-SERVICE-CLI-CUST-B32CE8DD",
+                      "RoleId":  "ROLE-OPERATOR",
+                      "ScopeType":  "TENANT",
+                      "ScopeId":  "TEN-DASHBOARD",
+                      "Deny":  false,
+                      "CreatedAtUtc":  "2026-09-23T17:32:16.9360686Z",
+                      "Active":  true
+                  }
+              ]
+}

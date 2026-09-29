@@ -1,0 +1,29 @@
+﻿[
+    {
+        "CascadeId":  "CASCADE-F9AD2C82F9C4484A90FD2B09F8A012DB",
+        "CascadeHash":  "15469616231bf2275bcfeeddad6f926163f4f8eeede7f78c5630908c39227784",
+        "CredentialRefHash":  "f3a96cc1f0e42d817d3e033d12d2460cd83039a5a48b9de0a203c0e2185706ef",
+        "LeaseId":  "LEASE-8A20-001",
+        "MaterializationId":  "MAT-8A20-001",
+        "UsageId":  "USE-8A20-001",
+        "ExecutionId":  "EXEC-8A20-001",
+        "WorkerId":  "SAM",
+        "Action":  "CONNECTOR_USE",
+        "Connector":  "BANKING-API",
+        "ProjectId":  "PROJECT-001",
+        "ClientId":  "CLIENT-001",
+        "TenantId":  "TENANT-001",
+        "CredentialStatus":  "REVOKED",
+        "LeaseStatus":  "REVOKED",
+        "MaterializationStatus":  "REVOKED",
+        "UsageStatus":  "REVOKED",
+        "ExecutionStatus":  "BLOCKED",
+        "CascadeStatus":  "REVOKED",
+        "Decision":  "BLOCK",
+        "CreatedAtUtc":  "2026-09-11T11:51:50.0376609Z",
+        "RevokedAtUtc":  "2026-09-11T11:51:50.2409499Z",
+        "RevocationReason":  "CREDENTIAL_REVOKED",
+        "RawSecret":  null,
+        "RawCredential":  null
+    }
+]

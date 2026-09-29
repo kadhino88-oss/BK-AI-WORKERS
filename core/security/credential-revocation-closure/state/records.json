@@ -1,0 +1,29 @@
+﻿[
+    {
+        "ClosureId":  "CLOSE-3EF4D01DC8E448CD9CC4692E9DC3DAE0",
+        "ClosureHash":  "88f50be850f908d09eef13f0343839feddec9585f7d02769c48ff3f638d748e7",
+        "CredentialRefHash":  "779a0ad97c9a71d1ccf9e375f0fc4d7c111cbd1eba47aeb46c872fcdff1542f3",
+        "LeaseId":  "LEASE-8A22-001",
+        "MaterializationId":  "MAT-8A22-001",
+        "UsageId":  "USE-8A22-001",
+        "ExecutionId":  "EXEC-8A22-001",
+        "WorkerId":  "SAM",
+        "Action":  "CONNECTOR_USE",
+        "Connector":  "CONTROLLED-API",
+        "ProjectId":  "PROJECT-001",
+        "ClientId":  "CLIENT-001",
+        "TenantId":  "TENANT-001",
+        "CredentialStatus":  "REVOKED",
+        "LeaseStatus":  "REVOKED",
+        "MaterializationStatus":  "REVOKED",
+        "UsageStatus":  "REVOKED",
+        "ExecutionStatus":  "CLOSED",
+        "Status":  "CLOSED",
+        "Decision":  "BLOCK",
+        "CreatedAtUtc":  "2026-09-11T11:54:08.2413187Z",
+        "ClosedAtUtc":  "2026-09-11T11:54:08.2413187Z",
+        "ReactivationAllowed":  false,
+        "RawSecret":  null,
+        "RawCredential":  null
+    }
+]

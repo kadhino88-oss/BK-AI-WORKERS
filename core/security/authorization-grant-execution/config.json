@@ -1,0 +1,22 @@
+{
+  "version":"1.0",
+  "system":"BK-AI-WORKERS",
+  "enabled":true,
+  "executionBindingEnabled":true,
+  "singleExecutionPerGrant":true,
+  "requireGrantValidation":true,
+  "requireExecutionId":true,
+  "bindUser":true,
+  "bindSession":true,
+  "bindAction":true,
+  "bindTenant":true,
+  "bindClient":true,
+  "bindProject":true,
+  "rejectDuplicateExecutionBinding":true,
+  "revocationAware":true,
+  "expirationAware":true,
+  "maxBindings":100000,
+  "captureSecrets":false,
+  "capturePayloads":false,
+  "liveExecutionEnabled":false
+}

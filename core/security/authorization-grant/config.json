@@ -1,0 +1,22 @@
+{
+  "version":"1.0",
+  "system":"BK-AI-WORKERS",
+  "enabled":true,
+  "grantEnabled":true,
+  "grantDurationSeconds":900,
+  "requireAuthorizationAllow":true,
+  "bindUser":true,
+  "bindSession":true,
+  "bindTenant":true,
+  "bindClient":true,
+  "bindProject":true,
+  "bindAction":true,
+  "expirationEnabled":true,
+  "revocationEnabled":true,
+  "maxGrants":100000,
+  "captureRawGrants":false,
+  "capturePasswords":false,
+  "captureSecrets":false,
+  "capturePayloads":false,
+  "liveExecutionEnabled":false
+}

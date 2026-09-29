@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <linearGradient id="bg-maya" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3F2E6B"/>
+      <stop offset="100%" stop-color="#1F5C6B"/>
+    </linearGradient>
+  </defs>
+  <circle cx="100" cy="100" r="98" fill="url(#bg-maya)"/>
+  <circle cx="100" cy="100" r="98" fill="none" stroke="#F0E9FA" stroke-width="2" opacity="0.5"/>
+  <text x="100" y="72" font-family="Georgia, 'Times New Roman', serif" font-size="46" font-weight="bold"
+        text-anchor="middle" fill="#F0E9FA" opacity="0.9">M</text>
+  <g transform="translate(100 128)">
+    <path d="M -20 14 L -8 -2 L 2 6 L 20 -16 L 20 -8 L 4 12 L -8 4 L -20 20 Z" fill="#F0E9FA" opacity="0.95"/>
+  </g>
+  <text x="100" y="182" font-family="Arial, sans-serif" font-size="13" letter-spacing="3"
+        text-anchor="middle" fill="#F0E9FA" opacity="0.85">MAYA</text>
+</svg>

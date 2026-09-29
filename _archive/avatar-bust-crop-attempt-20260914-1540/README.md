@@ -1,0 +1,1 @@
+Archived - see this session's notes: the tight bust-crop version (from the mockup dashboard cards) was replaced with a full-body version cropped from the clean lineup image, per user feedback that the bust crop was too zoomed/blurry with distorted mouths.

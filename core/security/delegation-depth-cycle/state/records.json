@@ -1,0 +1,18 @@
+﻿{
+    "version":  "1.0",
+    "items":  [
+                  {
+                      "GuardId":  "DGC-97FB92D8AE8F4D568D9DD3DC2F07AD07",
+                      "ParentDelegationId":  "DELEG-2A86F831312042709FD6E1D7EE0A3AAC",
+                      "ChildDelegationId":  "CHILD-001",
+                      "UserId":  "8A14-USER",
+                      "TenantId":  "8A14-TENANT",
+                      "ClientId":  "8A14-CLIENT",
+                      "ProjectId":  "8A14-PROJECT",
+                      "Depth":  1,
+                      "ChainLength":  1,
+                      "CreatedAtUtc":  "2026-09-11T08:03:31.3516058Z",
+                      "Status":  "INVALIDATED"
+                  }
+              ]
+}

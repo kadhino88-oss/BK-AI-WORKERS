@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BK-AI-WORKERS — Une équipe d'agents IA autonomes pour votre entreprise</title>
+<meta name="description" content="Chloé et 17 Workers IA spécialisés (ventes, marketing, contenu, juridique, comptabilité, support…) exécutent vos missions 24/7, dans votre langue, avec validation avant toute action sensible. Essai gratuit.">
+<link rel="canonical" href="https://bk-ai-workers.com/">
+<meta name="theme-color" content="#14151a">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="BK-AI-WORKERS">
+<meta property="og:title" content="BK-AI-WORKERS — Une équipe d'agents IA autonomes pour votre entreprise">
+<meta property="og:description" content="Chloé et 17 Workers IA spécialisés (ventes, marketing, contenu, juridique, comptabilité, support…) exécutent vos missions 24/7, dans votre langue, avec validation avant toute action sensible. Essai gratuit.">
+<meta property="og:url" content="https://bk-ai-workers.com/">
+<meta property="og:image" content="https://bk-ai-workers.com/portraits/chloe.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="BK-AI-WORKERS — Une équipe d'agents IA autonomes pour votre entreprise">
+<meta name="twitter:description" content="Chloé et 17 Workers IA spécialisés (ventes, marketing, contenu, juridique, comptabilité, support…) exécutent vos missions 24/7, dans votre langue, avec validation avant toute action sensible. Essai gratuit.">
+<meta name="twitter:image" content="https://bk-ai-workers.com/portraits/chloe.jpg">
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[
+{"@type":"Organization","name":"BK-AI-WORKERS","url":"https://bk-ai-workers.com/","logo":"https://bk-ai-workers.com/favicon.svg"},
+{"@type":"SoftwareApplication","name":"BK-AI-WORKERS","applicationCategory":"BusinessApplication","operatingSystem":"Web",
+"description":"Chloé et 17 Workers IA spécialisés (ventes, marketing, contenu, juridique, comptabilité, support…) exécutent vos missions 24/7, dans votre langue, avec validation avant toute action sensible. Essai gratuit.","url":"https://bk-ai-workers.com/","offers":{"@type":"Offer","price":"0","priceCurrency":"CHF","description":"Essai gratuit de 3 jours, sans carte bancaire"}}
+]}</script>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">BK</div>
+      <span>BK-AI-WORKERS<span class="brand-sub">AI Workforce Platform</span></span>
+    </div>
+    <nav class="nav-links">
+      <a href="#" id="nav-home">Accueil</a>
+      <a href="#" id="nav-onboarding">Démarrer</a>
+      <a href="#" id="nav-catalog">Workers</a>
+      <a href="#" id="nav-automations">Automatisations</a>
+      <a href="#" id="nav-analytics">Analytics</a>
+      <a href="#" id="nav-pricing">Tarifs</a>
+      <a href="#" id="nav-faq">FAQ</a>
+      <a href="#" id="nav-billing">Facturation</a>
+      <a href="#" id="nav-chloe">Chloé</a>
+      <a href="#" id="nav-admin" hidden>Admin</a>
+    </nav>
+    <div class="topbar-actions">
+      <button class="lang-toggle" id="lang-toggle" type="button" data-no-i18n="1" aria-label="Switch language">EN</button>
+      <button class="btn btn-ghost" id="nav-chloe-btn">Discuter avec Chloé</button>
+      <button class="btn btn-gold" id="topbar-account-btn">Se connecter</button>
+      <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Menu">&#9776;</button>
+    </div>
+  </header>
+
+  <main>
+    <section id="home-view" class="view">
+      <div class="hero-band">
+        <div class="hero-glow"></div>
+        <canvas class="hero-canvas" id="hero-canvas" aria-hidden="true"></canvas>
+        <div class="hero">
+          <div class="hero-badges">
+            <span class="hero-badge">✨ 17 Workers spécialisés</span>
+            <span class="hero-badge">⚡ Autonomes</span>
+            <span class="hero-badge">🕐 24/7</span>
+          </div>
+          <h1 class="hero-title">Votre objectif. Votre <span class="accent">équipe IA</span>. Votre résultat.</h1>
+          <p class="hero-sub">Chloé comprend votre mission, compose l'équipe de Workers adaptée et coordonne leur travail jusqu'au résultat.</p>
+
+          <form class="prompt-box prompt-box-hero" id="hero-prompt-form">
+            <textarea id="hero-prompt-input" placeholder="Ex : Rédige un email de prospection pour un nouveau client..." rows="2"></textarea>
+            <div class="prompt-box-row">
+              <label class="prompt-agent-select">
+                <img id="prompt-agent-avatar" class="prompt-agent-avatar" src="" alt="">
+                <select id="prompt-agent-select"></select>
+              </label>
+              <button type="submit" class="prompt-send-btn" id="prompt-send-btn" aria-label="Envoyer">&rarr;</button>
+            </div>
+          </form>
+
+          <div class="hero-cta-row">
+            <button class="btn btn-gold" id="hero-chloe-btn">Construire mon équipe</button>
+            <button class="btn btn-ghost" data-open-tour>&#9654; Voir la démo en 30 s</button>
+          </div>
+          <div class="hero-links">
+            <button type="button" class="hero-link" id="hero-workers-btn">Découvrir les Workers</button>
+            <span aria-hidden="true">·</span>
+            <button type="button" class="hero-link" data-open-demo>Réserver une démo</button>
+          </div>
+        </div>
+        <div class="hero-agents">
+        <div class="featured-heading">
+          <h2>Toute l'équipe, tour à tour</h2>
+          <p>Chloé et ses 17 Workers — passez la souris pour un aperçu, cliquez pour la fiche complète.</p>
+        </div>
+        <div class="agent-wheel-wrap">
+          <div class="agent-wheel" id="agent-wheel"></div>
+          <div class="wheel-tooltip" id="wheel-tooltip" hidden></div>
+        </div>
+        <div class="featured-cta">
+          <button class="btn btn-ghost" id="wheel-see-all-btn">Voir les 17 Workers &rarr;</button>
+        </div>
+        </div>
+        <div class="hero hero-prompt">
+
+
+          <form class="role-finder" id="role-finder-form">
+            <input type="text" id="role-finder-input" placeholder="Entrez un métier ou un besoin pour trouver le bon Worker : SEO, contrats, support...">
+            <button type="submit" class="btn btn-ghost">Trouver</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="stats-row" id="stats-row"></div>
+
+      <div class="page-wrap">
+
+        <div class="by-category-section reveal" id="by-category-section">
+          <div class="featured-heading">
+            <h2>Un Worker dédié pour chaque métier</h2>
+            <p>17 métiers, 17 spécialistes — cliquez un domaine pour rencontrer celui qui s'en occupe.</p>
+          </div>
+          <div class="category-bar" id="home-category-bar"></div>
+          <div class="worker-spotlight" id="home-category-spotlight"></div>
+        </div>
+
+        <div class="how-it-works reveal" id="how-it-works">
+          <div class="how-step">
+            <div class="how-step-icon">01</div>
+            <div>
+              <div class="how-step-title">Vous décrivez la mission</div>
+              <div class="how-step-sub">À Chloé ou directement à un Worker — pas de configuration, pas de script.</div>
+            </div>
+          </div>
+          <div class="how-step">
+            <div class="how-step-icon">02</div>
+            <div>
+              <div class="how-step-title">Le ou les Workers exécutent</div>
+              <div class="how-step-sub">Chacun selon son rôle et les outils auxquels il a accès.</div>
+            </div>
+          </div>
+          <div class="how-step">
+            <div class="how-step-icon">03</div>
+            <div>
+              <div class="how-step-title">Chloé vérifie</div>
+              <div class="how-step-sub">Avant tout envoi, publication ou suppression — automatiquement.</div>
+            </div>
+          </div>
+          <div class="how-step">
+            <div class="how-step-icon">04</div>
+            <div>
+              <div class="how-step-title">Vous validez le financier</div>
+              <div class="how-step-sub">Seuls les paiements et transactions vous reviennent directement.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="compare-section reveal">
+          <div class="trust-heading">
+            <h2>Un chatbot répond. Une équipe livre.</h2>
+            <p>La différence entre un assistant qu'on doit relancer et des Workers qui prennent la mission en charge.</p>
+          </div>
+          <div class="compare-table">
+            <div class="compare-head"><span></span><span>Chatbot classique</span><span class="compare-us">BK-AI-WORKERS</span></div>
+            <div class="compare-row"><span>Mode de travail</span><span>Attend votre prompt</span><span class="compare-us">Mission confiée, exécutée par le bon Worker</span></div>
+            <div class="compare-row"><span>Organisation</span><span>Une seule fenêtre de chat</span><span class="compare-us">Chloé compose l'équipe adaptée</span></div>
+            <div class="compare-row"><span>Sécurité</span><span>Aucun garde-fou métier</span><span class="compare-us">Actions sensibles vérifiées avant exécution</span></div>
+            <div class="compare-row"><span>Outils</span><span>Copier-coller manuel</span><span class="compare-us">Connecteurs réels vers vos outils</span></div>
+            <div class="compare-row"><span>Récurrence</span><span>À refaire à chaque fois</span><span class="compare-us">Automatisations planifiées</span></div>
+          </div>
+        </div>
+
+        <div class="integrations-strip reveal">
+          <div class="trust-heading">
+            <h2>Branchés sur vos outils</h2>
+            <p>Les connecteurs pris en charge par la plateforme.</p>
+          </div>
+          <div class="integrations-chips" id="integrations-chips"></div>
+        </div>
+
+        <div class="trust-signals reveal">
+          <div class="trust-heading">
+            <h2>Ce qui est déjà vrai aujourd'hui</h2>
+            <p>Pas d'avis fabriqués — juste ce que le système fait réellement, vérifiable.</p>
+          </div>
+          <div class="trust-grid" id="trust-grid">
+            <div class="trust-card">
+              <div class="trust-num" id="trust-workers-num">17</div>
+              <div class="trust-label">Workers spécialisés prêts à travailler</div>
+            </div>
+            <div class="trust-card">
+              <div class="trust-num" id="trust-connectors-num">—</div>
+              <div class="trust-label">Connecteurs métier disponibles (Slack, CRM, email…)</div>
+            </div>
+            <div class="trust-card">
+              <div class="trust-num">100%</div>
+              <div class="trust-label">Actions sensibles vérifiées par Chloé avant exécution</div>
+            </div>
+            <div class="trust-card">
+              <div class="trust-num">CH</div>
+              <div class="trust-label">Utilisable partout dans le monde, dans toutes les langues</div>
+            </div>
+          </div>
+          <div class="testimonials-slot" hidden>
+            <!-- Emplacement reserve aux VRAIS temoignages clients, des
+                 qu'il y en aura — aucun avis fabrique n'est ajoute ici. -->
+          </div>
+        </div>
+
+        <section class="testimonials-section reveal" id="testimonials-section" hidden>
+          <div class="featured-heading">
+            <h2>Ce que disent nos clients</h2>
+          </div>
+          <div class="testimonials-grid" id="testimonials-grid"></div>
+        </section>
+
+        <div class="final-cta reveal">
+          <div class="final-cta-eyebrow">Prêt à démarrer ?</div>
+          <h2>Confiez votre première mission.</h2>
+          <p>Choisissez un Worker ou laissez Chloé s'en occuper — Chloé vous demande confirmation avant toute action sensible.</p>
+          <div class="hero-cta-row">
+            <button class="btn btn-gold" id="final-cta-chloe-btn">Discuter avec Chloé</button>
+            <button class="btn btn-ghost" id="final-cta-workers-btn">Voir les 17 Workers</button>
+            <button class="btn btn-ghost" data-open-demo>Réserver une démo</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="workers-view" class="view page-wrap" hidden>
+      <div class="page-band">
+        <div class="page-band-glow"></div>
+        <button id="workers-back-btn" class="back-btn">&larr; Accueil</button>
+        <div class="catalog-intro">
+          <h1 class="workers-title">Des Workers spécialisés pour un métier</h1>
+          <p class="hero-sub">Un expert entraîné pour chaque fonction. Cliquez un Worker pour voir sa fiche et lui confier une mission.</p>
+        </div>
+      </div>
+      <div class="search-bar">
+        <span class="search-icon">&#128269;</span>
+        <input type="text" id="worker-search" placeholder="Cherchez un métier, une compétence... CRM, SEO, contrats...">
+      </div>
+      <div class="category-bar" id="category-bar"></div>
+      <div id="catalog-grid" class="catalog-grid"></div>
+    </section>
+
+    <section id="automations-view" class="view page-wrap" hidden>
+      <div class="page-band">
+        <div class="page-band-glow"></div>
+        <button id="automations-back-btn" class="back-btn">&larr; Accueil</button>
+
+        <div class="catalog-intro">
+          <h1 class="workers-title">Automatisations & Intégrations</h1>
+          <p class="hero-sub">Missions récurrentes réellement exécutées par le pipeline, et catalogue réel des connecteurs — un Worker prépare une action (email, publication, mise à jour CRM...), mais ne la diffuse jamais réellement tant que l'outil concerné n'est pas connecté à un vrai compte.</p>
+        </div>
+      </div>
+
+      <div class="automation-section-heading">
+        <h2>Automatisations</h2>
+        <p>Confiez une mission récurrente à un Worker — elle s'exécute automatiquement à la fréquence choisie.</p>
+      </div>
+
+      <form id="automation-form" class="automation-form">
+        <select id="automation-worker-select"></select>
+        <input type="text" id="automation-objective-input" placeholder="Ex : prépare le rapport budget mensuel" autocomplete="off">
+        <select id="automation-frequency-select">
+          <option value="60">Toutes les heures</option>
+          <option value="1440" selected>Tous les jours</option>
+          <option value="10080">Toutes les semaines</option>
+          <option value="43200">Tous les mois</option>
+        </select>
+        <label class="automation-notify-label">
+          <input type="checkbox" id="automation-notify-slack"> Notifier sur Slack
+        </label>
+        <button type="submit" class="btn btn-gold">Créer</button>
+      </form>
+      <div id="automation-error" class="task-error" hidden></div>
+
+      <div id="automation-list" class="automation-list"></div>
+
+      <div class="automation-section-heading">
+        <h2>Intégrations</h2>
+        <p id="connectors-summary"></p>
+      </div>
+      <div id="auto-approve-card" class="auto-approve-card" hidden>
+        <label class="auto-approve-toggle">
+          <input type="checkbox" id="auto-approve-checkbox">
+          <span>Laisser mes Workers agir seuls, sans confirmation à chaque fois</span>
+        </label>
+        <p class="auto-approve-warning">Une fois activé, toute action réelle préparée sur un connecteur que vous avez connecté (email, publication, tâche...) part automatiquement — vous ne verrez plus de carte à confirmer. Désactivez à tout moment.</p>
+      </div>
+      <div class="connectors-how">
+        <div class="how-mini"><b>1</b><div><strong>Connectez votre outil</strong><span>Avec votre propre compte. Vos identifiants sont chiffrés : personne, pas même nous, ne peut les lire.</span></div></div>
+        <div class="how-mini"><b>2</b><div><strong>Autorisez vos Workers</strong><span>Un interrupteur par outil : vous décidez lesquels ils peuvent utiliser.</span></div></div>
+        <div class="how-mini"><b>3</b><div><strong>Ils préparent, vous validez</strong><span>Lire et chercher est automatique ; envoyer ou publier attend votre confirmation.</span></div></div>
+      </div>
+      <div id="connectors-grid" class="connectors-grid"></div>
+
+    </section>
+
+    <section id="analytics-view" class="view page-wrap" hidden>
+      <div class="page-band">
+        <div class="page-band-glow"></div>
+        <button id="analytics-back-btn" class="back-btn">&larr; Accueil</button>
+
+        <div class="catalog-intro">
+          <h1 class="workers-title">Analytics</h1>
+          <p class="hero-sub">Données réelles issues des missions effectivement exécutées — rien n'est inventé. Le temps gagné est une estimation, clairement indiquée comme telle.</p>
+        </div>
+      </div>
+
+      <div id="analytics-connect-required" class="connect-required" hidden>
+        <p>Connectez-vous pour voir vos statistiques réelles (missions traitées, Workers sollicités, automatisations).</p>
+        <button type="button" class="btn btn-gold">Se connecter / Créer un compte</button>
+      </div>
+
+      <div id="analytics-content">
+        <div class="analytics-stats-grid" id="analytics-stats-grid"></div>
+
+        <div class="automation-section-heading">
+          <h2>Missions par Worker</h2>
+          <p>Nombre de missions réellement traitées par chaque Worker.</p>
+        </div>
+        <div id="analytics-worker-bars" class="analytics-bars"></div>
+
+        <div class="automation-section-heading">
+          <h2>Statuts des missions</h2>
+        </div>
+        <div id="analytics-status-bars" class="analytics-bars"></div>
+
+        <div class="analytics-note" id="analytics-time-note"></div>
+      </div>
+    </section>
+
+    <section id="onboarding-view" class="view page-wrap" hidden>
+      <button id="onboarding-back-btn" class="back-btn">&larr; Accueil</button>
+
+      <div class="onboarding-progress" id="onboarding-progress">
+        <div class="onboarding-step-dot active" data-step="1">1</div>
+        <div class="onboarding-step-line"></div>
+        <div class="onboarding-step-dot" data-step="2">2</div>
+        <div class="onboarding-step-line"></div>
+        <div class="onboarding-step-dot" data-step="3">3</div>
+        <div class="onboarding-step-line"></div>
+        <div class="onboarding-step-dot" data-step="4">4</div>
+      </div>
+
+      <!-- Etape 1 : profil entreprise -->
+      <div class="onboarding-step" id="onboarding-step-1">
+        <div class="page-band">
+          <div class="page-band-glow"></div>
+          <h1 class="workers-title">Parlez-nous de votre entreprise</h1>
+          <p class="hero-sub">Ces infos sont transmises à vos Workers pour personnaliser leurs réponses. Elles ne sont partagées avec aucun tiers, hormis le fournisseur IA qui génère la réponse.</p>
+        </div>
+        <div class="onboarding-form">
+          <input type="text" id="onboarding-company-name" placeholder="Nom de l'entreprise">
+          <input type="text" id="onboarding-company-sector" placeholder="Secteur d'activité (ex : e-commerce, conseil, artisanat...)">
+          <textarea id="onboarding-company-description" rows="2" placeholder="En une ou deux phrases : que vendez-vous, et à qui ? (optionnel, mais rend les réponses des Workers bien plus pertinentes)"></textarea>
+          <button type="button" class="btn btn-gold" id="onboarding-step1-next">Continuer &rarr;</button>
+        </div>
+      </div>
+
+      <!-- Etape 2 : objectif -->
+      <div class="onboarding-step" id="onboarding-step-2" hidden>
+        <div class="page-band">
+          <div class="page-band-glow"></div>
+          <h1 class="workers-title">Quel est votre objectif ?</h1>
+          <p class="hero-sub">Décrivez ce que vous voulez accomplir — Chloé va analyser et proposer une équipe adaptée.</p>
+        </div>
+        <div class="onboarding-form">
+          <textarea id="onboarding-objective" rows="3" placeholder="Ex : je veux lancer une campagne marketing et améliorer mon référencement SEO"></textarea>
+          <button type="button" class="btn btn-gold" id="onboarding-analyze-btn">Demander à Chloé &rarr;</button>
+        </div>
+        <div id="onboarding-analyze-error" class="task-error" hidden></div>
+      </div>
+
+      <!-- Etape 3 : proposition d'equipe -->
+      <div class="onboarding-step" id="onboarding-step-3" hidden>
+        <div class="page-band">
+          <div class="page-band-glow"></div>
+          <h1 class="workers-title">Voici l'équipe que Chloé propose</h1>
+          <p class="hero-sub" id="onboarding-team-sub"></p>
+        </div>
+        <div class="onboarding-team-grid" id="onboarding-team-grid"></div>
+        <div class="onboarding-form">
+          <button type="button" class="btn btn-ghost" id="onboarding-back-to-objective">&larr; Reformuler l'objectif</button>
+          <button type="button" class="btn btn-gold" id="onboarding-validate-btn">Valider et lancer la mission &rarr;</button>
+        </div>
+      </div>
+
+      <!-- Etape 4 : resultat -->
+      <div class="onboarding-step" id="onboarding-step-4" hidden>
+        <div class="page-band">
+          <div class="page-band-glow"></div>
+          <h1 class="workers-title">Résultat de votre première mission</h1>
+        </div>
+        <div class="task-result" id="onboarding-result"></div>
+        <div class="onboarding-form">
+          <button type="button" class="btn btn-gold" id="onboarding-finish-btn">Aller sur mon dashboard &rarr;</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="pricing-view" class="view page-wrap" hidden>
+      <div class="page-band">
+        <div class="page-band-glow"></div>
+        <button id="pricing-back-btn" class="back-btn">&larr; Accueil</button>
+
+        <div class="catalog-intro">
+          <div class="hero-badges">
+            <span class="hero-badge">🌍 Partout dans le monde</span>
+            <span class="hero-badge">💳 Sans engagement</span>
+          </div>
+          <h1 class="workers-title">Une équipe IA complète, pas juste un chatbot</h1>
+          <p class="hero-sub">Un chatbot seul coûte déjà l'équivalent de <span data-chf="79">CHF 79</span> à <span data-chf="149">CHF 149</span>/mois. Avec BK-AI-WORKERS, vous avez Chloé et toute une équipe de Workers spécialisés — au moins 5 % moins cher que les alternatives comparables.</p>
+        </div>
+      </div>
+
+      <div class="promo-banner">
+        <div class="promo-banner-title">🚀 Offre de lancement BK FOUNDERS</div>
+        <div class="promo-banner-sub">-30 % sur vos 2 premiers mois, abonnement annuel = 2 mois offerts, 1 mois offert pour vous et votre filleul si vous parrainez. Les 20 premiers clients gardent leur prix 12 mois, même si les tarifs augmentent. Aucune carte bancaire requise pour l'essai.</div>
+      </div>
+
+      <div class="pricing-grid" id="pricing-grid"></div>
+
+      <div class="final-cta">
+        <div class="final-cta-eyebrow">Une question sur le bon plan ?</div>
+        <h2>Décrivez votre activité à Chloé.</h2>
+        <p>Elle vous aide à estimer le plan le plus adapté à votre usage réel.</p>
+        <div class="hero-cta-row">
+          <button class="btn btn-gold" id="pricing-cta-chloe-btn">Discuter avec Chloé</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="billing-view" class="view page-wrap" hidden>
+      <div class="page-band">
+        <div class="page-band-glow"></div>
+        <button id="billing-back-btn" class="back-btn">&larr; Accueil</button>
+
+        <div class="catalog-intro">
+          <h1 class="workers-title">Facturation &amp; usage</h1>
+          <p class="hero-sub">Votre plan actif, votre consommation réelle de crédits (1 mission traitée = 1 crédit), et l'historique de votre compte.</p>
+        </div>
+      </div>
+
+      <div id="billing-connect-required" class="connect-required" hidden>
+        <p>Connectez-vous pour voir votre plan actif, votre consommation et votre historique — ou consultez la page <a href="#" id="billing-connect-pricing-link">Tarifs</a>, accessible sans compte.</p>
+        <button type="button" class="btn btn-gold">Se connecter / Créer un compte</button>
+      </div>
+
+      <div id="billing-content">
+        <div class="billing-current-card">
+          <div class="billing-current-head">
+            <div>
+              <div class="billing-current-label">Plan actif</div>
+              <div class="billing-current-plan" id="billing-plan-name">—</div>
+            </div>
+            <button type="button" class="btn btn-ghost" id="billing-cancel-btn">Annuler l'abonnement</button>
+          </div>
+          <div class="billing-usage-track">
+            <div class="billing-usage-fill" id="billing-usage-fill"></div>
+          </div>
+          <div class="billing-usage-line" id="billing-usage-line"></div>
+          <div class="billing-alert" id="billing-alert" hidden>⚠️ Vous avez consommé plus de 80% de votre quota du cycle en cours.</div>
+        </div>
+
+        <div class="billing-recharge" id="billing-recharge" hidden>
+          <input type="number" id="billing-recharge-amount" min="1" step="1" placeholder="Crédits à ajouter (ex : 50)">
+          <button type="button" class="btn btn-ghost" id="billing-recharge-btn">Recharger (simulation)</button>
+        </div>
+
+        <h2 class="billing-section-title">Changer de plan</h2>
+        <div class="billing-interval-toggle" id="billing-interval-toggle">
+          <button type="button" class="active" data-interval="month">Mensuel</button>
+          <button type="button" data-interval="year">Annuel — 2 mois offerts</button>
+        </div>
+        <div class="billing-plans-grid" id="billing-plans-grid"></div>
+
+        <div id="billing-history-section">
+          <h2 class="billing-section-title">Historique du compte</h2>
+          <div class="billing-history" id="billing-history"></div>
+        </div>
+
+        <div class="billing-alert" id="verify-email-banner" hidden>
+          ✉️ Confirmez votre email pour pouvoir souscrire un plan : un lien vous a été envoyé à l'inscription.
+          <button type="button" class="btn btn-ghost" id="verify-resend-btn" style="margin-left:8px">Renvoyer l'email</button>
+        </div>
+
+        <div id="account-data-section" hidden>
+          <h2 class="billing-section-title">Mes données</h2>
+          <div class="account-data-card">
+            <p>Vous gardez la maîtrise de vos données : téléchargez tout ce que nous conservons sur votre compte, ou supprimez-le définitivement.</p>
+            <div class="account-data-actions">
+              <button type="button" class="btn btn-ghost" id="account-export-btn">Exporter mes données</button>
+              <button type="button" class="btn btn-ghost danger" id="account-delete-btn">Supprimer mon compte</button>
+            </div>
+            <div id="account-data-msg" class="task-error" hidden></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="admin-view" class="view page-wrap" hidden>
+      <div class="page-band">
+        <div class="page-band-glow"></div>
+        <button id="admin-back-btn" class="back-btn">&larr; Accueil</button>
+
+        <div class="catalog-intro">
+          <div class="hero-badges">
+            <span class="hero-badge">🔑 Accès propriétaire</span>
+          </div>
+          <h1 class="workers-title">Vue d'ensemble</h1>
+          <p class="hero-sub">Tous vos comptes réels — vous y compris — avec leur activité et leur plan. Visible uniquement avec votre accès propriétaire.</p>
+        </div>
+      </div>
+
+      <div class="trust-grid" id="admin-stats-grid"></div>
+
+      <h2 class="billing-section-title">Activité en direct <span class="block-subtitle">(dernières 24 h, actualisée toutes les 30 s)</span></h2>
+      <div class="trust-grid" id="admin-24h-grid"></div>
+      <div id="admin-activity-list" class="admin-activity"></div>
+
+      <h2 class="billing-section-title">Témoignages clients</h2>
+      <div class="account-data-card" id="admin-testimonials-card">
+        <p>Publiez uniquement de vrais avis, avec l'accord de la personne. La section n'apparaît sur le site qu'à partir du premier témoignage.</p>
+        <form id="testimonial-form" class="testimonial-form">
+          <input type="text" id="tsm-name" placeholder="Nom (ex : Marie D.)" maxlength="80" required>
+          <input type="text" id="tsm-role" placeholder="Fonction (ex : Gérante)" maxlength="80">
+          <input type="text" id="tsm-company" placeholder="Entreprise (optionnel)" maxlength="80">
+          <select id="tsm-rating"><option value="">Note (optionnel)</option><option value="5">5 / 5</option><option value="4">4 / 5</option><option value="3">3 / 5</option></select>
+          <textarea id="tsm-text" rows="3" maxlength="600" placeholder="Le témoignage, tel que donné par le client (20 à 600 caractères)" required></textarea>
+          <label class="tsm-consent"><input type="checkbox" id="tsm-consent"> J'ai l'accord de cette personne pour publier ce témoignage</label>
+          <button type="submit" class="btn btn-gold">Publier</button>
+          <div id="tsm-msg" class="task-error" hidden></div>
+        </form>
+        <div id="admin-testimonials-list"></div>
+      </div>
+
+      <h2 class="billing-section-title">Demandes de démo</h2>
+      <div id="admin-demo-list" class="admin-activity"></div>
+
+      <h2 class="billing-section-title">Comptes</h2>
+      <div id="admin-clients-list"></div>
+    </section>
+
+    <section id="faq-view" class="view page-wrap" hidden>
+      <div class="page-band">
+        <div class="page-band-glow"></div>
+        <button id="faq-back-btn" class="back-btn">&larr; Accueil</button>
+
+        <div class="catalog-intro">
+          <h1 class="workers-title">Questions fréquentes</h1>
+          <p class="hero-sub">Comment ça marche, concrètement — sans jargon.</p>
+        </div>
+      </div>
+
+      <div class="faq-list">
+        <details class="faq-item">
+          <summary>Un Worker peut-il vraiment envoyer un email ou publier à ma place ?</summary>
+          <p>Un Worker prépare toujours le travail (texte, analyse, brouillon) avec une vraie IA. La diffusion réelle vers un outil externe (envoi d'email, publication, mise à jour CRM) n'a lieu que pour les outils que vous connectez vous-même à votre compte — tant qu'un outil n'est pas connecté, son résultat reste une préparation, jamais un envoi. Le paiement de votre abonnement, lui, est traité réellement par Stripe dès la souscription.</p>
+        </details>
+        <details class="faq-item">
+          <summary>Un Worker peut-il envoyer un email ou publier quelque chose sans mon accord ?</summary>
+          <p>Non. Toute action sensible (envoi, publication, suppression, exécution) passe systématiquement par une vérification de Chloé avant d'avoir lieu — jamais directement depuis la fiche d'un Worker. C'est une règle appliquée au niveau du code, pas juste une bonne intention.</p>
+        </details>
+        <details class="faq-item">
+          <summary>Comment les Workers se connectent-ils à mes outils (Slack, CRM, etc.) ?</summary>
+          <p>Chaque connexion se fait avec votre propre compte (« Se connecter avec Google », Microsoft…), et vos accès sont stockés chiffrés — jamais vus en clair, jamais partagés entre plusieurs comptes. Rien n'est connecté par défaut : vous choisissez quels outils brancher, et quand.</p>
+        </details>
+        <details class="faq-item">
+          <summary>Comment fonctionne la facturation ?</summary>
+          <p>Chaque plan inclut un quota de crédits par cycle (1 mission réellement traitée = 1 crédit consommé). La consommation est visible en temps réel, une alerte apparaît à 80% du quota, et aucune facturation supplémentaire automatique n'a lieu si vous dépassez — une recharge reste toujours volontaire, jamais imposée.</p>
+        </details>
+        <details class="faq-item">
+          <summary>Où sont stockées mes données ?</summary>
+          <p>Les missions, l'historique et les identifiants restent sur l'infrastructure du produit — pas partagés avec des tiers en dehors des outils que vous connectez vous-même. Voir la page Confidentialité pour le détail.</p>
+        </details>
+        <details class="faq-item">
+          <summary>Puis-je changer ou annuler mon plan à tout moment ?</summary>
+          <p>Oui, depuis la page Facturation — changement de plan, recharge de crédits et annulation sont accessibles à tout moment, sans engagement minimum.</p>
+        </details>
+      </div>
+    </section>
+
+    <section id="legal-view" class="view page-wrap" hidden>
+      <div class="page-band">
+        <div class="page-band-glow"></div>
+        <button id="legal-back-btn" class="back-btn">&larr; Accueil</button>
+
+        <div class="catalog-intro">
+          <h1 class="workers-title">Informations légales</h1>
+        </div>
+      </div>
+
+      <div class="legal-layout">
+        <nav class="legal-nav">
+          <a href="#legal-cgv">CGV</a>
+          <a href="#legal-mentions">Mentions légales</a>
+          <a href="#legal-confidentialite">Confidentialité</a>
+          <a href="#legal-cookies">Cookies</a>
+        </nav>
+        <div class="legal-content">
+          <article id="legal-cgv">
+            <h2>Conditions générales de vente</h2>
+            <p><em>Dernière mise à jour : 21 septembre 2026</em></p>
+            <h3>1. Éditeur et champ d'application</h3>
+            <p>Les présentes conditions générales de vente (CGV) régissent l'accès et l'utilisation de la plateforme BK-AI-WORKERS, éditée par <strong>BK-ENTREPRISE</strong> (entreprise individuelle, activité entièrement en ligne), Rue Joseph-Pasquier 1, 1203 Genève, Suisse. Elles s'appliquent à tout client professionnel (entreprise, indépendant) qui souscrit un plan. Le service est destiné aux professionnels ; il n'est pas proposé aux consommateurs.</p>
+            <h3>2. Description du service</h3>
+            <p>BK-AI-WORKERS met à disposition Chloé, agent orchestrateur, et une équipe d'agents IA spécialisés (les « Workers ») qui préparent des livrables métier (textes, analyses, plans, brouillons). Les Workers <strong>préparent</strong> ; ils n'exécutent aucune action à risque (envoi, publication, suppression, paiement) sans validation explicite du client. La diffusion réelle d'un livrable vers un outil externe (email, réseau social, CRM...) nécessite que le client connecte lui-même cet outil à son compte ; sans cette connexion, le résultat reste une préparation. Le paiement de l'abonnement, lui, est traité réellement dès la souscription (voir article 5).</p>
+            <h3>3. Essai gratuit</h3>
+            <p>Le plan Essai est gratuit, sans carte bancaire, limité à 3 jours et à un quota de crédits. À son terme, aucun prélèvement n'a lieu : le client choisit librement de souscrire un plan payant ou d'arrêter.</p>
+            <h3>4. Plans, crédits et prix</h3>
+            <p>Les plans, prix et quotas de crédits sont ceux affichés sur la page Tarifs au moment de la souscription, en francs suisses (CHF), hors taxes le cas échéant. Une mission consomme des crédits ; un crédit non utilisé à la fin de la période de facturation n'est pas reporté, sauf mention contraire sur la page Tarifs. Le client peut recharger des crédits à tout moment. BK-ENTREPRISE n'étant pas assujettie à la TVA en dessous du seuil légal suisse (CHF 100'000 de chiffre d'affaires annuel), aucune TVA n'est facturée à ce jour ; ce point sera mis à jour ici en cas d'assujettissement.</p>
+            <h3>5. Paiement</h3>
+            <p>Le paiement est dû d'avance, par carte bancaire via notre prestataire de paiement Stripe. BK-ENTREPRISE ne voit ni ne conserve les données de carte. En cas d'échec de paiement, l'accès aux fonctions payantes peut être suspendu jusqu'à régularisation.</p>
+            <h3>6. Durée, renouvellement et résiliation</h3>
+            <p>Les abonnements sont mensuels et se renouvellent automatiquement pour une période équivalente. Le client peut résilier à tout moment depuis la page Facturation, avec effet à la fin de la période en cours : la période déjà payée reste due et n'est pas remboursée au prorata. Aucune pénalité de sortie n'est appliquée.</p>
+            <h3>7. Remboursement</h3>
+            <p>Sauf disposition légale impérative, les sommes versées ne sont pas remboursables. En cas de défaut avéré du service imputable à BK-ENTREPRISE (indisponibilité prolongée, erreur de facturation), le client peut adresser une demande motivée à contact@bk-entreprise.com ; elle est examinée au cas par cas, sous 10 jours ouvrables.</p>
+            <h3>8. Modification des prix et des CGV</h3>
+            <p>BK-ENTREPRISE peut modifier ses prix et les présentes CGV. Toute modification est communiquée au client au moins 30 jours à l'avance et ne s'applique qu'au renouvellement suivant ; le client peut résilier avant son entrée en vigueur. Les prix d'un abonnement en cours ne sont pas augmentés en cours de période.</p>
+            <h3>9. Utilisation acceptable</h3>
+            <p>Le client s'engage à utiliser le service conformément au droit applicable, à fournir des informations exactes, à ne pas partager ses accès, et à ne pas utiliser les Workers pour des contenus illicites, trompeurs, discriminatoires ou portant atteinte aux droits de tiers, ni pour du spam. Toute revente ou sous-licence du service est interdite sans accord écrit.</p>
+            <h3>10. Résultats produits par l'IA</h3>
+            <p>Les réponses sont générées par des modèles d'intelligence artificielle et peuvent contenir des erreurs ou des approximations. Le client est seul responsable de la vérification et de l'usage des résultats avant toute action réelle, en particulier pour les décisions financières, juridiques, fiscales, médicales ou de communication externe. Les Workers ne remplacent pas un conseil professionnel. Le client conserve la propriété des contenus qu'il fournit et des livrables qu'il obtient.</p>
+            <h3>11. Responsabilité</h3>
+            <p>BK-ENTREPRISE fournit le service avec la diligence requise mais ne garantit ni un résultat commercial ou financier, ni une disponibilité ininterrompue. Dans les limites permises par le droit suisse, sa responsabilité est exclue pour les dommages indirects (perte de revenus, de données, d'opportunités) et, pour les autres dommages, limitée aux montants payés par le client au cours des 12 derniers mois. La responsabilité en cas d'intention ou de négligence grave demeure réservée (art. 100 CO).</p>
+            <h3>12. Suspension</h3>
+            <p>BK-ENTREPRISE peut suspendre ou résilier l'accès en cas de non-paiement, de violation des présentes CGV ou d'usage illicite, après information du client lorsque les circonstances le permettent.</p>
+            <h3>13. Support et maintenance</h3>
+            <p>Le support est assuré par courriel à contact@bk-entreprise.com, en jours ouvrables. Des opérations de maintenance peuvent entraîner des interruptions brèves ; elles sont annoncées lorsque c'est possible.</p>
+            <h3>14. Force majeure</h3>
+            <p>Aucune partie n'est responsable d'un manquement causé par un cas de force majeure (panne d'un fournisseur d'infrastructure ou d'IA, cyberattaque, événement naturel, décision d'autorité). Si l'événement dure plus de trois mois, chaque partie peut résilier sans pénalité.</p>
+            <h3>15. Protection des données</h3>
+            <p>Le traitement des données est décrit dans la section « Confidentialité » ci-dessous, qui fait partie intégrante des présentes CGV.</p>
+            <h3>16. Droit applicable et for</h3>
+            <p>Les présentes CGV sont soumises au droit suisse, à l'exclusion des règles de conflit de lois. Le for exclusif est Genève, Suisse. Si une clause est invalide, les autres restent applicables.</p>
+          </article>
+
+          <article id="legal-mentions">
+            <h2>Mentions légales</h2>
+            <ul>
+              <li><strong>Éditeur :</strong> BK-ENTREPRISE — BK-AI-WORKERS est un produit exploité par BK-ENTREPRISE</li>
+              <li><strong>Forme juridique :</strong> Entreprise individuelle (raison individuelle, activité 100% en ligne)</li>
+              <li><strong>Siège :</strong> Rue Joseph-Pasquier 1, 1203 Genève, Suisse</li>
+              <li><strong>Contact :</strong> contact@bk-entreprise.com — +41 79 934 99 46</li>
+              <li><strong>Responsable de la publication :</strong> M. Christ Kader Berte, fondateur</li>
+              <li><strong>Propriété intellectuelle :</strong> la plateforme, ses textes, visuels, portraits des Workers et sa marque sont la propriété exclusive de BK-ENTREPRISE ; toute reproduction sans autorisation écrite est interdite.</li>
+            </ul>
+          </article>
+
+          <article id="legal-confidentialite">
+            <h2>Confidentialité</h2>
+            <p>BK-AI-WORKERS traite les données conformément à la loi fédérale suisse sur la protection des données (nLPD). Responsable du traitement : BK-ENTREPRISE (coordonnées ci-dessus).</p>
+            <h3>Données traitées</h3>
+            <p>Informations de compte et de facturation, profil d'entreprise que vous renseignez, contenu des missions confiées aux Workers et leurs résultats, données techniques minimales (journaux de sécurité).</p>
+            <h3>Finalités</h3>
+            <p>Fournir le service, sécuriser l'accès, facturer, améliorer la fiabilité. Vos données ne sont jamais vendues à des tiers.</p>
+            <h3>Sous-traitants</h3>
+            <p>Pour générer les réponses, le contenu de vos missions et votre profil d'entreprise sont transmis à notre fournisseur d'IA (Anthropic, États-Unis), qui n'utilise pas les données d'API pour entraîner ses modèles selon ses conditions publiées. Les paiements sont traités par Stripe. Ces transferts vers l'étranger sont encadrés par des garanties contractuelles conformes à la nLPD. Ne saisissez pas de données sensibles (santé, données bancaires complètes, mots de passe) dans vos missions.</p>
+            <h3>Identifiants d'outils tiers</h3>
+            <p>Les identifiants de connexion à vos outils (Slack, CRM, etc.) sont stockés chiffrés et ne sont jamais visibles en clair, y compris par l'équipe BK-AI-WORKERS.</p>
+            <h3>Conservation et sécurité</h3>
+            <p>Les données sont conservées pendant la durée de l'abonnement puis supprimées sur demande, sous réserve des obligations légales (comptabilité : 10 ans). L'accès aux fonctions opérationnelles est protégé par authentification et chaque action à risque est soumise à validation.</p>
+            <h3>Vos droits</h3>
+            <p>Accès, rectification, suppression, portabilité, opposition : contact@bk-entreprise.com. Vous pouvez aussi vous adresser au Préposé fédéral à la protection des données et à la transparence (PFPDT).</p>
+          </article>
+
+          <article id="legal-cookies">
+            <h2>Cookies</h2>
+            <p>La plateforme n'utilise que des cookies techniques strictement nécessaires (session de connexion) et un stockage local du navigateur pour mémoriser votre langue. Aucun cookie publicitaire ni de suivi n'est utilisé : aucun consentement n'est donc requis.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="profile-view" class="view page-wrap" hidden>
+      <div id="app-profile">
+        <button id="back-btn" class="back-btn">&larr; Retour</button>
+        <div class="profile-layout">
+          <div class="profile-portrait-col">
+            <div class="portrait-frame">
+              <div class="online-badge"><span class="dot"></span>Disponible</div>
+              <img id="profile-portrait" src="" alt="">
+              <div class="chat-preview" id="chat-preview" hidden>
+                <div class="chat-preview-label">Style de communication</div>
+                <div class="chat-bubble" id="chat-preview-text"></div>
+              </div>
+            </div>
+          </div>
+          <div class="profile-info-col">
+            <h1 id="profile-name"></h1>
+            <div id="profile-role" class="profile-role"></div>
+            <p id="profile-personality" class="profile-personality"></p>
+
+            <div class="profile-block">
+              <div class="block-title">Compétences</div>
+              <div id="profile-skills" class="tag-row"></div>
+            </div>
+
+            <div class="profile-block">
+              <div class="block-title">Outils accessibles</div>
+              <div id="profile-tools" class="tag-row"></div>
+            </div>
+
+            <div class="profile-block">
+              <div class="block-title">Confier une mission</div>
+              <form id="task-form" class="task-form">
+                <input id="task-input" type="text" placeholder="Ex: prépare une stratégie de prospection pour un nouveau client" autocomplete="off">
+                <button type="submit">Envoyer</button>
+              </form>
+              <div id="task-error" class="task-error" hidden></div>
+              <div id="task-result" class="task-result" hidden></div>
+            </div>
+
+            <div class="profile-block" id="activity-block">
+              <div class="block-title">Activité récente <span class="block-subtitle">(données réelles du système)</span></div>
+              <div id="profile-activity" class="activity-list"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="account-modal" class="gate-modal" hidden>
+    <div class="gate-modal-box">
+      <div class="account-modal-tabs">
+        <button type="button" class="active" id="account-tab-signup">Créer un compte</button>
+        <button type="button" id="account-tab-login">Se connecter</button>
+      </div>
+
+      <div id="account-panel-signup">
+        <p class="hero-sub">Gratuit, sans carte bancaire — essai 3 jours pour utiliser Chloé et les Workers.</p>
+        <input type="text" id="account-signup-company" placeholder="Nom de votre entreprise (optionnel)">
+        <input type="email" id="account-signup-email" placeholder="Votre email" autocomplete="email">
+        <input type="password" id="account-signup-password" placeholder="Mot de passe (8 caractères min.)" autocomplete="new-password">
+        <div id="account-signup-error" class="task-error" hidden></div>
+        <div class="gate-modal-actions">
+          <button type="button" class="btn btn-ghost" id="account-cancel-btn-1">Annuler</button>
+          <button type="button" class="btn btn-gold" id="account-signup-btn">Créer mon compte &rarr;</button>
+        </div>
+      </div>
+
+      <div id="account-panel-login" hidden>
+        <p class="hero-sub">Retrouvez votre espace.</p>
+        <input type="email" id="account-login-email" placeholder="Votre email" autocomplete="email">
+        <input type="password" id="account-login-password" placeholder="Mot de passe" autocomplete="current-password">
+        <div id="account-login-error" class="task-error" hidden></div>
+        <div class="gate-modal-actions">
+          <button type="button" class="btn btn-ghost" id="account-cancel-btn-2">Annuler</button>
+          <button type="button" class="btn btn-gold" id="account-login-btn">Se connecter &rarr;</button>
+        </div>
+        <p class="account-forgot"><button type="button" id="account-forgot-link">Mot de passe oublié ?</button></p>
+      </div>
+
+      <div id="account-panel-forgot" hidden>
+        <p class="hero-sub">Entrez l'email de votre compte : nous vous envoyons un lien pour choisir un nouveau mot de passe.</p>
+        <input type="email" id="account-forgot-email" placeholder="Votre email" autocomplete="email">
+        <div id="account-forgot-msg" class="task-error" hidden></div>
+        <div class="gate-modal-actions">
+          <button type="button" class="btn btn-ghost" id="account-forgot-back">Retour</button>
+          <button type="button" class="btn btn-gold" id="account-forgot-send">Envoyer le lien &rarr;</button>
+        </div>
+      </div>
+
+      <p class="account-modal-owner-link">Vous êtes l'administrateur du site ? <button type="button" id="account-owner-btn">Connexion propriétaire</button></p>
+    </div>
+  </div>
+
+  <div id="tour-modal" class="gate-modal" hidden>
+    <div class="tour-box" role="dialog" aria-modal="true" aria-label="Démonstration animée">
+      <div class="tour-bar"><span class="tour-badge">Exemple illustratif</span><button type="button" class="tour-x" id="tour-close" aria-label="Fermer">&times;</button></div>
+      <div class="tour-stage" id="tour-stage" aria-live="polite"></div>
+      <div class="tour-progress"><span id="tour-progress-fill"></span></div>
+      <div class="tour-foot">
+        <button type="button" class="btn btn-ghost" id="tour-replay">&#8635; Revoir</button>
+        <button type="button" class="btn btn-gold" id="tour-cta">Essayer gratuitement</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="demo-modal" class="gate-modal" hidden>
+    <div class="gate-modal-box demo-box" role="dialog" aria-modal="true" aria-labelledby="demo-title">
+      <div id="demo-form-wrap">
+        <h2 id="demo-title">Réserver une démo</h2>
+        <p class="hero-sub">Voyez BK-AI-WORKERS sur votre cas concret : décrivez votre activité, nous vous montrons ce que Chloé et les Workers font pour vous.</p>
+        <form id="demo-form" autocomplete="on">
+          <input type="text" id="demo-name" placeholder="Votre nom" required autocomplete="name">
+          <input type="email" id="demo-email" placeholder="Votre email professionnel" required autocomplete="email">
+          <div class="demo-row">
+            <input type="text" id="demo-company" placeholder="Entreprise (optionnel)" autocomplete="organization">
+            <input type="tel" id="demo-phone" placeholder="Téléphone / WhatsApp (optionnel)" autocomplete="tel">
+          </div>
+          <select id="demo-slot" aria-label="Créneau souhaité">
+            <option value="">Créneau souhaité — peu importe</option>
+            <option value="Matin">Plutôt le matin</option>
+            <option value="Après-midi">Plutôt l'après-midi</option>
+            <option value="Soir">Plutôt en fin de journée</option>
+          </select>
+          <textarea id="demo-message" rows="3" placeholder="Que voulez-vous automatiser ? (optionnel)"></textarea>
+          <input type="text" id="demo-website" class="demo-trap" tabindex="-1" autocomplete="off" aria-hidden="true">
+          <div id="demo-error" class="task-error" hidden></div>
+          <div class="gate-modal-actions">
+            <button type="button" class="btn btn-ghost" id="demo-cancel-btn">Annuler</button>
+            <button type="submit" class="btn btn-gold" id="demo-submit-btn">Envoyer ma demande &rarr;</button>
+          </div>
+        </form>
+      </div>
+      <div id="demo-done" hidden>
+        <h2>Demande envoyée ✓</h2>
+        <p class="hero-sub">Merci ! Nous vous recontactons très vite pour fixer la démo.</p>
+        <div class="gate-modal-actions"><button type="button" class="btn btn-gold" id="demo-close-btn">Fermer</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="reset-modal" class="gate-modal" hidden>
+    <div class="gate-modal-box" role="dialog" aria-modal="true" aria-labelledby="reset-title">
+      <h2 id="reset-title">Nouveau mot de passe</h2>
+      <p class="hero-sub">Choisissez un mot de passe d'au moins 8 caractères.</p>
+      <input type="password" id="reset-password" placeholder="Nouveau mot de passe" autocomplete="new-password">
+      <input type="password" id="reset-password2" placeholder="Confirmez le mot de passe" autocomplete="new-password">
+      <div id="reset-error" class="task-error" hidden></div>
+      <div class="gate-modal-actions">
+        <button type="button" class="btn btn-ghost" id="reset-cancel">Annuler</button>
+        <button type="button" class="btn btn-gold" id="reset-submit">Enregistrer &rarr;</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="gate-modal" class="gate-modal" hidden>
+    <div class="gate-modal-box">
+      <h2>Accès protégé</h2>
+      <p class="hero-sub">Cette section fait partie du produit — un mot de passe est requis. La vitrine (accueil, Workers, tarifs, FAQ) reste ouverte à tous.</p>
+      <input type="password" id="gate-password-input" placeholder="Mot de passe" autocomplete="current-password">
+      <div id="gate-error" class="task-error" hidden></div>
+      <div class="gate-modal-actions">
+        <button type="button" class="btn btn-ghost" id="gate-cancel-btn">Annuler</button>
+        <button type="button" class="btn btn-gold" id="gate-submit-btn">Déverrouiller</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <div class="footer-cta">
+      <div class="footer-cta-in">
+        <div>
+          <div class="footer-cta-title">Prêt à confier votre première mission ?</div>
+          <div class="footer-cta-sub">Essai gratuit de 3 jours, sans carte bancaire.</div>
+        </div>
+        <div class="footer-cta-actions">
+          <button type="button" class="btn btn-gold" id="footer-cta-start-btn">Démarrer &rarr;</button>
+          <button type="button" class="btn btn-ghost" id="footer-cta-chloe-btn">Discuter avec Chloé</button>
+        </div>
+      </div>
+    </div>
+    <div class="footer-cols">
+      <div class="footer-col footer-brand">
+        <div class="footer-brand-title">BK-AI-WORKERS</div>
+        <p>Une équipe IA complète — Chloé et 17 Workers spécialisés, pour les entreprises du monde entier.</p>
+        <div class="footer-badges">
+          <span>🌍 Disponible dans le monde entier</span>
+        </div>
+      </div>
+      <div class="footer-col">
+        <div class="footer-col-title">Produit</div>
+        <a href="#" id="footer-nav-workers">Workers</a>
+        <a href="#" id="footer-nav-chloe">Chloé</a>
+        <a href="#" id="footer-nav-automations">Automatisations</a>
+        <a href="#" id="footer-nav-analytics">Analytics</a>
+        <a href="#" id="footer-nav-billing">Facturation</a>
+      </div>
+      <div class="footer-col">
+        <div class="footer-col-title">Ressources</div>
+        <a href="#" id="footer-nav-pricing">Tarifs</a>
+        <a href="#" id="footer-nav-faq">FAQ</a>
+      </div>
+      <div class="footer-col">
+        <div class="footer-col-title">Légal</div>
+        <a href="#" id="footer-nav-cgv">CGV</a>
+        <a href="#" id="footer-nav-mentions">Mentions légales</a>
+        <a href="#" id="footer-nav-confidentialite">Confidentialité</a>
+        <a href="#" id="footer-nav-cookies">Cookies</a>
+      </div>
+      <div class="footer-col">
+        <div class="footer-col-title">Contact</div>
+        <a href="mailto:contact@bk-entreprise.com">contact@bk-entreprise.com</a>
+        <a href="tel:+41799349946">+41 79 934 99 46</a>
+        <span class="footer-address">Rue Joseph-Pasquier 1<br>1203 Genève, Suisse</span>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <div>© 2026 BK-ENTREPRISE — BK-AI-WORKERS</div>
+      <span>Diffusion réelle uniquement vers les outils que vous connectez vous-même</span>
+    </div>
+  </footer>
+
+  <div id="chloe-fab">
+    <button type="button" id="chloe-fab-toggle" aria-label="Discuter avec Chloé">
+      <span class="chloe-fab-icon-chat">&#128172;</span>
+      <span class="chloe-fab-icon-close">&times;</span>
+    </button>
+    <div id="chloe-fab-panel" hidden>
+      <div class="chloe-fab-header">
+        <img id="chloe-fab-avatar" src="" alt="Chloé">
+        <div class="chloe-fab-header-text">
+          <div class="chloe-fab-name">Chloé</div>
+          <div class="chloe-fab-status"><span class="dot"></span>Disponible</div>
+        </div>
+      </div>
+      <div id="chloe-fab-body">
+        <div class="chloe-fab-welcome">Bonjour, je suis Chloé 👋 Décrivez votre mission, je compose l'équipe adaptée et je vérifie tout avant exécution.</div>
+      </div>
+      <form id="chloe-fab-form">
+        <input type="text" id="chloe-fab-input" placeholder="Écrivez à Chloé..." autocomplete="off">
+        <button type="submit" aria-label="Envoyer">&rarr;</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+  <script src="/i18n-en.js"></script>
+  <script src="/i18n-en-legal.js"></script>
+  <script src="/i18n-en-app.js"></script>
+  <script src="/i18n.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

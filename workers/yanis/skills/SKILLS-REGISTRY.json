@@ -1,0 +1,67 @@
+{
+    "worker": "YANIS",
+    "role": "Project Management / PMO",
+    "version": "1.0.0",
+    "description": "Catalogue professionnel de compétences pour YANIS.",
+    "skills": {
+        "ROADMAP_PLANNING": {
+            "enabled": true,
+            "category": "PROJECT_PLANNING",
+            "description": "Compétence ROADMAP_PLANNING de YANIS."
+        },
+        "SPRINT_PLANNING": {
+            "enabled": true,
+            "category": "PROJECT_PLANNING",
+            "description": "Compétence SPRINT_PLANNING de YANIS."
+        },
+        "MILESTONE_TRACKING": {
+            "enabled": true,
+            "category": "PROJECT_PLANNING",
+            "description": "Compétence MILESTONE_TRACKING de YANIS."
+        },
+        "DEPENDENCY_MANAGEMENT": {
+            "enabled": true,
+            "category": "PROJECT_PLANNING",
+            "description": "Compétence DEPENDENCY_MANAGEMENT de YANIS."
+        },
+        "TASK_TRACKING": {
+            "enabled": true,
+            "category": "PROJECT_EXECUTION",
+            "description": "Compétence TASK_TRACKING de YANIS."
+        },
+        "RESOURCE_ALLOCATION": {
+            "enabled": true,
+            "category": "PROJECT_EXECUTION",
+            "description": "Compétence RESOURCE_ALLOCATION de YANIS."
+        },
+        "RETROSPECTIVES": {
+            "enabled": true,
+            "category": "PROJECT_EXECUTION",
+            "description": "Compétence RETROSPECTIVES de YANIS."
+        },
+        "RISK_REGISTER": {
+            "enabled": true,
+            "category": "PROJECT_GOVERNANCE",
+            "description": "Compétence RISK_REGISTER de YANIS."
+        },
+        "STAKEHOLDER_REPORTING": {
+            "enabled": true,
+            "category": "PROJECT_GOVERNANCE",
+            "description": "Compétence STAKEHOLDER_REPORTING de YANIS."
+        },
+        "STATUS_REPORTING": {
+            "enabled": true,
+            "category": "PROJECT_GOVERNANCE",
+            "description": "Compétence STATUS_REPORTING de YANIS."
+        }
+    },
+    "governance": {
+        "security_status": "VALID",
+        "client_isolation": true,
+        "project_isolation": true,
+        "worker_isolation": true,
+        "secret_exposure": false,
+        "financial_actions": false,
+        "external_actions": false
+    }
+}

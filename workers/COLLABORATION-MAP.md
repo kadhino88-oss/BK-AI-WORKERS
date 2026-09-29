@@ -1,0 +1,109 @@
+# WORKER COLLABORATION MAP
+
+Aligné le 2026-09-14 sur la matrice officielle
+(BK-AI-WORKERS-VISION-PRODUIT-2026-09-14.md, section 8).
+
+CHLOÉ
+↔ TOUS LES WORKERS
+
+ALEX
+↔ MAYA
+↔ EMMA
+↔ NOAH
+↔ INÈS
+
+EMMA
+↔ MAYA
+↔ LÉA
+↔ SÉOYA
+
+LÉA
+↔ EMMA
+↔ LUCAS
+↔ MAYA
+
+LUCAS
+↔ SÉOYA
+↔ SAM
+↔ LÉA
+
+MAYA
+↔ ALEX
+↔ EMMA
+↔ SÉOYA
+↔ INÈS
+
+NOAH
+↔ YANIS
+↔ SOPHIE
+↔ NORA
+
+SAM
+↔ LUCAS
+↔ RAYAN
+↔ CHLOÉ
+
+SÉOYA
+↔ LUCAS
+↔ EMMA
+↔ MAYA
+↔ AMINA
+
+NORA
+↔ NOAH
+↔ ALEX
+↔ EMMA
+
+SOPHIE
+↔ NOAH
+↔ YANIS
+↔ NORA
+
+DARIO
+↔ INÈS
+↔ ALEX
+↔ YANIS
+
+INÈS
+↔ DARIO
+↔ MAYA
+↔ ALEX
+↔ SÉOYA
+
+YANIS
+↔ TOUS LES WORKERS SELON PROJET
+
+CLARA
+↔ NOAH
+↔ YANIS
+↔ DARIO
+↔ SOPHIE
+
+AMINA
+↔ MAYA
+↔ SÉOYA
+↔ ALEX
+↔ CLARA
+
+THOMAS
+↔ ALEX
+↔ MAYA
+↔ EMMA
+↔ SÉOYA
+↔ DARIO
+
+RAYAN
+↔ LUCAS
+↔ SAM
+↔ NOAH
+↔ THOMAS
+
+ATLAS
+↔ ORCHESTRATEUR
+↔ CHLOÉ
+(hors catalogue commercial — jamais confondu avec un Worker commercial,
+jamais utilisé pour representer DARIO)
+
+KADER
+= PROPRIÉTAIRE DU SYSTÈME
+= AUTORITÉ FINANCIÈRE

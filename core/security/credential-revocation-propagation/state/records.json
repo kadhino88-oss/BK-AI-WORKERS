@@ -1,0 +1,22 @@
+﻿[
+    {
+        "RecordId":  "REV-260A586AF2A54BF78E58FC904ED026BD",
+        "CredentialRefHash":  "f3a96cc1f0e42d817d3e033d12d2460cd83039a5a48b9de0a203c0e2185706ef",
+        "MaterializationId":  "MAT-8A19-001",
+        "UsageId":  "USE-8A19-001",
+        "ExecutionId":  "EXEC-8A19-001",
+        "WorkerId":  "SAM",
+        "Action":  "CONNECTOR_USE",
+        "Connector":  "BANKING-API",
+        "ProjectId":  "PROJECT-001",
+        "ClientId":  "CLIENT-001",
+        "TenantId":  "TENANT-001",
+        "Status":  "REVOKED",
+        "Decision":  "BLOCK",
+        "CreatedAtUtc":  "2026-09-11T11:50:02.6714521Z",
+        "RevokedAtUtc":  "2026-09-11T11:50:02.8501991Z",
+        "RevocationReason":  "SECURITY_REVOKED",
+        "RawSecret":  null,
+        "RawCredential":  null
+    }
+]

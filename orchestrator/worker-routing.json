@@ -1,0 +1,301 @@
+{
+  "version": "2.0",
+  "note": "Corrige le 2026-09-14 : ce fichier existait deja mais n'etait jamais lu par Invoke-Orchestrator.ps1, qui utilisait a la place une chaine if/elif codee en dur et mal calee (ex: 'web|develop|code' routait vers ALEX au lieu de LUCAS). Desormais lu dynamiquement : ajouter un worker ici suffit a le rendre routable, sans toucher au .ps1.",
+  "excluded_from_routing": [
+    "atlas"
+  ],
+  "workers": {
+    "lea": {
+      "name": "LEA",
+      "primary": [
+        "design",
+        "branding",
+        "identite visuelle",
+        "logo",
+        "charte graphique",
+        "ui",
+        "ux design",
+        "creative",
+        "maquette",
+        "moodboard",
+        "direction artistique",
+        "flyer",
+        "visuel"
+      ]
+    },
+    "noah": {
+      "name": "NOAH",
+      "primary": [
+        "administration",
+        "email",
+        "mail",
+        "calendrier",
+        "agenda",
+        "documents",
+        "coordination",
+        "organisation",
+        "reunion",
+        "rendez-vous"
+      ]
+    },
+    "alex": {
+      "name": "ALEX",
+      "primary": [
+        "prospection",
+        "sales",
+        "vente",
+        "leads",
+        "qualification",
+        "followup",
+        "relance commerciale",
+        "crm",
+        "pipeline",
+        "negociation",
+        "prospect"
+      ]
+    },
+    "maya": {
+      "name": "MAYA",
+      "primary": [
+        "marketing",
+        "growth",
+        "campagne",
+        "acquisition",
+        "strategie marketing",
+        "publicite",
+        "ads",
+        "analytics marketing",
+        "fidelisation",
+        "croissance"
+      ]
+    },
+    "lucas": {
+      "name": "LUCAS",
+      "primary": [
+        "web",
+        "site web",
+        "developpement",
+        "developpeur",
+        "code",
+        "programmation",
+        "wordpress",
+        "webflow",
+        "landing page",
+        "architecture web",
+        "frontend",
+        "backend",
+        "api",
+        "base de donnees",
+        "bug",
+        "maintenance site",
+        "performance technique",
+        "core web vitals technique"
+      ]
+    },
+    "seoya": {
+      "name": "SEOYA",
+      "primary": [
+        "seo",
+        "referencement",
+        "google",
+        "classement",
+        "ranking",
+        "mots-cles",
+        "keyword",
+        "backlink",
+        "netlinking",
+        "serp",
+        "indexation",
+        "crawl",
+        "sitemap",
+        "search console",
+        "positionnement",
+        "seo local",
+        "seo international",
+        "seo e-commerce",
+        "maillage interne",
+        "donnees structurees",
+        "concurrence seo",
+        "core web vitals seo",
+        "trafic organique"
+      ]
+    },
+    "emma": {
+      "name": "EMMA",
+      "primary": [
+        "contenu",
+        "social",
+        "reseaux sociaux",
+        "instagram",
+        "facebook",
+        "linkedin post",
+        "community management",
+        "copywriting",
+        "newsletter",
+        "publication",
+        "calendrier editorial",
+        "influence"
+      ]
+    },
+    "sam": {
+      "name": "SAM",
+      "primary": [
+        "it",
+        "infrastructure",
+        "cybersecurite",
+        "securite informatique",
+        "monitoring",
+        "audit securite",
+        "conformite",
+        "risque informatique",
+        "reseau informatique",
+        "serveur",
+        "backup",
+        "incident",
+        "vulnerabilite"
+      ]
+    },
+    "atlas": {
+      "name": "ATLAS",
+      "primary": [
+        "trading",
+        "marche financier",
+        "setup trading",
+        "risk management",
+        "mt5",
+        "positions trading"
+      ]
+    },
+    "nora": {
+      "name": "NORA",
+      "primary": [
+        "support client",
+        "ticket",
+        "reclamation",
+        "sav",
+        "assistance client",
+        "chat en direct",
+        "satisfaction client",
+        "remboursement"
+      ]
+    },
+    "sophie": {
+      "name": "SOPHIE",
+      "primary": [
+        "recrutement",
+        "rh",
+        "ressources humaines",
+        "candidat",
+        "sourcing",
+        "cv",
+        "entretien",
+        "onboarding",
+        "offboarding",
+        "embauche",
+        "offre d'emploi",
+        "ats",
+        "matching",
+        "gap analysis",
+        "screening",
+        "fiche de poste"
+      ]
+    },
+    "dario": {
+      "name": "DARIO",
+      "primary": [
+        "finance",
+        "budget",
+        "controle de gestion",
+        "tresorerie",
+        "comptabilite",
+        "facture",
+        "factures",
+        "facturation",
+        "paiement",
+        "paiements",
+        "virement",
+        "virements",
+        "depense",
+        "depenses",
+        "previsionnel"
+      ]
+    },
+    "ines": {
+      "name": "INES",
+      "primary": [
+        "data",
+        "donnees",
+        "analytics",
+        "tableau de bord",
+        "kpi",
+        "statistique",
+        "cohortes",
+        "modele predictif"
+      ]
+    },
+    "yanis": {
+      "name": "YANIS",
+      "primary": [
+        "gestion de projet",
+        "planning",
+        "planning projet",
+        "roadmap",
+        "sprint",
+        "jalons",
+        "pmo",
+        "avancement",
+        "risques projet"
+      ]
+    },
+    "clara": {
+      "name": "CLARA",
+      "primary": [
+        "juridique",
+        "contrat",
+        "clause",
+        "conformite legale",
+        "rgpd",
+        "cgv",
+        "nda",
+        "confidentialite"
+      ]
+    },
+    "amina": {
+      "name": "AMINA",
+      "primary": [
+        "recherche marche",
+        "veille concurrentielle",
+        "etude de marche",
+        "tendances",
+        "intelligence economique",
+        "benchmark"
+      ]
+    },
+    "thomas": {
+      "name": "THOMAS",
+      "primary": [
+        "e-commerce",
+        "marketplace",
+        "boutique en ligne",
+        "shopify",
+        "fiche produit",
+        "fiches produits",
+        "panier abandonne",
+        "commande"
+      ]
+    },
+    "rayan": {
+      "name": "RAYAN",
+      "primary": [
+        "automatisation",
+        "integration",
+        "workflow automatise",
+        "webhook",
+        "synchronisation",
+        "api integration",
+        "zapier",
+        "make"
+      ]
+    }
+  }
+}

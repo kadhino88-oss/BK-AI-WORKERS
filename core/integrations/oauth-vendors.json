@@ -1,0 +1,73 @@
+{
+  "_comment": "Fournisseurs 'Se connecter avec ...' branches via variables d'environnement OAUTH_<FOURNISSEUR>_CLIENT_ID / _CLIENT_SECRET (voir deploy/set-oauth-app.py). Ajouter un fournisseur = une entree ici. store: slack_webhook = l'URL de webhook renvoyee par Slack ; token_json = {access_token, refresh_token, expires_at}. authStyle: body = identifiants dans le corps, basic = en-tete Basic.",
+  "slack": {
+    "label": "Slack",
+    "authUrl": "https://slack.com/oauth/v2/authorize",
+    "tokenUrl": "https://slack.com/api/oauth.v2.access",
+    "store": "slack_webhook",
+    "authStyle": "body",
+    "providers": { "slack": ["incoming-webhook"] },
+    "base": [],
+    "extra": {}
+  },
+  "hubspot": {
+    "label": "HubSpot",
+    "authUrl": "https://app.hubspot.com/oauth/authorize",
+    "tokenUrl": "https://api.hubapi.com/oauth/v1/token",
+    "store": "token_json",
+    "authStyle": "body",
+    "providers": { "hubspot": ["oauth", "crm.objects.contacts.read", "crm.objects.contacts.write", "crm.objects.companies.read", "crm.objects.deals.read", "crm.objects.deals.write"] },
+    "base": [],
+    "extra": {}
+  },
+  "dropbox": {
+    "label": "Dropbox",
+    "authUrl": "https://www.dropbox.com/oauth2/authorize",
+    "tokenUrl": "https://api.dropboxapi.com/oauth2/token",
+    "store": "token_json",
+    "authStyle": "body",
+    "providers": { "dropbox": ["files.metadata.read", "files.content.read", "files.content.write"] },
+    "base": [],
+    "extra": { "token_access_type": "offline" }
+  },
+  "asana": {
+    "label": "Asana",
+    "authUrl": "https://app.asana.com/-/oauth_authorize",
+    "tokenUrl": "https://app.asana.com/-/oauth_token",
+    "store": "token_json",
+    "authStyle": "body",
+    "providers": { "asana": [] },
+    "base": [],
+    "extra": {}
+  },
+  "monday": {
+    "label": "monday.com",
+    "authUrl": "https://auth.monday.com/oauth2/authorize",
+    "tokenUrl": "https://auth.monday.com/oauth2/token",
+    "store": "token_json",
+    "authStyle": "body",
+    "providers": { "monday": ["boards:read", "boards:write", "me:read"] },
+    "base": [],
+    "extra": {}
+  },
+  "intercom": {
+    "label": "Intercom",
+    "authUrl": "https://app.intercom.com/oauth",
+    "tokenUrl": "https://api.intercom.io/auth/eagle/token",
+    "store": "token_json",
+    "authStyle": "body",
+    "providers": { "intercom": [] },
+    "base": [],
+    "extra": {}
+  },
+  "linkedin": {
+    "label": "LinkedIn",
+    "authUrl": "https://www.linkedin.com/oauth/v2/authorization",
+    "tokenUrl": "https://www.linkedin.com/oauth/v2/accessToken",
+    "store": "token_json",
+    "authStyle": "body",
+    "providers": { "linkedin": ["openid", "profile", "w_member_social"] },
+    "base": [],
+    "extra": {}
+  }
+}

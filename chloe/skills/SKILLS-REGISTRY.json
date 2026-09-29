@@ -1,0 +1,72 @@
+{
+    "worker": "CHLOE",
+    "role": "Interface principale & Orchestration",
+    "version": "1.0.0",
+    "description": "Catalogue professionnel de compétences pour CHLOE (référentiel officiel BK-AI-WORKERS-STRUCTURE-OFFICIELLE-18-WORKERS.md, section 1, converti en MAJUSCULES le 2026-09-14 pour cohérence avec les 17 Workers commerciaux).",
+    "skills": {
+        "INTENT_DETECTION": {
+            "enabled": true,
+            "category": "ORCHESTRATION_CORE",
+            "description": "Compétence INTENT_DETECTION de CHLOE."
+        },
+        "MISSION_PLANNING": {
+            "enabled": true,
+            "category": "ORCHESTRATION_CORE",
+            "description": "Compétence MISSION_PLANNING de CHLOE."
+        },
+        "TASK_DECOMPOSITION": {
+            "enabled": true,
+            "category": "ORCHESTRATION_CORE",
+            "description": "Compétence TASK_DECOMPOSITION de CHLOE."
+        },
+        "WORKER_SELECTION": {
+            "enabled": true,
+            "category": "ORCHESTRATION_CORE",
+            "description": "Compétence WORKER_SELECTION de CHLOE."
+        },
+        "TEAM_ORCHESTRATION": {
+            "enabled": true,
+            "category": "ORCHESTRATION_EXECUTION",
+            "description": "Compétence TEAM_ORCHESTRATION de CHLOE."
+        },
+        "DEPENDENCY_MANAGEMENT": {
+            "enabled": true,
+            "category": "ORCHESTRATION_EXECUTION",
+            "description": "Compétence DEPENDENCY_MANAGEMENT de CHLOE."
+        },
+        "RESULT_REVIEW": {
+            "enabled": true,
+            "category": "ORCHESTRATION_VERIFICATION",
+            "description": "Compétence RESULT_REVIEW de CHLOE."
+        },
+        "CONFLICT_RESOLUTION": {
+            "enabled": true,
+            "category": "ORCHESTRATION_VERIFICATION",
+            "description": "Compétence CONFLICT_RESOLUTION de CHLOE."
+        },
+        "HUMAN_APPROVAL_REQUEST": {
+            "enabled": true,
+            "category": "ORCHESTRATION_VERIFICATION",
+            "description": "Compétence HUMAN_APPROVAL_REQUEST de CHLOE."
+        },
+        "FINAL_SYNTHESIS": {
+            "enabled": true,
+            "category": "ORCHESTRATION_DELIVERY",
+            "description": "Compétence FINAL_SYNTHESIS de CHLOE."
+        },
+        "MEMORY_UPDATE": {
+            "enabled": true,
+            "category": "ORCHESTRATION_DELIVERY",
+            "description": "Compétence MEMORY_UPDATE de CHLOE."
+        }
+    },
+    "governance": {
+        "security_status": "VALID",
+        "client_isolation": true,
+        "project_isolation": true,
+        "worker_isolation": true,
+        "secret_exposure": false,
+        "financial_actions": false,
+        "external_actions": false
+    }
+}

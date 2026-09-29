@@ -1,0 +1,23 @@
+{
+  "version":"1.0",
+  "system":"BK-AI-WORKERS",
+  "enabled":true,
+  "contextIntegrityEnabled":true,
+  "hashContextBeforeStorage":true,
+  "requireRevocationChain":true,
+  "requireFreshnessValidation":true,
+  "requireUserBinding":true,
+  "requireSessionBinding":true,
+  "requireGrantBinding":true,
+  "requireExecutionBinding":true,
+  "requireActionBinding":true,
+  "requireTenantBinding":true,
+  "requireClientBinding":true,
+  "requireProjectBinding":true,
+  "failClosed":true,
+  "defaultDecision":"BLOCK",
+  "maxRecords":100000,
+  "captureSecrets":false,
+  "capturePayloads":false,
+  "liveExecutionEnabled":false
+}

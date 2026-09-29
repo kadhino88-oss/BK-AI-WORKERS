@@ -1,0 +1,30 @@
+{
+    "version":  "1.0.0",
+    "worker":  "SOPHIE",
+    "contract_type":  "SKILL",
+    "required_fields":  [
+                            "skill_id",
+                            "worker",
+                            "category",
+                            "mission",
+                            "inputs",
+                            "outputs",
+                            "tools",
+                            "memory",
+                            "permissions",
+                            "dependencies",
+                            "collaborators",
+                            "kpis",
+                            "security",
+                            "escalation",
+                            "error_handling"
+                        ],
+    "security_defaults":  {
+                              "financial_actions":  false,
+                              "external_actions":  false,
+                              "secret_exposure":  false,
+                              "client_isolation":  true,
+                              "project_isolation":  true,
+                              "worker_isolation":  true
+                          }
+}

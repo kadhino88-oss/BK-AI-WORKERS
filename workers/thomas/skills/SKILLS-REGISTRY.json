@@ -1,0 +1,67 @@
+{
+    "worker": "THOMAS",
+    "role": "E-commerce & Marketplace",
+    "version": "1.0.0",
+    "description": "Catalogue professionnel de compétences pour THOMAS.",
+    "skills": {
+        "PRODUCT_LISTING_OPTIMIZATION": {
+            "enabled": true,
+            "category": "ECOMMERCE_CATALOG",
+            "description": "Compétence PRODUCT_LISTING_OPTIMIZATION de THOMAS."
+        },
+        "PRODUCT_CATEGORIZATION": {
+            "enabled": true,
+            "category": "ECOMMERCE_CATALOG",
+            "description": "Compétence PRODUCT_CATEGORIZATION de THOMAS."
+        },
+        "INVENTORY_SYNC_MONITORING": {
+            "enabled": true,
+            "category": "ECOMMERCE_CATALOG",
+            "description": "Compétence INVENTORY_SYNC_MONITORING de THOMAS."
+        },
+        "MARKETPLACE_MANAGEMENT": {
+            "enabled": true,
+            "category": "MARKETPLACE_OPS",
+            "description": "Compétence MARKETPLACE_MANAGEMENT de THOMAS."
+        },
+        "MARKETPLACE_SEO": {
+            "enabled": true,
+            "category": "MARKETPLACE_OPS",
+            "description": "Compétence MARKETPLACE_SEO de THOMAS."
+        },
+        "REVIEW_MANAGEMENT_MONITORING": {
+            "enabled": true,
+            "category": "MARKETPLACE_OPS",
+            "description": "Compétence REVIEW_MANAGEMENT_MONITORING de THOMAS."
+        },
+        "PRICING_STRATEGY_PREP": {
+            "enabled": true,
+            "category": "ECOMMERCE_GROWTH",
+            "description": "Compétence PRICING_STRATEGY_PREP de THOMAS."
+        },
+        "PROMOTIONS_CALENDAR": {
+            "enabled": true,
+            "category": "ECOMMERCE_GROWTH",
+            "description": "Compétence PROMOTIONS_CALENDAR de THOMAS."
+        },
+        "CART_ABANDONMENT_ANALYSIS": {
+            "enabled": true,
+            "category": "ECOMMERCE_GROWTH",
+            "description": "Compétence CART_ABANDONMENT_ANALYSIS de THOMAS."
+        },
+        "CHECKOUT_OPTIMIZATION": {
+            "enabled": true,
+            "category": "ECOMMERCE_GROWTH",
+            "description": "Compétence CHECKOUT_OPTIMIZATION de THOMAS."
+        }
+    },
+    "governance": {
+        "security_status": "VALID",
+        "client_isolation": true,
+        "project_isolation": true,
+        "worker_isolation": true,
+        "secret_exposure": false,
+        "financial_actions": false,
+        "external_actions": false
+    }
+}

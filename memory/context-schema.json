@@ -1,0 +1,28 @@
+{
+  "context_id": "CTX-YYYYMMDD-HHMMSS-fff",
+  "client_id": "client-id",
+  "project_id": "project-id",
+  "worker_id": "worker-id",
+  "task_id": "task-id",
+  "objective": "objectif de la tâche",
+  "scope": {
+    "client": true,
+    "project": true,
+    "worker": true
+  },
+  "permissions": {
+    "read": true,
+    "write": true,
+    "external_actions": false,
+    "financial_actions": false
+  },
+  "memory": {
+    "global": [],
+    "client": [],
+    "project": [],
+    "worker": [],
+    "task": []
+  },
+  "created_at": "timestamp",
+  "updated_at": "timestamp"
+}

@@ -1,0 +1,20 @@
+﻿{
+  "schema_version": "1.0",
+  "workflow": {
+    "workflow_id": "string",
+    "name": "string",
+    "description": "string",
+    "client_id": "string",
+    "project_id": "string",
+    "mode": "sequential|parallel|conditional",
+    "nodes": [
+      {
+        "node_id": "string",
+        "worker": "string",
+        "task": "string",
+        "depends_on": []
+      }
+    ],
+    "status": "created|running|success|partial_success|blocked|needs_human|error"
+  }
+}

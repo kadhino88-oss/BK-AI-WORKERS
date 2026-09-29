@@ -1,0 +1,132 @@
+# HIERARCHICAL MEMORY
+
+## OBJECTIF
+
+La mémoire du système est organisée par niveaux.
+
+Chaque niveau possède une portée précise.
+
+## HIERARCHIE
+
+GLOBAL
+CLIENT
+PROJECT
+WORKER
+TASK
+EXECUTION
+
+## 1. GLOBAL
+
+Informations communes à l'ensemble du système.
+
+Exemples :
+
+- règles générales
+- principes de sécurité
+- conventions
+- architecture
+- politiques système
+
+Aucune donnée client privée ne doit être stockée ici.
+
+## 2. CLIENT
+
+Informations propres à un client.
+
+Exemples :
+
+- identité du client
+- préférences
+- secteur
+- objectifs
+- contraintes
+- historique global de collaboration
+
+Un client ne peut jamais accéder à la mémoire d'un autre client.
+
+## 3. PROJECT
+
+Informations propres à un projet.
+
+Exemples :
+
+- objectifs
+- état du projet
+- décisions
+- livrables
+- ressources
+- contraintes
+
+Un projet appartient obligatoirement à un client.
+
+## 4. WORKER
+
+Informations propres à un Worker dans son périmètre autorisé.
+
+Exemples :
+
+- méthodes de travail
+- préférences opérationnelles
+- connaissances utiles
+- historique pertinent
+
+## 5. TASK
+
+Informations propres à une tâche.
+
+Exemples :
+
+- objectif
+- contexte
+- instructions
+- résultat attendu
+- dépendances
+- statut
+
+## 6. EXECUTION
+
+Informations liées à une exécution précise.
+
+Exemples :
+
+- début
+- fin
+- étapes
+- résultats
+- erreurs
+- décisions
+- escalades
+
+## REGLE FONDAMENTALE
+
+Plus le niveau est bas, plus le contexte est spécifique.
+
+Une mémoire de niveau inférieur ne doit jamais élargir les permissions d'un niveau supérieur.
+
+## FINANCE
+
+Les données et actions financières restent soumises à la frontière financière du système.
+
+Les Workers ne peuvent pas utiliser la mémoire pour contourner cette frontière.
+
+## SECRETS
+
+Ne jamais stocker :
+
+- mots de passe
+- API keys
+- tokens
+- secrets
+- informations d'authentification
+
+dans la mémoire métier.
+
+## ISOLATION
+
+CLIENT A != CLIENT B
+
+PROJECT A != PROJECT B
+
+WORKER A != WORKER B
+
+L'accès est toujours vérifié par le contexte actif.

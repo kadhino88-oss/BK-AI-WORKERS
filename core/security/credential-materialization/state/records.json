@@ -1,0 +1,24 @@
+﻿[
+    {
+        "MaterializationId":  "MAT-75B3B2305559450894105C5DAA5395AB",
+        "MaterializationHash":  "501c8aee5118c87054b98651d831aeaa1de2aa9c26dfcd1d6538ee300663cdcd",
+        "LeaseId":  "LEASE-8A17-001",
+        "CredentialRefHash":  "f3a96cc1f0e42d817d3e033d12d2460cd83039a5a48b9de0a203c0e2185706ef",
+        "ExecutionId":  "EXEC-8A17-001",
+        "WorkerId":  "SAM",
+        "Action":  "CONNECTOR_USE",
+        "Connector":  "BANKING-API",
+        "ProjectId":  "PROJECT-001",
+        "ClientId":  "CLIENT-001",
+        "TenantId":  "TENANT-001",
+        "CreatedAtUtc":  "2026-09-11T09:38:57.2470733Z",
+        "ExpiresAtUtc":  "2026-09-11T09:39:57.2470733Z",
+        "ConsumedAtUtc":  "2026-09-11T09:38:57.5371384Z",
+        "RevokedAtUtc":  null,
+        "Status":  "CONSUMED",
+        "Used":  true,
+        "Decision":  "ALLOW",
+        "RawSecret":  null,
+        "RawCredential":  null
+    }
+]

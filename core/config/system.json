@@ -1,0 +1,33 @@
+﻿{
+  "system": "BK-AI-WORKERS",
+  "version": "3.0.0",
+  "owner": "Kader",
+
+  "architecture": {
+    "orchestrator": true,
+    "chloe_interface": true,
+    "business_workers": 7,
+    "specialized_workers": 1
+  },
+
+  "workers": [
+    "lea",
+    "noah",
+    "alex",
+    "maya",
+    "lucas",
+    "emma",
+    "sam",
+    "atlas"
+  ],
+
+  "financial_boundary": {
+    "owner": "Kader",
+    "worker_execution": false,
+    "worker_preparation": true
+  },
+
+  "client_isolation": true,
+  "project_isolation": true,
+  "audit_logging": true
+}

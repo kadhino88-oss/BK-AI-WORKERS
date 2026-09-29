@@ -1,0 +1,297 @@
+{
+    "worker":  "SAM",
+    "role":  "Responsable IT, Infrastructure \u0026 Cybersécurité",
+    "version":  "1.0.0",
+    "description":  "Catalogue professionnel de compétences pour SAM.",
+    "skills":  {
+                   "SECURITY_AUDIT":  {
+                                          "enabled":  true,
+                                          "category":  "SECURITY_AUDIT",
+                                          "description":  "Compétence SECURITY_AUDIT de SAM."
+                                      },
+                   "CONFIGURATION_AUDIT":  {
+                                               "enabled":  true,
+                                               "category":  "SECURITY_AUDIT",
+                                               "description":  "Compétence CONFIGURATION_AUDIT de SAM."
+                                           },
+                   "LOG_AUDIT":  {
+                                     "enabled":  true,
+                                     "category":  "SECURITY_AUDIT",
+                                     "description":  "Compétence LOG_AUDIT de SAM."
+                                 },
+                   "POLICY_AUDIT":  {
+                                        "enabled":  true,
+                                        "category":  "SECURITY_AUDIT",
+                                        "description":  "Compétence POLICY_AUDIT de SAM."
+                                    },
+                   "COMPLIANCE_SUPPORT":  {
+                                              "enabled":  true,
+                                              "category":  "SECURITY_AUDIT",
+                                              "description":  "Compétence COMPLIANCE_SUPPORT de SAM."
+                                          },
+                   "BUSINESS_CONTINUITY":  {
+                                               "enabled":  true,
+                                               "category":  "CONTINUITE",
+                                               "description":  "Compétence BUSINESS_CONTINUITY de SAM."
+                                           },
+                   "DISASTER_RECOVERY_PLAN":  {
+                                                  "enabled":  true,
+                                                  "category":  "CONTINUITE",
+                                                  "description":  "Compétence DISASTER_RECOVERY_PLAN de SAM."
+                                              },
+                   "RESILIENCE_REVIEW":  {
+                                             "enabled":  true,
+                                             "category":  "CONTINUITE",
+                                             "description":  "Compétence RESILIENCE_REVIEW de SAM."
+                                         },
+                   "RECOVERY_TESTING":  {
+                                            "enabled":  true,
+                                            "category":  "CONTINUITE",
+                                            "description":  "Compétence RECOVERY_TESTING de SAM."
+                                        },
+                   "IT_SUPPORT":  {
+                                      "enabled":  true,
+                                      "category":  "IT_SUPPORT",
+                                      "description":  "Compétence IT_SUPPORT de SAM."
+                                  },
+                   "TROUBLESHOOTING":  {
+                                           "enabled":  true,
+                                           "category":  "IT_SUPPORT",
+                                           "description":  "Compétence TROUBLESHOOTING de SAM."
+                                       },
+                   "USER_SUPPORT":  {
+                                        "enabled":  true,
+                                        "category":  "IT_SUPPORT",
+                                        "description":  "Compétence USER_SUPPORT de SAM."
+                                    },
+                   "DEVICE_SUPPORT":  {
+                                          "enabled":  true,
+                                          "category":  "IT_SUPPORT",
+                                          "description":  "Compétence DEVICE_SUPPORT de SAM."
+                                      },
+                   "SOFTWARE_SUPPORT":  {
+                                            "enabled":  true,
+                                            "category":  "IT_SUPPORT",
+                                            "description":  "Compétence SOFTWARE_SUPPORT de SAM."
+                                        },
+                   "INFRASTRUCTURE_MANAGEMENT":  {
+                                                     "enabled":  true,
+                                                     "category":  "INFRASTRUCTURE",
+                                                     "description":  "Compétence INFRASTRUCTURE_MANAGEMENT de SAM."
+                                                 },
+                   "SERVER_MANAGEMENT":  {
+                                             "enabled":  true,
+                                             "category":  "INFRASTRUCTURE",
+                                             "description":  "Compétence SERVER_MANAGEMENT de SAM."
+                                         },
+                   "CLOUD_ARCHITECTURE":  {
+                                              "enabled":  true,
+                                              "category":  "INFRASTRUCTURE",
+                                              "description":  "Compétence CLOUD_ARCHITECTURE de SAM."
+                                          },
+                   "SYSTEM_ARCHITECTURE":  {
+                                               "enabled":  true,
+                                               "category":  "INFRASTRUCTURE",
+                                               "description":  "Compétence SYSTEM_ARCHITECTURE de SAM."
+                                           },
+                   "INFRASTRUCTURE_AUDIT":  {
+                                                "enabled":  true,
+                                                "category":  "INFRASTRUCTURE",
+                                                "description":  "Compétence INFRASTRUCTURE_AUDIT de SAM."
+                                            },
+                   "CYBERSECURITY_AUDIT":  {
+                                               "enabled":  true,
+                                               "category":  "CYBERSECURITE",
+                                               "description":  "Compétence CYBERSECURITY_AUDIT de SAM."
+                                           },
+                   "SECURITY_HARDENING":  {
+                                              "enabled":  true,
+                                              "category":  "CYBERSECURITE",
+                                              "description":  "Compétence SECURITY_HARDENING de SAM."
+                                          },
+                   "THREAT_ANALYSIS":  {
+                                           "enabled":  true,
+                                           "category":  "CYBERSECURITE",
+                                           "description":  "Compétence THREAT_ANALYSIS de SAM."
+                                       },
+                   "SECURITY_POLICY":  {
+                                           "enabled":  true,
+                                           "category":  "CYBERSECURITE",
+                                           "description":  "Compétence SECURITY_POLICY de SAM."
+                                       },
+                   "SECURITY_AWARENESS":  {
+                                              "enabled":  true,
+                                              "category":  "CYBERSECURITE",
+                                              "description":  "Compétence SECURITY_AWARENESS de SAM."
+                                          },
+                   "NETWORK_MONITORING":  {
+                                              "enabled":  true,
+                                              "category":  "RESEAUX",
+                                              "description":  "Compétence NETWORK_MONITORING de SAM."
+                                          },
+                   "NETWORK_TROUBLESHOOTING":  {
+                                                   "enabled":  true,
+                                                   "category":  "RESEAUX",
+                                                   "description":  "Compétence NETWORK_TROUBLESHOOTING de SAM."
+                                               },
+                   "FIREWALL_REVIEW":  {
+                                           "enabled":  true,
+                                           "category":  "RESEAUX",
+                                           "description":  "Compétence FIREWALL_REVIEW de SAM."
+                                       },
+                   "VPN_MANAGEMENT":  {
+                                          "enabled":  true,
+                                          "category":  "RESEAUX",
+                                          "description":  "Compétence VPN_MANAGEMENT de SAM."
+                                      },
+                   "DNS_MANAGEMENT":  {
+                                          "enabled":  true,
+                                          "category":  "RESEAUX",
+                                          "description":  "Compétence DNS_MANAGEMENT de SAM."
+                                      },
+                   "SYSTEM_MONITORING":  {
+                                             "enabled":  true,
+                                             "category":  "SYSTEMES",
+                                             "description":  "Compétence SYSTEM_MONITORING de SAM."
+                                         },
+                   "ALERT_MANAGEMENT":  {
+                                            "enabled":  true,
+                                            "category":  "MONITORING",
+                                            "description":  "Compétence ALERT_MANAGEMENT de SAM."
+                                        },
+                   "LOG_ANALYSIS":  {
+                                        "enabled":  true,
+                                        "category":  "MONITORING",
+                                        "description":  "Compétence LOG_ANALYSIS de SAM."
+                                    },
+                   "UPTIME_MONITORING":  {
+                                             "enabled":  true,
+                                             "category":  "MONITORING",
+                                             "description":  "Compétence UPTIME_MONITORING de SAM."
+                                         },
+                   "PERFORMANCE_MONITORING":  {
+                                                  "enabled":  true,
+                                                  "category":  "MONITORING",
+                                                  "description":  "Compétence PERFORMANCE_MONITORING de SAM."
+                                              },
+                   "INCIDENT_DETECTION":  {
+                                              "enabled":  true,
+                                              "category":  "INCIDENT_RESPONSE",
+                                              "description":  "Compétence INCIDENT_DETECTION de SAM."
+                                          },
+                   "INCIDENT_TRIAGE":  {
+                                           "enabled":  true,
+                                           "category":  "INCIDENT_RESPONSE",
+                                           "description":  "Compétence INCIDENT_TRIAGE de SAM."
+                                       },
+                   "INCIDENT_CONTAINMENT":  {
+                                                "enabled":  true,
+                                                "category":  "INCIDENT_RESPONSE",
+                                                "description":  "Compétence INCIDENT_CONTAINMENT de SAM."
+                                            },
+                   "INCIDENT_DOCUMENTATION":  {
+                                                  "enabled":  true,
+                                                  "category":  "INCIDENT_RESPONSE",
+                                                  "description":  "Compétence INCIDENT_DOCUMENTATION de SAM."
+                                              },
+                   "POST_INCIDENT_REVIEW":  {
+                                                "enabled":  true,
+                                                "category":  "INCIDENT_RESPONSE",
+                                                "description":  "Compétence POST_INCIDENT_REVIEW de SAM."
+                                            },
+                   "BACKUP_STRATEGY":  {
+                                           "enabled":  true,
+                                           "category":  "BACKUP",
+                                           "description":  "Compétence BACKUP_STRATEGY de SAM."
+                                       },
+                   "BACKUP_VERIFICATION":  {
+                                               "enabled":  true,
+                                               "category":  "BACKUP",
+                                               "description":  "Compétence BACKUP_VERIFICATION de SAM."
+                                           },
+                   "RESTORE_TESTING":  {
+                                           "enabled":  true,
+                                           "category":  "BACKUP",
+                                           "description":  "Compétence RESTORE_TESTING de SAM."
+                                       },
+                   "DISASTER_RECOVERY":  {
+                                             "enabled":  true,
+                                             "category":  "BACKUP",
+                                             "description":  "Compétence DISASTER_RECOVERY de SAM."
+                                         },
+                   "VULNERABILITY_SCANNING":  {
+                                                  "enabled":  true,
+                                                  "category":  "VULNERABILITY_MANAGEMENT",
+                                                  "description":  "Compétence VULNERABILITY_SCANNING de SAM."
+                                              },
+                   "VULNERABILITY_TRIAGE":  {
+                                                "enabled":  true,
+                                                "category":  "VULNERABILITY_MANAGEMENT",
+                                                "description":  "Compétence VULNERABILITY_TRIAGE de SAM."
+                                            },
+                   "PATCH_PRIORITIZATION":  {
+                                                "enabled":  true,
+                                                "category":  "VULNERABILITY_MANAGEMENT",
+                                                "description":  "Compétence PATCH_PRIORITIZATION de SAM."
+                                            },
+                   "SECURITY_RISK_RANKING":  {
+                                                 "enabled":  true,
+                                                 "category":  "VULNERABILITY_MANAGEMENT",
+                                                 "description":  "Compétence SECURITY_RISK_RANKING de SAM."
+                                             },
+                   "WINDOWS_ADMINISTRATION":  {
+                                                  "enabled":  true,
+                                                  "category":  "SYSTEMES",
+                                                  "description":  "Compétence WINDOWS_ADMINISTRATION de SAM."
+                                              },
+                   "LINUX_ADMINISTRATION":  {
+                                                "enabled":  true,
+                                                "category":  "SYSTEMES",
+                                                "description":  "Compétence LINUX_ADMINISTRATION de SAM."
+                                            },
+                   "PATCH_MANAGEMENT":  {
+                                            "enabled":  true,
+                                            "category":  "SYSTEMES",
+                                            "description":  "Compétence PATCH_MANAGEMENT de SAM."
+                                        },
+                   "CONFIGURATION_MANAGEMENT":  {
+                                                    "enabled":  true,
+                                                    "category":  "SYSTEMES",
+                                                    "description":  "Compétence CONFIGURATION_MANAGEMENT de SAM."
+                                                },
+                   "IDENTITY_MANAGEMENT":  {
+                                               "enabled":  true,
+                                               "category":  "ACCESS_CONTROL",
+                                               "description":  "Compétence IDENTITY_MANAGEMENT de SAM."
+                                           },
+                   "ACCESS_REVIEW":  {
+                                         "enabled":  true,
+                                         "category":  "ACCESS_CONTROL",
+                                         "description":  "Compétence ACCESS_REVIEW de SAM."
+                                     },
+                   "PRIVILEGE_REVIEW":  {
+                                            "enabled":  true,
+                                            "category":  "ACCESS_CONTROL",
+                                            "description":  "Compétence PRIVILEGE_REVIEW de SAM."
+                                        },
+                   "ACCOUNT_LIFECYCLE":  {
+                                             "enabled":  true,
+                                             "category":  "ACCESS_CONTROL",
+                                             "description":  "Compétence ACCOUNT_LIFECYCLE de SAM."
+                                         },
+                   "MFA_REVIEW":  {
+                                      "enabled":  true,
+                                      "category":  "ACCESS_CONTROL",
+                                      "description":  "Compétence MFA_REVIEW de SAM."
+                                  }
+               },
+    "governance":  {
+                       "security_status":  "VALID",
+                       "client_isolation":  true,
+                       "project_isolation":  true,
+                       "worker_isolation":  true,
+                       "secret_exposure":  false,
+                       "financial_actions":  false,
+                       "external_actions":  false
+                   }
+}

@@ -1,0 +1,13 @@
+﻿[
+    {
+        "RecoveryId":  "REC-8A24-PARENT",
+        "ChainId":  "CHAIN-8A24-OLD",
+        "UserId":  "USER-001",
+        "TenantId":  "TENANT-001",
+        "ClientId":  "CLIENT-001",
+        "ProjectId":  "PROJECT-001",
+        "ChainStatus":  "REVOKED",
+        "RecoveryStatus":  "CLOSED",
+        "ReactivationAllowed":  false
+    }
+]

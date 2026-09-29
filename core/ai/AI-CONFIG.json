@@ -1,0 +1,38 @@
+{
+  "gateway": {
+    "name": "BK-AI-GATEWAY",
+    "version": "1.0.0",
+    "mode": "LOCAL"
+  },
+
+  "provider": {
+    "name": "NONE",
+    "model": "NONE",
+    "enabled": false
+  },
+
+  "security": {
+    "client_isolation": true,
+    "project_isolation": true,
+    "worker_isolation": true,
+    "financial_actions": false,
+    "external_actions": false,
+    "secret_exposure": false
+  },
+
+  "workers": {
+    "lea": true,
+    "noah": true,
+    "alex": true,
+    "maya": true,
+    "lucas": true,
+    "emma": true,
+    "sam": true,
+    "atlas": true
+  },
+
+  "logging": {
+    "enabled": true,
+    "directory": "memory/runtime"
+  }
+}

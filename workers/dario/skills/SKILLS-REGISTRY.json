@@ -1,0 +1,72 @@
+{
+    "worker": "DARIO",
+    "role": "Finance & Controle de gestion",
+    "version": "1.0.0",
+    "description": "Catalogue professionnel de compétences pour DARIO.",
+    "skills": {
+        "BUDGET_TRACKING": {
+            "enabled": true,
+            "category": "FINANCE_CORE",
+            "description": "Compétence BUDGET_TRACKING de DARIO."
+        },
+        "EXPENSE_CATEGORIZATION": {
+            "enabled": true,
+            "category": "FINANCE_CORE",
+            "description": "Compétence EXPENSE_CATEGORIZATION de DARIO."
+        },
+        "INVOICE_RECONCILIATION": {
+            "enabled": true,
+            "category": "FINANCE_CORE",
+            "description": "Compétence INVOICE_RECONCILIATION de DARIO."
+        },
+        "CASH_FLOW_FORECAST": {
+            "enabled": true,
+            "category": "FINANCE_CORE",
+            "description": "Compétence CASH_FLOW_FORECAST de DARIO."
+        },
+        "FINANCIAL_REPORTING": {
+            "enabled": true,
+            "category": "FINANCE_REPORTING",
+            "description": "Compétence FINANCIAL_REPORTING de DARIO."
+        },
+        "COST_ANALYSIS": {
+            "enabled": true,
+            "category": "FINANCE_REPORTING",
+            "description": "Compétence COST_ANALYSIS de DARIO."
+        },
+        "VARIANCE_ANALYSIS": {
+            "enabled": true,
+            "category": "FINANCE_REPORTING",
+            "description": "Compétence VARIANCE_ANALYSIS de DARIO."
+        },
+        "KPI_DASHBOARD_FINANCE": {
+            "enabled": true,
+            "category": "FINANCE_REPORTING",
+            "description": "Compétence KPI_DASHBOARD_FINANCE de DARIO."
+        },
+        "AUDIT_PREPARATION": {
+            "enabled": true,
+            "category": "FINANCE_COMPLIANCE",
+            "description": "Compétence AUDIT_PREPARATION de DARIO."
+        },
+        "TAX_DOCUMENT_PREPARATION": {
+            "enabled": true,
+            "category": "FINANCE_COMPLIANCE",
+            "description": "Compétence TAX_DOCUMENT_PREPARATION de DARIO."
+        },
+        "SUPPLIER_PAYMENT_PREPARATION": {
+            "enabled": true,
+            "category": "FINANCE_COMPLIANCE",
+            "description": "Compétence SUPPLIER_PAYMENT_PREPARATION de DARIO."
+        }
+    },
+    "governance": {
+        "security_status": "VALID",
+        "client_isolation": true,
+        "project_isolation": true,
+        "worker_isolation": true,
+        "secret_exposure": false,
+        "financial_actions": false,
+        "external_actions": false
+    }
+}

@@ -1,0 +1,207 @@
+{
+    "worker": "LUCAS",
+    "role": "Webmaster & Expert SEO",
+    "version": "1.0.0",
+    "description": "Catalogue professionnel de compétences pour LUCAS.",
+    "skills": {
+        "WORDPRESS_DEVELOPMENT": {
+            "enabled": true,
+            "category": "WORDPRESS",
+            "description": "Compétence WORDPRESS_DEVELOPMENT de LUCAS."
+        },
+        "WORDPRESS_THEME": {
+            "enabled": true,
+            "category": "WORDPRESS",
+            "description": "Compétence WORDPRESS_THEME de LUCAS."
+        },
+        "WORDPRESS_PLUGIN": {
+            "enabled": true,
+            "category": "WORDPRESS",
+            "description": "Compétence WORDPRESS_PLUGIN de LUCAS."
+        },
+        "WORDPRESS_MAINTENANCE": {
+            "enabled": true,
+            "category": "WORDPRESS",
+            "description": "Compétence WORDPRESS_MAINTENANCE de LUCAS."
+        },
+        "WORDPRESS_SECURITY": {
+            "enabled": true,
+            "category": "WORDPRESS",
+            "description": "Compétence WORDPRESS_SECURITY de LUCAS."
+        },
+        "LANDING_PAGE_BUILD": {
+            "enabled": true,
+            "category": "LANDING_PAGES",
+            "description": "Compétence LANDING_PAGE_BUILD de LUCAS."
+        },
+        "LANDING_PAGE_OPTIMIZATION": {
+            "enabled": true,
+            "category": "LANDING_PAGES",
+            "description": "Compétence LANDING_PAGE_OPTIMIZATION de LUCAS."
+        },
+        "CTA_OPTIMIZATION": {
+            "enabled": true,
+            "category": "LANDING_PAGES",
+            "description": "Compétence CTA_OPTIMIZATION de LUCAS."
+        },
+        "FORM_OPTIMIZATION": {
+            "enabled": true,
+            "category": "LANDING_PAGES",
+            "description": "Compétence FORM_OPTIMIZATION de LUCAS."
+        },
+        "CONVERSION_COPY": {
+            "enabled": true,
+            "category": "LANDING_PAGES",
+            "description": "Compétence CONVERSION_COPY de LUCAS."
+        },
+        "WEB_ACCESSIBILITY": {
+            "enabled": true,
+            "category": "ACCESSIBILITE",
+            "description": "Compétence WEB_ACCESSIBILITY de LUCAS."
+        },
+        "WCAG_REVIEW": {
+            "enabled": true,
+            "category": "ACCESSIBILITE",
+            "description": "Compétence WCAG_REVIEW de LUCAS."
+        },
+        "SEMANTIC_HTML": {
+            "enabled": true,
+            "category": "ACCESSIBILITE",
+            "description": "Compétence SEMANTIC_HTML de LUCAS."
+        },
+        "KEYBOARD_NAVIGATION": {
+            "enabled": true,
+            "category": "ACCESSIBILITE",
+            "description": "Compétence KEYBOARD_NAVIGATION de LUCAS."
+        },
+        "WEB_ANALYTICS": {
+            "enabled": true,
+            "category": "ANALYTICS_WEB",
+            "description": "Compétence WEB_ANALYTICS de LUCAS."
+        },
+        "CONVERSION_TRACKING": {
+            "enabled": true,
+            "category": "ANALYTICS_WEB",
+            "description": "Compétence CONVERSION_TRACKING de LUCAS."
+        },
+        "TAG_MANAGEMENT": {
+            "enabled": true,
+            "category": "ANALYTICS_WEB",
+            "description": "Compétence TAG_MANAGEMENT de LUCAS."
+        },
+        "CRO": {
+            "enabled": true,
+            "category": "CONVERSION_WEB",
+            "description": "Compétence CRO de LUCAS."
+        },
+        "UX_AUDIT": {
+            "enabled": true,
+            "category": "CONVERSION_WEB",
+            "description": "Compétence UX_AUDIT de LUCAS."
+        },
+        "USER_FLOW_ANALYSIS": {
+            "enabled": true,
+            "category": "CONVERSION_WEB",
+            "description": "Compétence USER_FLOW_ANALYSIS de LUCAS."
+        },
+        "A_B_TEST_IMPLEMENTATION": {
+            "enabled": true,
+            "category": "CONVERSION_WEB",
+            "description": "Compétence A_B_TEST_IMPLEMENTATION de LUCAS."
+        },
+        "PERFORMANCE_AUDIT": {
+            "enabled": true,
+            "category": "PERFORMANCE_WEB",
+            "description": "Compétence PERFORMANCE_AUDIT de LUCAS."
+        },
+        "IMAGE_OPTIMIZATION": {
+            "enabled": true,
+            "category": "PERFORMANCE_WEB",
+            "description": "Compétence IMAGE_OPTIMIZATION de LUCAS."
+        },
+        "CACHING": {
+            "enabled": true,
+            "category": "PERFORMANCE_WEB",
+            "description": "Compétence CACHING de LUCAS."
+        },
+        "PAGE_SPEED": {
+            "enabled": true,
+            "category": "PERFORMANCE_WEB",
+            "description": "Compétence PAGE_SPEED de LUCAS."
+        },
+        "FRONTEND_DEVELOPMENT": {
+            "enabled": true,
+            "category": "WEB_DEVELOPMENT",
+            "description": "Compétence FRONTEND_DEVELOPMENT de LUCAS."
+        },
+        "BACKEND_DEVELOPMENT": {
+            "enabled": true,
+            "category": "WEB_DEVELOPMENT",
+            "description": "Compétence BACKEND_DEVELOPMENT de LUCAS."
+        },
+        "API_INTEGRATION": {
+            "enabled": true,
+            "category": "WEB_DEVELOPMENT",
+            "description": "Compétence API_INTEGRATION de LUCAS."
+        },
+        "DATABASE_INTEGRATION": {
+            "enabled": true,
+            "category": "WEB_DEVELOPMENT",
+            "description": "Compétence DATABASE_INTEGRATION de LUCAS."
+        },
+        "WEB_ARCHITECTURE": {
+            "enabled": true,
+            "category": "WEB_DEVELOPMENT",
+            "description": "Compétence WEB_ARCHITECTURE de LUCAS."
+        },
+        "WEBSITE_MAINTENANCE": {
+            "enabled": true,
+            "category": "MAINTENANCE",
+            "description": "Compétence WEBSITE_MAINTENANCE de LUCAS."
+        },
+        "BACKUP_VERIFICATION": {
+            "enabled": true,
+            "category": "MAINTENANCE",
+            "description": "Compétence BACKUP_VERIFICATION de LUCAS."
+        },
+        "DEPENDENCY_UPDATES": {
+            "enabled": true,
+            "category": "MAINTENANCE",
+            "description": "Compétence DEPENDENCY_UPDATES de LUCAS."
+        },
+        "ERROR_MONITORING": {
+            "enabled": true,
+            "category": "MAINTENANCE",
+            "description": "Compétence ERROR_MONITORING de LUCAS."
+        },
+        "WEBFLOW_DEVELOPMENT": {
+            "enabled": true,
+            "category": "WEBFLOW",
+            "description": "Compétence WEBFLOW_DEVELOPMENT de LUCAS."
+        },
+        "WEBFLOW_CMS": {
+            "enabled": true,
+            "category": "WEBFLOW",
+            "description": "Compétence WEBFLOW_CMS de LUCAS."
+        },
+        "WEBFLOW_LAYOUT": {
+            "enabled": true,
+            "category": "WEBFLOW",
+            "description": "Compétence WEBFLOW_LAYOUT de LUCAS."
+        },
+        "WEBFLOW_MIGRATION": {
+            "enabled": true,
+            "category": "WEBFLOW",
+            "description": "Compétence WEBFLOW_MIGRATION de LUCAS."
+        }
+    },
+    "governance": {
+        "security_status": "VALID",
+        "client_isolation": true,
+        "project_isolation": true,
+        "worker_isolation": true,
+        "secret_exposure": false,
+        "financial_actions": false,
+        "external_actions": false
+    }
+}

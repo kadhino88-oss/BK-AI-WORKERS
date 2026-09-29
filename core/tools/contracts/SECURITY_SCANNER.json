@@ -1,0 +1,27 @@
+{
+    "tool_id":  "SECURITY_SCANNER",
+    "category":  "SECURITY",
+    "description":  "Analyser la posture de sÃ©curitÃ© et les vulnÃ©rabilitÃ©s autorisÃ©es.",
+    "authorized_workers":  [
+                               "SAM"
+                           ],
+    "allowed_actions":  [
+                            "SCAN",
+                            "READ",
+                            "REPORT"
+                        ],
+    "financial_action":  false,
+    "external_action":  true,
+    "secret_required":  true,
+    "permission_check":  true,
+    "client_isolation":  true,
+    "project_isolation":  true,
+    "worker_isolation":  true,
+    "audit_logging":  true,
+    "human_override":  true,
+    "security":  {
+                     "secret_exposure":  false,
+                     "financial_actions":  false,
+                     "unsafe_external_action":  false
+                 }
+}

@@ -1,0 +1,32 @@
+﻿{
+  "version": "1.0.0",
+  "mode": "LIVE_LLM",
+  "active_provider": "ANTHROPIC",
+  "llm_enabled": true,
+  "providers": {
+    "anthropic": {
+      "enabled": true,
+      "status": "ACTIVE",
+      "model": "claude-haiku-4-5-20251001",
+      "credentials": "EXTERNAL_SECRET_STORE"
+    },
+    "openai": {
+      "enabled": true,
+      "status": "ACTIVE",
+      "credentials": "EXTERNAL_SECRET_STORE"
+    }
+  },
+  "security": {
+    "client_isolation": true,
+    "project_isolation": true,
+    "worker_isolation": true,
+    "financial_actions": false,
+    "external_actions": false,
+    "secret_exposure": false
+  },
+  "development": {
+    "simulation": true,
+    "api_calls_enabled": true,
+    "cost": 0
+  }
+}

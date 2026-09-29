@@ -1,0 +1,345 @@
+{
+  "catalog": {
+    "name": "BK-AI-WORKERS INTEGRATION CATALOG",
+    "version": "1.0.0",
+    "status": "ACTIVE",
+    "extensible": true
+  },
+
+  "design_principles": {
+    "provider_agnostic": true,
+    "connector_modular": true,
+    "client_configurable": true,
+    "project_configurable": true,
+    "worker_scoped": true,
+    "skill_scoped": true,
+    "secret_isolation": true,
+    "audit_logging": true,
+    "human_override": true
+  },
+
+  "categories": {
+
+    "EMAIL": {
+      "providers": [
+        "GMAIL",
+        "MICROSOFT_OUTLOOK",
+        "IMAP_SMTP"
+      ]
+    },
+
+    "CALENDAR": {
+      "providers": [
+        "GOOGLE_CALENDAR",
+        "MICROSOFT_365_CALENDAR",
+        "CALDAV"
+      ]
+    },
+
+    "CRM": {
+      "providers": [
+        "HUBSPOT",
+        "SALESFORCE",
+        "PIPEDRIVE",
+        "ZOHO_CRM",
+        "MONDAY_CRM"
+      ]
+    },
+
+    "PROJECT_MANAGEMENT": {
+      "providers": [
+        "TRELLO",
+        "ASANA",
+        "MONDAY",
+        "CLICKUP",
+        "NOTION",
+        "JIRA"
+      ]
+    },
+
+    "DOCUMENTS": {
+      "providers": [
+        "GOOGLE_DRIVE",
+        "GOOGLE_DOCS",
+        "MICROSOFT_ONEDRIVE",
+        "MICROSOFT_SHAREPOINT",
+        "DROPBOX",
+        "NOTION"
+      ]
+    },
+
+    "COMMUNICATION": {
+      "providers": [
+        "SLACK",
+        "MICROSOFT_TEAMS",
+        "DISCORD"
+      ]
+    },
+
+    "ANALYTICS": {
+      "providers": [
+        "GOOGLE_ANALYTICS",
+        "GOOGLE_SEARCH_CONSOLE",
+        "MATOMO"
+      ]
+    },
+
+    "ADVERTISING": {
+      "providers": [
+        "GOOGLE_ADS",
+        "META_ADS",
+        "LINKEDIN_ADS",
+        "TIKTOK_ADS"
+      ]
+    },
+
+    "SOCIAL_MEDIA": {
+      "providers": [
+        "INSTAGRAM",
+        "FACEBOOK",
+        "LINKEDIN",
+        "TIKTOK",
+        "YOUTUBE"
+      ]
+    },
+
+    "WEB": {
+      "providers": [
+        "WORDPRESS",
+        "WEBFLOW",
+        "SHOPIFY",
+        "WIX",
+        "WOOCOMMERCE",
+        "SQUARESPACE"
+      ]
+    },
+
+    "ECOMMERCE": {
+      "providers": [
+        "SHOPIFY",
+        "WOOCOMMERCE",
+        "PRESTASHOP",
+        "MAGENTO"
+      ]
+    },
+
+    "CUSTOMER_SUPPORT": {
+      "providers": [
+        "ZENDESK",
+        "INTERCOM",
+        "FRESHDESK",
+        "HUBSPOT_SERVICE"
+      ]
+    },
+
+    "PAYMENTS": {
+      "providers": [
+        "STRIPE",
+        "PAYPAL",
+        "SUMUP",
+        "MOLLIE"
+      ],
+      "financial_control": "KADER_APPROVAL_REQUIRED"
+    },
+
+    "ACCOUNTING": {
+      "providers": [
+        "QUICKBOOKS",
+        "XERO",
+        "SAGE",
+        "ODOO",
+        "EXPERT"
+      ],
+      "financial_control": "KADER_APPROVAL_REQUIRED"
+    },
+
+    "ERP": {
+      "providers": [
+        "ODOO",
+        "SAP",
+        "MICROSOFT_DYNAMICS",
+        "SAGE"
+      ]
+    },
+
+    "HR": {
+      "providers": [
+        "BAMBOOHR",
+        "FACTORIAL",
+        "PERSONIO",
+        "WORKDAY"
+      ]
+    },
+
+    "RECRUITMENT": {
+      "providers": [
+        "LINKEDIN",
+        "INDEED",
+        "WELCOME_TO_THE_JUNGLE",
+        "LEADERS"
+      ]
+    },
+
+    "STORAGE": {
+      "providers": [
+        "GOOGLE_DRIVE",
+        "ONEDRIVE",
+        "DROPBOX",
+        "BOX"
+      ]
+    },
+
+    "AUTOMATION": {
+      "providers": [
+        "ZAPIER",
+        "MAKE",
+        "N8N"
+      ]
+    },
+
+    "DATABASE": {
+      "providers": [
+        "POSTGRESQL",
+        "MYSQL",
+        "MONGODB",
+        "SUPABASE",
+        "FIREBASE"
+      ]
+    },
+
+    "CLOUD": {
+      "providers": [
+        "AWS",
+        "MICROSOFT_AZURE",
+        "GOOGLE_CLOUD",
+        "CLOUDFLARE",
+        "VERCEL"
+      ]
+    },
+
+    "SECURITY": {
+      "providers": [
+        "CLOUDFLARE",
+        "MICROSOFT_DEFENDER",
+        "CROWDSTRIKE",
+        "SENTINELONE",
+        "WAZUH"
+      ]
+    },
+
+    "DEVELOPER": {
+      "providers": [
+        "GITHUB",
+        "GITLAB",
+        "BITBUCKET",
+        "SENTRY",
+        "POSTMAN"
+      ]
+    },
+
+    "AI": {
+      "providers": [
+        "OPENAI",
+        "ANTHROPIC",
+        "GOOGLE_GEMINI"
+      ]
+    }
+  },
+
+  "worker_domains": {
+
+    "LEA": [
+      "DESIGN",
+      "DOCUMENTS",
+      "SOCIAL_MEDIA",
+      "AI"
+    ],
+
+    "NOAH": [
+      "EMAIL",
+      "CALENDAR",
+      "DOCUMENTS",
+      "PROJECT_MANAGEMENT",
+      "COMMUNICATION",
+      "STORAGE",
+      "HR",
+      "RECRUITMENT"
+    ],
+
+    "ALEX": [
+      "EMAIL",
+      "CRM",
+      "PROJECT_MANAGEMENT",
+      "SOCIAL_MEDIA",
+      "RECRUITMENT",
+      "AI"
+    ],
+
+    "MAYA": [
+      "CRM",
+      "EMAIL",
+      "CALENDAR",
+      "ANALYTICS",
+      "ADVERTISING",
+      "SOCIAL_MEDIA",
+      "WEB",
+      "CUSTOMER_SUPPORT",
+      "AI"
+    ],
+
+    "LUCAS": [
+      "ANALYTICS",
+      "WEB",
+      "ECOMMERCE",
+      "DATABASE",
+      "CLOUD",
+      "DEVELOPER",
+      "SECURITY",
+      "AI"
+    ],
+
+    "EMMA": [
+      "SOCIAL_MEDIA",
+      "EMAIL",
+      "ANALYTICS",
+      "ADVERTISING",
+      "COMMUNICATION",
+      "AI"
+    ],
+
+    "SAM": [
+      "CLOUD",
+      "SECURITY",
+      "DATABASE",
+      "DEVELOPER",
+      "MONITORING",
+      "COMMUNICATION",
+      "AI"
+    ]
+  },
+
+  "integration_state": {
+    "catalog_only": true,
+    "accounts_connected": false,
+    "live_execution_enabled": false,
+    "credentials_loaded": false,
+    "external_actions_enabled": false,
+    "financial_actions_enabled": false
+  },
+
+  "security": {
+    "client_isolation": true,
+    "project_isolation": true,
+    "worker_isolation": true,
+    "secret_exposure": false,
+    "audit_logging": true,
+    "human_override": true
+  },
+
+  "financial_boundary": {
+    "payment_tools": "PREPARE_ONLY",
+    "accounting_tools": "READ_OR_PREPARE",
+    "transaction_execution": false,
+    "financial_authority": "KADER"
+  }
+}

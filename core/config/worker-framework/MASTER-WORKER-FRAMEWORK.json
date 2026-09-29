@@ -1,0 +1,282 @@
+{
+  "framework": {
+    "name": "BK-AI-WORKERS MASTER WORKER FRAMEWORK",
+    "version": "1.0.0",
+    "status": "ACTIVE",
+    "commercial_ready_target": true,
+    "target_clients": [
+      "TPE",
+      "PME",
+      "ETI",
+      "INDEPENDANTS",
+      "ORGANISATIONS"
+    ]
+  },
+  "standard": {
+    "identity": true,
+    "mission": true,
+    "skills": true,
+    "skill_contracts": true,
+    "runtime": true,
+    "memory": true,
+    "tools": true,
+    "integrations": true,
+    "workflows": true,
+    "permissions": true,
+    "security": true,
+    "kpis": true,
+    "escalation": true,
+    "error_handling": true,
+    "logging": true,
+    "tests": true
+  },
+  "security_defaults": {
+    "client_isolation": true,
+    "project_isolation": true,
+    "worker_isolation": true,
+    "secret_exposure": false,
+    "financial_actions": false,
+    "external_actions": false,
+    "human_override": true
+  },
+  "workers": {
+    "LEA": {
+      "role": "Directrice Créative & Design",
+      "categories": [
+        "BRANDING",
+        "IDENTITE_VISUELLE",
+        "DIRECTION_ARTISTIQUE",
+        "DESIGN_GRAPHIQUE",
+        "UX_UI",
+        "CAMPAGNE_CREATIVE",
+        "PRESENTATIONS"
+      ]
+    },
+    "NOAH": {
+      "role": "Assistant Exécutif & Administratif",
+      "categories": [
+        "ADMINISTRATION",
+        "EMAIL",
+        "AGENDA",
+        "REUNIONS",
+        "DOCUMENTS",
+        "ORGANISATION",
+        "REPORTING",
+        "PROCEDURES",
+        "ASSISTANCE_EXECUTIVE"
+      ]
+    },
+    "ALEX": {
+      "role": "Responsable Prospection & Sales",
+      "categories": [
+        "PROSPECTION",
+        "LEAD_GENERATION",
+        "QUALIFICATION",
+        "CRM",
+        "RELANCE",
+        "SALES_PIPELINE",
+        "EMAIL_OUTBOUND",
+        "LINKEDIN_OUTBOUND",
+        "SALES_ENABLEMENT",
+        "FORECAST_COMMERCIAL"
+      ]
+    },
+    "MAYA": {
+      "role": "Directrice Marketing & Growth",
+      "categories": [
+        "STRATEGIE",
+        "ACQUISITION",
+        "CRM_AUTOMATION",
+        "EMAIL",
+        "CONTENU_SOCIAL",
+        "SEO_SEA",
+        "ANALYTICS",
+        "FIDELISATION",
+        "COMMERCIAL_MARKETING"
+      ],
+      "skills_registry": "workers/maya/skills/SKILLS-REGISTRY.json"
+    },
+    "LUCAS": {
+      "role": "Développement Web & Digital",
+      "categories": [
+        "WEB_DEVELOPMENT",
+        "WORDPRESS",
+        "WEBFLOW",
+        "LANDING_PAGES",
+        "PERFORMANCE_WEB",
+        "ANALYTICS_WEB",
+        "MAINTENANCE",
+        "ACCESSIBILITE",
+        "CONVERSION_WEB"
+      ]
+    },
+    "EMMA": {
+      "role": "Responsable Contenu & Social Media",
+      "categories": [
+        "CONTENT",
+        "COPYWRITING",
+        "SOCIAL_MEDIA",
+        "CALENDRIER_EDITORIAL",
+        "COMMUNITY_MANAGEMENT",
+        "RESEAUX_SOCIAUX",
+        "VIDEO_SHORT_FORM",
+        "ENGAGEMENT",
+        "INFLUENCE",
+        "UGC",
+        "REPUTATION"
+      ]
+    },
+    "SAM": {
+      "role": "Responsable IT, Infrastructure & Cybersécurité",
+      "categories": [
+        "IT_SUPPORT",
+        "INFRASTRUCTURE",
+        "SYSTEMES",
+        "RESEAUX",
+        "CYBERSECURITE",
+        "MONITORING",
+        "BACKUP",
+        "INCIDENT_RESPONSE",
+        "VULNERABILITY_MANAGEMENT",
+        "ACCESS_CONTROL",
+        "SECURITY_AUDIT",
+        "CONTINUITE"
+      ]
+    },
+    "SEOYA": {
+      "role": "SEO & Search Intelligence",
+      "categories": [
+        "SEO_TECHNIQUE",
+        "SEO_ON_PAGE",
+        "SEO_ANALYTICS",
+        "LOCAL_SEO",
+        "SEO_STRATEGIQUE",
+        "SEO_OFF_PAGE"
+      ],
+      "skills_registry": "workers/seoya/skills/SKILLS-REGISTRY.json"
+    },
+    "NORA": {
+      "role": "Customer Support",
+      "categories": [
+        "AFTER_SALES",
+        "CUSTOMER_INSIGHT",
+        "KNOWLEDGE_BASE",
+        "SUPPORT_CHANNELS",
+        "SUPPORT_OPERATIONS"
+      ],
+      "skills_registry": "workers/nora/skills/SKILLS-REGISTRY.json"
+    },
+    "SOPHIE": {
+      "role": "RH & Recrutement — Agent ATS IA",
+      "categories": [
+        "EMPLOYEE_LIFECYCLE",
+        "HR_ANALYTICS",
+        "HR_MARKETING",
+        "RECRUITMENT",
+        "RECRUITMENT_TOOLS",
+        "RECRUITMENT_AI_ANALYSIS",
+        "RECRUITMENT_AI_MATCHING",
+        "RECRUITMENT_AI_SCREENING",
+        "RECRUITMENT_AI_INTELLIGENCE",
+        "RECRUITMENT_COMPLIANCE"
+      ],
+      "skills_registry": "workers/sophie/skills/SKILLS-REGISTRY.json"
+    },
+    "DARIO": {
+      "role": "Finance & Controle de gestion",
+      "categories": [
+        "FINANCE_COMPLIANCE",
+        "FINANCE_CORE",
+        "FINANCE_REPORTING"
+      ],
+      "skills_registry": "workers/dario/skills/SKILLS-REGISTRY.json"
+    },
+    "INES": {
+      "role": "Data & Analytics",
+      "categories": [
+        "DATA_ANALYSIS",
+        "DATA_ENGINEERING",
+        "DATA_SCIENCE_PREP",
+        "DATA_VISUALIZATION"
+      ],
+      "skills_registry": "workers/ines/skills/SKILLS-REGISTRY.json"
+    },
+    "YANIS": {
+      "role": "Project Management / PMO",
+      "categories": [
+        "PROJECT_EXECUTION",
+        "PROJECT_GOVERNANCE",
+        "PROJECT_PLANNING"
+      ],
+      "skills_registry": "workers/yanis/skills/SKILLS-REGISTRY.json"
+    },
+    "CLARA": {
+      "role": "Juridique & Contrats",
+      "categories": [
+        "CONTRACTS",
+        "LEGAL_COMPLIANCE",
+        "LEGAL_DOCUMENTATION"
+      ],
+      "skills_registry": "workers/clara/skills/SKILLS-REGISTRY.json"
+    },
+    "AMINA": {
+      "role": "Research & Intelligence",
+      "categories": [
+        "RESEARCH_CORE",
+        "RESEARCH_METHODS",
+        "RESEARCH_OUTPUT"
+      ],
+      "skills_registry": "workers/amina/skills/SKILLS-REGISTRY.json"
+    },
+    "THOMAS": {
+      "role": "E-commerce & Marketplace",
+      "categories": [
+        "ECOMMERCE_CATALOG",
+        "ECOMMERCE_GROWTH",
+        "MARKETPLACE_OPS"
+      ],
+      "skills_registry": "workers/thomas/skills/SKILLS-REGISTRY.json"
+    },
+    "RAYAN": {
+      "role": "Automation & Integrations",
+      "categories": [
+        "AUTOMATION_CORE",
+        "AUTOMATION_RELIABILITY",
+        "INTEGRATIONS"
+      ],
+      "skills_registry": "workers/rayan/skills/SKILLS-REGISTRY.json"
+    }
+  },
+  "shared_runtime": {
+    "orchestrator": true,
+    "context_bridge": true,
+    "memory_engine": true,
+    "ai_gateway": true,
+    "provider_engine": true,
+    "credential_boundary": true,
+    "skill_contracts": true,
+    "workflow_engine": true,
+    "audit_logging": true
+  },
+  "commercial_requirements": {
+    "multi_client": true,
+    "multi_project": true,
+    "tenant_isolation": true,
+    "client_configuration": true,
+    "worker_configuration": true,
+    "skill_configuration": true,
+    "tool_permissions": true,
+    "integration_configuration": true,
+    "usage_monitoring": true,
+    "cost_monitoring": true,
+    "audit_trail": true,
+    "error_recovery": true,
+    "human_override": true
+  },
+  "financial_boundary": {
+    "owner": "KADER",
+    "worker_execution": false,
+    "worker_preparation": true,
+    "approval_required": true
+  }
+}

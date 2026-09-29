@@ -1,0 +1,19 @@
+{
+  "version":"1.0",
+  "system":"BK-AI-WORKERS",
+  "enabled":true,
+  "policyRevalidationEnabled":true,
+  "rbacDriftDetectionEnabled":true,
+  "failClosed":true,
+  "requireIdentityState":true,
+  "requireSessionState":true,
+  "requireCurrentRbacDecision":true,
+  "requireRevocationChain":true,
+  "requireFreshnessValidation":true,
+  "requireContextIntegrity":true,
+  "defaultDecision":"BLOCK",
+  "maxRecords":100000,
+  "captureSecrets":false,
+  "capturePayloads":false,
+  "liveExecutionEnabled":false
+}

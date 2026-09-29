@@ -1,0 +1,148 @@
+{
+  "version": "1.0.0",
+  "status": "ACTIVE",
+  "tool_framework": "BK-AI-TOOLS",
+
+  "security_defaults": {
+    "client_isolation": true,
+    "project_isolation": true,
+    "worker_isolation": true,
+    "secret_exposure": false,
+    "financial_actions": false,
+    "external_actions": false,
+    "human_override": true
+  },
+
+  "tools": {
+
+    "EMAIL": {
+      "category": "COMMUNICATION",
+      "description": "Lire, rédiger, organiser et gérer les emails.",
+      "workers": ["NOAH","ALEX","MAYA","EMMA"],
+      "actions": ["READ","CREATE","REPLY","SEND","ARCHIVE"],
+      "financial": false,
+      "external": true,
+      "secret_required": true
+    },
+
+    "CALENDAR": {
+      "category": "PRODUCTIVITY",
+      "description": "Gérer les agendas et rendez-vous.",
+      "workers": ["NOAH","ALEX","MAYA"],
+      "actions": ["READ","CREATE","UPDATE","CANCEL"],
+      "financial": false,
+      "external": true,
+      "secret_required": true
+    },
+
+    "CRM": {
+      "category": "SALES",
+      "description": "Gérer prospects, contacts, entreprises et opportunités.",
+      "workers": ["ALEX","MAYA","NOAH"],
+      "actions": ["READ","CREATE","UPDATE","SEARCH","TAG"],
+      "financial": false,
+      "external": true,
+      "secret_required": true
+    },
+
+    "WEB_ANALYTICS": {
+      "category": "ANALYTICS",
+      "description": "Consulter et analyser les données de trafic et conversion.",
+      "workers": ["MAYA","LUCAS"],
+      "actions": ["READ","REPORT"],
+      "financial": false,
+      "external": true,
+      "secret_required": true
+    },
+
+    "SEARCH_ENGINE": {
+      "category": "RESEARCH",
+      "description": "Effectuer des recherches web autorisées.",
+      "workers": ["MAYA","ALEX","LUCAS","EMMA","NOAH"],
+      "actions": ["SEARCH","READ","REPORT"],
+      "financial": false,
+      "external": true,
+      "secret_required": false
+    },
+
+    "WORDPRESS": {
+      "category": "WEB",
+      "description": "Administrer un site WordPress selon les permissions du projet.",
+      "workers": ["LUCAS"],
+      "actions": ["READ","CREATE","UPDATE","PUBLISH","DELETE"],
+      "financial": false,
+      "external": true,
+      "secret_required": true
+    },
+
+    "WEBFLOW": {
+      "category": "WEB",
+      "description": "Administrer un projet Webflow.",
+      "workers": ["LUCAS"],
+      "actions": ["READ","CREATE","UPDATE","PUBLISH"],
+      "financial": false,
+      "external": true,
+      "secret_required": true
+    },
+
+    "SOCIAL_MEDIA": {
+      "category": "SOCIAL",
+      "description": "Gérer les comptes sociaux et publications.",
+      "workers": ["EMMA","MAYA"],
+      "actions": ["READ","CREATE","SCHEDULE","PUBLISH","MODERATE"],
+      "financial": false,
+      "external": true,
+      "secret_required": true
+    },
+
+    "DESIGN": {
+      "category": "CREATIVE",
+      "description": "Produire et gérer les ressources créatives.",
+      "workers": ["LEA"],
+      "actions": ["CREATE","UPDATE","EXPORT","REVIEW"],
+      "financial": false,
+      "external": false,
+      "secret_required": false
+    },
+
+    "DOCUMENTS": {
+      "category": "PRODUCTIVITY",
+      "description": "Créer et gérer des documents professionnels.",
+      "workers": ["NOAH","MAYA","ALEX","LUCAS","EMMA","LEA"],
+      "actions": ["READ","CREATE","UPDATE","EXPORT","REVIEW"],
+      "financial": false,
+      "external": false,
+      "secret_required": false
+    },
+
+    "MONITORING": {
+      "category": "IT",
+      "description": "Surveiller systèmes, services et disponibilité.",
+      "workers": ["SAM","LUCAS"],
+      "actions": ["READ","CHECK","ALERT","REPORT"],
+      "financial": false,
+      "external": true,
+      "secret_required": true
+    },
+
+    "SECURITY_SCANNER": {
+      "category": "SECURITY",
+      "description": "Analyser la posture de sécurité et les vulnérabilités autorisées.",
+      "workers": ["SAM"],
+      "actions": ["SCAN","READ","REPORT"],
+      "financial": false,
+      "external": true,
+      "secret_required": true
+    },
+
+    "CLOUD_INFRASTRUCTURE": {
+      "category": "INFRASTRUCTURE",
+      "description": "Contrôler et administrer une infrastructure cloud autorisée.",
+      "workers": ["SAM","LUCAS"],
+      "actions": ["READ","CHECK","UPDATE","RESTART"],
+      "financial": false,
+      "external": true,
+      "secret_required": true
+    }
+  }
+}

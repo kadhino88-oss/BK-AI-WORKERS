@@ -1,0 +1,24 @@
+# BK AI WORKERS - SECRET BOUNDARY
+
+.secrets/
+*.secret
+*.secrets
+.env
+.env.*
+!.env.example
+
+# Local tool state / runtime data (not part of the product source,
+# regenerated at runtime, may contain local test data or PII)
+.bk-mcp/
+.claude/
+runtime/
+memory/runtime/
+dashboard/.gate
+core/accounts/data/
+**/backups
+**/*.bak
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
+*.log

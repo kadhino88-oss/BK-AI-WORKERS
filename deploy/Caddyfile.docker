@@ -1,0 +1,8 @@
+www.{$BK_DOMAIN} {
+	redir https://{$BK_DOMAIN}{uri} permanent
+}
+
+{$BK_DOMAIN} {
+	encode gzip
+	reverse_proxy app:8787
+}

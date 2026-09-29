@@ -1,0 +1,32 @@
+{
+    "tool_id":  "EMAIL",
+    "category":  "COMMUNICATION",
+    "description":  "Lire, rÃ©diger, organiser et gÃ©rer les emails.",
+    "authorized_workers":  [
+                               "NOAH",
+                               "ALEX",
+                               "MAYA",
+                               "EMMA"
+                           ],
+    "allowed_actions":  [
+                            "READ",
+                            "CREATE",
+                            "REPLY",
+                            "SEND",
+                            "ARCHIVE"
+                        ],
+    "financial_action":  false,
+    "external_action":  true,
+    "secret_required":  true,
+    "permission_check":  true,
+    "client_isolation":  true,
+    "project_isolation":  true,
+    "worker_isolation":  true,
+    "audit_logging":  true,
+    "human_override":  true,
+    "security":  {
+                     "secret_exposure":  false,
+                     "financial_actions":  false,
+                     "unsafe_external_action":  false
+                 }
+}

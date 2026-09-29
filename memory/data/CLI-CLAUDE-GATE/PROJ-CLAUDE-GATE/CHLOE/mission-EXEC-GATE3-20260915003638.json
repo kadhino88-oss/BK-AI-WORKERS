@@ -1,0 +1,8 @@
+﻿{
+    "memory_key":  "mission-EXEC-GATE3-20260915003638",
+    "client_id":  "CLI-CLAUDE-GATE",
+    "project_id":  "PROJ-CLAUDE-GATE",
+    "worker_id":  "CHLOE",
+    "value":  "Demande: envoie un email au client\nWorkers: NOAH\nMode: PARALLEL\nStatut: SUCCESS\nSynthese: [NOAH] Réponse locale de secours disponible.",
+    "updated_at":  "2026-09-14T22:36:49.8145905Z"
+}

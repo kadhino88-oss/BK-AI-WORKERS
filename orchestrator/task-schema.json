@@ -1,0 +1,23 @@
+﻿{
+  "schema_version": "1.0",
+  "task": {
+    "task_id": "string",
+    "parent_task_id": "string|null",
+    "client_id": "string",
+    "project_id": "string",
+    "source": "chloe|orchestrator|worker|kader",
+    "target_worker": "lea|noah|alex|maya|lucas|emma|sam|atlas",
+    "objective": "string",
+    "inputs": [],
+    "constraints": [],
+    "permissions": [],
+    "priority": "critical|high|normal|low",
+    "deadline": "datetime|null",
+    "status": "created|routed|in_progress|waiting|success|partial_success|blocked|needs_human|error",
+    "result": null,
+    "blocker": null,
+    "next_action": null,
+    "created_at": "datetime",
+    "updated_at": "datetime"
+  }
+}

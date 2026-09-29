@@ -1,0 +1,32 @@
+﻿[
+    {
+        "EvidenceId":  "EVIDENCE-0B1E5FF25BDE4D97B579330D24865F28",
+        "EvidenceHash":  "a638ba6f11c3d955a290fe629bad0b9629f3d524b7ca5a523d6e9d9a1b4b904b",
+        "PreviousHash":  "GENESIS",
+        "ConflictId":  "CONFLICT-8A40-001",
+        "ResolutionId":  "RESOLUTION-8A40-001",
+        "ClosureId":  "CLOSURE-8A40-001",
+        "EnforcementId":  "ENF-8A40-001",
+        "RecoveryId":  "REC-8A40-001",
+        "TenantId":  "TENANT-001",
+        "ClientId":  "CLIENT-001",
+        "ProjectId":  "PROJECT-001",
+        "ExecutionId":  "EXEC-8A40-001",
+        "ResolvedEnforcement":  "REVOKED",
+        "ResolvedConsumption":  "REVOKED",
+        "ResolvedAuthorization":  "REVOKED",
+        "ResolvedExecution":  "BLOCKED",
+        "ClosureStatus":  "CLOSED",
+        "Decision":  "BLOCK",
+        "Immutable":  true,
+        "AppendOnly":  true,
+        "PermanentEvidence":  true,
+        "MutationAllowed":  false,
+        "DeletionAllowed":  false,
+        "RewriteAllowed":  false,
+        "Actor":  "SYSTEM",
+        "CreatedAtUtc":  "2026-09-11T12:24:38.5068754Z",
+        "RawSecret":  null,
+        "RawCredential":  null
+    }
+]

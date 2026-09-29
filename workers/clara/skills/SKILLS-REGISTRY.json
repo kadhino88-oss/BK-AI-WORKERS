@@ -1,0 +1,62 @@
+{
+    "worker": "CLARA",
+    "role": "Juridique & Contrats",
+    "version": "1.0.0",
+    "description": "Catalogue professionnel de compétences pour CLARA.",
+    "skills": {
+        "CONTRACT_DRAFTING_TEMPLATE": {
+            "enabled": true,
+            "category": "CONTRACTS",
+            "description": "Compétence CONTRACT_DRAFTING_TEMPLATE de CLARA."
+        },
+        "CONTRACT_REVIEW_FLAGGING": {
+            "enabled": true,
+            "category": "CONTRACTS",
+            "description": "Compétence CONTRACT_REVIEW_FLAGGING de CLARA."
+        },
+        "NDA_MANAGEMENT": {
+            "enabled": true,
+            "category": "CONTRACTS",
+            "description": "Compétence NDA_MANAGEMENT de CLARA."
+        },
+        "TERMS_CONDITIONS_DRAFTING": {
+            "enabled": true,
+            "category": "CONTRACTS",
+            "description": "Compétence TERMS_CONDITIONS_DRAFTING de CLARA."
+        },
+        "COMPLIANCE_CHECKLIST": {
+            "enabled": true,
+            "category": "LEGAL_COMPLIANCE",
+            "description": "Compétence COMPLIANCE_CHECKLIST de CLARA."
+        },
+        "GDPR_CHECKLIST": {
+            "enabled": true,
+            "category": "LEGAL_COMPLIANCE",
+            "description": "Compétence GDPR_CHECKLIST de CLARA."
+        },
+        "LEGAL_RISK_FLAGGING": {
+            "enabled": true,
+            "category": "LEGAL_COMPLIANCE",
+            "description": "Compétence LEGAL_RISK_FLAGGING de CLARA."
+        },
+        "DOCUMENT_RETENTION_POLICY": {
+            "enabled": true,
+            "category": "LEGAL_DOCUMENTATION",
+            "description": "Compétence DOCUMENT_RETENTION_POLICY de CLARA."
+        },
+        "CONTRACT_ARCHIVING": {
+            "enabled": true,
+            "category": "LEGAL_DOCUMENTATION",
+            "description": "Compétence CONTRACT_ARCHIVING de CLARA."
+        }
+    },
+    "governance": {
+        "security_status": "VALID",
+        "client_isolation": true,
+        "project_isolation": true,
+        "worker_isolation": true,
+        "secret_exposure": false,
+        "financial_actions": false,
+        "external_actions": false
+    }
+}

@@ -1,0 +1,167 @@
+{
+    "worker":  "LEA",
+    "role":  "Directrice Créative \u0026 Design",
+    "version":  "1.0.0",
+    "description":  "Catalogue professionnel de compétences pour LEA.",
+    "skills":  {
+                   "BRAND_STRATEGY":  {
+                                          "enabled":  true,
+                                          "category":  "BRANDING",
+                                          "description":  "Compétence BRAND_STRATEGY de LEA."
+                                      },
+                   "BRAND_POSITIONING":  {
+                                             "enabled":  true,
+                                             "category":  "BRANDING",
+                                             "description":  "Compétence BRAND_POSITIONING de LEA."
+                                         },
+                   "NAMING":  {
+                                  "enabled":  true,
+                                  "category":  "BRANDING",
+                                  "description":  "Compétence NAMING de LEA."
+                              },
+                   "BRAND_ARCHITECTURE":  {
+                                              "enabled":  true,
+                                              "category":  "BRANDING",
+                                              "description":  "Compétence BRAND_ARCHITECTURE de LEA."
+                                          },
+                   "BRAND_GUIDELINES":  {
+                                            "enabled":  true,
+                                            "category":  "BRANDING",
+                                            "description":  "Compétence BRAND_GUIDELINES de LEA."
+                                        },
+                   "LOGO_DESIGN":  {
+                                       "enabled":  true,
+                                       "category":  "IDENTITE_VISUELLE",
+                                       "description":  "Compétence LOGO_DESIGN de LEA."
+                                   },
+                   "VISUAL_IDENTITY":  {
+                                           "enabled":  true,
+                                           "category":  "IDENTITE_VISUELLE",
+                                           "description":  "Compétence VISUAL_IDENTITY de LEA."
+                                       },
+                   "COLOR_SYSTEM":  {
+                                        "enabled":  true,
+                                        "category":  "IDENTITE_VISUELLE",
+                                        "description":  "Compétence COLOR_SYSTEM de LEA."
+                                    },
+                   "TYPOGRAPHY_SYSTEM":  {
+                                             "enabled":  true,
+                                             "category":  "IDENTITE_VISUELLE",
+                                             "description":  "Compétence TYPOGRAPHY_SYSTEM de LEA."
+                                         },
+                   "DESIGN_SYSTEM":  {
+                                         "enabled":  true,
+                                         "category":  "IDENTITE_VISUELLE",
+                                         "description":  "Compétence DESIGN_SYSTEM de LEA."
+                                     },
+                   "CREATIVE_CAMPAIGN":  {
+                                             "enabled":  true,
+                                             "category":  "CAMPAGNE_CREATIVE",
+                                             "description":  "Compétence CREATIVE_CAMPAIGN de LEA."
+                                         },
+                   "KEY_VISUAL":  {
+                                      "enabled":  true,
+                                      "category":  "CAMPAGNE_CREATIVE",
+                                      "description":  "Compétence KEY_VISUAL de LEA."
+                                  },
+                   "CREATIVE_BRIEF":  {
+                                          "enabled":  true,
+                                          "category":  "CAMPAGNE_CREATIVE",
+                                          "description":  "Compétence CREATIVE_BRIEF de LEA."
+                                      },
+                   "ASSET_PLANNING":  {
+                                          "enabled":  true,
+                                          "category":  "CAMPAGNE_CREATIVE",
+                                          "description":  "Compétence ASSET_PLANNING de LEA."
+                                      },
+                   "UX_RESEARCH":  {
+                                       "enabled":  true,
+                                       "category":  "UX_UI",
+                                       "description":  "Compétence UX_RESEARCH de LEA."
+                                   },
+                   "UX_STRATEGY":  {
+                                       "enabled":  true,
+                                       "category":  "UX_UI",
+                                       "description":  "Compétence UX_STRATEGY de LEA."
+                                   },
+                   "UI_DESIGN":  {
+                                     "enabled":  true,
+                                     "category":  "UX_UI",
+                                     "description":  "Compétence UI_DESIGN de LEA."
+                                 },
+                   "WIREFRAMING":  {
+                                       "enabled":  true,
+                                       "category":  "UX_UI",
+                                       "description":  "Compétence WIREFRAMING de LEA."
+                                   },
+                   "PROTOTYPING":  {
+                                       "enabled":  true,
+                                       "category":  "UX_UI",
+                                       "description":  "Compétence PROTOTYPING de LEA."
+                                   },
+                   "DESIGN_REVIEW":  {
+                                         "enabled":  true,
+                                         "category":  "UX_UI",
+                                         "description":  "Compétence DESIGN_REVIEW de LEA."
+                                     },
+                   "ART_DIRECTION":  {
+                                         "enabled":  true,
+                                         "category":  "DIRECTION_ARTISTIQUE",
+                                         "description":  "Compétence ART_DIRECTION de LEA."
+                                     },
+                   "CREATIVE_DIRECTION":  {
+                                              "enabled":  true,
+                                              "category":  "DIRECTION_ARTISTIQUE",
+                                              "description":  "Compétence CREATIVE_DIRECTION de LEA."
+                                          },
+                   "CAMPAIGN_CONCEPT":  {
+                                            "enabled":  true,
+                                            "category":  "DIRECTION_ARTISTIQUE",
+                                            "description":  "Compétence CAMPAIGN_CONCEPT de LEA."
+                                        },
+                   "MOODBOARD_CREATION":  {
+                                              "enabled":  true,
+                                              "category":  "DIRECTION_ARTISTIQUE",
+                                              "description":  "Compétence MOODBOARD_CREATION de LEA."
+                                          },
+                   "VISUAL_CONCEPT":  {
+                                          "enabled":  true,
+                                          "category":  "DIRECTION_ARTISTIQUE",
+                                          "description":  "Compétence VISUAL_CONCEPT de LEA."
+                                      },
+                   "SOCIAL_DESIGN":  {
+                                         "enabled":  true,
+                                         "category":  "DESIGN_GRAPHIQUE",
+                                         "description":  "Compétence SOCIAL_DESIGN de LEA."
+                                     },
+                   "PRINT_DESIGN":  {
+                                        "enabled":  true,
+                                        "category":  "DESIGN_GRAPHIQUE",
+                                        "description":  "Compétence PRINT_DESIGN de LEA."
+                                    },
+                   "AD_DESIGN":  {
+                                     "enabled":  true,
+                                     "category":  "DESIGN_GRAPHIQUE",
+                                     "description":  "Compétence AD_DESIGN de LEA."
+                                 },
+                   "PRESENTATION_DESIGN":  {
+                                               "enabled":  true,
+                                               "category":  "DESIGN_GRAPHIQUE",
+                                               "description":  "Compétence PRESENTATION_DESIGN de LEA."
+                                           },
+                   "PACKAGING_DESIGN":  {
+                                            "enabled":  true,
+                                            "category":  "DESIGN_GRAPHIQUE",
+                                            "description":  "Compétence PACKAGING_DESIGN de LEA."
+                                        }
+               },
+    "governance":  {
+                       "security_status":  "VALID",
+                       "client_isolation":  true,
+                       "project_isolation":  true,
+                       "worker_isolation":  true,
+                       "secret_exposure":  false,
+                       "financial_actions":  false,
+                       "external_actions":  false
+                   }
+}
