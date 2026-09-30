@@ -252,13 +252,28 @@ try {
     }
     [void]$Messages.Add(@{ role = "user"; content = $Objective })
 
+    # Recherche/lecture web reelles (2026-09-30, demande explicite de Kader :
+    # "tous mes agents doivent etre capables de chercher... comme Claude Code
+    # le fait"). Outils SERVEUR Anthropic (web_search/web_fetch) : Claude
+    # decide seul quand les utiliser, l'execution se fait cote Anthropic dans
+    # le MEME appel (stop_reason reste "end_turn", aucun aller-retour
+    # supplementaire a gerer ici, verifie en direct le 2026-09-30). Toujours
+    # disponibles, independamment des connecteurs metier actives par le
+    # client — ce n'est pas un connecteur au sens Chloe, juste la capacite
+    # de lire une page publique, deja implicitement couverte par "READ".
+    $Tools = @(
+        @{ type = "web_search_20250305"; name = "web_search"; max_uses = 5 }
+        @{ type = "web_fetch_20250910"; name = "web_fetch"; max_uses = 5 }
+    )
+    if ($ToolDef) { $Tools += $ToolDef }
+
     $BodyObj = [ordered]@{
         model      = $EffectiveModel
         max_tokens = 64000
         system     = $SystemPrompt
         messages   = $Messages
+        tools      = $Tools
     }
-    if ($ToolDef) { $BodyObj["tools"] = @($ToolDef) }
 
     $Headers = @{ "x-api-key" = $PlainKey; "anthropic-version" = "2023-06-01" }
     $Response = Invoke-RestMethod -Uri "https://api.anthropic.com/v1/messages" -Method Post `
@@ -307,8 +322,8 @@ try {
 
                 $BodyObj2 = [ordered]@{
                     model = $EffectiveModel; max_tokens = 64000; system = $SystemPrompt; messages = $Messages
+                    tools = $Tools
                 }
-                if ($ToolDef) { $BodyObj2["tools"] = @($ToolDef) }
                 $Response2 = Invoke-RestMethod -Uri "https://api.anthropic.com/v1/messages" -Method Post `
                     -Headers $Headers -ContentType "application/json; charset=utf-8" `
                     -Body ([System.Text.Encoding]::UTF8.GetBytes(($BodyObj2 | ConvertTo-Json -Depth 10))) -TimeoutSec 240
