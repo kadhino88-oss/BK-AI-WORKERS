@@ -1,0 +1,13 @@
+{
+  "version":"1.0",
+  "system":"BK-AI-WORKERS",
+  "enabled":true,
+  "transactionsEnabled":true,
+  "compensationEnabled":true,
+  "maxSteps":100,
+  "maxTransactions":5000,
+  "requireTenantIsolation":true,
+  "captureSecrets":false,
+  "capturePayloads":false,
+  "liveExecutionEnabled":false
+}

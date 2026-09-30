@@ -1,0 +1,31 @@
+{
+    "schema":  "BK-AI-WORKERS-EXECUTION-CONTEXT",
+    "version":  "7H-13",
+    "executionId":  "EXEC-b2a0fa30-4038-465c-b103-34a301905b96",
+    "correlationId":  "CORR-53146918-7298-4ffa-93f2-9b97b6c1def7",
+    "tenantId":  "TENANT-7H13-001",
+    "clientId":  "CLIENT-7H13-001",
+    "projectId":  "PROJECT-7H13-001",
+    "workerId":  "MAYA",
+    "skillId":  "CRM_AUTOMATION",
+    "taskId":  "TASK-7H13-001",
+    "toolId":  "CRM",
+    "action":  "READ",
+    "mode":  "SIMULATION",
+    "createdAt":  "2026-09-09T21:50:17.4082572+02:00",
+    "security":  {
+                     "tenantIsolation":  true,
+                     "clientIsolation":  true,
+                     "projectIsolation":  true,
+                     "authorizationRequired":  true,
+                     "secretExposureToWorker":  false
+                 },
+    "financial":  {
+                      "approvalRequired":  false,
+                      "autonomousCommitAllowed":  false
+                  },
+    "metadata":  {
+                     "runtime":  "BK-AI-WORKERS",
+                     "contextVersion":  "7H-13"
+                 }
+}

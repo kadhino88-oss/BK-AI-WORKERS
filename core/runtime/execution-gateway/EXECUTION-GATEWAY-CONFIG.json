@@ -1,0 +1,15 @@
+{
+  "gatewayVersion": "1.0",
+  "system": "BK-AI-WORKERS",
+  "enabled": true,
+  "liveExecutionEnabled": true,
+  "requireCapabilityAuthorization": true,
+  "requireExecutionContext": true,
+  "requirePolicyAuthorization": true,
+  "requireAdapterResolution": true,
+  "requireCredentialReference": true,
+  "requireHealthApproval": true,
+  "requireIdempotency": true,
+  "allowDirectConnectorExecution": false,
+  "allowSecretForwarding": false
+}

@@ -1,0 +1,67 @@
+{
+  "factoryVersion": "1.0",
+  "system": "BK-AI-WORKERS",
+  "liveCreationEnabled": false,
+  "adapters": [
+    {
+      "adapterId": "gmail.default",
+      "provider": "GMAIL",
+      "category": "EMAIL",
+      "version": "1.0.0",
+      "lifecycle": "ENABLED",
+      "health": "HEALTHY",
+      "enabled": true,
+      "supportsSimulation": true,
+      "supportsControlled": true,
+      "supportsLive": false
+    },
+    {
+      "adapterId": "outlook.default",
+      "provider": "OUTLOOK",
+      "category": "EMAIL",
+      "version": "1.0.0",
+      "lifecycle": "ENABLED",
+      "health": "HEALTHY",
+      "enabled": true,
+      "supportsSimulation": true,
+      "supportsControlled": true,
+      "supportsLive": false
+    },
+    {
+      "adapterId": "wordpress.default",
+      "provider": "WORDPRESS",
+      "category": "CMS",
+      "version": "1.0.0",
+      "lifecycle": "ENABLED",
+      "health": "HEALTHY",
+      "enabled": true,
+      "supportsSimulation": true,
+      "supportsControlled": true,
+      "supportsLive": false
+    },
+    {
+      "adapterId": "crm.default",
+      "provider": "CRM",
+      "category": "CRM",
+      "version": "1.0.0",
+      "lifecycle": "ENABLED",
+      "health": "HEALTHY",
+      "enabled": true,
+      "supportsSimulation": true,
+      "supportsControlled": true,
+      "supportsLive": false
+    },
+    {
+      "adapterId": "stripe.default",
+      "provider": "STRIPE",
+      "category": "PAYMENT",
+      "version": "1.0.0",
+      "lifecycle": "DISABLED",
+      "health": "UNKNOWN",
+      "enabled": false,
+      "supportsSimulation": true,
+      "supportsControlled": true,
+      "supportsLive": false
+    }
+  ]
+}

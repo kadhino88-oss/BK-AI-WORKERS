@@ -1,0 +1,17 @@
+{
+  "version":"1.0",
+  "system":"BK-AI-WORKERS",
+  "enabled":true,
+  "metricsEnabled":true,
+  "auditEventsEnabled":true,
+  "stateFormat":"jsonl",
+  "retentionDays":30,
+  "captureSecrets":false,
+  "capturePrompts":false,
+  "capturePayloads":false,
+  "includeTenantId":true,
+  "includeClientId":true,
+  "includeProjectId":true,
+  "includeWorkerId":true,
+  "liveExecutionEnabled":false
+}

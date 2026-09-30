@@ -1,0 +1,15 @@
+{
+  "version": "1.0",
+  "system": "BK-AI-WORKERS",
+  "enabled": true,
+  "receiptGuardEnabled": true,
+  "confirmationRequired": true,
+  "requireDeliveryId": true,
+  "requireExecutionId": true,
+  "requireTargetId": true,
+  "allowDuplicateReceipt": false,
+  "maxReceipts": 20000,
+  "captureSecrets": false,
+  "capturePayloads": false,
+  "liveExecutionEnabled": false
+}

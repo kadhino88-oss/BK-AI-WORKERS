@@ -1,0 +1,14 @@
+[
+    {
+        "ConsistencyId":  "1a81ab96234a4977b8b53c07cb01da4d",
+        "DeliveryId":  "DELIVERY-7H68-001",
+        "ExecutionId":  "EXEC-7H68-001",
+        "TenantId":  "TENANT-001",
+        "ClientId":  "CLIENT-001",
+        "ProjectId":  "PROJECT-001",
+        "LeaseId":  "LEASE-7H68-001",
+        "RetryCount":  1,
+        "RecoveryState":  "AUTHORIZED",
+        "RecordedAtUtc":  "2026-09-10T21:40:16.8621183Z"
+    }
+]

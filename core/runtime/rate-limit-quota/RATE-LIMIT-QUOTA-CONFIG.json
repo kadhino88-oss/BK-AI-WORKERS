@@ -1,0 +1,24 @@
+{
+  "version": "1.0",
+  "system": "BK-AI-WORKERS",
+  "enabled": true,
+  "rateLimitEnabled": true,
+  "quotaEnabled": true,
+  "windowSeconds": 60,
+  "defaultLimit": 100,
+  "limits": {
+    "tenant": 100,
+    "client": 50,
+    "project": 25,
+    "worker": 20,
+    "connector": 15,
+    "provider": 15
+  },
+  "allowBurst": false,
+  "allowNegativeConsumption": false,
+  "requireTenantIsolation": true,
+  "requireClientIsolation": true,
+  "requireProjectIsolation": true,
+  "storeSecrets": false,
+  "liveExecutionEnabled": false
+}

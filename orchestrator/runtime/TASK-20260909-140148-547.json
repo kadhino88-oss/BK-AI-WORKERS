@@ -1,0 +1,19 @@
+﻿{
+    "task_id":  "TASK-20260909-140148-547",
+    "timestamp":  "2026-09-09T14:01:48",
+    "client_id":  "bk-entreprise",
+    "project_id":  "general",
+    "source":  "runtime",
+    "target_worker":  "EMMA",
+    "intent":  "content_social",
+    "objective":  "Prépare mes publications Instagram de la semaine",
+    "priority":  "normal",
+    "status":  "routed",
+    "execution":  "SIMULATION",
+    "result":  {
+                   "message":  "Task correctly routed to EMMA.",
+                   "external_action":  false
+               },
+    "blocker":  null,
+    "next_action":  "EXECUTE_WITH_EMMA"
+}

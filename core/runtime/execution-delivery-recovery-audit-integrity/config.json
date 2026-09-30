@@ -1,0 +1,17 @@
+﻿{
+  "version": "1.0",
+  "system": "BK-AI-WORKERS",
+  "enabled": true,
+  "integrityGuardEnabled": true,
+  "hashChainEnabled": true,
+  "tamperDetectionEnabled": true,
+  "requireSequence": true,
+  "requireCorrelationId": true,
+  "requireDeliveryContext": true,
+  "requireLifecycleState": true,
+  "maxEvents": 20000,
+  "hashAlgorithm": "SHA256",
+  "captureSecrets": false,
+  "capturePayloads": false,
+  "liveExecutionEnabled": false
+}

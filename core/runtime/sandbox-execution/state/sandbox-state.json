@@ -1,0 +1,31 @@
+{
+    "Schema":  "BK-AI-WORKERS-SANDBOX-EXECUTION",
+    "Version":  "1.0",
+    "Mode":  "SANDBOX",
+    "LiveEnabled":  false,
+    "ExternalActionsEnabled":  false,
+    "SecretsAllowed":  false,
+    "ProviderLiveEnabled":  false,
+    "ConnectorLiveEnabled":  false,
+    "Executions":  [
+                       {
+                           "Key":  "26492d1a319ab81623b8501a7e662a9f8f14b5a2134a1656718dcaba91b7eb08",
+                           "TenantId":  "TEN-8B01",
+                           "ClientId":  "CLI-8B01",
+                           "ProjectId":  "PROJ-8B01",
+                           "ExecutionId":  "EXEC-8B01",
+                           "UserId":  "USER-8B01",
+                           "TaskId":  "TASK-8B01",
+                           "OperationName":  "AI_SIMULATION",
+                           "Environment":  "SANDBOX",
+                           "Mode":  "SANDBOX",
+                           "ProviderExecution":  "SIMULATED",
+                           "ConnectorExecution":  "SIMULATED",
+                           "ExternalActionExecuted":  false,
+                           "SecretsUsed":  false,
+                           "LiveExecution":  false,
+                           "Status":  "SIMULATED_SUCCESS",
+                           "CreatedAtUtc":  "2026-09-11T21:00:15.5322029Z"
+                       }
+                   ]
+}

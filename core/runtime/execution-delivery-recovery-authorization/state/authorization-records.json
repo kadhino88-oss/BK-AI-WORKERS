@@ -1,0 +1,26 @@
+[
+    {
+        "AuthorizationId":  "48260ed29d964e859ebcfc444a493d9a",
+        "DeliveryId":  "DELIVERY-7H69-001",
+        "ExecutionId":  "EXEC-7H69-001",
+        "TenantId":  "TENANT-001",
+        "ClientId":  "CLIENT-001",
+        "ProjectId":  "PROJECT-001",
+        "LeaseId":  "LEASE-7H69-001",
+        "RetryCount":  1,
+        "Status":  "AUTHORIZED",
+        "AuthorizedAtUtc":  "2026-09-10T21:41:14.8716605Z"
+    },
+    {
+        "AuthorizationId":  "d1171e115b344fc488ef4b84d61c0dbe",
+        "DeliveryId":  "DELIVERY-7H69-001",
+        "ExecutionId":  "EXEC-OTHER",
+        "TenantId":  "TENANT-001",
+        "ClientId":  "CLIENT-001",
+        "ProjectId":  "PROJECT-001",
+        "LeaseId":  "LEASE-7H69-001",
+        "RetryCount":  1,
+        "Status":  "AUTHORIZED",
+        "AuthorizedAtUtc":  "2026-09-10T21:41:15.1167786Z"
+    }
+]

@@ -1,0 +1,14 @@
+{
+  "version": "1.0",
+  "system": "BK-AI-WORKERS",
+  "enabled": true,
+  "authorityGateEnabled": true,
+  "humanApprovalRequired": true,
+  "highRiskApprovalRequired": true,
+  "financialApprovalRequired": true,
+  "liveExecutionEnabled": false,
+  "maxRequests": 10000,
+  "approvalExpirySeconds": 900,
+  "captureSecrets": false,
+  "capturePayloads": false
+}

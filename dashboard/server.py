@@ -554,7 +554,10 @@ def submit_task(worker_hint_text, worker_id="", plan_only=False, client_id=""):
 
         if os.path.isfile(out_file):
             with open(out_file, encoding="utf-8-sig") as f:
-                return json.load(f)
+                result = json.load(f)
+            if not plan_only:
+                dispatch_webhook_if_configured(client_id, result)
+            return result
 
         return {"error": "SUBMIT_FAILED", "detail": stderr.strip() or stdout.strip() or f"exit code {proc.returncode}"}
     except subprocess.TimeoutExpired:
@@ -963,6 +966,187 @@ def _load_client_autoapprove(client_id):
 def _save_client_autoapprove(client_id, enabled):
     os.makedirs(CONNECTORS_DATA_DIR, exist_ok=True)
     _write_json_atomic(_client_autoapprove_path(client_id), {"autoApprove": bool(enabled)}, ensure_ascii=False, indent=2)
+
+
+# =====================================================================
+# INTEGRATIONS GENERIQUES (2026-09-30, demande explicite de Kader :
+# "fait l'integration generique compatible [Zapier/Make]"). Plutot que
+# de construire une app dediee dans le magasin Zapier/Make (ce qui
+# exigerait un compte developpeur a LUI et une revue de plateforme),
+# on expose les deux briques universelles que Zapier ET Make savent
+# deja parler nativement via leurs modules "Webhooks"/"HTTP" :
+#   - une cle API par client -> un Zap/scenario peut DECLENCHER une
+#     mission (POST /api/public/v1/missions), sans jamais toucher au
+#     mot de passe du compte.
+#   - une URL de webhook par client -> BK notifie ce Zap/scenario a la
+#     fin de CHAQUE mission (quelle que soit son origine), pour s'en
+#     servir comme declencheur ("New Mission Completed").
+# Meme isolation stricte que le reste de la plateforme : une cle ne
+# donne jamais acces qu'aux missions de SON PROPRE client.
+# =====================================================================
+
+def _client_apikey_path(client_id):
+    return os.path.join(CONNECTORS_DATA_DIR, f"{client_id}.apikey.json")
+
+
+def _client_webhook_path(client_id):
+    return os.path.join(CONNECTORS_DATA_DIR, f"{client_id}.webhook.json")
+
+
+def _generate_api_key():
+    raw = "bkw_live_" + secrets.token_urlsafe(32)
+    key_hash = hashlib.sha256(raw.encode("utf-8")).hexdigest()
+    return raw, key_hash
+
+
+@_state_locked
+def _save_client_apikey(client_id, key_hash, key_prefix):
+    os.makedirs(CONNECTORS_DATA_DIR, exist_ok=True)
+    _write_json_atomic(_client_apikey_path(client_id), {
+        "keyHash": key_hash,
+        "keyPrefix": key_prefix,
+        "createdAtUtc": datetime.datetime.utcnow().isoformat() + "Z",
+    }, ensure_ascii=False, indent=2)
+
+
+def _load_client_apikey(client_id):
+    if not client_id:
+        return None
+    return load_json(_client_apikey_path(client_id), None)
+
+
+@_state_locked
+def _remove_client_apikey(client_id):
+    try:
+        os.remove(_client_apikey_path(client_id))
+    except OSError:
+        pass
+
+
+def _find_client_by_api_key(raw_key):
+    """Retrouve le ClientId proprietaire d'une cle API presentee par un
+    appelant externe (Zapier, Make, ou tout autre outil). Jamais de cle
+    en clair stockee sur disque : seul son hash SHA-256 est compare,
+    avec hmac.compare_digest pour eviter une fuite par timing."""
+    if not raw_key or not raw_key.startswith("bkw_"):
+        return None
+    key_hash = hashlib.sha256(raw_key.encode("utf-8")).hexdigest()
+    try:
+        files = os.listdir(CONNECTORS_DATA_DIR)
+    except OSError:
+        return None
+    for fname in files:
+        if not fname.endswith(".apikey.json"):
+            continue
+        data = load_json(os.path.join(CONNECTORS_DATA_DIR, fname), None)
+        if data and hmac.compare_digest(str(data.get("keyHash", "")), key_hash):
+            return fname[: -len(".apikey.json")]
+    return None
+
+
+@_state_locked
+def _save_client_webhook(client_id, url):
+    os.makedirs(CONNECTORS_DATA_DIR, exist_ok=True)
+    existing = load_json(_client_webhook_path(client_id), {}) or {}
+    secret = existing.get("secret") or secrets.token_hex(32)
+    _write_json_atomic(_client_webhook_path(client_id), {
+        "url": url,
+        "secret": secret,
+        "createdAtUtc": existing.get("createdAtUtc") or (datetime.datetime.utcnow().isoformat() + "Z"),
+    }, ensure_ascii=False, indent=2)
+    return secret
+
+
+def _load_client_webhook(client_id):
+    if not client_id:
+        return None
+    return load_json(_client_webhook_path(client_id), None)
+
+
+@_state_locked
+def _remove_client_webhook(client_id):
+    try:
+        os.remove(_client_webhook_path(client_id))
+    except OSError:
+        pass
+
+
+def _summarize_mission_result(result):
+    """Meme resultat, mis a plat pour un appelant externe (Zapier/Make) :
+    gere aussi bien une mission Worker directe (TaskId au premier niveau)
+    qu'une orchestration Chloe (un TaskId par Worker dans Results[])."""
+    if not isinstance(result, dict):
+        return {"status": "ERROR", "error": "UNEXPECTED_RESULT"}
+    if result.get("error"):
+        return {"status": "ERROR", "error": result.get("error")}
+    if result.get("Results"):
+        return {
+            "status": result.get("Status"),
+            "results": [
+                {
+                    "taskId": r.get("TaskId"),
+                    "worker": r.get("Worker"),
+                    "status": r.get("Status"),
+                    "answer": (r.get("Result") or {}).get("Answer"),
+                }
+                for r in result.get("Results", []) if isinstance(r, dict)
+            ],
+        }
+    return {
+        "taskId": result.get("TaskId"),
+        "worker": result.get("Worker"),
+        "status": result.get("Status"),
+        "answer": (result.get("Result") or {}).get("Answer"),
+    }
+
+
+PUBLIC_API_CALLS = {}   # clientId -> [timestamps]
+PUBLIC_API_WINDOW = 60
+PUBLIC_API_MAX_PER_MINUTE = 20
+
+
+def public_api_throttled(client_id):
+    rows = _recent(PUBLIC_API_CALLS, client_id, PUBLIC_API_WINDOW)
+    if len(rows) >= PUBLIC_API_MAX_PER_MINUTE:
+        return True
+    rows.append(time.time())
+    PUBLIC_API_CALLS[client_id] = rows
+    return False
+
+
+def dispatch_webhook_if_configured(client_id, result):
+    """Notifie l'automatisation externe du client (Zapier/Make/autre) a
+    la fin d'une mission, quelle que soit son origine (dashboard ou API
+    publique). Best-effort et en arriere-plan : une URL lente ou en
+    panne chez le client ne doit jamais ralentir ni faire echouer la
+    reponse de la mission elle-meme."""
+    if not client_id:
+        return
+    cfg = _load_client_webhook(client_id)
+    if not cfg or not cfg.get("url"):
+        return
+    summary = _summarize_mission_result(result)
+
+    def _send():
+        import urllib.request
+        try:
+            payload = {
+                "event": "mission.completed",
+                "clientId": client_id,
+                "createdAtUtc": datetime.datetime.utcnow().isoformat() + "Z",
+                **summary,
+            }
+            body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+            signature = hmac.new(cfg["secret"].encode("utf-8"), body, hashlib.sha256).hexdigest()
+            req = urllib.request.Request(
+                cfg["url"], data=body, method="POST",
+                headers={"Content-Type": "application/json", "X-BK-Signature": f"sha256={signature}"},
+            )
+            urllib.request.urlopen(req, timeout=10).read()
+        except Exception:
+            pass
+
+    threading.Thread(target=_send, daemon=True).start()
 
 
 def get_connector_catalog(client_id=None):
@@ -2331,6 +2515,16 @@ class Handler(BaseHTTPRequestHandler):
     def _send_account_required(self):
         self._send_json({"error": "ACCOUNT_REQUIRED"}, 401)
 
+    def _public_api_key(self):
+        """Cle API pour /api/public/v1/* : header Authorization: Bearer
+        <cle> (convention Zapier/Make "API Key" standard) ou X-Api-Key,
+        jamais un cookie de session — cet appelant n'est pas un
+        navigateur connecte au compte."""
+        auth = self.headers.get("Authorization", "")
+        if auth.lower().startswith("bearer "):
+            return auth[7:].strip()
+        return (self.headers.get("X-Api-Key") or "").strip()
+
     def _client_ip(self):
         # Derriere Caddy (reverse_proxy), self.client_address est l'IP
         # interne du conteneur Caddy pour TOUTES les requetes : sans lire
@@ -2462,6 +2656,35 @@ class Handler(BaseHTTPRequestHandler):
             # reconnu, sinon il reste a null pour tout le monde.
             client_id = self._resolve_client_id()
             self._send_json(get_connector_catalog(client_id))
+        elif path == "/api/integrations/apikey":
+            client_id = self._resolve_client_id()
+            if not client_id:
+                self._send_account_required()
+                return
+            existing = _load_client_apikey(client_id)
+            self._send_json({"exists": bool(existing), "keyPrefix": (existing or {}).get("keyPrefix")})
+        elif path == "/api/integrations/webhook":
+            client_id = self._resolve_client_id()
+            if not client_id:
+                self._send_account_required()
+                return
+            cfg = _load_client_webhook(client_id)
+            self._send_json({"url": (cfg or {}).get("url"), "secret": (cfg or {}).get("secret")})
+        elif path.startswith("/api/public/v1/missions/"):
+            raw_key = self._public_api_key()
+            client_id = _find_client_by_api_key(raw_key)
+            if not client_id:
+                self._send_json({"error": "INVALID_API_KEY"}, 401)
+                return
+            task_id = path.split("/")[-1]
+            if not TASK_ID_PATTERN.match(task_id or ""):
+                self._send_json({"error": "INVALID_TASK_ID"}, 400)
+                return
+            data = load_json(os.path.join(TASKS_DIR, f"{task_id}.json"))
+            if not data or data.get("ClientId") != client_id:
+                self._send_json({"error": "NOT_FOUND"}, 404)
+                return
+            self._send_json(_summarize_mission_result(data))
         elif path == "/api/admin/overview":
             # Reserve au proprietaire : la porte historique uniquement,
             # jamais une session de compte client (meme un client tres
@@ -3094,6 +3317,84 @@ class Handler(BaseHTTPRequestHandler):
                 return
             result = run_automation_bridge("tick", client_id=client_id)
             self._send_json({"ran": result} if isinstance(result, list) else result)
+        elif path == "/api/integrations/apikey/generate":
+            # Regenerer REVOQUE l'ancienne cle immediatement (un seul
+            # jeton actif a la fois, comme un mot de passe d'application) :
+            # la valeur en clair n'est renvoyee qu'UNE FOIS, jamais
+            # re-consultable ensuite (seul le prefixe reste affiche).
+            client_id = self._resolve_client_id()
+            if not client_id:
+                self._send_account_required()
+                return
+            raw_key, key_hash = _generate_api_key()
+            _save_client_apikey(client_id, key_hash, raw_key[:12] + "…")
+            self._send_json({"apiKey": raw_key})
+        elif path == "/api/integrations/apikey/revoke":
+            client_id = self._resolve_client_id()
+            if not client_id:
+                self._send_account_required()
+                return
+            _remove_client_apikey(client_id)
+            self._send_json({"ok": True})
+        elif path == "/api/integrations/webhook":
+            client_id = self._resolve_client_id()
+            if not client_id:
+                self._send_account_required()
+                return
+            length = int(self.headers.get("Content-Length", 0))
+            raw = self.rfile.read(length) if length else b"{}"
+            try:
+                body = json.loads(raw.decode("utf-8"))
+            except Exception:
+                body = {}
+            url = (body.get("url") or "").strip()
+            if not url:
+                _remove_client_webhook(client_id)
+                self._send_json({"url": None, "secret": None})
+                return
+            if not (url.startswith("https://") or url.startswith("http://")):
+                self._send_json({"error": "INVALID_URL"}, 400)
+                return
+            if len(url) > 2000:
+                self._send_json({"error": "VALUE_TOO_LONG"}, 400)
+                return
+            secret = _save_client_webhook(client_id, url)
+            self._send_json({"url": url, "secret": secret})
+        elif path == "/api/public/v1/missions":
+            # Point d'entree Zapier/Make (et tout outil generique compatible
+            # webhooks/HTTP) : une mission reelle, soumise avec la meme cle
+            # API que le client a generee depuis son tableau de bord — memes
+            # regles que le reste de la plateforme (abonnement/credits,
+            # isolation stricte par client), juste un autre point d'entree
+            # que le navigateur.
+            raw_key = self._public_api_key()
+            client_id = _find_client_by_api_key(raw_key)
+            if not client_id:
+                self._send_json({"error": "INVALID_API_KEY"}, 401)
+                return
+            if public_api_throttled(client_id):
+                self._send_json({"error": "TOO_MANY_REQUESTS"}, 429)
+                return
+            block = subscription_blocks_mission(client_id)
+            if block:
+                self._send_json({"error": "SUBSCRIPTION_REQUIRED", "detail": block}, 402)
+                return
+            length = int(self.headers.get("Content-Length", 0))
+            raw = self.rfile.read(length) if length else b"{}"
+            try:
+                body = json.loads(raw.decode("utf-8"))
+            except Exception:
+                body = {}
+            objective = (body.get("request") or body.get("objective") or "").strip()
+            if not objective:
+                self._send_json({"error": "REQUEST_REQUIRED"}, 400)
+                return
+            worker_id = (body.get("worker") or "").strip().lower()
+            if worker_id and worker_id not in get_worker_ids():
+                self._send_json({"error": "UNKNOWN_WORKER"}, 404)
+                return
+            result = submit_task(objective, worker_id=worker_id or "chloe", client_id=client_id)
+            self._send_json(_summarize_mission_result(result))
         elif path == "/api/connectors/auto-approve/toggle":
             # Pre-autorisation globale : quand activee, les actions
             # d'ecriture proposees par un Worker s'executent pour de vrai

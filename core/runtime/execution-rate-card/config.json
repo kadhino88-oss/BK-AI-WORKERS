@@ -1,0 +1,15 @@
+{
+  "version": "1.0",
+  "system": "BK-AI-WORKERS",
+  "enabled": true,
+  "rateCardEnabled": true,
+  "costCalculationEnabled": true,
+  "providerIsolationEnabled": true,
+  "maxRateCards": 5000,
+  "maxUnitRate": 1000000,
+  "defaultCurrency": "UNIT",
+  "precision": 6,
+  "captureSecrets": false,
+  "capturePayloads": false,
+  "liveExecutionEnabled": false
+}

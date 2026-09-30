@@ -1,0 +1,15 @@
+﻿{
+  "version":"1.0",
+  "system":"BK-AI-WORKERS",
+  "enabled":true,
+  "admissionGateEnabled":true,
+  "readinessChecksEnabled":true,
+  "dependencyChecksEnabled":true,
+  "deadlineChecksEnabled":true,
+  "strictMode":true,
+  "maxAdmissions":5000,
+  "requireTenantIsolation":true,
+  "captureSecrets":false,
+  "capturePayloads":false,
+  "liveExecutionEnabled":false
+}

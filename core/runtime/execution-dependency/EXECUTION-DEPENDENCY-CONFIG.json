@@ -1,0 +1,15 @@
+{
+  "version":"1.0",
+  "system":"BK-AI-WORKERS",
+  "enabled":true,
+  "dependencyManagerEnabled":true,
+  "prerequisiteChecksEnabled":true,
+  "cycleDetectionEnabled":true,
+  "strictMode":true,
+  "maxExecutions":5000,
+  "maxDependenciesPerExecution":50,
+  "requireTenantIsolation":true,
+  "captureSecrets":false,
+  "capturePayloads":false,
+  "liveExecutionEnabled":false
+}

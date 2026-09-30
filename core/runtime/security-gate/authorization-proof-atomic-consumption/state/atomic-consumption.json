@@ -1,0 +1,20 @@
+{
+    "Schema":  "BK-AI-WORKERS-AUTHORIZATION-PROOF-ATOMIC-CONSUMPTION",
+    "Version":  "1.0",
+    "Records":  [
+                    {
+                        "ProofKey":  "9a7052f9c5e2fc970a0089a8f7b68e6e1d54c187c1a4c1470dfae86bf559213a",
+                        "TenantId":  "TEN-55",
+                        "ClientId":  "CLI-55",
+                        "ProjectId":  "PROJ-55",
+                        "ExecutionId":  "EXEC-55",
+                        "UserId":  "USER-55",
+                        "OperationName":  "AI_EXECUTION",
+                        "ProofHash":  "PROOF-55",
+                        "Consumed":  true,
+                        "Locked":  true,
+                        "CreatedAtUtc":  "2026-09-11T20:30:50.1063809Z",
+                        "ConsumedAtUtc":  "2026-09-11T20:30:50.4106483Z"
+                    }
+                ]
+}

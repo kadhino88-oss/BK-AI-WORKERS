@@ -1,0 +1,22 @@
+﻿{
+  "version": "1.0",
+  "system": "BK-AI-WORKERS",
+  "enabled": true,
+  "consistencyGuardEnabled": true,
+  "auditLinkGuardEnabled": true,
+  "contextIsolationEnabled": true,
+  "requireRetentionId": true,
+  "requireEventId": true,
+  "requireCorrelationId": true,
+  "requireDeliveryContext": true,
+  "requireLifecycleState": true,
+  "allowedStates": [
+    "ACTIVE",
+    "RETAINED",
+    "EXPIRED"
+  ],
+  "maxRecords": 20000,
+  "captureSecrets": false,
+  "capturePayloads": false,
+  "liveExecutionEnabled": false
+}

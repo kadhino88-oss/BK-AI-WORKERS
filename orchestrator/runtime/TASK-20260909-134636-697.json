@@ -1,0 +1,19 @@
+﻿{
+    "task_id":  "TASK-20260909-134636-697",
+    "timestamp":  "2026-09-09T13:46:36",
+    "client_id":  "bk-entreprise",
+    "project_id":  "general",
+    "source":  "runtime",
+    "target_worker":  "MAYA",
+    "intent":  "marketing",
+    "objective":  "Prépare une campagne marketing pour mon nouveau service IA",
+    "priority":  "normal",
+    "status":  "routed",
+    "execution":  "SIMULATION",
+    "result":  {
+                   "message":  "Task correctly routed to MAYA.",
+                   "external_action":  false
+               },
+    "blocker":  null,
+    "next_action":  "EXECUTE_WITH_MAYA"
+}

@@ -1,0 +1,15 @@
+{
+  "version":"1.0",
+  "system":"BK-AI-WORKERS",
+  "enabled":true,
+  "healthChecksEnabled":true,
+  "diagnosticsEnabled":true,
+  "filesystemChecksEnabled":true,
+  "runtimeChecksEnabled":true,
+  "dependencyChecksEnabled":true,
+  "configurationChecksEnabled":true,
+  "captureSecrets":false,
+  "capturePayloads":false,
+  "liveExecutionEnabled":false,
+  "maxDiagnosticItems":500
+}

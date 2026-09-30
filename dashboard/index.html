@@ -298,6 +298,46 @@
       </div>
       <div id="connectors-grid" class="connectors-grid"></div>
 
+      <div class="automation-section-heading">
+        <h2>Zapier &amp; Make (API générique)</h2>
+        <p>Branchez BK-AI-WORKERS sur les milliers d'applications déjà supportées par Zapier ou Make, sans attendre une intégration dédiée pour chacune.</p>
+      </div>
+      <div id="zapier-card" class="zapier-card" hidden>
+        <div class="zapier-block">
+          <h3>Déclencher une mission depuis Zapier/Make</h3>
+          <p class="zapier-sub">Générez une clé API, puis utilisez-la dans un module « Webhooks by Zapier » (action POST) ou « HTTP » (Make) pour confier une mission à un Worker depuis n'importe quel scénario.</p>
+          <div class="zapier-row">
+            <span id="zapier-apikey-state" class="zapier-key-state">Aucune clé générée</span>
+            <button type="button" id="zapier-apikey-generate-btn" class="btn-small">Générer une clé</button>
+            <button type="button" id="zapier-apikey-revoke-btn" class="btn-small" hidden>Révoquer</button>
+          </div>
+          <div id="zapier-apikey-reveal" class="zapier-reveal" hidden>
+            <p class="zapier-warning">Copiez cette clé maintenant : elle ne sera plus jamais affichée en clair.</p>
+            <code id="zapier-apikey-value"></code>
+            <button type="button" id="zapier-apikey-copy-btn" class="btn-small">Copier</button>
+          </div>
+          <details class="zapier-howto">
+            <summary>Comment faire (Zapier / Make)</summary>
+            <p><strong>URL :</strong> <code>POST https://bk-ai-workers.com/api/public/v1/missions</code></p>
+            <p><strong>En-tête :</strong> <code>Authorization: Bearer VOTRE_CLE</code></p>
+            <p><strong>Corps JSON :</strong> <code>{"worker": "alex", "request": "..."}</code> — le champ <code>worker</code> est optionnel (Chloé choisit le bon Worker si omis).</p>
+          </details>
+        </div>
+        <div class="zapier-block">
+          <h3>Être notifié à la fin de chaque mission</h3>
+          <p class="zapier-sub">Collez ici l'URL « Catch Hook » d'un Zap (déclencheur Webhooks by Zapier) ou d'un scénario Make (déclencheur Webhooks personnalisé) : elle sera appelée à chaque mission terminée, quelle que soit son origine.</p>
+          <div class="zapier-row">
+            <input type="text" id="zapier-webhook-input" placeholder="https://hooks.zapier.com/hooks/catch/..." autocomplete="off">
+            <button type="button" id="zapier-webhook-save-btn" class="btn-small">Enregistrer</button>
+          </div>
+          <div id="zapier-webhook-secret-row" class="zapier-reveal" hidden>
+            <p class="zapier-sub">Clé de signature (pour vérifier que l'appel vient bien de BK-AI-WORKERS, dans l'en-tête <code>X-BK-Signature</code>) :</p>
+            <code id="zapier-webhook-secret-value"></code>
+          </div>
+        </div>
+      </div>
+      <p id="zapier-account-required" class="hero-sub">Créez un compte pour générer votre clé API et connecter Zapier/Make.</p>
+
     </section>
 
     <section id="analytics-view" class="view page-wrap" hidden>

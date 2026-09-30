@@ -1,0 +1,19 @@
+﻿{
+  "version": "1.0",
+  "system": "BK-AI-WORKERS",
+  "enabled": true,
+  "accessAuditEnabled": true,
+  "decisionTraceEnabled": true,
+  "requireRetentionId": true,
+  "requireTenantId": true,
+  "requireClientId": true,
+  "requireProjectId": true,
+  "requireOperation": true,
+  "requireDecision": true,
+  "allowDuplicateDecision": false,
+  "preventContradictoryDecision": true,
+  "maxRecords": 20000,
+  "captureSecrets": false,
+  "capturePayloads": false,
+  "liveExecutionEnabled": false
+}

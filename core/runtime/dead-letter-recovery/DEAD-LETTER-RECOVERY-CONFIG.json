@@ -1,0 +1,13 @@
+{
+  "version":"1.0",
+  "system":"BK-AI-WORKERS",
+  "enabled":true,
+  "deadLetterEnabled":true,
+  "recoveryEnabled":true,
+  "replayEnabled":true,
+  "maxQueueEntries":5000,
+  "maxReplayAttempts":3,
+  "captureSecrets":false,
+  "capturePayloads":false,
+  "liveExecutionEnabled":false
+}

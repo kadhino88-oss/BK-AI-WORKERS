@@ -1,0 +1,13 @@
+{
+  "version": "1.0",
+  "system": "BK-AI-WORKERS",
+  "enabled": true,
+  "authorizationEnabled": true,
+  "rateCardRequired": true,
+  "budgetRequired": true,
+  "reservationSupported": false,
+  "maxAuthorizations": 10000,
+  "captureSecrets": false,
+  "capturePayloads": false,
+  "liveExecutionEnabled": false
+}

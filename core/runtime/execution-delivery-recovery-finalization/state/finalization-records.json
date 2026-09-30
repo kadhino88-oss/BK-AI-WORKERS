@@ -1,0 +1,18 @@
+﻿[
+    {
+        "FinalizationId":  "2de689d7-283f-4244-9abc-184c5ef8bade",
+        "DeliveryId":  "DEL-7001",
+        "ExecutionId":  "EXE-7001",
+        "TenantId":  "TEN-01",
+        "ClientId":  "CLI-01",
+        "ProjectId":  "PROJ-01",
+        "LeaseId":  "LEASE-01",
+        "RecoveryId":  "REC-01",
+        "AuthorizationId":  "AUTH-01",
+        "RecoveryState":  "RECOVERED",
+        "AuthorizationState":  "AUTHORIZED",
+        "ConsistencyState":  "CONSISTENT",
+        "Status":  "FINALIZED",
+        "FinalizedAtUtc":  "2026-09-10T21:42:30.6192668Z"
+    }
+]

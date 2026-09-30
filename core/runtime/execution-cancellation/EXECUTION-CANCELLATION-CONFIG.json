@@ -1,0 +1,14 @@
+{
+  "version":"1.0",
+  "system":"BK-AI-WORKERS",
+  "enabled":true,
+  "cancellationEnabled":true,
+  "leaseEnabled":true,
+  "leaseSeconds":60,
+  "renewalGraceSeconds":15,
+  "maxLeaseEntries":5000,
+  "allowForceCancel":false,
+  "captureSecrets":false,
+  "capturePayloads":false,
+  "liveExecutionEnabled":false
+}

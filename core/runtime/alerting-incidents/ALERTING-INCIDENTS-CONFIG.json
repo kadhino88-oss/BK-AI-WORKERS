@@ -1,0 +1,18 @@
+{
+  "version":"1.0",
+  "system":"BK-AI-WORKERS",
+  "enabled":true,
+  "alertingEnabled":true,
+  "incidentDetectionEnabled":true,
+  "deduplicationEnabled":true,
+  "cooldownSeconds":60,
+  "maxOpenIncidents":100,
+  "captureSecrets":false,
+  "capturePayloads":false,
+  "liveExecutionEnabled":false,
+  "thresholds":{
+    "errorCount":5,
+    "blockedCount":5,
+    "latencyMs":5000
+  }
+}

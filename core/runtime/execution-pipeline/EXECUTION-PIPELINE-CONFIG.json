@@ -1,0 +1,23 @@
+{
+  "pipelineVersion": "1.0",
+  "system": "BK-AI-WORKERS",
+  "enabled": true,
+  "liveExecutionEnabled": false,
+  "stages": [
+    "CAPABILITY",
+    "CONTEXT",
+    "POLICY",
+    "ADAPTER",
+    "CREDENTIAL",
+    "HEALTH",
+    "RETRY_TIMEOUT_IDEMPOTENCY",
+    "GATEWAY",
+    "CONNECTOR",
+    "RESULT",
+    "AUDIT"
+  ],
+  "requireAllStages": true,
+  "allowStageBypass": false,
+  "allowSecretPropagation": false,
+  "allowDirectConnectorExecution": false
+}

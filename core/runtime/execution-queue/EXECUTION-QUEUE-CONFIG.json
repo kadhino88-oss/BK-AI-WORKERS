@@ -1,0 +1,19 @@
+{
+  "version": "1.0",
+  "system": "BK-AI-WORKERS",
+  "enabled": true,
+  "queueEnabled": true,
+  "schedulerEnabled": true,
+  "maxQueueSize": 100,
+  "maxConcurrentExecutions": 10,
+  "defaultPriority": 50,
+  "minimumPriority": 1,
+  "maximumPriority": 100,
+  "allowDuplicateExecutionIds": false,
+  "allowDuplicateIdempotencyKeys": false,
+  "requireTenantIsolation": true,
+  "requireClientIsolation": true,
+  "requireProjectIsolation": true,
+  "allowSecretStorage": false,
+  "liveExecutionEnabled": false
+}

@@ -1,0 +1,14 @@
+{
+  "version":"1.0",
+  "system":"BK-AI-WORKERS",
+  "enabled":true,
+  "checkpointEnabled":true,
+  "resumeEnabled":true,
+  "maxCheckpointsPerExecution":20,
+  "maxExecutions":5000,
+  "requireTenantIsolation":true,
+  "requireProjectIsolation":true,
+  "captureSecrets":false,
+  "capturePayloads":false,
+  "liveExecutionEnabled":false
+}

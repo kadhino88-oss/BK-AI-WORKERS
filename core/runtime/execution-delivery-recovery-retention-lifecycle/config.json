@@ -1,0 +1,17 @@
+﻿{
+  "version": "1.0",
+  "system": "BK-AI-WORKERS",
+  "enabled": true,
+  "lifecycleGuardEnabled": true,
+  "expirationEnforcementEnabled": true,
+  "transitionGuardEnabled": true,
+  "requireRetentionContext": true,
+  "preventBackwardTransition": true,
+  "preventDuplicateTransition": true,
+  "allowExpiredMutation": false,
+  "retentionDays": 365,
+  "maxTransitions": 20000,
+  "captureSecrets": false,
+  "capturePayloads": false,
+  "liveExecutionEnabled": false
+}

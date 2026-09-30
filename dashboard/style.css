@@ -2267,6 +2267,44 @@ a:focus-visible,
   margin: 0 0 26px;
 }
 
+/* ---------- 2026-09-30 : ces sections restaient sur le fond clair par
+   defaut du body, entre le hero sombre et le footer sombre - une
+   alternance clair/sombre en descendant la page, relevee par Kader et
+   par la comparaison avec Delos/Limova. On leur applique le meme
+   traitement "panneau sombre" deja etabli ailleurs sur le site
+   (worker-spotlight, worker-card, page-band) plutot que d'inventer un
+   nouveau theme : memes variables --ink/--ink-muted/--card-border,
+   redefinies localement pour que tout le contenu texte qui en depend
+   (titres, paragraphes, bordures) bascule automatiquement en clair. */
+.by-category-section,
+.how-it-works,
+.compare-section,
+.integrations-strip,
+.trust-signals,
+.testimonials-section,
+.final-cta {
+  background: var(--dark-panel);
+  --ink: #ffffff;
+  --ink-muted: var(--dark-panel-muted);
+  --card-border: rgba(255, 255, 255, 0.14);
+  color: var(--ink);
+  border-radius: var(--radius);
+  padding: 56px 32px;
+}
+
+/* Cartes blanches partagees avec d'autres pages (dashboard inclus) :
+   elles restent blanches par design, on leur restaure juste leurs
+   couleurs de texte d'origine pour rester lisibles sur fond clair. */
+.by-category-section .category-chip,
+.compare-section .compare-table,
+.integrations-strip .integration-chip,
+.trust-signals .trust-card,
+.testimonials-section .testimonial-card {
+  --ink: #16171c;
+  --ink-muted: #6b6f7b;
+  color: var(--ink);
+}
+
 /* ---------- FOOTER (2026-09-24 : refonte sombre premium, coherente
    avec le hero et les page-band — avant, le footer etait clair et ne
    listait que 3 destinations sur 9 reelles) ---------- */
@@ -3012,6 +3050,23 @@ input, textarea, select { border-radius: 14px; }
 .how-mini strong { display: block; font-size: 14px; margin-bottom: 3px; }
 .how-mini span { display: block; font-size: 12.5px; color: var(--ink-muted); line-height: 1.5; }
 @media (max-width: 900px) { .connectors-how { grid-template-columns: 1fr; } }
+
+/* ---------- INTEGRATION GENERIQUE ZAPIER/MAKE (2026-09-30) ---------- */
+.zapier-card { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin: 6px 0 22px; }
+.zapier-block { background: linear-gradient(180deg,#fff,#fcfbf8); border: 1px solid var(--card-border); border-radius: var(--radius); padding: 18px 20px; box-shadow: var(--shadow-card); }
+.zapier-block h3 { font-size: 15px; margin: 0 0 6px; }
+.zapier-sub { font-size: 12.5px; color: var(--ink-muted); line-height: 1.5; margin: 0 0 12px; }
+.zapier-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.zapier-row input[type=text] { flex: 1; min-width: 200px; padding: 9px 12px; border-radius: var(--radius-sm); border: 1px solid var(--card-border); font: inherit; font-size: 13.5px; }
+.zapier-key-state { font-size: 13px; font-weight: 600; color: var(--ink-muted); }
+.zapier-reveal { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--card-border); }
+.zapier-reveal code { display: block; background: var(--bg); border-radius: var(--radius-sm); padding: 8px 10px; font-size: 12.5px; word-break: break-all; margin: 6px 0; }
+.zapier-warning { font-size: 12.5px; color: var(--accent-2); margin: 0; font-weight: 600; }
+.zapier-howto { margin-top: 12px; font-size: 12.5px; color: var(--ink-muted); }
+.zapier-howto summary { cursor: pointer; font-weight: 600; color: var(--ink); }
+.zapier-howto p { margin: 8px 0 0; line-height: 1.6; }
+.zapier-howto code { background: var(--bg); border-radius: 6px; padding: 1px 6px; }
+@media (max-width: 900px) { .zapier-card { grid-template-columns: 1fr; } }
 
 .connector-category-title { text-transform: capitalize; font-family: var(--font-display); font-size: 16px; letter-spacing: 0; margin-bottom: 6px; }
 .connector-row { display: grid; grid-template-columns: 40px 1fr; grid-template-areas: "logo main" "actions actions"; gap: 8px 12px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--card-border); }

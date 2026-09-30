@@ -1,0 +1,22 @@
+{
+  "version":"1.0",
+  "system":"BK-AI-WORKERS",
+  "enabled":true,
+  "stateMachineEnabled":true,
+  "transitionGuardsEnabled":true,
+  "strictMode":true,
+  "maxExecutions":5000,
+  "requireTenantIsolation":true,
+  "captureSecrets":false,
+  "capturePayloads":false,
+  "liveExecutionEnabled":false,
+  "states":[
+    "CREATED",
+    "QUEUED",
+    "RUNNING",
+    "PAUSED",
+    "COMPLETED",
+    "FAILED",
+    "CANCELLED"
+  ]
+}

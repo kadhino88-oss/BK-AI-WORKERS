@@ -1,0 +1,243 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "BK-AI-WORKERS Integration Adapter Contract",
+  "description": "Contract normalisé entre Integration Runtime et un adapter externe.",
+  "type": "object",
+  "required": [
+    "contractVersion",
+    "adapter",
+    "execution",
+    "request",
+    "security",
+    "response"
+  ],
+  "properties": {
+    "contractVersion": {
+      "type": "string",
+      "const": "1.0"
+    },
+    "adapter": {
+      "type": "object",
+      "required": [
+        "adapterId",
+        "provider",
+        "category",
+        "version",
+        "status"
+      ],
+      "properties": {
+        "adapterId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "provider": {
+          "type": "string",
+          "minLength": 1
+        },
+        "category": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "SIMULATION",
+            "CONTROLLED",
+            "LIVE",
+            "DISABLED"
+          ]
+        }
+      }
+    },
+    "execution": {
+      "type": "object",
+      "required": [
+        "executionId",
+        "correlationId",
+        "tenantId",
+        "clientId",
+        "projectId",
+        "workerId",
+        "skillId",
+        "taskId",
+        "toolId",
+        "action",
+        "mode",
+        "authorization"
+      ],
+      "properties": {
+        "executionId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "correlationId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "tenantId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "clientId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "projectId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "workerId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "skillId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "taskId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "toolId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "action": {
+          "type": "string",
+          "minLength": 1
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "SIMULATION",
+            "CONTROLLED",
+            "LIVE"
+          ]
+        },
+        "authorization": {
+          "type": "object",
+          "required": [
+            "capabilityChecked",
+            "policyDecision"
+          ],
+          "properties": {
+            "capabilityChecked": {
+              "type": "boolean"
+            },
+            "policyDecision": {
+              "type": "string",
+              "enum": [
+                "SIMULATION",
+                "LIVE",
+                "NEEDS_HUMAN",
+                "BLOCKED"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "request": {
+      "type": "object",
+      "required": [
+        "operation",
+        "parameters"
+      ],
+      "properties": {
+        "operation": {
+          "type": "string",
+          "minLength": 1
+        },
+        "parameters": {
+          "type": "object"
+        },
+        "idempotencyKey": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "security": {
+      "type": "object",
+      "required": [
+        "secretsProvidedToAdapter",
+        "secretReferencesAllowed",
+        "tenantIsolation",
+        "clientIsolation",
+        "projectIsolation"
+      ],
+      "properties": {
+        "secretsProvidedToAdapter": {
+          "type": "boolean",
+          "const": false
+        },
+        "secretReferencesAllowed": {
+          "type": "boolean"
+        },
+        "tenantIsolation": {
+          "type": "boolean",
+          "const": true
+        },
+        "clientIsolation": {
+          "type": "boolean",
+          "const": true
+        },
+        "projectIsolation": {
+          "type": "boolean",
+          "const": true
+        }
+      }
+    },
+    "response": {
+      "type": "object",
+      "required": [
+        "status",
+        "provider",
+        "operation"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "SUCCESS",
+            "SIMULATED",
+            "FAILED",
+            "BLOCKED",
+            "NEEDS_HUMAN"
+          ]
+        },
+        "provider": {
+          "type": "string"
+        },
+        "operation": {
+          "type": "string"
+        },
+        "externalRequestId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "data": {
+          "type": [
+            "object",
+            "array",
+            "null"
+          ]
+        },
+        "error": {
+          "type": [
+            "object",
+            "null"
+          ]
+        }
+      }
+    }
+  }
+}

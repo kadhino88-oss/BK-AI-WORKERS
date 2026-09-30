@@ -1,0 +1,16 @@
+{
+  "version": "1.0",
+  "system": "BK-AI-WORKERS",
+  "enabled": true,
+  "consistencyGuardEnabled": true,
+  "requireDeliveryId": true,
+  "requireExecutionId": true,
+  "requireTenantId": true,
+  "requireClientId": true,
+  "requireProjectId": true,
+  "requireLeaseId": true,
+  "maxRecoveryRecords": 20000,
+  "captureSecrets": false,
+  "capturePayloads": false,
+  "liveExecutionEnabled": false
+}

@@ -1,0 +1,16 @@
+{
+  "version": "1.0",
+  "system": "BK-AI-WORKERS",
+  "enabled": true,
+  "provenanceEnabled": true,
+  "correlationEnabled": true,
+  "requireExecutionId": true,
+  "requireTenantId": true,
+  "requireClientId": true,
+  "requireProjectId": true,
+  "requireWorkerId": true,
+  "rejectCrossTenantCorrelation": true,
+  "captureSecrets": false,
+  "capturePayloads": false,
+  "liveExecutionEnabled": false
+}

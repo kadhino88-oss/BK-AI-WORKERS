@@ -1,0 +1,14 @@
+{
+    "Schema":  "BK-AI-WORKERS-SANDBOX-FILESYSTEM-ISOLATION",
+    "Version":  "1.0",
+    "Mode":  "SANDBOX",
+    "SandboxRoot":  "C:\\Users\\FEUCOM\\BK-AI-WORKERS\\core\\runtime\\sandbox-filesystem-isolation\\workspace",
+    "ExternalWriteAllowed":  false,
+    "PathTraversalAllowed":  false,
+    "AbsolutePathAllowed":  false,
+    "UNCPathAllowed":  false,
+    "OtherVolumeAllowed":  false,
+    "Records":  [
+
+                ]
+}

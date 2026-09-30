@@ -1,0 +1,12 @@
+{
+  "version": "1.0",
+  "module": "ExecutionContextIntegrityGuard",
+  "enabled": true,
+  "failClosed": true,
+  "requireTenantBinding": true,
+  "requireClientBinding": true,
+  "requireProjectBinding": true,
+  "requireExecutionBinding": true,
+  "requireUserBinding": true,
+  "immutableExecutionContext": true
+}

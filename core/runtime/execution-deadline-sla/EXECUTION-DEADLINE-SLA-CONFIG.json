@@ -1,0 +1,16 @@
+{
+  "version":"1.0",
+  "system":"BK-AI-WORKERS",
+  "enabled":true,
+  "deadlineManagerEnabled":true,
+  "slaEnabled":true,
+  "escalationEnabled":true,
+  "defaultSlaSeconds":300,
+  "warningRatio":0.8,
+  "maxDeadlineEntries":5000,
+  "requireTenantIsolation":true,
+  "requireProjectIsolation":true,
+  "captureSecrets":false,
+  "capturePayloads":false,
+  "liveExecutionEnabled":false
+}

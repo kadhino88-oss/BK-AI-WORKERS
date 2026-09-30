@@ -1,0 +1,13 @@
+{
+    "Schema":  "BK-AI-WORKERS-SANDBOX-TIMEOUT-DEADLINE",
+    "Version":  "1.0",
+    "Mode":  "SANDBOX",
+    "MaxExecutionDurationSeconds":  300,
+    "MinimumTimeoutSeconds":  1,
+    "TimeoutBypassAllowed":  false,
+    "DeadlineBypassAllowed":  false,
+    "InfiniteExecutionAllowed":  false,
+    "Records":  [
+
+                ]
+}

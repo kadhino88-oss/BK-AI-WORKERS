@@ -1,0 +1,47 @@
+{
+  "healthVersion": "1.0",
+  "system": "BK-AI-WORKERS",
+  "liveHealthChecksEnabled": false,
+  "defaultState": "UNKNOWN",
+  "retry": {
+    "enabled": true,
+    "maxAttempts": 3,
+    "backoffSeconds": 2,
+    "maxBackoffSeconds": 30
+  },
+  "circuitBreaker": {
+    "enabled": true,
+    "failureThreshold": 3,
+    "cooldownSeconds": 60
+  },
+  "connectors": [
+    {
+      "connectorId": "gmail.controlled",
+      "provider": "GMAIL",
+      "category": "EMAIL",
+      "state": "HEALTHY",
+      "enabled": true
+    },
+    {
+      "connectorId": "wordpress.controlled",
+      "provider": "WORDPRESS",
+      "category": "CMS",
+      "state": "HEALTHY",
+      "enabled": true
+    },
+    {
+      "connectorId": "crm.controlled",
+      "provider": "CRM",
+      "category": "CRM",
+      "state": "DEGRADED",
+      "enabled": true
+    },
+    {
+      "connectorId": "stripe.controlled",
+      "provider": "STRIPE",
+      "category": "PAYMENT",
+      "state": "DISABLED",
+      "enabled": false
+    }
+  ]
+}

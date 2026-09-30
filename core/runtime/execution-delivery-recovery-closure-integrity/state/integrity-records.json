@@ -1,0 +1,19 @@
+﻿[
+    {
+        "IntegrityId":  "757ee266-0520-45ab-9f12-dee67a061c79",
+        "ClosureId":  "CLOSURE-7201",
+        "DeliveryId":  "DEL-7201",
+        "ExecutionId":  "EXE-7201",
+        "TenantId":  "TEN-01",
+        "ClientId":  "CLI-01",
+        "ProjectId":  "PROJ-01",
+        "LeaseId":  "LEASE-01",
+        "RecoveryId":  "REC-01",
+        "AuthorizationId":  "AUTH-01",
+        "FinalizationId":  "FIN-01",
+        "Status":  "CLOSED",
+        "ClosedAtUtc":  "2026-09-10T21:50:56.5928832Z",
+        "ClosureHash":  "8c77398cbbf5b61a3e8e466b3e709a6e66e98b9210373b4fa54469d931ac1b51",
+        "RecordedAtUtc":  "2026-09-10T21:50:57.1590052Z"
+    }
+]

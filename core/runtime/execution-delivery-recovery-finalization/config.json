@@ -1,0 +1,14 @@
+﻿{
+  "version": "1.0",
+  "system": "BK-AI-WORKERS",
+  "enabled": true,
+  "finalizationEnabled": true,
+  "requireRecoveryAuthorization": true,
+  "requireRecoveryConsistency": true,
+  "requireDeliveryContext": true,
+  "preventDuplicateFinalization": true,
+  "maxFinalizations": 20000,
+  "captureSecrets": false,
+  "capturePayloads": false,
+  "liveExecutionEnabled": false
+}

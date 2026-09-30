@@ -1,0 +1,21 @@
+{
+  "version": "1.0",
+  "system": "BK-AI-WORKERS",
+  "enabled": true,
+  "deliveryGuardEnabled": true,
+  "requireFinalizedResult": true,
+  "requireExecutionId": true,
+  "requireTenantId": true,
+  "requireClientId": true,
+  "requireProjectId": true,
+  "requireWorkerId": true,
+  "allowedChannels": [
+    "INTERNAL",
+    "EMAIL",
+    "DASHBOARD",
+    "API"
+  ],
+  "captureSecrets": false,
+  "capturePayloads": false,
+  "liveExecutionEnabled": false
+}

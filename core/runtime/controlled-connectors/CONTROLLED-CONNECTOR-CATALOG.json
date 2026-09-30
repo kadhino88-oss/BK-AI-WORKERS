@@ -1,0 +1,724 @@
+{
+  "catalogVersion": "2.0",
+  "system": "BK-AI-WORKERS",
+  "liveExecutionEnabled": true,
+  "note": "Catalogue etendu le 2026-09-14 pour couvrir les besoins courants TPE/PME/grande entreprise (email, calendrier, CRM, reseaux sociaux, site web, e-commerce, paiement, comptabilite, communication, stockage, analytics, publicite, gestion de projet, support client, design, IT, RH). Chaque entree est une declaration de connecteur CONTROLLED : aucun appel externe reel n'est possible tant que liveExecutionEnabled reste false et qu'aucun adaptateur reel n'est branche derriere adapterId. Categories financieres (PAYMENT, ACCOUNTING) activees le 2026-09-23 sur demande explicite de Kader : memes garde-fous que le reste (SIMULATION tant que liveExecutionEnabled est false, gate d'autonomie obligatoire pour toute operation SEND/PUBLISH/PREPARE_REFUND).",
+  "connectors": [
+    {
+      "connectorId": "gmail.controlled",
+      "provider": "GMAIL",
+      "category": "EMAIL",
+      "adapterId": "gmail.default",
+      "adapterVersion": "1.0.0",
+      "status": "CONTROLLED",
+      "enabled": true,
+      "operations": [
+        "READ_MESSAGES",
+        "SEARCH_MESSAGES",
+        "DRAFT_MESSAGE"
+      ],
+      "realAdapter": {
+        "path": "core/integrations/OAuth2-Adapter.ps1",
+        "note": "Pret (2026-09-15), OAuth2 refresh_token : NOT_CONFIGURED tant que .secrets/<provider>.secret.dpapi (JSON client_id/client_secret/refresh_token) n'existe pas. Voir core/integrations/CONNECTOR-SETUP-GUIDE.md."
+      }
+    },
+    {
+      "connectorId": "outlook_mail.controlled",
+      "provider": "OUTLOOK",
+      "category": "EMAIL",
+      "adapterId": "outlook_mail.default",
+      "adapterVersion": "1.0.0",
+      "status": "CONTROLLED",
+      "enabled": true,
+      "operations": [
+        "READ_MESSAGES",
+        "SEARCH_MESSAGES",
+        "DRAFT_MESSAGE"
+      ],
+      "realAdapter": {
+        "path": "core/integrations/OAuth2-Adapter.ps1",
+        "note": "Pret (2026-09-15), OAuth2 refresh_token : NOT_CONFIGURED tant que .secrets/<provider>.secret.dpapi (JSON client_id/client_secret/refresh_token) n'existe pas. Voir core/integrations/CONNECTOR-SETUP-GUIDE.md."
+      }
+    },
+    {
+      "connectorId": "calendar.controlled",
+      "provider": "CALENDAR",
+      "category": "CALENDAR",
+      "adapterId": "calendar.default",
+      "adapterVersion": "1.0.0",
+      "status": "CONTROLLED",
+      "enabled": true,
+      "operations": [
+        "READ_EVENTS",
+        "SEARCH_EVENTS",
+        "CREATE_EVENT"
+      ],
+      "realAdapter": {
+        "path": "core/integrations/OAuth2-Adapter.ps1",
+        "note": "Pret (2026-09-15), OAuth2 refresh_token : NOT_CONFIGURED tant que .secrets/<provider>.secret.dpapi (JSON client_id/client_secret/refresh_token) n'existe pas. Voir core/integrations/CONNECTOR-SETUP-GUIDE.md."
+      }
+    },
+    {
+      "connectorId": "outlook_calendar.controlled",
+      "provider": "OUTLOOK_CALENDAR",
+      "category": "CALENDAR",
+      "adapterId": "outlook_calendar.default",
+      "adapterVersion": "1.0.0",
+      "status": "CONTROLLED",
+      "enabled": true,
+      "operations": [
+        "READ_EVENTS",
+        "SEARCH_EVENTS",
+        "CREATE_EVENT"
+      ],
+      "realAdapter": {
+        "path": "core/integrations/OAuth2-Adapter.ps1",
+        "note": "Pret (2026-09-15), OAuth2 refresh_token : NOT_CONFIGURED tant que .secrets/<provider>.secret.dpapi (JSON client_id/client_secret/refresh_token) n'existe pas. Voir core/integrations/CONNECTOR-SETUP-GUIDE.md."
+      }
+    },
+    {
+      "connectorId": "crm.controlled",
+      "provider": "CRM",
+      "category": "CRM",
+      "adapterId": "crm.default",
+      "adapterVersion": "1.0.0",
+      "status": "CONTROLLED",
+      "enabled": true,
+      "operations": [
+        "READ_CONTACT",
+        "SEARCH_CONTACTS",
+        "CREATE_TASK"
+      ],
+      "note": "Categorie generique sans produit reel nomme derriere (voir Salesforce/HubSpot/Pipedrive) : desactive le 2026-09-30 pour ne plus afficher un etat 'Active' sans aucun appel possible."
+    },
+    {
+      "connectorId": "salesforce.controlled",
+      "provider": "SALESFORCE",
+      "category": "CRM",
+      "adapterId": "salesforce.default",
+      "adapterVersion": "1.0.0",
+      "status": "CONTROLLED",
+      "enabled": true,
+      "operations": [
+        "READ_CONTACT",
+        "SEARCH_CONTACTS",
+        "READ_OPPORTUNITY",
+        "CREATE_TASK"
+      ],
+      "realAdapter": {
+        "path": "core/integrations/OAuth2-Adapter.ps1",
+        "note": "Pret (2026-09-15), OAuth2 refresh_token : NOT_CONFIGURED tant que .secrets/<provider>.secret.dpapi (JSON client_id/client_secret/refresh_token) n'existe pas. Voir core/integrations/CONNECTOR-SETUP-GUIDE.md."
+      }
+    },
+    {
+      "connectorId": "hubspot.controlled",
+      "provider": "HUBSPOT",
+      "category": "CRM",
+      "adapterId": "hubspot.default",
+      "adapterVersion": "1.0.0",
+      "status": "CONTROLLED",
+      "enabled": true,
+      "operations": [
+        "READ_CONTACT",
+        "SEARCH_CONTACTS",
+        "READ_DEAL",
+        "CREATE_TASK"
+      ],
+      "realAdapter": {
+        "path": "core/integrations/Generic-REST-Adapter.ps1",
+        "note": "Pret (2026-09-15) : NOT_CONFIGURED tant que .secrets/<provider>.secret.dpapi n'existe pas. Voir core/integrations/CONNECTOR-SETUP-GUIDE.md."
+      }
+    },
+    {
+      "connectorId": "pipedrive.controlled",
+      "provider": "PIPEDRIVE",
+      "category": "CRM",
+      "adapterId": "pipedrive.default",
+      "adapterVersion": "1.0.0",
+      "status": "CONTROLLED",
+      "enabled": true,
+      "operations": [
+        "READ_CONTACT",
+        "SEARCH_CONTACTS",
+        "READ_DEAL"
+      ],
+      "realAdapter": {
+        "path": "core/integrations/Generic-REST-Adapter.ps1",
+        "note": "Pret (2026-09-15) : NOT_CONFIGURED tant que .secrets/<provider>.secret.dpapi n'existe pas. Voir core/integrations/CONNECTOR-SETUP-GUIDE.md."
+      }
+    },
+    {
+      "connectorId": "social_media.controlled",
+      "provider": "SOCIAL_MEDIA",
+      "category": "SOCIAL_MEDIA",
+      "adapterId": "social_media.default",
+      "adapterVersion": "1.0.0",
+      "status": "CONTROLLED",
+      "enabled": true,
+      "operations": [
+        "READ_POSTS",
+        "CREATE_DRAFT_POST"
+      ],
+      "note": "Categorie generique sans produit reel nomme derriere (voir LinkedIn/Instagram/Facebook/TikTok/X) : desactive le 2026-09-30 pour ne plus afficher un etat 'Active' sans aucun appel possible."
+    },
+    {
+      "connectorId": "linkedin.controlled",
+      "provider": "LINKEDIN",
+      "category": "SOCIAL_MEDIA",
+      "adapterId": "linkedin.default",
+      "adapterVersion": "1.0.0",
+      "status": "CONTROLLED",
+      "enabled": true,
+      "operations": [
+        "READ_POSTS",
+        "SEARCH_POSTS",
+        "CREATE_DRAFT_POST"
+      ],
+      "realAdapter": {
+        "path": "core/integrations/Generic-REST-Adapter.ps1",
+        "note": "Pret (2026-09-15) : NOT_CONFIGURED tant que .secrets/<provider>.secret.dpapi n'existe pas. Voir core/integrations/CONNECTOR-SETUP-GUIDE.md."
+      }
+    },
+    {
+      "connectorId": "instagram.controlled",
+      "provider": "INSTAGRAM",
+      "category": "SOCIAL_MEDIA",
+      "adapterId": "instagram.default",
+      "adapterVersion": "1.0.0",
+      "status": "CONTROLLED",
+      "enabled": true,
+      "operations": [
+        "READ_POSTS",
+        "CREATE_DRAFT_POST"
+      ],
+      "realAdapter": {
+        "path": "core/integrations/Generic-REST-Adapter.ps1",
+        "note": "Pret (2026-09-15) : NOT_CONFIGURED tant que .secrets/<provider>.secret.dpapi n'existe pas. Voir core/integrations/CONNECTOR-SETUP-GUIDE.md."
+      }
+    },
+    {
+      "connectorId": "facebook.controlled",
+      "provider": "FACEBOOK",
+      "category": "SOCIAL_MEDIA",
+      "adapterId": "facebook.default",
+      "adapterVersion": "1.0.0",
+      "status": "CONTROLLED",
+      "enabled": true,
+      "operations": [
+        "READ_POSTS",
+        "CREATE_DRAFT_POST"
+      ],
+      "realAdapter": {
+        "path": "core/integrations/Generic-REST-Adapter.ps1",
+        "note": "Pret (2026-09-15) : NOT_CONFIGURED tant que .secrets/<provider>.secret.dpapi n'existe pas. Voir core/integrations/CONNECTOR-SETUP-GUIDE.md."
+      }
+    },
+    {
+      "connectorId": "tiktok.controlled",
+      "provider": "TIKTOK",
+      "category": "SOCIAL_MEDIA",
+      "adapterId": "tiktok.default",
+      "adapterVersion": "1.0.0",
+      "status": "CONTROLLED",
+      "enabled": true,
+      "operations": [
+        "READ_POSTS",
+        "CREATE_DRAFT_POST"
+      ],
+      "realAdapter": {
+        "path": "core/integrations/Generic-REST-Adapter.ps1",
+        "note": "Pret (2026-09-15) : NOT_CONFIGURED tant que .secrets/<provider>.secret.dpapi n'existe pas. Voir core/integrations/CONNECTOR-SETUP-GUIDE.md."
+      }
+    },
+    {
+      "connectorId": "x_twitter.controlled",
+      "provider": "X_TWITTER",
+      "category": "SOCIAL_MEDIA",
+      "adapterId": "x_twitter.default",
+      "adapterVersion": "1.0.0",
+      "status": "CONTROLLED",
+      "enabled": true,
+      "operations": [
+        "READ_POSTS",
+        "CREATE_DRAFT_POST"
+      ],
+      "realAdapter": {
+        "path": "core/integrations/Generic-REST-Adapter.ps1",
+        "note": "Pret (2026-09-15) : NOT_CONFIGURED tant que .secrets/<provider>.secret.dpapi n'existe pas. Voir core/integrations/CONNECTOR-SETUP-GUIDE.md."
+      }
+    },
+    {
+      "connectorId": "wordpress.controlled",
+      "provider": "WORDPRESS",
+      "category": "CMS",
+      "adapterId": "wordpress.default",
+      "adapterVersion": "1.0.0",
+      "status": "CONTROLLED",
+      "enabled": true,
+      "operations": [
+        "READ_POST",
+        "CREATE_DRAFT",
+        "UPDATE_DRAFT"
+      ],
+      "realAdapter": {
+        "path": "core/integrations/Generic-REST-Adapter.ps1",
+        "note": "Pret (2026-09-15) : NOT_CONFIGURED tant que .secrets/<provider>.secret.dpapi n'existe pas. Voir core/integrations/CONNECTOR-SETUP-GUIDE.md."
+      }
+    },
+    {
+      "connectorId": "webflow.controlled",
+      "provider": "WEBFLOW",
+      "category": "CMS",
+      "adapterId": "webflow.default",
+      "adapterVersion": "1.0.0",
+      "status": "CONTROLLED",
+      "enabled": true,
+      "operations": [
+        "READ_PAGE",
+        "CREATE_DRAFT",
+        "UPDATE_DRAFT"
+      ],
+      "realAdapter": {
+        "path": "core/integrations/Generic-REST-Adapter.ps1",
+        "note": "Pret (2026-09-15) : NOT_CONFIGURED tant que .secrets/<provider>.secret.dpapi n'existe pas. Voir core/integrations/CONNECTOR-SETUP-GUIDE.md."
+      }
+    },
+    {
+      "connectorId": "shopify.controlled",
+      "provider": "SHOPIFY",
+      "category": "ECOMMERCE",
+      "adapterId": "shopify.default",
+      "adapterVersion": "1.0.0",
+      "status": "CONTROLLED",
+      "enabled": true,
+      "operations": [
+        "READ_PRODUCT",
+        "SEARCH_ORDERS",
+        "READ_INVENTORY"
+      ],
+      "realAdapter": {
+        "path": "core/integrations/Generic-REST-Adapter.ps1",
+        "note": "Pret (2026-09-15) : NOT_CONFIGURED tant que .secrets/<provider>.secret.dpapi n'existe pas. Voir core/integrations/CONNECTOR-SETUP-GUIDE.md."
+      }
+    },
+    {
+      "connectorId": "woocommerce.controlled",
+      "provider": "WOOCOMMERCE",
+      "category": "ECOMMERCE",
+      "adapterId": "woocommerce.default",
+      "adapterVersion": "1.0.0",
+      "status": "CONTROLLED",
+      "enabled": true,
+      "operations": [
+        "READ_PRODUCT",
+        "SEARCH_ORDERS",
+        "READ_INVENTORY"
+      ],
+      "realAdapter": {
+        "path": "core/integrations/Generic-REST-Adapter.ps1",
+        "note": "Pret (2026-09-15) : NOT_CONFIGURED tant que .secrets/<provider>.secret.dpapi n'existe pas. Voir core/integrations/CONNECTOR-SETUP-GUIDE.md."
+      }
+    },
+    {
+      "connectorId": "stripe.controlled",
+      "provider": "STRIPE",
+      "category": "PAYMENT",
+      "adapterId": "stripe.default",
+      "adapterVersion": "1.0.0",
+      "status": "CONTROLLED",
+      "enabled": true,
+      "operations": [
+        "PREPARE_PAYMENT",
+        "PREPARE_REFUND"
+      ],
+      "realAdapter": {
+        "path": "core/integrations/Stripe-Adapter.ps1",
+        "note": "Deja branche reellement pour la facturation des abonnements (voir dashboard/Stripe-Bridge.ps1). PREPARE_REFUND reste soumis au meme gate d'autonomie que tout le reste (SEND/PUBLISH = verification Chloe obligatoire) : aucun remboursement n'est jamais declenche sans validation humaine."
+      }
+    },
+    {
+      "connectorId": "paypal.controlled",
+      "provider": "PAYPAL",
+      "category": "PAYMENT",
+      "adapterId": "paypal.default",
+      "adapterVersion": "1.0.0",
+      "status": "CONTROLLED",
+      "enabled": true,
+      "operations": [
+        "PREPARE_PAYMENT",
+        "PREPARE_REFUND"
+      ],
+      "realAdapter": {
+        "path": "core/integrations/Generic-REST-Adapter.ps1",
+        "note": "Pret : NOT_CONFIGURED tant que .secrets/paypal.secret.dpapi n'existe pas. Voir core/integrations/CONNECTOR-SETUP-GUIDE.md."
+      }
+    },
+    {
+      "connectorId": "quickbooks.controlled",
+      "provider": "QUICKBOOKS",
+      "category": "ACCOUNTING",
+      "adapterId": "quickbooks.default",
+      "adapterVersion": "1.0.0",
+      "status": "CONTROLLED",
+      "enabled": true,
+      "operations": [
+        "READ_INVOICE",
+        "PREPARE_INVOICE"
+      ],
+      "realAdapter": {
+        "path": "core/integrations/OAuth2-Adapter.ps1",
+        "note": "Pret, OAuth2 refresh_token : NOT_CONFIGURED tant que .secrets/quickbooks.secret.dpapi (JSON client_id/client_secret/refresh_token) n'existe pas. Voir core/integrations/CONNECTOR-SETUP-GUIDE.md."
+      }
+    },
+    {
+      "connectorId": "xero.controlled",
+      "provider": "XERO",
+      "category": "ACCOUNTING",
+      "adapterId": "xero.default",
+      "adapterVersion": "1.0.0",
+      "status": "CONTROLLED",
+      "enabled": true,
+      "operations": [
+        "READ_INVOICE",
+        "PREPARE_INVOICE"
+      ],
+      "realAdapter": {
+        "path": "core/integrations/OAuth2-Adapter.ps1",
+        "note": "Pret, OAuth2 refresh_token : NOT_CONFIGURED tant que .secrets/xero.secret.dpapi (JSON client_id/client_secret/refresh_token) n'existe pas. Voir core/integrations/CONNECTOR-SETUP-GUIDE.md."
+      }
+    },
+    {
+      "connectorId": "slack.controlled",
+      "provider": "SLACK",
+      "category": "COMMUNICATION",
+      "adapterId": "slack.default",
+      "adapterVersion": "1.0.0",
+      "status": "CONTROLLED",
+      "enabled": true,
+      "operations": [
+        "READ_MESSAGES",
+        "SEARCH_MESSAGES",
+        "DRAFT_MESSAGE",
+        "POST_MESSAGE"
+      ],
+      "realAdapter": {
+        "path": "core/integrations/Slack-Adapter.ps1",
+        "note": "Premiere integration EXTERNE reelle (2026-09-15), autorisee explicitement par Kader. POST_MESSAGE effectue un vrai appel HTTP vers un webhook Slack SI ET SEULEMENT SI .secrets/slack.secret.dpapi existe (Test-SlackConfigured) — sinon NOT_CONFIGURED, aucun appel tente. Toujours soumis au meme gate d'autonomie que le reste (SEND/PUBLISH = verification Chloe obligatoire). N'affecte aucun autre connecteur."
+      }
+    },
+    {
+      "connectorId": "teams.controlled",
+      "provider": "MICROSOFT_TEAMS",
+      "category": "COMMUNICATION",
+      "adapterId": "teams.default",
+      "adapterVersion": "1.0.0",
+      "status": "CONTROLLED",
+      "enabled": true,
+      "operations": [
+        "READ_MESSAGES",
+        "SEARCH_MESSAGES",
+        "DRAFT_MESSAGE"
+      ],
+      "realAdapter": {
+        "path": "core/integrations/OAuth2-Adapter.ps1",
+        "note": "Pret (2026-09-15), OAuth2 refresh_token : NOT_CONFIGURED tant que .secrets/<provider>.secret.dpapi (JSON client_id/client_secret/refresh_token) n'existe pas. Voir core/integrations/CONNECTOR-SETUP-GUIDE.md."
+      }
+    },
+    {
+      "connectorId": "whatsapp_business.controlled",
+      "provider": "WHATSAPP_BUSINESS",
+      "category": "COMMUNICATION",
+      "adapterId": "whatsapp_business.default",
+      "adapterVersion": "1.0.0",
+      "status": "CONTROLLED",
+      "enabled": true,
+      "operations": [
+        "READ_MESSAGES",
+        "DRAFT_MESSAGE"
+      ],
+      "realAdapter": {
+        "path": "core/integrations/Generic-REST-Adapter.ps1",
+        "note": "Pret (2026-09-15) : NOT_CONFIGURED tant que .secrets/<provider>.secret.dpapi n'existe pas. Voir core/integrations/CONNECTOR-SETUP-GUIDE.md."
+      }
+    },
+    {
+      "connectorId": "google_drive.controlled",
+      "provider": "GOOGLE_DRIVE",
+      "category": "STORAGE",
+      "adapterId": "google_drive.default",
+      "adapterVersion": "1.0.0",
+      "status": "CONTROLLED",
+      "enabled": true,
+      "operations": [
+        "READ_FILE",
+        "SEARCH_FILES"
+      ],
+      "realAdapter": {
+        "path": "core/integrations/OAuth2-Adapter.ps1",
+        "note": "Pret (2026-09-15), OAuth2 refresh_token : NOT_CONFIGURED tant que .secrets/<provider>.secret.dpapi (JSON client_id/client_secret/refresh_token) n'existe pas. Voir core/integrations/CONNECTOR-SETUP-GUIDE.md."
+      }
+    },
+    {
+      "connectorId": "dropbox.controlled",
+      "provider": "DROPBOX",
+      "category": "STORAGE",
+      "adapterId": "dropbox.default",
+      "adapterVersion": "1.0.0",
+      "status": "CONTROLLED",
+      "enabled": true,
+      "operations": [
+        "READ_FILE",
+        "SEARCH_FILES"
+      ],
+      "realAdapter": {
+        "path": "core/integrations/Generic-REST-Adapter.ps1",
+        "note": "Pret (2026-09-15) : NOT_CONFIGURED tant que .secrets/<provider>.secret.dpapi n'existe pas. Voir core/integrations/CONNECTOR-SETUP-GUIDE.md."
+      }
+    },
+    {
+      "connectorId": "onedrive.controlled",
+      "provider": "ONEDRIVE",
+      "category": "STORAGE",
+      "adapterId": "onedrive.default",
+      "adapterVersion": "1.0.0",
+      "status": "CONTROLLED",
+      "enabled": true,
+      "operations": [
+        "READ_FILE",
+        "SEARCH_FILES"
+      ],
+      "realAdapter": {
+        "path": "core/integrations/OAuth2-Adapter.ps1",
+        "note": "Pret (2026-09-15), OAuth2 refresh_token : NOT_CONFIGURED tant que .secrets/<provider>.secret.dpapi (JSON client_id/client_secret/refresh_token) n'existe pas. Voir core/integrations/CONNECTOR-SETUP-GUIDE.md."
+      }
+    },
+    {
+      "connectorId": "web_analytics.controlled",
+      "provider": "WEB_ANALYTICS",
+      "category": "WEB_ANALYTICS",
+      "adapterId": "web_analytics.default",
+      "adapterVersion": "1.0.0",
+      "status": "CONTROLLED",
+      "enabled": true,
+      "operations": [
+        "READ_REPORT",
+        "SEARCH_METRICS"
+      ],
+      "note": "Categorie generique sans produit reel nomme derriere (voir Google Search Console) : desactive le 2026-09-30 pour ne plus afficher un etat 'Active' sans aucun appel possible."
+    },
+    {
+      "connectorId": "google_search_console.controlled",
+      "provider": "GOOGLE_SEARCH_CONSOLE",
+      "category": "WEB_ANALYTICS",
+      "adapterId": "google_search_console.default",
+      "adapterVersion": "1.0.0",
+      "status": "CONTROLLED",
+      "enabled": true,
+      "operations": [
+        "READ_REPORT",
+        "SEARCH_QUERIES"
+      ],
+      "realAdapter": {
+        "path": "core/integrations/OAuth2-Adapter.ps1",
+        "note": "Pret (2026-09-15), OAuth2 refresh_token : NOT_CONFIGURED tant que .secrets/<provider>.secret.dpapi (JSON client_id/client_secret/refresh_token) n'existe pas. Voir core/integrations/CONNECTOR-SETUP-GUIDE.md."
+      }
+    },
+    {
+      "connectorId": "google_ads.controlled",
+      "provider": "GOOGLE_ADS",
+      "category": "ADVERTISING",
+      "adapterId": "google_ads.default",
+      "adapterVersion": "1.0.0",
+      "status": "CONTROLLED",
+      "enabled": true,
+      "operations": [
+        "READ_CAMPAIGN",
+        "READ_REPORT"
+      ],
+      "realAdapter": {
+        "path": "core/integrations/OAuth2-Adapter.ps1",
+        "note": "Pret (2026-09-15), OAuth2 refresh_token : NOT_CONFIGURED tant que .secrets/<provider>.secret.dpapi (JSON client_id/client_secret/refresh_token) n'existe pas. Voir core/integrations/CONNECTOR-SETUP-GUIDE.md."
+      }
+    },
+    {
+      "connectorId": "meta_ads.controlled",
+      "provider": "META_ADS",
+      "category": "ADVERTISING",
+      "adapterId": "meta_ads.default",
+      "adapterVersion": "1.0.0",
+      "status": "CONTROLLED",
+      "enabled": true,
+      "operations": [
+        "READ_CAMPAIGN",
+        "READ_REPORT"
+      ],
+      "realAdapter": {
+        "path": "core/integrations/Generic-REST-Adapter.ps1",
+        "note": "Pret (2026-09-15) : NOT_CONFIGURED tant que .secrets/<provider>.secret.dpapi n'existe pas. Voir core/integrations/CONNECTOR-SETUP-GUIDE.md."
+      }
+    },
+    {
+      "connectorId": "asana.controlled",
+      "provider": "ASANA",
+      "category": "PROJECT_MANAGEMENT",
+      "adapterId": "asana.default",
+      "adapterVersion": "1.0.0",
+      "status": "CONTROLLED",
+      "enabled": true,
+      "operations": [
+        "READ_TASK",
+        "SEARCH_TASKS",
+        "CREATE_TASK"
+      ],
+      "realAdapter": {
+        "path": "core/integrations/Generic-REST-Adapter.ps1",
+        "note": "Pret (2026-09-15) : NOT_CONFIGURED tant que .secrets/<provider>.secret.dpapi n'existe pas. Voir core/integrations/CONNECTOR-SETUP-GUIDE.md."
+      }
+    },
+    {
+      "connectorId": "trello.controlled",
+      "provider": "TRELLO",
+      "category": "PROJECT_MANAGEMENT",
+      "adapterId": "trello.default",
+      "adapterVersion": "1.0.0",
+      "status": "CONTROLLED",
+      "enabled": true,
+      "operations": [
+        "READ_CARD",
+        "SEARCH_CARDS",
+        "CREATE_CARD"
+      ],
+      "realAdapter": {
+        "path": "core/integrations/Generic-REST-Adapter.ps1",
+        "note": "Pret (2026-09-15) : NOT_CONFIGURED tant que .secrets/<provider>.secret.dpapi n'existe pas. Voir core/integrations/CONNECTOR-SETUP-GUIDE.md."
+      }
+    },
+    {
+      "connectorId": "monday.controlled",
+      "provider": "MONDAY",
+      "category": "PROJECT_MANAGEMENT",
+      "adapterId": "monday.default",
+      "adapterVersion": "1.0.0",
+      "status": "CONTROLLED",
+      "enabled": true,
+      "operations": [
+        "READ_ITEM",
+        "SEARCH_ITEMS",
+        "CREATE_ITEM"
+      ],
+      "realAdapter": {
+        "path": "core/integrations/Generic-REST-Adapter.ps1",
+        "note": "Pret (2026-09-15) : NOT_CONFIGURED tant que .secrets/<provider>.secret.dpapi n'existe pas. Voir core/integrations/CONNECTOR-SETUP-GUIDE.md."
+      }
+    },
+    {
+      "connectorId": "zendesk.controlled",
+      "provider": "ZENDESK",
+      "category": "SUPPORT",
+      "adapterId": "zendesk.default",
+      "adapterVersion": "1.0.0",
+      "status": "CONTROLLED",
+      "enabled": true,
+      "operations": [
+        "READ_TICKET",
+        "SEARCH_TICKETS",
+        "DRAFT_REPLY"
+      ],
+      "realAdapter": {
+        "path": "core/integrations/Generic-REST-Adapter.ps1",
+        "note": "Pret (2026-09-15) : NOT_CONFIGURED tant que .secrets/<provider>.secret.dpapi n'existe pas. Voir core/integrations/CONNECTOR-SETUP-GUIDE.md."
+      }
+    },
+    {
+      "connectorId": "intercom.controlled",
+      "provider": "INTERCOM",
+      "category": "SUPPORT",
+      "adapterId": "intercom.default",
+      "adapterVersion": "1.0.0",
+      "status": "CONTROLLED",
+      "enabled": true,
+      "operations": [
+        "READ_TICKET",
+        "SEARCH_TICKETS",
+        "DRAFT_REPLY"
+      ],
+      "realAdapter": {
+        "path": "core/integrations/Generic-REST-Adapter.ps1",
+        "note": "Pret (2026-09-15) : NOT_CONFIGURED tant que .secrets/<provider>.secret.dpapi n'existe pas. Voir core/integrations/CONNECTOR-SETUP-GUIDE.md."
+      }
+    },
+    {
+      "connectorId": "design.controlled",
+      "provider": "DESIGN",
+      "category": "DESIGN",
+      "adapterId": "design.default",
+      "adapterVersion": "1.0.0",
+      "status": "CONTROLLED",
+      "enabled": true,
+      "operations": [
+        "READ_ASSET",
+        "CREATE_DRAFT_ASSET"
+      ],
+      "note": "Categorie generique sans produit reel nomme derriere (voir Figma) : desactive le 2026-09-30 pour ne plus afficher un etat 'Active' sans aucun appel possible."
+    },
+    {
+      "connectorId": "canva.controlled",
+      "provider": "CANVA",
+      "category": "DESIGN",
+      "adapterId": "canva.default",
+      "adapterVersion": "1.0.0",
+      "status": "CONTROLLED",
+      "enabled": true,
+      "operations": [
+        "READ_ASSET",
+        "CREATE_DRAFT_ASSET"
+      ],
+      "note": "Aucun adaptateur reel branche pour Canva : desactive le 2026-09-30 pour ne plus afficher un etat 'Active' sans aucun appel possible."
+    },
+    {
+      "connectorId": "figma.controlled",
+      "provider": "FIGMA",
+      "category": "DESIGN",
+      "adapterId": "figma.default",
+      "adapterVersion": "1.0.0",
+      "status": "CONTROLLED",
+      "enabled": true,
+      "operations": [
+        "READ_ASSET",
+        "SEARCH_ASSETS"
+      ],
+      "realAdapter": {
+        "path": "core/integrations/Generic-REST-Adapter.ps1",
+        "note": "Pret (2026-09-15) : NOT_CONFIGURED tant que .secrets/<provider>.secret.dpapi n'existe pas. Voir core/integrations/CONNECTOR-SETUP-GUIDE.md."
+      }
+    },
+    {
+      "connectorId": "monitoring.controlled",
+      "provider": "MONITORING",
+      "category": "MONITORING",
+      "adapterId": "monitoring.default",
+      "adapterVersion": "1.0.0",
+      "status": "CONTROLLED",
+      "enabled": true,
+      "operations": [
+        "READ_STATUS",
+        "SEARCH_INCIDENTS"
+      ],
+      "note": "Categorie generique sans produit reel nomme derriere : desactive le 2026-09-30 pour ne plus afficher un etat 'Active' sans aucun appel possible."
+    },
+    {
+      "connectorId": "calendar_hr.controlled",
+      "provider": "HR_PLATFORM",
+      "category": "HR",
+      "adapterId": "hr_platform.default",
+      "adapterVersion": "1.0.0",
+      "status": "CONTROLLED",
+      "enabled": true,
+      "operations": [
+        "READ_EMPLOYEE_RECORD",
+        "SEARCH_CANDIDATES"
+      ],
+      "note": "Categorie generique sans produit reel nomme derriere : desactive le 2026-09-30 pour ne plus afficher un etat 'Active' sans aucun appel possible."
+    }
+  ]
+}

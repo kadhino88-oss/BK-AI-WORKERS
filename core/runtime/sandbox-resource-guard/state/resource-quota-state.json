@@ -1,0 +1,17 @@
+{
+    "Schema":  "BK-AI-WORKERS-SANDBOX-RESOURCE-QUOTA",
+    "Version":  "1.0",
+    "Mode":  "SANDBOX",
+    "MaxConcurrentExecutions":  4,
+    "MaxExecutionDurationSeconds":  300,
+    "MaxMemoryMb":  512,
+    "MaxOutputBytes":  10485760,
+    "MaxInputBytes":  10485760,
+    "MaxProcessCount":  0,
+    "MaxNetworkRequests":  0,
+    "ResourceUnlimited":  false,
+    "QuotaBypassAllowed":  false,
+    "Records":  [
+
+                ]
+}

@@ -1,0 +1,15 @@
+{
+  "version": "1.0",
+  "system": "BK-AI-WORKERS",
+  "enabled": true,
+  "environmentGuardEnabled": true,
+  "defaultEnvironment": "SIMULATION",
+  "simulationEnabled": true,
+  "sandboxEnabled": true,
+  "liveEnabled": false,
+  "requireExplicitLiveEnable": true,
+  "requireHumanApprovalForLive": true,
+  "requireProductionFlag": true,
+  "captureSecrets": false,
+  "capturePayloads": false
+}

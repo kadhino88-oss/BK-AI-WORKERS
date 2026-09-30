@@ -1,0 +1,20 @@
+﻿[
+    {
+        "ClosureId":  "6129ba67-520d-45b9-b3fb-876d88886232",
+        "DeliveryId":  "DEL-7101",
+        "ExecutionId":  "EXE-7101",
+        "TenantId":  "TEN-01",
+        "ClientId":  "CLI-01",
+        "ProjectId":  "PROJ-01",
+        "LeaseId":  "LEASE-01",
+        "RecoveryId":  "REC-01",
+        "AuthorizationId":  "AUTH-01",
+        "RecoveryState":  "RECOVERED",
+        "AuthorizationState":  "AUTHORIZED",
+        "ConsistencyState":  "CONSISTENT",
+        "FinalizationState":  "FINALIZED",
+        "FinalizationId":  "FIN-01",
+        "Status":  "CLOSED",
+        "ClosedAtUtc":  "2026-09-10T21:44:39.7127863Z"
+    }
+]

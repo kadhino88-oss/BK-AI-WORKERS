@@ -1,0 +1,14 @@
+{
+  "version":"1.0",
+  "system":"BK-AI-WORKERS",
+  "enabled":true,
+  "integrityEnabled":true,
+  "versioningEnabled":true,
+  "maxVersionsPerExecution":50,
+  "maxExecutions":5000,
+  "requireTenantIsolation":true,
+  "requireProjectIsolation":true,
+  "captureSecrets":false,
+  "capturePayloads":false,
+  "liveExecutionEnabled":false
+}

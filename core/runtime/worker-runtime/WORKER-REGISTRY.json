@@ -1,0 +1,24 @@
+{
+    "version": "1.0",
+    "workers": {
+        "alex": "sales",
+        "atlas": "trading",
+        "emma": "social-media-marketing",
+        "lea": "design-branding",
+        "lucas": "web-development",
+        "maya": "marketing-growth",
+        "noah": "executive-assistant-administration",
+        "sam": "it-security-infrastructure",
+        "seoya": "seo-search-intelligence",
+        "chloe": "orchestrator-interface",
+        "nora": "customer-support",
+        "sophie": "hr-recruitment",
+        "dario": "finance-controlling",
+        "ines": "data-analytics",
+        "yanis": "project-management",
+        "clara": "legal-contracts",
+        "amina": "research-intelligence",
+        "thomas": "ecommerce-marketplace",
+        "rayan": "automation-integrations"
+    }
+}

@@ -1,0 +1,13 @@
+{
+  "version": "1.0",
+  "system": "BK-AI-WORKERS",
+  "enabled": true,
+  "redactionEnabled": true,
+  "secretDetectionEnabled": true,
+  "credentialDetectionEnabled": true,
+  "maxOutputLength": 200000,
+  "replacement": "[REDACTED]",
+  "captureSecrets": false,
+  "capturePayloads": false,
+  "liveExecutionEnabled": false
+}

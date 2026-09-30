@@ -1,0 +1,15 @@
+[
+    {
+        "LeaseId":  "d05c8df1573948e6a27dfd004b2799f9",
+        "DeliveryId":  "DELIVERY-7H66-001",
+        "ExecutionId":  "EXEC-7H66-001",
+        "TenantId":  "TENANT-001",
+        "ClientId":  "CLIENT-001",
+        "ProjectId":  "PROJECT-001",
+        "Status":  "RELEASED",
+        "AcquiredAtUtc":  "2026-09-10T21:38:00.4421475Z",
+        "ExpiresAtUtc":  "2026-09-10T21:43:00.9439711Z",
+        "RenewalCount":  3,
+        "LastRenewedUtc":  "2026-09-10T21:38:00.9439711Z"
+    }
+]

@@ -1,0 +1,12 @@
+{
+  "version": "1.0",
+  "system": "BK-AI-WORKERS",
+  "enabled": true,
+  "stateMachineEnabled": true,
+  "transitionGuardEnabled": true,
+  "requireDeliveryId": true,
+  "allowRetryFromFailed": true,
+  "captureSecrets": false,
+  "capturePayloads": false,
+  "liveExecutionEnabled": false
+}

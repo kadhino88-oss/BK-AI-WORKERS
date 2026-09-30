@@ -1,0 +1,20 @@
+{
+    "Schema":  "BK-AI-WORKERS-CERTIFICATION-READINESS",
+    "Version":  "1.0",
+    "Stage":  "CERTIFICATION",
+    "SandboxRequired":  true,
+    "SandboxValidated":  false,
+    "LiveExecutionAllowed":  false,
+    "ExternalActionsAllowed":  false,
+    "ProviderLiveAllowed":  false,
+    "ConnectorLiveAllowed":  false,
+    "SecretsAllowed":  false,
+    "CertificationReady":  false,
+    "HumanApprovalRequired":  true,
+    "HumanApprovalGranted":  false,
+    "Decision":  "BLOCK",
+    "Reason":  "SANDBOX_VALIDATION_REQUIRED",
+    "Records":  [
+
+                ]
+}

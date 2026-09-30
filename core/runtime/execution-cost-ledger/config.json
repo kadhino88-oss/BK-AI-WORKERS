@@ -1,0 +1,15 @@
+{
+  "version": "1.0",
+  "system": "BK-AI-WORKERS",
+  "enabled": true,
+  "ledgerEnabled": true,
+  "reconciliationEnabled": true,
+  "idempotencyEnabled": true,
+  "appendOnly": true,
+  "maxEntries": 10000,
+  "currency": "UNIT",
+  "tolerance": 0.000001,
+  "captureSecrets": false,
+  "capturePayloads": false,
+  "liveExecutionEnabled": false
+}

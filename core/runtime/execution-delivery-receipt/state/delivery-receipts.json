@@ -1,0 +1,14 @@
+[
+    {
+        "ReceiptId":  "fa3ea55de12e4defbcda3b29619c22ba",
+        "DeliveryId":  "DELIVERY-7H63-001",
+        "ExecutionId":  "EXEC-7H63-001",
+        "TenantId":  "TENANT-001",
+        "ClientId":  "CLIENT-001",
+        "ProjectId":  "PROJECT-001",
+        "TargetId":  "TARGET-001",
+        "Channel":  "INTERNAL",
+        "ConfirmedAtUtc":  "2026-09-10T21:32:23.0475921Z",
+        "Status":  "CONFIRMED"
+    }
+]

@@ -1,0 +1,18 @@
+{
+  "version": "1.0",
+  "system": "BK-AI-WORKERS",
+  "enabled": true,
+  "budgetManagerEnabled": true,
+  "reservationEnabled": true,
+  "costTrackingEnabled": true,
+  "maxGlobalBudget": 100000,
+  "defaultTenantBudget": 10000,
+  "defaultClientBudget": 5000,
+  "defaultProjectBudget": 2500,
+  "maxEntries": 5000,
+  "currency": "UNIT",
+  "allowNegativeBalance": false,
+  "captureSecrets": false,
+  "capturePayloads": false,
+  "liveExecutionEnabled": false
+}

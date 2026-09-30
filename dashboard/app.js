@@ -411,6 +411,7 @@ function showView(name) {
   if (name === "automations") {
     loadAutomations();
     loadConnectors();
+    loadZapierCard();
   }
   if (name === "analytics") {
     loadAnalytics();
@@ -1301,6 +1302,43 @@ async function loadConnectors() {
     gridEl.appendChild(card);
   });
   renderWhatsappCard(gridEl);
+}
+
+// Integration generique Zapier/Make (2026-09-30) : une cle API pour
+// declencher une mission depuis un Zap/scenario, un webhook pour etre
+// notifie a la fin de chaque mission. Voir /api/public/v1/missions et
+// /api/integrations/* cote server.py.
+async function loadZapierCard() {
+  const card = document.getElementById("zapier-card");
+  const accountRequired = document.getElementById("zapier-account-required");
+  if (!accountAuthenticated) {
+    card.hidden = true;
+    accountRequired.hidden = false;
+    return;
+  }
+  accountRequired.hidden = true;
+  card.hidden = false;
+
+  const [keyData, webhookData] = await Promise.all([
+    fetchJson("/api/integrations/apikey"),
+    fetchJson("/api/integrations/webhook"),
+  ]);
+
+  const keyStateEl = document.getElementById("zapier-apikey-state");
+  const revokeBtn = document.getElementById("zapier-apikey-revoke-btn");
+  keyStateEl.textContent = keyData.exists ? `Clé active : ${keyData.keyPrefix}` : "Aucune clé générée";
+  revokeBtn.hidden = !keyData.exists;
+
+  const webhookInput = document.getElementById("zapier-webhook-input");
+  const secretRow = document.getElementById("zapier-webhook-secret-row");
+  const secretValue = document.getElementById("zapier-webhook-secret-value");
+  if (webhookData.url) {
+    webhookInput.value = webhookData.url;
+    secretValue.textContent = webhookData.secret || "";
+    secretRow.hidden = false;
+  } else {
+    secretRow.hidden = true;
+  }
 }
 
 // Rappel du format attendu par connecteur — memes valeurs que
@@ -2999,6 +3037,43 @@ document.getElementById("account-signup-password").addEventListener("keydown", (
 });
 document.getElementById("account-login-password").addEventListener("keydown", (e) => {
   if (e.key === "Enter") submitAccountLogin();
+});
+
+// Integration generique Zapier/Make (2026-09-30) : voir loadZapierCard().
+document.getElementById("zapier-apikey-generate-btn").addEventListener("click", async () => {
+  const hadKey = !document.getElementById("zapier-apikey-revoke-btn").hidden;
+  if (hadKey && !confirm("Générer une nouvelle clé révoque immédiatement l'ancienne. Continuer ?")) return;
+  const result = await fetchJson("/api/integrations/apikey/generate", { method: "POST" });
+  if (result.error === "ACCOUNT_REQUIRED") { requireAccount(() => loadZapierCard()); return; }
+  document.getElementById("zapier-apikey-value").textContent = result.apiKey;
+  document.getElementById("zapier-apikey-reveal").hidden = false;
+  await loadZapierCard();
+});
+document.getElementById("zapier-apikey-revoke-btn").addEventListener("click", async () => {
+  if (!confirm("Révoquer votre clé API ? Tous les Zaps/scénarios qui l'utilisent cesseront de fonctionner.")) return;
+  await fetchJson("/api/integrations/apikey/revoke", { method: "POST" });
+  document.getElementById("zapier-apikey-reveal").hidden = true;
+  await loadZapierCard();
+});
+document.getElementById("zapier-apikey-copy-btn").addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText(document.getElementById("zapier-apikey-value").textContent);
+    showToast("Clé copiée ✓", true);
+  } catch (e) {
+    showToast("Copie impossible — sélectionnez le texte manuellement", false);
+  }
+});
+document.getElementById("zapier-webhook-save-btn").addEventListener("click", async () => {
+  const url = document.getElementById("zapier-webhook-input").value.trim();
+  const result = await fetchJson("/api/integrations/webhook", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url }),
+  });
+  if (result.error === "ACCOUNT_REQUIRED") { requireAccount(() => loadZapierCard()); return; }
+  if (result.error) { showToast("URL invalide", false); return; }
+  showToast(url ? "Webhook enregistré ✓" : "Webhook supprimé", true);
+  await loadZapierCard();
 });
 
 

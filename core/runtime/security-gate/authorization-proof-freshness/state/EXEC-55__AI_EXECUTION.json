@@ -1,0 +1,17 @@
+{
+    "Schema":  "BK-AI-WORKERS-AUTHORIZATION-PROOF-FRESHNESS",
+    "Version":  "1.0",
+    "TenantId":  "TEN-55",
+    "ClientId":  "CLI-55",
+    "ProjectId":  "PROJ-55",
+    "ExecutionId":  "EXEC-55",
+    "UserId":  "USER-55",
+    "Action":  "AI_EXECUTION",
+    "ProofHash":  "PROOF-55",
+    "FreshnessHash":  "f999f9972f57d519f6ae27acf0392ad557cb11456587c4d6e6da27972221c4ba",
+    "IssuedAtUtc":  "2026-09-11T20:30:44.8788939Z",
+    "ExpiresAtUtc":  "2026-09-11T20:35:44.8788939Z",
+    "LifetimeSeconds":  300,
+    "Consumed":  false,
+    "Locked":  true
+}

@@ -1,0 +1,15 @@
+﻿{
+    "task_id":  "TASK-20260909-140330-304",
+    "timestamp":  "2026-09-09T14:03:30",
+    "client_id":  "bk-entreprise",
+    "project_id":  "general",
+    "source":  "runtime",
+    "intent":  "financial_action",
+    "target_worker":  null,
+    "priority":  "normal",
+    "status":  "needs_human",
+    "owner":  "KADER",
+    "next_action":  "KADER_APPROVAL",
+    "execution":  "REFUSED",
+    "reason":  "Financial actions require human approval."
+}

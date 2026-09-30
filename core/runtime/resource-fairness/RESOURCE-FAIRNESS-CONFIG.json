@@ -1,0 +1,14 @@
+{
+  "version":"1.0",
+  "system":"BK-AI-WORKERS",
+  "enabled":true,
+  "fairnessEnabled":true,
+  "tenantIsolationEnabled":true,
+  "defaultWeight":1,
+  "minWeight":1,
+  "maxWeight":100,
+  "maxActiveEntries":5000,
+  "captureSecrets":false,
+  "capturePayloads":false,
+  "liveExecutionEnabled":false
+}

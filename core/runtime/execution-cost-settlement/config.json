@@ -1,0 +1,13 @@
+{
+  "version": "1.0",
+  "system": "BK-AI-WORKERS",
+  "enabled": true,
+  "settlementEnabled": true,
+  "reconciliationRequired": true,
+  "budgetCommitRequired": true,
+  "ledgerRequired": true,
+  "maxSettlements": 10000,
+  "captureSecrets": false,
+  "capturePayloads": false,
+  "liveExecutionEnabled": false
+}

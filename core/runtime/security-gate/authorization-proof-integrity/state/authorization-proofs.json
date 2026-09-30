@@ -1,0 +1,18 @@
+{
+    "proofs":  [
+                   {
+                       "TenantId":  "TEN-52",
+                       "ClientId":  "CLI-52",
+                       "ProjectId":  "PROJ-52",
+                       "ExecutionId":  "EXEC-52-9f9f7ae06300405583ec61e953d1cb81",
+                       "UserId":  "USER-52",
+                       "Decision":  "ALLOW",
+                       "Action":  "AI_EXECUTION",
+                       "ProofHash":  "fca175abd42b7bb5e4e8db7e03fe645f44ba1c533892922eb7c6ff4a6eb33d2e",
+                       "Locked":  true,
+                       "CreatedAtUtc":  "2026-09-11T20:03:41.2963605Z"
+                   }
+               ],
+    "schema":  "BK-AI-WORKERS-AUTHORIZATION-PROOF-INTEGRITY",
+    "version":  "1.0"
+}

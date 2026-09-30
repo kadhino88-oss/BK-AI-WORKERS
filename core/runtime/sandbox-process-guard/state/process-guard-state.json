@@ -1,0 +1,15 @@
+{
+    "Schema":  "BK-AI-WORKERS-SANDBOX-PROCESS-GUARD",
+    "Version":  "1.0",
+    "Mode":  "SANDBOX",
+    "ProcessSpawnAllowed":  false,
+    "ChildProcessAllowed":  false,
+    "ShellExecutionAllowed":  false,
+    "PowerShellExecutionAllowed":  false,
+    "CommandExecutionAllowed":  false,
+    "ExternalBinaryAllowed":  false,
+    "ScriptExecutionAllowed":  false,
+    "Records":  [
+
+                ]
+}

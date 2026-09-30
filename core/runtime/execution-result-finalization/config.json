@@ -1,0 +1,13 @@
+{
+  "version": "1.0",
+  "system": "BK-AI-WORKERS",
+  "enabled": true,
+  "finalizationEnabled": true,
+  "requireContractValidation": true,
+  "requireProvenanceValidation": true,
+  "allowBlockedFinalization": false,
+  "allowInvalidFinalization": false,
+  "captureSecrets": false,
+  "capturePayloads": false,
+  "liveExecutionEnabled": false
+}

@@ -1,0 +1,66 @@
+{
+  "version": "1.0",
+  "system": "BK-AI-WORKERS",
+  "eventBusEnabled": true,
+  "auditEvents": true,
+  "appendOnly": true,
+  "liveExecutionEnabled": false,
+  "allowedStates": [
+    "CREATED",
+    "VALIDATING",
+    "AUTHORIZED",
+    "RUNNING",
+    "COMPLETED",
+    "FAILED",
+    "BLOCKED",
+    "CANCELLED"
+  ],
+  "allowedTransitions": [
+    {
+      "from": "CREATED",
+      "to": "VALIDATING"
+    },
+    {
+      "from": "VALIDATING",
+      "to": "AUTHORIZED"
+    },
+    {
+      "from": "VALIDATING",
+      "to": "BLOCKED"
+    },
+    {
+      "from": "AUTHORIZED",
+      "to": "RUNNING"
+    },
+    {
+      "from": "RUNNING",
+      "to": "COMPLETED"
+    },
+    {
+      "from": "RUNNING",
+      "to": "FAILED"
+    },
+    {
+      "from": "RUNNING",
+      "to": "CANCELLED"
+    }
+  ],
+  "forbiddenTransitions": [
+    {
+      "from": "COMPLETED",
+      "to": "RUNNING"
+    },
+    {
+      "from": "FAILED",
+      "to": "RUNNING"
+    },
+    {
+      "from": "BLOCKED",
+      "to": "RUNNING"
+    },
+    {
+      "from": "CANCELLED",
+      "to": "RUNNING"
+    }
+  ]
+}

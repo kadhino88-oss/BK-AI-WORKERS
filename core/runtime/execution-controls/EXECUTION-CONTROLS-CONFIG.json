@@ -1,0 +1,22 @@
+{
+  "version": "1.0",
+  "system": "BK-AI-WORKERS",
+  "liveExecutionEnabled": false,
+  "timeout": {
+    "enabled": true,
+    "defaultSeconds": 30,
+    "minimumSeconds": 1,
+    "maximumSeconds": 300
+  },
+  "retry": {
+    "enabled": true,
+    "maxAttempts": 3,
+    "backoffSeconds": 2,
+    "maxBackoffSeconds": 30
+  },
+  "idempotency": {
+    "enabled": true,
+    "requiredForMutations": true,
+    "keyMaximumLength": 128
+  }
+}

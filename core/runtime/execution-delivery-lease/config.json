@@ -1,0 +1,17 @@
+{
+  "version": "1.0",
+  "system": "BK-AI-WORKERS",
+  "enabled": true,
+  "leaseGuardEnabled": true,
+  "leaseDurationSeconds": 300,
+  "renewalEnabled": true,
+  "maxRenewals": 3,
+  "requireDeliveryId": true,
+  "requireExecutionId": true,
+  "requireTenantId": true,
+  "requireClientId": true,
+  "requireProjectId": true,
+  "captureSecrets": false,
+  "capturePayloads": false,
+  "liveExecutionEnabled": false
+}

@@ -1,0 +1,55 @@
+{
+    "schema":  "BK-AI-WORKERS-EXECUTION-POLICY",
+    "version":  "7H-15",
+    "defaults":  {
+                     "mode":  "SIMULATION",
+                     "liveExecution":  false,
+                     "requireHumanApproval":  false,
+                     "denyByDefault":  true
+                 },
+    "decisions":  {
+                      "SIMULATION":  {
+                                         "description":  "Execution contrôlée sans action externe réelle."
+                                     },
+                      "LIVE":  {
+                                   "description":  "Execution externe réelle après validation de toutes les politiques."
+                               },
+                      "NEEDS_HUMAN":  {
+                                          "description":  "Validation humaine obligatoire avant poursuite."
+                                      },
+                      "BLOCKED":  {
+                                      "description":  "Execution interdite."
+                                  }
+                  },
+    "financial":  {
+                      "enabled":  true,
+                      "autonomousCommitAllowed":  false,
+                      "humanApprovalRequired":  true,
+                      "actions":  [
+                                      "PAY",
+                                      "PAYMENT",
+                                      "TRANSFER",
+                                      "INVEST",
+                                      "REFUND",
+                                      "BANK_CHANGE",
+                                      "FINANCIAL_COMMIT"
+                                  ]
+                  },
+    "highRiskActions":  [
+                            "DELETE",
+                            "SEND",
+                            "PUBLISH",
+                            "EXECUTE"
+                        ],
+    "liveAllowedActions":  [
+                               "READ",
+                               "SEARCH",
+                               "REPORT",
+                               "CREATE",
+                               "UPDATE",
+                               "DELETE",
+                               "SEND",
+                               "PUBLISH",
+                               "EXECUTE"
+                           ]
+}

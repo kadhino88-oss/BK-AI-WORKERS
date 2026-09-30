@@ -1,0 +1,86 @@
+{
+  "registryVersion": "1.0",
+  "system": "BK-AI-WORKERS",
+  "description": "Registry central des adapters et bindings providers.",
+  "defaults": {
+    "allowUnregisteredAdapters": false,
+    "allowDisabledAdapters": false,
+    "allowVersionMismatch": false,
+    "secretsStoredHere": false
+  },
+  "adapters": [
+    {
+      "adapterId": "gmail.default",
+      "provider": "GMAIL",
+      "category": "EMAIL",
+      "version": "1.0.0",
+      "status": "SIMULATION",
+      "enabled": true
+    },
+    {
+      "adapterId": "outlook.default",
+      "provider": "OUTLOOK",
+      "category": "EMAIL",
+      "version": "1.0.0",
+      "status": "SIMULATION",
+      "enabled": true
+    },
+    {
+      "adapterId": "wordpress.default",
+      "provider": "WORDPRESS",
+      "category": "CMS",
+      "version": "1.0.0",
+      "status": "SIMULATION",
+      "enabled": true
+    },
+    {
+      "adapterId": "stripe.default",
+      "provider": "STRIPE",
+      "category": "PAYMENT",
+      "version": "1.0.0",
+      "status": "DISABLED",
+      "enabled": false
+    },
+    {
+      "adapterId": "crm.default",
+      "provider": "CRM",
+      "category": "CRM",
+      "version": "1.0.0",
+      "status": "SIMULATION",
+      "enabled": true
+    }
+  ],
+  "providerBindings": [
+    {
+      "provider": "GMAIL",
+      "category": "EMAIL",
+      "adapterId": "gmail.default",
+      "adapterVersion": "1.0.0"
+    },
+    {
+      "provider": "OUTLOOK",
+      "category": "EMAIL",
+      "adapterId": "outlook.default",
+      "adapterVersion": "1.0.0"
+    },
+    {
+      "provider": "WORDPRESS",
+      "category": "CMS",
+      "adapterId": "wordpress.default",
+      "adapterVersion": "1.0.0"
+    },
+    {
+      "provider": "STRIPE",
+      "category": "PAYMENT",
+      "adapterId": "stripe.default",
+      "adapterVersion": "1.0.0"
+    },
+    {
+      "provider": "CRM",
+      "category": "CRM",
+      "adapterId": "crm.default",
+      "adapterVersion": "1.0.0"
+    }
+  ],
+  "clientProjectOverrides": []
+}

@@ -1,0 +1,15 @@
+{
+  "version": "1.0",
+  "system": "BK-AI-WORKERS",
+  "enabled": true,
+  "lockEnabled": true,
+  "defaultLockSeconds": 120,
+  "minimumLockSeconds": 5,
+  "maximumLockSeconds": 3600,
+  "allowConcurrentSameKey": false,
+  "requireTenantIsolation": true,
+  "requireClientIsolation": true,
+  "requireProjectIsolation": true,
+  "liveExecutionEnabled": false,
+  "storeSecretsInLocks": false
+}

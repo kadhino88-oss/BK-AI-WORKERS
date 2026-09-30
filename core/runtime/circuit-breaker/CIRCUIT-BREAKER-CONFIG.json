@@ -1,0 +1,14 @@
+﻿{
+    "version":  "1.0",
+    "system":  "BK-AI-WORKERS",
+    "enabled":  true,
+    "circuitBreakerEnabled":  true,
+    "failureThreshold":  3,
+    "successThreshold":  2,
+    "cooldownSeconds":  0,
+    "maxStateEntries":  5000,
+    "scopeIsolation":  "tenant-client-project-worker-connector-provider",
+    "captureSecrets":  false,
+    "capturePayloads":  false,
+    "liveExecutionEnabled":  false
+}

@@ -1,0 +1,13 @@
+{
+    "Schema":  "BK-AI-WORKERS-SANDBOX-LIVE-ISOLATION",
+    "Version":  "1.0",
+    "SandboxEnabled":  true,
+    "LiveEnabled":  false,
+    "SandboxMayInvokeLive":  false,
+    "SandboxMayUseLiveProvider":  false,
+    "SandboxMayUseLiveConnector":  false,
+    "CrossEnvironmentExecution":  false,
+    "Records":  [
+
+                ]
+}

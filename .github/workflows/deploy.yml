@@ -1,0 +1,35 @@
+name: Deploy to production
+
+# Se declenche automatiquement a chaque push sur main (choix explicite
+# de Kader le 2026-09-30 : plus depender de sa propre machine pour
+# deployer), et reste aussi declenchable a la main depuis GitHub.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: production-deploy
+      cancel-in-progress: false
+    steps:
+      - name: Deploy via SSH (git pull + rebuild sur le VPS)
+        env:
+          SSH_KEY: ${{ secrets.BK_DEPLOY_SSH_KEY }}
+          HOST: ${{ secrets.BK_DEPLOY_HOST }}
+          SSH_USER: ${{ secrets.BK_DEPLOY_USER }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          ssh -i ~/.ssh/deploy_key "$SSH_USER@$HOST" '
+            set -euo pipefail
+            cd ~/BK-AI-WORKERS
+            git fetch origin main
+            git checkout -f origin/main
+            docker compose up -d --build
+          '

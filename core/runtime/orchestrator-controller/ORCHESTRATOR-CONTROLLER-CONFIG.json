@@ -1,0 +1,23 @@
+{
+  "version": "1.0",
+  "system": "BK-AI-WORKERS",
+  "enabled": true,
+  "liveExecutionEnabled": false,
+  "singleEntryPoint": true,
+  "stopOnFirstFailure": true,
+  "requireCapability": true,
+  "requireContext": true,
+  "requirePolicy": true,
+  "requireAdapter": true,
+  "requireCredential": true,
+  "requireHealth": true,
+  "requireExecutionControls": true,
+  "requireGateway": true,
+  "requireConnector": true,
+  "requireResult": true,
+  "requireEvent": true,
+  "requireAudit": true,
+  "allowBypass": false,
+  "allowDirectConnectorExecution": false,
+  "allowSecretPropagation": false
+}

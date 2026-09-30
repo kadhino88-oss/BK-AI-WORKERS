@@ -1,0 +1,14 @@
+{
+  "version": "1.0",
+  "system": "BK-AI-WORKERS",
+  "enabled": true,
+  "idempotencyEnabled": true,
+  "duplicateDetectionEnabled": true,
+  "requireDeliveryId": true,
+  "requireExecutionId": true,
+  "requireTargetId": true,
+  "maxRecords": 20000,
+  "captureSecrets": false,
+  "capturePayloads": false,
+  "liveExecutionEnabled": false
+}

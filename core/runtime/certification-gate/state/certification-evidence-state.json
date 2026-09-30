@@ -1,0 +1,21 @@
+{
+    "Schema":  "BK-AI-WORKERS-CERTIFICATION-EVIDENCE-INTEGRITY",
+    "Version":  "1.0",
+    "Stage":  "CERTIFICATION",
+    "SandboxGlobalValidated":  false,
+    "SandboxChecks":  0,
+    "SandboxPass":  0,
+    "SandboxFail":  0,
+    "ReadinessValidated":  false,
+    "CertificationEvidenceValid":  false,
+    "LiveExecutionAllowed":  false,
+    "ExternalActionsAllowed":  false,
+    "ProviderLiveAllowed":  false,
+    "ConnectorLiveAllowed":  false,
+    "SecretsAllowed":  false,
+    "Decision":  "BLOCK",
+    "Reason":  "CERTIFICATION_EVIDENCE_REQUIRED",
+    "Records":  [
+
+                ]
+}

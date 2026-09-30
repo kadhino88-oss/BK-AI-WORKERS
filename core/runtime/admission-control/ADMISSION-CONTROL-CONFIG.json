@@ -1,0 +1,20 @@
+{
+  "version":"1.0",
+  "system":"BK-AI-WORKERS",
+  "enabled":true,
+  "admissionControlEnabled":true,
+  "backpressureEnabled":true,
+  "maxGlobalInFlight":10,
+  "maxTenantInFlight":5,
+  "maxClientInFlight":3,
+  "maxProjectInFlight":2,
+  "maxWorkerInFlight":2,
+  "maxConnectorInFlight":2,
+  "maxProviderInFlight":2,
+  "allowPriorityBypass":true,
+  "priorityBypassLevel":90,
+  "degradedModeEnabled":true,
+  "captureSecrets":false,
+  "capturePayloads":false,
+  "liveExecutionEnabled":false
+}

@@ -1,0 +1,19 @@
+﻿{
+    "task_id":  "TASK-20260909-140048-214",
+    "timestamp":  "2026-09-09T14:00:48",
+    "client_id":  "bk-entreprise",
+    "project_id":  "general",
+    "source":  "runtime",
+    "target_worker":  "ALEX",
+    "intent":  "sales",
+    "objective":  "Trouve 50 prospects pour BK Entreprise",
+    "priority":  "normal",
+    "status":  "routed",
+    "execution":  "SIMULATION",
+    "result":  {
+                   "message":  "Task correctly routed to ALEX.",
+                   "external_action":  false
+               },
+    "blocker":  null,
+    "next_action":  "EXECUTE_WITH_ALEX"
+}

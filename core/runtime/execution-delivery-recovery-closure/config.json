@@ -1,0 +1,16 @@
+﻿{
+  "version": "1.0",
+  "system": "BK-AI-WORKERS",
+  "enabled": true,
+  "closureGuardEnabled": true,
+  "requireDeliveryContext": true,
+  "requireRecoveryAuthorization": true,
+  "requireRecoveryConsistency": true,
+  "requireFinalization": true,
+  "allowClosureOnlyFromFinalized": true,
+  "preventDuplicateClosure": true,
+  "maxClosures": 20000,
+  "captureSecrets": false,
+  "capturePayloads": false,
+  "liveExecutionEnabled": false
+}

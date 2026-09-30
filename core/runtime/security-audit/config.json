@@ -1,0 +1,13 @@
+{
+  "version": "1.0",
+  "system": "BK-AI-WORKERS",
+  "enabled": true,
+  "auditEnabled": true,
+  "correlationEnabled": true,
+  "hashChainEnabled": true,
+  "maxEvents": 20000,
+  "hashAlgorithm": "SHA256",
+  "captureSecrets": false,
+  "capturePayloads": false,
+  "liveExecutionEnabled": false
+}

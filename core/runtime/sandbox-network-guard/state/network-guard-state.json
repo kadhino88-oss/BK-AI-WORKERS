@@ -1,0 +1,16 @@
+{
+    "Schema":  "BK-AI-WORKERS-SANDBOX-NETWORK-EXTERNAL-IO",
+    "Version":  "1.0",
+    "Mode":  "SANDBOX",
+    "NetworkEnabled":  false,
+    "ExternalIOEnabled":  false,
+    "ProviderNetworkEnabled":  false,
+    "ConnectorNetworkEnabled":  false,
+    "FilesystemExternalWriteEnabled":  false,
+    "ProcessSpawnEnabled":  false,
+    "DNSResolutionEnabled":  false,
+    "OutboundHTTPEnabled":  false,
+    "Records":  [
+
+                ]
+}

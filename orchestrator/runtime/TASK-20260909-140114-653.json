@@ -1,0 +1,19 @@
+﻿{
+    "task_id":  "TASK-20260909-140114-653",
+    "timestamp":  "2026-09-09T14:01:14",
+    "client_id":  "bk-entreprise",
+    "project_id":  "general",
+    "source":  "runtime",
+    "target_worker":  "LÉA",
+    "intent":  "creative",
+    "objective":  "Crée une identité visuelle premium pour BK Entreprise",
+    "priority":  "normal",
+    "status":  "routed",
+    "execution":  "SIMULATION",
+    "result":  {
+                   "message":  "Task correctly routed to LÉA.",
+                   "external_action":  false
+               },
+    "blocker":  null,
+    "next_action":  "EXECUTE_WITH_LÉA"
+}

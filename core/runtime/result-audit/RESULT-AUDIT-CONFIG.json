@@ -1,0 +1,21 @@
+{
+  "version": "1.0",
+  "system": "BK-AI-WORKERS",
+  "enabled": true,
+  "auditEnabled": true,
+  "appendOnly": true,
+  "liveExecutionEnabled": false,
+  "storeRawSecrets": false,
+  "storeCredentialValues": false,
+  "storeAccessTokens": false,
+  "storePasswords": false,
+  "storePrivateKeys": false,
+  "normalizedStatuses": [
+    "SUCCESS",
+    "SIMULATED",
+    "AUTHORIZED",
+    "BLOCKED",
+    "NEEDS_HUMAN",
+    "FAILED"
+  ]
+}

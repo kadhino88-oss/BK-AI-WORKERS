@@ -1,0 +1,14 @@
+[
+    {
+        "RecoveryId":  "836e1644af674bd4a52656215d1971b0",
+        "DeliveryId":  "DELIVERY-7H65-001",
+        "ExecutionId":  "EXEC-7H65-001",
+        "TenantId":  "TENANT-001",
+        "ClientId":  "CLIENT-001",
+        "ProjectId":  "PROJECT-001",
+        "RetryCount":  3,
+        "LastState":  "FAILED",
+        "RecoveryState":  "FAILED",
+        "UpdatedAtUtc":  "2026-09-10T21:35:06.9478998Z"
+    }
+]

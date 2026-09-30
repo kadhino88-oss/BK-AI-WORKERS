@@ -1,0 +1,19 @@
+﻿{
+    "task_id":  "TASK-20260909-140136-515",
+    "timestamp":  "2026-09-09T14:01:36",
+    "client_id":  "bk-entreprise",
+    "project_id":  "general",
+    "source":  "runtime",
+    "target_worker":  "LUCAS",
+    "intent":  "web_seo",
+    "objective":  "Optimise le SEO et les performances de mon site",
+    "priority":  "normal",
+    "status":  "routed",
+    "execution":  "SIMULATION",
+    "result":  {
+                   "message":  "Task correctly routed to LUCAS.",
+                   "external_action":  false
+               },
+    "blocker":  null,
+    "next_action":  "EXECUTE_WITH_LUCAS"
+}

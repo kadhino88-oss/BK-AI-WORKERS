@@ -1,0 +1,17 @@
+﻿{
+  "version": "1.0",
+  "system": "BK-AI-WORKERS",
+  "enabled": true,
+  "integrityGuardEnabled": true,
+  "reopenGuardEnabled": true,
+  "requireDeliveryContext": true,
+  "requireClosureId": true,
+  "preventMutationOfClosedState": true,
+  "preventImplicitReopen": true,
+  "allowExplicitReopen": false,
+  "maxRecords": 20000,
+  "hashAlgorithm": "SHA256",
+  "captureSecrets": false,
+  "capturePayloads": false,
+  "liveExecutionEnabled": false
+}

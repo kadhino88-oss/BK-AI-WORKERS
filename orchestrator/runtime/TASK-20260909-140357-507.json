@@ -1,0 +1,15 @@
+﻿{
+    "task_id":  "TASK-20260909-140357-507",
+    "timestamp":  "2026-09-09T14:03:57",
+    "client_id":  "bk-entreprise",
+    "project_id":  "general",
+    "source":  "runtime",
+    "intent":  "unknown",
+    "target_worker":  null,
+    "priority":  "normal",
+    "status":  "needs_human",
+    "owner":  "KADER",
+    "next_action":  "CLARIFY_REQUEST",
+    "execution":  "NOT_EXECUTED",
+    "reason":  "Request is too ambiguous."
+}

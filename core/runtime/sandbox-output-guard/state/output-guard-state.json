@@ -1,0 +1,17 @@
+{
+    "Schema":  "BK-AI-WORKERS-SANDBOX-OUTPUT-DATA-EXFILTRATION",
+    "Version":  "1.0",
+    "Mode":  "SANDBOX",
+    "ExternalOutputAllowed":  false,
+    "NetworkOutputAllowed":  false,
+    "ProviderOutputAllowed":  false,
+    "ConnectorOutputAllowed":  false,
+    "ExternalFileExportAllowed":  false,
+    "ClipboardExportAllowed":  false,
+    "RedirectOutputAllowed":  false,
+    "SecretOutputAllowed":  false,
+    "CrossTenantOutputAllowed":  false,
+    "Records":  [
+
+                ]
+}

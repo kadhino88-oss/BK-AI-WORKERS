@@ -1,0 +1,2610 @@
+﻿[
+    {
+        "RetentionId":  "TASK-A3CE994E707049D684E7868864806FBC",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-13T21:18:17.8841431Z"
+    },
+    {
+        "RetentionId":  "TASK-6D4A9C92CB974BDEAD3D7F01002E42E6",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-13T21:18:21.9544729Z"
+    },
+    {
+        "RetentionId":  "TASK-30A7E10DF94245A19350079818558C19",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-13T21:18:50.4814086Z"
+    },
+    {
+        "RetentionId":  "TASK-29A24F48AAF2441498CFE9BC4F68294F",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-13T21:18:55.9991353Z"
+    },
+    {
+        "RetentionId":  "TASK-F74D50F10FBF405298057071795C9A68",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-13T21:28:11.3820223Z"
+    },
+    {
+        "RetentionId":  "TASK-F9438B1A84FB4F4AB135AE2840DCB923",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-13T21:28:14.4899976Z"
+    },
+    {
+        "RetentionId":  "TASK-4DB47D05EFC24231806CD48637EBB142",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T01:15:12.0066000Z"
+    },
+    {
+        "RetentionId":  "TASK-D2EB8A8DFB5F423C9102799F5F8060CC",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T01:15:13.7891984Z"
+    },
+    {
+        "RetentionId":  "TASK-878D60BEEED74EC3922BEA94073839E4",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T01:16:48.5891883Z"
+    },
+    {
+        "RetentionId":  "TASK-996634207DBB4133BF6EE90D4199F893",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T01:17:36.7046091Z"
+    },
+    {
+        "RetentionId":  "TASK-E68A17F85F3549A99F3745162C0A7226",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T01:18:20.8123109Z"
+    },
+    {
+        "RetentionId":  "TASK-87DEE1FADCF346B7AD466ACB99871970",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T01:19:14.2765192Z"
+    },
+    {
+        "RetentionId":  "TASK-D9F1916F8AEE48BAA1D25F035101F10F",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T01:20:00.4363714Z"
+    },
+    {
+        "RetentionId":  "TASK-CDCB1B1B7DFB456E893F93B6C94E2F5E",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T01:20:21.2524008Z"
+    },
+    {
+        "RetentionId":  "TASK-013BD3EF4137490FA0D6E68371117C1F",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T01:20:23.1548083Z"
+    },
+    {
+        "RetentionId":  "TASK-57C9E2013C90408191955692DB791243",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T07:35:00.1861669Z"
+    },
+    {
+        "RetentionId":  "TASK-07C2C19367264CCE8BB89C2FED7C580A",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T07:35:02.9020279Z"
+    },
+    {
+        "RetentionId":  "TASK-2E297A90A84947FC8405340A4F4BC13B",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T07:35:04.7435860Z"
+    },
+    {
+        "RetentionId":  "TASK-E9E7D73A63C8434BBDAA06DE006D4EE1",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T07:35:53.4701924Z"
+    },
+    {
+        "RetentionId":  "TASK-A93D745504914FF994403015220F7D50",
+        "TenantId":  "TEN-AUTRE-TENANT",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T07:35:55.0805456Z"
+    },
+    {
+        "RetentionId":  "TASK-F876B415F68D4E36A7445100FFC7C871",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T07:35:56.1838527Z"
+    },
+    {
+        "RetentionId":  "TASK-6CC067613E4249729B160856CCE8E92C",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T08:45:36.3253381Z"
+    },
+    {
+        "RetentionId":  "TASK-944A6E9E36F54EA3A6200AECF8930A43",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T08:45:39.9965970Z"
+    },
+    {
+        "RetentionId":  "TASK-8009AF0685F940D9865F98AFBF4CB652",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T08:46:33.6066311Z"
+    },
+    {
+        "RetentionId":  "TASK-F076FEB551C246A78CE93197C17ADA41",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T08:46:38.1187422Z"
+    },
+    {
+        "RetentionId":  "TASK-596FE07AB6C4422FA579D2DF920C5C1B",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T08:46:41.5962072Z"
+    },
+    {
+        "RetentionId":  "TASK-F200204A74FC40728BB6C8D6A76C6F64",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T08:49:36.8198747Z"
+    },
+    {
+        "RetentionId":  "TASK-C3E336C1680D422F9E97EFAAC9AB883E",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T08:49:40.1433646Z"
+    },
+    {
+        "RetentionId":  "TASK-F34E2AB01CED417C9EC3189DFB66062A",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T08:49:42.9848206Z"
+    },
+    {
+        "RetentionId":  "TASK-4167096D3B28405A9078E378DA9AC8D3",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T08:51:10.7871904Z"
+    },
+    {
+        "RetentionId":  "TASK-3C20742F43FB43849493E0B27FF80932",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T08:51:20.8640325Z"
+    },
+    {
+        "RetentionId":  "TASK-5979146AB71F4B55A9DE8E79A8B876AB",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T08:51:25.9103014Z"
+    },
+    {
+        "RetentionId":  "TASK-9EA66E0D5AA54505954FE19AA27CFEA2",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T08:51:29.0769070Z"
+    },
+    {
+        "RetentionId":  "TASK-CCF6B31E22894CEBB83F9372471EF873",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T08:51:32.1395518Z"
+    },
+    {
+        "RetentionId":  "TASK-F64236C5EEB74273858E222CFEF44CDD",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T08:52:02.7148767Z"
+    },
+    {
+        "RetentionId":  "TASK-8E2A917D450542E89C22C48D456F6A0B",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T08:52:06.7686254Z"
+    },
+    {
+        "RetentionId":  "TASK-9EC2A8C8E775482B9839042D16C45EEF",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T08:52:09.5401948Z"
+    },
+    {
+        "RetentionId":  "TASK-D549586B85B544489FE6B7363794A414",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T08:52:13.2580966Z"
+    },
+    {
+        "RetentionId":  "TASK-434DDD78356A49EB80B4F6D8EADB62BE",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T08:52:23.5240219Z"
+    },
+    {
+        "RetentionId":  "TASK-36C7916A28A34FF392DBDC8C3209526B",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T08:52:50.1882917Z"
+    },
+    {
+        "RetentionId":  "TASK-86610966E2554AE0B47E3EAE13085A66",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T08:52:56.0554089Z"
+    },
+    {
+        "RetentionId":  "TASK-05E50418A555426CBC8589164677F97B",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T08:52:59.5320495Z"
+    },
+    {
+        "RetentionId":  "TASK-602AED748C8E4EB78F6C350822E4BEA2",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T08:53:03.3537602Z"
+    },
+    {
+        "RetentionId":  "TASK-39A7CB09BC7E461581BB992F512A29BE",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T08:53:07.2511791Z"
+    },
+    {
+        "RetentionId":  "TASK-845331D7CE464C55B799A4B10FB1FDEA",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T08:53:11.3028813Z"
+    },
+    {
+        "RetentionId":  "TASK-682A3060C617412A9BCC35067B90083C",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T08:53:15.2090968Z"
+    },
+    {
+        "RetentionId":  "TASK-E9D186645CD24860AD012DCBBF98F00C",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T08:53:41.4876371Z"
+    },
+    {
+        "RetentionId":  "TASK-5724B690B1E946CF8C56597DB6FDE27E",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T08:53:46.1702942Z"
+    },
+    {
+        "RetentionId":  "TASK-9C3AFA953DAD4A5A866449BAC7D26CC9",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T08:53:49.7461299Z"
+    },
+    {
+        "RetentionId":  "TASK-CC93DE158DB84CEDA46C3E3710142268",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T08:53:53.6069462Z"
+    },
+    {
+        "RetentionId":  "TASK-C3C20EA0C7C24E478728588F22A60101",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T08:53:57.8884645Z"
+    },
+    {
+        "RetentionId":  "TASK-A294D8B45AE2407F892EB23B22C73C34",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T08:54:01.9121637Z"
+    },
+    {
+        "RetentionId":  "TASK-F1D6D589A3724D7F9F491ABA0B5BC144",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T08:54:05.5142191Z"
+    },
+    {
+        "RetentionId":  "TASK-FCD2F83294494969837D81AF86D0668D",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T08:54:19.0269159Z"
+    },
+    {
+        "RetentionId":  "TASK-B749CEA5465848DE8F6280E1760E85E3",
+        "TenantId":  "TEN-AUTRE-TENANT",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T08:54:22.4185947Z"
+    },
+    {
+        "RetentionId":  "TASK-E41F4DE662934067ABC63695E46C70DD",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T08:54:25.2887934Z"
+    },
+    {
+        "RetentionId":  "TASK-C0F3F3DD5288469E81F88ABD467464C9",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T09:01:55.1530501Z"
+    },
+    {
+        "RetentionId":  "TASK-E021420177694209BB7232C7ADF9F746",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T09:01:59.6543439Z"
+    },
+    {
+        "RetentionId":  "TASK-7688635C96574068B5A9C16E7D800444",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T09:02:03.8260733Z"
+    },
+    {
+        "RetentionId":  "TASK-0F159487F95449E9B80836FF1BF53AB4",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T09:02:09.3522994Z"
+    },
+    {
+        "RetentionId":  "TASK-C74A360BB37D47A2B6F84532F0F06310",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T09:02:15.6648799Z"
+    },
+    {
+        "RetentionId":  "TASK-34F3ABE2A1284E6E8140929FDF423C69",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T09:02:21.4274595Z"
+    },
+    {
+        "RetentionId":  "TASK-ACBB5B4C2E1A44EB95D1B196609F4B72",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T09:02:26.1702606Z"
+    },
+    {
+        "RetentionId":  "TASK-2EA9468300F3429EB8CFCF99926D91F1",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T09:02:34.8319968Z"
+    },
+    {
+        "RetentionId":  "TASK-98D751A9C89D4FD490948411F3AE72BB",
+        "TenantId":  "TEN-AUTRE-TENANT",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T09:02:38.2267246Z"
+    },
+    {
+        "RetentionId":  "TASK-EC78535C365E48CC9B04F17C871C58AC",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T09:02:41.2673687Z"
+    },
+    {
+        "RetentionId":  "TASK-038E5ABDF22E44E4B18C798A9EF1DC49",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T09:15:30.1177666Z"
+    },
+    {
+        "RetentionId":  "TASK-3D2532B7BC5C4A859403DD432359BCDC",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-DASHBOARD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T10:30:07.5477719Z"
+    },
+    {
+        "RetentionId":  "TASK-7DE7FFB66ED14B88B4B4DA8D65C11A7C",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-DASHBOARD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T10:30:16.2985218Z"
+    },
+    {
+        "RetentionId":  "TASK-1F202E15DC434301B7D9A8EF15E8A4CA",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-DASHBOARD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T10:38:46.3840002Z"
+    },
+    {
+        "RetentionId":  "TASK-C2D0D4898B6D48D38DA934ADABD5503C",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-DASHBOARD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T10:39:02.2705821Z"
+    },
+    {
+        "RetentionId":  "TASK-D46BF67D11F544D78171992D3A32B288",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-DASHBOARD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T10:40:44.4017264Z"
+    },
+    {
+        "RetentionId":  "TASK-B8AF817D59B54D5180452F5AFDF26182",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T19:58:22.2049883Z"
+    },
+    {
+        "RetentionId":  "TASK-C537B910221B4343A3B1A5EA5B1452BE",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T19:58:29.0049296Z"
+    },
+    {
+        "RetentionId":  "TASK-A55C066A5F1D42758064FE8ED6E7C138",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T19:58:35.4609510Z"
+    },
+    {
+        "RetentionId":  "TASK-2C19161FA4B145A583759D7F263D1B47",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T19:58:41.8630435Z"
+    },
+    {
+        "RetentionId":  "TASK-214E9637CB2647DE9B5307E62DC0DB82",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T19:58:48.0780176Z"
+    },
+    {
+        "RetentionId":  "TASK-3A536398DE294E08945EC555B121585A",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T19:58:54.4770311Z"
+    },
+    {
+        "RetentionId":  "TASK-BC7391E1A14D492E8319A54704DB4D13",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:00:02.9983059Z"
+    },
+    {
+        "RetentionId":  "TASK-13400D96C56B45AFA2D328EA986EAAA9",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:00:30.4508334Z"
+    },
+    {
+        "RetentionId":  "TASK-BFF7B7C251F345CC93A6EC33BF1F88DB",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:02:17.7928559Z"
+    },
+    {
+        "RetentionId":  "TASK-AFB8443F1545494A9FCBC2F9DD006473",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:02:23.6884577Z"
+    },
+    {
+        "RetentionId":  "TASK-04B479C97F694813B760F8B8E98E7779",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:02:51.0659923Z"
+    },
+    {
+        "RetentionId":  "TASK-4F26CC07B65F4376BCE1E6690AA670AC",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:02:55.4754867Z"
+    },
+    {
+        "RetentionId":  "TASK-B185949C70404398914B2AD17CE01138",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:02:59.7608473Z"
+    },
+    {
+        "RetentionId":  "TASK-18B4242252CD4004ACA5ABA71A0B45A9",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:03:03.7426816Z"
+    },
+    {
+        "RetentionId":  "TASK-30B5FD23B0044F42B3424DF979ECCB93",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:03:08.1268161Z"
+    },
+    {
+        "RetentionId":  "TASK-AD54FCA94F344758999AAF23C4B2854B",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:03:12.1956096Z"
+    },
+    {
+        "RetentionId":  "TASK-549D0448CA3345DEABFE539825518F44",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:03:16.8249862Z"
+    },
+    {
+        "RetentionId":  "TASK-6AF4328E4E2F4A46B2D9FC9B4CDB3671",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:03:21.9086871Z"
+    },
+    {
+        "RetentionId":  "TASK-55F23F98A6E9475CBD1F08FA121F89BF",
+        "TenantId":  "TEN-CLAUDE-TEST2",
+        "ClientId":  "CLI-CLAUDE-TEST2",
+        "ProjectId":  "PROJ-CLAUDE-TEST2",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:04:44.0917992Z"
+    },
+    {
+        "RetentionId":  "TASK-8729C064E9984EC2B85F08F4956E3C8B",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:07:20.6555471Z"
+    },
+    {
+        "RetentionId":  "TASK-12E94CF5F3E1467CB888A46373A27C02",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:07:28.6057692Z"
+    },
+    {
+        "RetentionId":  "TASK-16EFB552E1B740579F0E01905800B416",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:07:36.7941449Z"
+    },
+    {
+        "RetentionId":  "TASK-2FCC45E64080448BAB86BF2AE6CEF2A3",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:07:44.6010812Z"
+    },
+    {
+        "RetentionId":  "TASK-6FAEA2FEABC14E6D8D8765DA1651E657",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:07:52.5513860Z"
+    },
+    {
+        "RetentionId":  "TASK-D051F7F9C17143938765495C5116F1F5",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:08:01.3297347Z"
+    },
+    {
+        "RetentionId":  "TASK-98ABED85687041E89931867831638CC9",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:08:08.2467232Z"
+    },
+    {
+        "RetentionId":  "TASK-B0111D0E3E9445449BCAF39391A0A28D",
+        "TenantId":  "TEN-CLAUDE-TEST",
+        "ClientId":  "CLI-CLAUDE-TEST",
+        "ProjectId":  "PROJ-CLAUDE-TEST",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:08:16.5022279Z"
+    },
+    {
+        "RetentionId":  "TASK-B5D40281D24946168F87590C8A2AB0A0",
+        "TenantId":  "TEN-CLAUDE-TEST3",
+        "ClientId":  "CLI-CLAUDE-TEST3",
+        "ProjectId":  "PROJ-CLAUDE-TEST3",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:22:08.2872807Z"
+    },
+    {
+        "RetentionId":  "TASK-A16D17F64D77433D97168DB68CB92021",
+        "TenantId":  "TEN-CLAUDE-TEST3",
+        "ClientId":  "CLI-CLAUDE-TEST3",
+        "ProjectId":  "PROJ-CLAUDE-TEST3",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:22:12.9918160Z"
+    },
+    {
+        "RetentionId":  "TASK-69FA7FC6D7E84246AE11C9572C9C4F20",
+        "TenantId":  "TEN-CLAUDE-TEST3",
+        "ClientId":  "CLI-CLAUDE-TEST3",
+        "ProjectId":  "PROJ-CLAUDE-TEST3",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:22:16.9284723Z"
+    },
+    {
+        "RetentionId":  "TASK-31C5A9E285BE4DB2B020314CD27F38DE",
+        "TenantId":  "TEN-CLAUDE-TEST4",
+        "ClientId":  "CLI-CLAUDE-TEST4",
+        "ProjectId":  "PROJ-CLAUDE-TEST4",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:23:07.2867934Z"
+    },
+    {
+        "RetentionId":  "TASK-9A7ADCC3705B4EA59C7D8A23970535EC",
+        "TenantId":  "TEN-CLAUDE-TEST4",
+        "ClientId":  "CLI-CLAUDE-TEST4",
+        "ProjectId":  "PROJ-CLAUDE-TEST4",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:23:11.7803865Z"
+    },
+    {
+        "RetentionId":  "TASK-DA260EA586FF411A8A3CCFB0A65CD5D2",
+        "TenantId":  "TEN-CLAUDE-TEST4",
+        "ClientId":  "CLI-CLAUDE-TEST4",
+        "ProjectId":  "PROJ-CLAUDE-TEST4",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:23:16.0057027Z"
+    },
+    {
+        "RetentionId":  "TASK-F5D4080B729848C5ADBF4E8E8FA3C569",
+        "TenantId":  "TEN-CLAUDE-TEST4",
+        "ClientId":  "CLI-CLAUDE-TEST4",
+        "ProjectId":  "PROJ-CLAUDE-TEST4",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:23:20.0162607Z"
+    },
+    {
+        "RetentionId":  "TASK-14BA9DE2022F4F0BA38FC7B94B5F3BC7",
+        "TenantId":  "TEN-CLAUDE-TEST5",
+        "ClientId":  "CLI-CLAUDE-TEST5",
+        "ProjectId":  "PROJ-CLAUDE-TEST5",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:30:02.3836938Z"
+    },
+    {
+        "RetentionId":  "TASK-20B05311D72746E6925BF34D270660A9",
+        "TenantId":  "TEN-CLAUDE-TEST5",
+        "ClientId":  "CLI-CLAUDE-TEST5",
+        "ProjectId":  "PROJ-CLAUDE-TEST5",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:30:07.1040453Z"
+    },
+    {
+        "RetentionId":  "TASK-55D4B5D3A5B04BD0BC6384C54090C541",
+        "TenantId":  "TEN-CLAUDE-TEST5",
+        "ClientId":  "CLI-CLAUDE-TEST5",
+        "ProjectId":  "PROJ-CLAUDE-TEST5",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:30:12.1179600Z"
+    },
+    {
+        "RetentionId":  "TASK-1116858D481547F0AFAF6302ADCCCF4F",
+        "TenantId":  "TEN-CLAUDE-TEST5",
+        "ClientId":  "CLI-CLAUDE-TEST5",
+        "ProjectId":  "PROJ-CLAUDE-TEST5",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:30:16.3410723Z"
+    },
+    {
+        "RetentionId":  "TASK-EEEC214A8320427A9ADCF631C0F0CE63",
+        "TenantId":  "TEN-CLAUDE-TEST5",
+        "ClientId":  "CLI-CLAUDE-TEST5",
+        "ProjectId":  "PROJ-CLAUDE-TEST5",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:30:20.7356848Z"
+    },
+    {
+        "RetentionId":  "TASK-C97C84B5DB464A37B19CEA391664E623",
+        "TenantId":  "TEN-CLAUDE-TEST5",
+        "ClientId":  "CLI-CLAUDE-TEST5",
+        "ProjectId":  "PROJ-CLAUDE-TEST5",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:30:24.9773289Z"
+    },
+    {
+        "RetentionId":  "TASK-74430164701248908ECCD35AFECF2EBC",
+        "TenantId":  "TEN-CLAUDE-TEST5",
+        "ClientId":  "CLI-CLAUDE-TEST5",
+        "ProjectId":  "PROJ-CLAUDE-TEST5",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:30:29.5348429Z"
+    },
+    {
+        "RetentionId":  "TASK-EF65A135E68E4EC189470CAF24C677FB",
+        "TenantId":  "TEN-CLAUDE-TEST5",
+        "ClientId":  "CLI-CLAUDE-TEST5",
+        "ProjectId":  "PROJ-CLAUDE-TEST5",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:30:33.7834877Z"
+    },
+    {
+        "RetentionId":  "TASK-AE2663F1973B479B959E9CEA9993D2D5",
+        "TenantId":  "TEN-CLAUDE-TEST5",
+        "ClientId":  "CLI-CLAUDE-TEST5",
+        "ProjectId":  "PROJ-CLAUDE-TEST5",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:30:38.6354186Z"
+    },
+    {
+        "RetentionId":  "TASK-749F6834A97F47A78157F5EF2ABE836C",
+        "TenantId":  "TEN-CLAUDE-TEST5",
+        "ClientId":  "CLI-CLAUDE-TEST5",
+        "ProjectId":  "PROJ-CLAUDE-TEST5",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:30:42.9016237Z"
+    },
+    {
+        "RetentionId":  "TASK-BEAFD1424F034CD8AF13A08680026992",
+        "TenantId":  "TEN-CLAUDE-TEST5",
+        "ClientId":  "CLI-CLAUDE-TEST5",
+        "ProjectId":  "PROJ-CLAUDE-TEST5",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:30:47.5512947Z"
+    },
+    {
+        "RetentionId":  "TASK-75E917FE9B03449B80E0476CD07A3451",
+        "TenantId":  "TEN-CLAUDE-TEST5",
+        "ClientId":  "CLI-CLAUDE-TEST5",
+        "ProjectId":  "PROJ-CLAUDE-TEST5",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:30:52.1451276Z"
+    },
+    {
+        "RetentionId":  "TASK-85EC09A938C04D75A157AC379BB02163",
+        "TenantId":  "TEN-CLAUDE-TEST5",
+        "ClientId":  "CLI-CLAUDE-TEST5",
+        "ProjectId":  "PROJ-CLAUDE-TEST5",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:30:56.7345554Z"
+    },
+    {
+        "RetentionId":  "TASK-D7332CB596504D349A6445219A500F14",
+        "TenantId":  "TEN-CLAUDE-TEST5",
+        "ClientId":  "CLI-CLAUDE-TEST5",
+        "ProjectId":  "PROJ-CLAUDE-TEST5",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:31:01.3224905Z"
+    },
+    {
+        "RetentionId":  "TASK-2A31ADD746764797A1F81F1F9EEF3406",
+        "TenantId":  "TEN-CLAUDE-TEST6",
+        "ClientId":  "CLI-CLAUDE-TEST6",
+        "ProjectId":  "PROJ-CLAUDE-TEST6",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:33:05.3167148Z"
+    },
+    {
+        "RetentionId":  "TASK-1CC301E44B4A4C4098EB73477CE66CBA",
+        "TenantId":  "TEN-CLAUDE-TEST6",
+        "ClientId":  "CLI-CLAUDE-TEST6",
+        "ProjectId":  "PROJ-CLAUDE-TEST6",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:33:10.1597360Z"
+    },
+    {
+        "RetentionId":  "TASK-4A9F8E118B3E4E478EAFA4EF55451E81",
+        "TenantId":  "TEN-CLAUDE-TEST6",
+        "ClientId":  "CLI-CLAUDE-TEST6",
+        "ProjectId":  "PROJ-CLAUDE-TEST6",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:33:14.6870379Z"
+    },
+    {
+        "RetentionId":  "TASK-BC0AF631312740CBA0A6FE0477929B00",
+        "TenantId":  "TEN-CLAUDE-TEST6",
+        "ClientId":  "CLI-CLAUDE-TEST6",
+        "ProjectId":  "PROJ-CLAUDE-TEST6",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:33:19.2135089Z"
+    },
+    {
+        "RetentionId":  "TASK-5B3F1F3E9BF04F2E8FEF9E5365DB1F11",
+        "TenantId":  "TEN-CLAUDE-TEST6",
+        "ClientId":  "CLI-CLAUDE-TEST6",
+        "ProjectId":  "PROJ-CLAUDE-TEST6",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:33:23.6887132Z"
+    },
+    {
+        "RetentionId":  "TASK-217625814E2B4D03BC0CFC7F28B89CD6",
+        "TenantId":  "TEN-CLAUDE-TEST6",
+        "ClientId":  "CLI-CLAUDE-TEST6",
+        "ProjectId":  "PROJ-CLAUDE-TEST6",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:33:29.1955380Z"
+    },
+    {
+        "RetentionId":  "TASK-455634165F06401F9836C89FD647E14A",
+        "TenantId":  "TEN-CLAUDE-TEST6",
+        "ClientId":  "CLI-CLAUDE-TEST6",
+        "ProjectId":  "PROJ-CLAUDE-TEST6",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:33:34.5004897Z"
+    },
+    {
+        "RetentionId":  "TASK-607C82488AEC4EC4AF8D5A0D5E30A36F",
+        "TenantId":  "TEN-CLAUDE-TEST7",
+        "ClientId":  "CLI-CLAUDE-TEST7",
+        "ProjectId":  "PROJ-CLAUDE-TEST7",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:33:57.7822564Z"
+    },
+    {
+        "RetentionId":  "TASK-4A485F861D5F4010A278570F74999246",
+        "TenantId":  "TEN-CLAUDE-TEST8",
+        "ClientId":  "CLI-CLAUDE-TEST8",
+        "ProjectId":  "PROJ-CLAUDE-TEST8",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:35:24.4734446Z"
+    },
+    {
+        "RetentionId":  "TASK-0C37F23548294C66900461E6484581D0",
+        "TenantId":  "TEN-CLAUDE-TEST8",
+        "ClientId":  "CLI-CLAUDE-TEST8",
+        "ProjectId":  "PROJ-CLAUDE-TEST8",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:35:30.0956001Z"
+    },
+    {
+        "RetentionId":  "TASK-6568B0A548DF43649BCC53D082FB079F",
+        "TenantId":  "TEN-CLAUDE-TEST9",
+        "ClientId":  "CLI-CLAUDE-TEST9",
+        "ProjectId":  "PROJ-CLAUDE-TEST9",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:36:33.8053122Z"
+    },
+    {
+        "RetentionId":  "TASK-2A320DE8C47E4688A8AC14EAA58909BD",
+        "TenantId":  "TEN-CLAUDE-TEST9",
+        "ClientId":  "CLI-CLAUDE-TEST9",
+        "ProjectId":  "PROJ-CLAUDE-TEST9",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:36:40.1449277Z"
+    },
+    {
+        "RetentionId":  "TASK-037CC031452E43CCB288BDEE1474BD85",
+        "TenantId":  "TEN-CLAUDE-TEST9",
+        "ClientId":  "CLI-CLAUDE-TEST9",
+        "ProjectId":  "PROJ-CLAUDE-TEST9",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:36:46.8356490Z"
+    },
+    {
+        "RetentionId":  "TASK-F082309F433F4DEEB5E9220AA7B588B0",
+        "TenantId":  "TEN-CLAUDE-TEST9",
+        "ClientId":  "CLI-CLAUDE-TEST9",
+        "ProjectId":  "PROJ-CLAUDE-TEST9",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:36:52.8681426Z"
+    },
+    {
+        "RetentionId":  "TASK-B5E3C702908F461CB386A543437100B9",
+        "TenantId":  "TEN-CLAUDE-FINAL",
+        "ClientId":  "CLI-CLAUDE-FINAL",
+        "ProjectId":  "PROJ-CLAUDE-FINAL",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:38:48.2459225Z"
+    },
+    {
+        "RetentionId":  "TASK-F90E3FE61FBC4D85B8F4750EABBFA135",
+        "TenantId":  "TEN-CLAUDE-FINAL",
+        "ClientId":  "CLI-CLAUDE-FINAL",
+        "ProjectId":  "PROJ-CLAUDE-FINAL",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:38:54.6030975Z"
+    },
+    {
+        "RetentionId":  "TASK-E0E981E325A94B23AF0E19864585AB5C",
+        "TenantId":  "TEN-CLAUDE-FINAL",
+        "ClientId":  "CLI-CLAUDE-FINAL",
+        "ProjectId":  "PROJ-CLAUDE-FINAL",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:39:00.7766013Z"
+    },
+    {
+        "RetentionId":  "TASK-D82FA7A0FDA342658506235CD348C404",
+        "TenantId":  "TEN-CLAUDE-FINAL",
+        "ClientId":  "CLI-CLAUDE-FINAL",
+        "ProjectId":  "PROJ-CLAUDE-FINAL",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:39:06.8683821Z"
+    },
+    {
+        "RetentionId":  "TASK-ED18CCAA7D3B44C6A3E8C696286236CA",
+        "TenantId":  "TEN-CLAUDE-FINAL",
+        "ClientId":  "CLI-CLAUDE-FINAL",
+        "ProjectId":  "PROJ-CLAUDE-FINAL",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:39:12.7616491Z"
+    },
+    {
+        "RetentionId":  "TASK-C2FCD7E90CD448B9865720055176ED34",
+        "TenantId":  "TEN-CLAUDE-FINAL",
+        "ClientId":  "CLI-CLAUDE-FINAL",
+        "ProjectId":  "PROJ-CLAUDE-FINAL",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:39:18.6680524Z"
+    },
+    {
+        "RetentionId":  "TASK-453E307810CF4C9D9E0C6334035DC92C",
+        "TenantId":  "TEN-CLAUDE-FINAL",
+        "ClientId":  "CLI-CLAUDE-FINAL",
+        "ProjectId":  "PROJ-CLAUDE-FINAL",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:39:24.5181920Z"
+    },
+    {
+        "RetentionId":  "TASK-1489EFC44A1344C19530212CA332DB5C",
+        "TenantId":  "TEN-CLAUDE-FINAL",
+        "ClientId":  "CLI-CLAUDE-FINAL",
+        "ProjectId":  "PROJ-CLAUDE-FINAL",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:39:30.5179942Z"
+    },
+    {
+        "RetentionId":  "TASK-77970F399FF148F681A65A28DEA37B34",
+        "TenantId":  "TEN-CLAUDE-FINAL",
+        "ClientId":  "CLI-CLAUDE-FINAL",
+        "ProjectId":  "PROJ-CLAUDE-FINAL",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:39:36.6832746Z"
+    },
+    {
+        "RetentionId":  "TASK-0D14AF7188314D2FA606180E20E824BB",
+        "TenantId":  "TEN-CLAUDE-FINAL",
+        "ClientId":  "CLI-CLAUDE-FINAL",
+        "ProjectId":  "PROJ-CLAUDE-FINAL",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:39:42.4341191Z"
+    },
+    {
+        "RetentionId":  "TASK-03B3A87E44524E1FB5605845652117E4",
+        "TenantId":  "TEN-CLAUDE-FINAL",
+        "ClientId":  "CLI-CLAUDE-FINAL",
+        "ProjectId":  "PROJ-CLAUDE-FINAL",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:39:48.5285726Z"
+    },
+    {
+        "RetentionId":  "TASK-0910F73C6EA74573AFC6968BEC02C9C0",
+        "TenantId":  "TEN-CLAUDE-FINAL",
+        "ClientId":  "CLI-CLAUDE-FINAL",
+        "ProjectId":  "PROJ-CLAUDE-FINAL",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:39:54.1071237Z"
+    },
+    {
+        "RetentionId":  "TASK-0BFC6588C40D48C4AE6D55BF8B431336",
+        "TenantId":  "TEN-CLAUDE-FINAL",
+        "ClientId":  "CLI-CLAUDE-FINAL",
+        "ProjectId":  "PROJ-CLAUDE-FINAL",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:40:00.2201389Z"
+    },
+    {
+        "RetentionId":  "TASK-7EE6D510C4064C63A69FDC9985984405",
+        "TenantId":  "TEN-CLAUDE-FINAL",
+        "ClientId":  "CLI-CLAUDE-FINAL",
+        "ProjectId":  "PROJ-CLAUDE-FINAL",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:40:06.0368553Z"
+    },
+    {
+        "RetentionId":  "TASK-DCCF79AEEE8B4D348613D50A6821EF05",
+        "TenantId":  "TEN-CLAUDE-FINAL",
+        "ClientId":  "CLI-CLAUDE-FINAL",
+        "ProjectId":  "PROJ-CLAUDE-FINAL",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:40:12.0630952Z"
+    },
+    {
+        "RetentionId":  "TASK-FF75F661A5E148148C5C9637AE50E4F0",
+        "TenantId":  "TEN-CLAUDE-FINAL",
+        "ClientId":  "CLI-CLAUDE-FINAL",
+        "ProjectId":  "PROJ-CLAUDE-FINAL",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:40:17.7948420Z"
+    },
+    {
+        "RetentionId":  "TASK-2126740C84AB4AC6AA1481443FF12336",
+        "TenantId":  "TEN-CLAUDE-FINAL",
+        "ClientId":  "CLI-CLAUDE-FINAL",
+        "ProjectId":  "PROJ-CLAUDE-FINAL",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:40:24.0607590Z"
+    },
+    {
+        "RetentionId":  "TASK-2D520ED062DE4C28A36787855108596D",
+        "TenantId":  "TEN-CLAUDE-FINAL",
+        "ClientId":  "CLI-CLAUDE-FINAL",
+        "ProjectId":  "PROJ-CLAUDE-FINAL",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:40:29.9524970Z"
+    },
+    {
+        "RetentionId":  "TASK-29C2EF6C75364B96A6CEEE7203881574",
+        "TenantId":  "TEN-CLAUDE-FINAL",
+        "ClientId":  "CLI-CLAUDE-FINAL",
+        "ProjectId":  "PROJ-CLAUDE-FINAL",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:40:36.1643848Z"
+    },
+    {
+        "RetentionId":  "TASK-F7D78DD350CF49E29D0DC0664AA39A81",
+        "TenantId":  "TEN-CLAUDE-FINAL",
+        "ClientId":  "CLI-CLAUDE-FINAL",
+        "ProjectId":  "PROJ-CLAUDE-FINAL",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:40:42.6486279Z"
+    },
+    {
+        "RetentionId":  "TASK-D956F8845C964E2CB3B1B13A008E1B1E",
+        "TenantId":  "TEN-CLAUDE-FINAL",
+        "ClientId":  "CLI-CLAUDE-FINAL",
+        "ProjectId":  "PROJ-CLAUDE-FINAL",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:40:49.2986925Z"
+    },
+    {
+        "RetentionId":  "TASK-C4B16E2FC2924D9C8E2F46409187EFE8",
+        "TenantId":  "TEN-CLAUDE-FINAL",
+        "ClientId":  "CLI-CLAUDE-FINAL",
+        "ProjectId":  "PROJ-CLAUDE-FINAL",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:40:55.5853817Z"
+    },
+    {
+        "RetentionId":  "TASK-D3BACB864D28417BBD4997BCBB8C79C3",
+        "TenantId":  "TEN-CLAUDE-FINAL",
+        "ClientId":  "CLI-CLAUDE-FINAL",
+        "ProjectId":  "PROJ-CLAUDE-FINAL",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:41:02.0472646Z"
+    },
+    {
+        "RetentionId":  "TASK-00D949E2787E4FB2924221ED8197B743",
+        "TenantId":  "TEN-CLAUDE-FINAL",
+        "ClientId":  "CLI-CLAUDE-FINAL",
+        "ProjectId":  "PROJ-CLAUDE-FINAL",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:41:08.4375087Z"
+    },
+    {
+        "RetentionId":  "TASK-F9F344F5346140C8B24FCCEB18D12D70",
+        "TenantId":  "TEN-CLAUDE-FINAL",
+        "ClientId":  "CLI-CLAUDE-FINAL",
+        "ProjectId":  "PROJ-CLAUDE-FINAL",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:41:14.7154155Z"
+    },
+    {
+        "RetentionId":  "TASK-FC34FB80E6C6466DBC38BD542C1BDEA9",
+        "TenantId":  "TEN-CLAUDE-FINAL",
+        "ClientId":  "CLI-CLAUDE-FINAL",
+        "ProjectId":  "PROJ-CLAUDE-FINAL",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:41:21.2202063Z"
+    },
+    {
+        "RetentionId":  "TASK-0DEBE99BC1254457A48F831673C84684",
+        "TenantId":  "TEN-CLAUDE-FINAL",
+        "ClientId":  "CLI-CLAUDE-FINAL",
+        "ProjectId":  "PROJ-CLAUDE-FINAL",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:41:27.6336351Z"
+    },
+    {
+        "RetentionId":  "TASK-8B846FC12ECF48A8A3EAC7BCA266EC88",
+        "TenantId":  "TEN-CLAUDE-FINAL",
+        "ClientId":  "CLI-CLAUDE-FINAL",
+        "ProjectId":  "PROJ-CLAUDE-FINAL",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:41:33.8287670Z"
+    },
+    {
+        "RetentionId":  "TASK-5B22D6C6AE6447E48E3BA2CB675D5E74",
+        "TenantId":  "TEN-CLAUDE-FINAL",
+        "ClientId":  "CLI-CLAUDE-FINAL",
+        "ProjectId":  "PROJ-CLAUDE-FINAL",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:41:40.3258821Z"
+    },
+    {
+        "RetentionId":  "TASK-68744677B5984BD68B96AEF95718C6FF",
+        "TenantId":  "TEN-CLAUDE-FINAL",
+        "ClientId":  "CLI-CLAUDE-FINAL",
+        "ProjectId":  "PROJ-CLAUDE-FINAL",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:41:48.5808709Z"
+    },
+    {
+        "RetentionId":  "TASK-017A24BB0DB945819AD9C2ADAE307194",
+        "TenantId":  "TEN-CLAUDE-FINAL",
+        "ClientId":  "CLI-CLAUDE-FINAL",
+        "ProjectId":  "PROJ-CLAUDE-FINAL",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:41:55.1052002Z"
+    },
+    {
+        "RetentionId":  "TASK-8E101875C00A42D7B3764060B7594A76",
+        "TenantId":  "TEN-CLAUDE-FINAL",
+        "ClientId":  "CLI-CLAUDE-FINAL",
+        "ProjectId":  "PROJ-CLAUDE-FINAL",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:42:01.6194301Z"
+    },
+    {
+        "RetentionId":  "TASK-3160EECF3F9F4FDF97A1B984C8612E05",
+        "TenantId":  "TEN-CLAUDE-FINAL2",
+        "ClientId":  "CLI-CLAUDE-FINAL2",
+        "ProjectId":  "PROJ-CLAUDE-FINAL2",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:43:03.7992606Z"
+    },
+    {
+        "RetentionId":  "TASK-0B8A5F73C358494892D6CE9E6CF2E3A6",
+        "TenantId":  "TEN-CLAUDE-FINAL2",
+        "ClientId":  "CLI-CLAUDE-FINAL2",
+        "ProjectId":  "PROJ-CLAUDE-FINAL2",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T20:43:10.0849452Z"
+    },
+    {
+        "RetentionId":  "TASK-E20255133BBF4F2AA1E7EC068B2F91BC",
+        "TenantId":  "TEN-CLAUDE-CHAIN",
+        "ClientId":  "CLI-CLAUDE-CHAIN",
+        "ProjectId":  "PROJ-CLAUDE-CHAIN",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T21:20:21.7793775Z"
+    },
+    {
+        "RetentionId":  "TASK-812DF1C838B84CED9846E5C3642C529C",
+        "TenantId":  "TEN-CLAUDE-CHAIN",
+        "ClientId":  "CLI-CLAUDE-CHAIN",
+        "ProjectId":  "PROJ-CLAUDE-CHAIN",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T21:20:32.2105122Z"
+    },
+    {
+        "RetentionId":  "TASK-A60BE0F7754C471681F2AAD3A3E46B09",
+        "TenantId":  "TEN-CLAUDE-CHAIN2",
+        "ClientId":  "CLI-CLAUDE-CHAIN2",
+        "ProjectId":  "PROJ-CLAUDE-CHAIN2",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T21:21:47.2896069Z"
+    },
+    {
+        "RetentionId":  "TASK-E625C6F4C9AE4368A051C93AE955719E",
+        "TenantId":  "TEN-CLAUDE-CHAIN2",
+        "ClientId":  "CLI-CLAUDE-CHAIN2",
+        "ProjectId":  "PROJ-CLAUDE-CHAIN2",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T21:21:55.5713316Z"
+    },
+    {
+        "RetentionId":  "TASK-A9D2D266316E455A85EEC5D13A831DEB",
+        "TenantId":  "TEN-CLAUDE-REGR",
+        "ClientId":  "CLI-CLAUDE-REGR",
+        "ProjectId":  "PROJ-CLAUDE-REGR",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T21:42:27.9063313Z"
+    },
+    {
+        "RetentionId":  "TASK-DB2BA562FD644D7A981337DE5E037F0E",
+        "TenantId":  "TEN-CLAUDE-REGR",
+        "ClientId":  "CLI-CLAUDE-REGR",
+        "ProjectId":  "PROJ-CLAUDE-REGR",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T21:42:40.1722152Z"
+    },
+    {
+        "RetentionId":  "TASK-1DCD093676164144A0D9DC5DBC307DB9",
+        "TenantId":  "TEN-CLAUDE-REGR",
+        "ClientId":  "CLI-CLAUDE-REGR",
+        "ProjectId":  "PROJ-CLAUDE-REGR",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T21:42:52.4470412Z"
+    },
+    {
+        "RetentionId":  "TASK-62A7426D29B94F0796665B160B709286",
+        "TenantId":  "TEN-CLAUDE-REGR",
+        "ClientId":  "CLI-CLAUDE-REGR",
+        "ProjectId":  "PROJ-CLAUDE-REGR",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T21:43:01.7567321Z"
+    },
+    {
+        "RetentionId":  "TASK-AE71C43F5CA54B8B815F7194A2CDAEAB",
+        "TenantId":  "TEN-CLAUDE-REGR",
+        "ClientId":  "CLI-CLAUDE-REGR",
+        "ProjectId":  "PROJ-CLAUDE-REGR",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T21:43:10.9817184Z"
+    },
+    {
+        "RetentionId":  "TASK-08A0A0CC6C714DEDA54BA5767C14AB65",
+        "TenantId":  "TEN-CLAUDE-REGR",
+        "ClientId":  "CLI-CLAUDE-REGR",
+        "ProjectId":  "PROJ-CLAUDE-REGR",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T21:43:28.8921840Z"
+    },
+    {
+        "RetentionId":  "TASK-C107E29659A44A028A1AC03914BBDE6E",
+        "TenantId":  "TEN-CLAUDE-REGR",
+        "ClientId":  "CLI-CLAUDE-REGR",
+        "ProjectId":  "PROJ-CLAUDE-REGR",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T21:43:44.6580816Z"
+    },
+    {
+        "RetentionId":  "TASK-326ECD9031994438A61E5644F2CEF1FA",
+        "TenantId":  "TEN-CLAUDE-REGR",
+        "ClientId":  "CLI-CLAUDE-REGR",
+        "ProjectId":  "PROJ-CLAUDE-REGR",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T21:43:54.9320624Z"
+    },
+    {
+        "RetentionId":  "TASK-EA567DEC1ADA47E48535F27BF9DD5932",
+        "TenantId":  "TEN-CLAUDE-FULLCHECK",
+        "ClientId":  "CLI-CLAUDE-FULLCHECK",
+        "ProjectId":  "PROJ-CLAUDE-FULLCHECK",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T22:00:56.9505288Z"
+    },
+    {
+        "RetentionId":  "TASK-78B5FCA807D64581A97591F1D08D4348",
+        "TenantId":  "TEN-CLAUDE-FULLCHECK",
+        "ClientId":  "CLI-CLAUDE-FULLCHECK",
+        "ProjectId":  "PROJ-CLAUDE-FULLCHECK",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T22:01:14.9502939Z"
+    },
+    {
+        "RetentionId":  "TASK-BB20F2D6FEE141A8942694A8BAE72E22",
+        "TenantId":  "TEN-CLAUDE-FULLCHECK",
+        "ClientId":  "CLI-CLAUDE-FULLCHECK",
+        "ProjectId":  "PROJ-CLAUDE-FULLCHECK",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T22:01:33.9326643Z"
+    },
+    {
+        "RetentionId":  "TASK-3BEB2F82951B4B968B56FF2D64B8B715",
+        "TenantId":  "TEN-CLAUDE-CHLOECHECK",
+        "ClientId":  "CLI-CLAUDE-CHLOECHECK",
+        "ProjectId":  "PROJ-CLAUDE-CHLOECHECK",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T22:01:46.8629354Z"
+    },
+    {
+        "RetentionId":  "TASK-B050600A6F42498EBB57E307CB080963",
+        "TenantId":  "TEN-CLAUDE-FULLCHECK",
+        "ClientId":  "CLI-CLAUDE-FULLCHECK",
+        "ProjectId":  "PROJ-CLAUDE-FULLCHECK",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T22:01:51.6705919Z"
+    },
+    {
+        "RetentionId":  "TASK-D261223721FE4764B5C001FC2227A32D",
+        "TenantId":  "TEN-CLAUDE-CHLOECHECK",
+        "ClientId":  "CLI-CLAUDE-CHLOECHECK",
+        "ProjectId":  "PROJ-CLAUDE-CHLOECHECK",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T22:02:04.9109306Z"
+    },
+    {
+        "RetentionId":  "TASK-34C98E066B5F452DAF5FA3983AC1D533",
+        "TenantId":  "TEN-CLAUDE-FULLCHECK",
+        "ClientId":  "CLI-CLAUDE-FULLCHECK",
+        "ProjectId":  "PROJ-CLAUDE-FULLCHECK",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T22:02:09.3587698Z"
+    },
+    {
+        "RetentionId":  "TASK-2FDD7B8496F14ADAAEB41224841C3612",
+        "TenantId":  "TEN-CLAUDE-CHLOECHECK",
+        "ClientId":  "CLI-CLAUDE-CHLOECHECK",
+        "ProjectId":  "PROJ-CLAUDE-CHLOECHECK",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T22:02:27.2361902Z"
+    },
+    {
+        "RetentionId":  "TASK-24E62970ABB8477B876D453F1059E9E2",
+        "TenantId":  "TEN-CLAUDE-FULLCHECK",
+        "ClientId":  "CLI-CLAUDE-FULLCHECK",
+        "ProjectId":  "PROJ-CLAUDE-FULLCHECK",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T22:02:31.7105723Z"
+    },
+    {
+        "RetentionId":  "TASK-3064F62CF183429E8728580F0A40D525",
+        "TenantId":  "TEN-CLAUDE-CHLOECHECK",
+        "ClientId":  "CLI-CLAUDE-CHLOECHECK",
+        "ProjectId":  "PROJ-CLAUDE-CHLOECHECK",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T22:02:46.9410032Z"
+    },
+    {
+        "RetentionId":  "TASK-9DA7F129BA804ECDB3E555177A92AF62",
+        "TenantId":  "TEN-CLAUDE-FULLCHECK",
+        "ClientId":  "CLI-CLAUDE-FULLCHECK",
+        "ProjectId":  "PROJ-CLAUDE-FULLCHECK",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T22:02:51.7136827Z"
+    },
+    {
+        "RetentionId":  "TASK-75EDF0AE83364B0299A689FCDF08117E",
+        "TenantId":  "TEN-CLAUDE-FULLCHECK",
+        "ClientId":  "CLI-CLAUDE-FULLCHECK",
+        "ProjectId":  "PROJ-CLAUDE-FULLCHECK",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T22:03:05.8144271Z"
+    },
+    {
+        "RetentionId":  "TASK-C769D488A71F43F5A53D47A483772A45",
+        "TenantId":  "TEN-CLAUDE-FULLCHECK",
+        "ClientId":  "CLI-CLAUDE-FULLCHECK",
+        "ProjectId":  "PROJ-CLAUDE-FULLCHECK",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T22:03:22.5592924Z"
+    },
+    {
+        "RetentionId":  "TASK-7D8B15B88D074BF49E92C16AD2E2A6EA",
+        "TenantId":  "TEN-CLAUDE-FULLCHECK",
+        "ClientId":  "CLI-CLAUDE-FULLCHECK",
+        "ProjectId":  "PROJ-CLAUDE-FULLCHECK",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T22:03:37.8772756Z"
+    },
+    {
+        "RetentionId":  "TASK-6F1D5E6CD0DE464A845FAF641E7F1CBB",
+        "TenantId":  "TEN-CLAUDE-FULLCHECK",
+        "ClientId":  "CLI-CLAUDE-FULLCHECK",
+        "ProjectId":  "PROJ-CLAUDE-FULLCHECK",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T22:03:56.5585874Z"
+    },
+    {
+        "RetentionId":  "TASK-DC9978CC53C145F5BFC61EB5A5E7F06C",
+        "TenantId":  "TEN-CLAUDE-FULLCHECK",
+        "ClientId":  "CLI-CLAUDE-FULLCHECK",
+        "ProjectId":  "PROJ-CLAUDE-FULLCHECK",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T22:04:13.6852284Z"
+    },
+    {
+        "RetentionId":  "TASK-4932F89D873E4C23BD133787212AE5DC",
+        "TenantId":  "TEN-CLAUDE-FULLCHECK",
+        "ClientId":  "CLI-CLAUDE-FULLCHECK",
+        "ProjectId":  "PROJ-CLAUDE-FULLCHECK",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T22:04:35.6696774Z"
+    },
+    {
+        "RetentionId":  "TASK-41DD219D94264A158C4420F59A535083",
+        "TenantId":  "TEN-CLAUDE-FULLCHECK",
+        "ClientId":  "CLI-CLAUDE-FULLCHECK",
+        "ProjectId":  "PROJ-CLAUDE-FULLCHECK",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T22:04:51.4877916Z"
+    },
+    {
+        "RetentionId":  "TASK-09A98AAC3FE84176B240102540232C96",
+        "TenantId":  "TEN-CLAUDE-FULLCHECK",
+        "ClientId":  "CLI-CLAUDE-FULLCHECK",
+        "ProjectId":  "PROJ-CLAUDE-FULLCHECK",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T22:05:09.7360482Z"
+    },
+    {
+        "RetentionId":  "TASK-A748920110524F5E8F7F47472A1069F8",
+        "TenantId":  "TEN-CLAUDE-FULLCHECK",
+        "ClientId":  "CLI-CLAUDE-FULLCHECK",
+        "ProjectId":  "PROJ-CLAUDE-FULLCHECK",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T22:05:25.3017474Z"
+    },
+    {
+        "RetentionId":  "TASK-FD15D6A1D4D946C6A52279FC3CF0E3FA",
+        "TenantId":  "TEN-CLAUDE-FULLCHECK",
+        "ClientId":  "CLI-CLAUDE-FULLCHECK",
+        "ProjectId":  "PROJ-CLAUDE-FULLCHECK",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T22:05:42.5191180Z"
+    },
+    {
+        "RetentionId":  "TASK-C144E237F0D54703A39ADB6AE0B42B67",
+        "TenantId":  "TEN-CLAUDE-FULLCHECK",
+        "ClientId":  "CLI-CLAUDE-FULLCHECK",
+        "ProjectId":  "PROJ-CLAUDE-FULLCHECK",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T22:06:01.2501599Z"
+    },
+    {
+        "RetentionId":  "TASK-25C2284AB6B047F5BE64F1FDDCF37B77",
+        "TenantId":  "TEN-CLAUDE-FULLCHECK",
+        "ClientId":  "CLI-CLAUDE-FULLCHECK",
+        "ProjectId":  "PROJ-CLAUDE-FULLCHECK",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T22:06:17.7370435Z"
+    },
+    {
+        "RetentionId":  "TASK-31E46DF764B9426EB3F6E8CB9A5C54A6",
+        "TenantId":  "TEN-CLAUDE-FULLCHECK",
+        "ClientId":  "CLI-CLAUDE-FULLCHECK",
+        "ProjectId":  "PROJ-CLAUDE-FULLCHECK",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T22:06:34.4017438Z"
+    },
+    {
+        "RetentionId":  "TASK-D52933DFAA9741D197C1981999705947",
+        "TenantId":  "TEN-CLAUDE-FULLCHECK",
+        "ClientId":  "CLI-CLAUDE-FULLCHECK",
+        "ProjectId":  "PROJ-CLAUDE-FULLCHECK",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T22:06:50.7624688Z"
+    },
+    {
+        "RetentionId":  "TASK-933E2F29472A40E4AE2A2EB28E269A89",
+        "TenantId":  "TEN-CLAUDE-FULLCHECK",
+        "ClientId":  "CLI-CLAUDE-FULLCHECK",
+        "ProjectId":  "PROJ-CLAUDE-FULLCHECK",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T22:07:08.8124885Z"
+    },
+    {
+        "RetentionId":  "TASK-6BD0D8E388F44363821372648627680F",
+        "TenantId":  "TEN-CLAUDE-FULLCHECK",
+        "ClientId":  "CLI-CLAUDE-FULLCHECK",
+        "ProjectId":  "PROJ-CLAUDE-FULLCHECK",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T22:07:25.2746989Z"
+    },
+    {
+        "RetentionId":  "TASK-65D1934160424E91A0B3114BDF00F5D6",
+        "TenantId":  "TEN-CLAUDE-FULLCHECK",
+        "ClientId":  "CLI-CLAUDE-FULLCHECK",
+        "ProjectId":  "PROJ-CLAUDE-FULLCHECK",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T22:07:40.4424361Z"
+    },
+    {
+        "RetentionId":  "TASK-7B217B7EBE794DEBB3EEACE3A7A78B42",
+        "TenantId":  "TEN-CLAUDE-FULLCHECK",
+        "ClientId":  "CLI-CLAUDE-FULLCHECK",
+        "ProjectId":  "PROJ-CLAUDE-FULLCHECK",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T22:07:59.3224988Z"
+    },
+    {
+        "RetentionId":  "TASK-D0696D69B0754D81958D00A296F373AC",
+        "TenantId":  "TEN-CLAUDE-FULLCHECK",
+        "ClientId":  "CLI-CLAUDE-FULLCHECK",
+        "ProjectId":  "PROJ-CLAUDE-FULLCHECK",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T22:08:12.7949006Z"
+    },
+    {
+        "RetentionId":  "TASK-3F8719601C444769B8EB6B9CD1486BAA",
+        "TenantId":  "TEN-CLAUDE-FULLCHECK",
+        "ClientId":  "CLI-CLAUDE-FULLCHECK",
+        "ProjectId":  "PROJ-CLAUDE-FULLCHECK",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T22:08:30.0922646Z"
+    },
+    {
+        "RetentionId":  "TASK-607174B68CF94811940E7BBCD6A8A757",
+        "TenantId":  "TEN-CLAUDE-FULLCHECK",
+        "ClientId":  "CLI-CLAUDE-FULLCHECK",
+        "ProjectId":  "PROJ-CLAUDE-FULLCHECK",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T22:08:46.9518114Z"
+    },
+    {
+        "RetentionId":  "TASK-CEBB10BA8E5B4ECAB3FF52B352F83B08",
+        "TenantId":  "TEN-CLAUDE-FULLCHECK",
+        "ClientId":  "CLI-CLAUDE-FULLCHECK",
+        "ProjectId":  "PROJ-CLAUDE-FULLCHECK",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T22:09:03.9720606Z"
+    },
+    {
+        "RetentionId":  "TASK-4D720117E5014BFE8627AF6FEC5C943E",
+        "TenantId":  "TEN-CLAUDE-FULLCHECK",
+        "ClientId":  "CLI-CLAUDE-FULLCHECK",
+        "ProjectId":  "PROJ-CLAUDE-FULLCHECK",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T22:09:19.7027608Z"
+    },
+    {
+        "RetentionId":  "TASK-C7F8A33C60C9419DB08D7F1A8930056F",
+        "TenantId":  "TEN-CLAUDE-FULLCHECK",
+        "ClientId":  "CLI-CLAUDE-FULLCHECK",
+        "ProjectId":  "PROJ-CLAUDE-FULLCHECK",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T22:09:35.9914835Z"
+    },
+    {
+        "RetentionId":  "TASK-385689E442844393823002998E4FAE71",
+        "TenantId":  "TEN-CLAUDE-FULLCHECK",
+        "ClientId":  "CLI-CLAUDE-FULLCHECK",
+        "ProjectId":  "PROJ-CLAUDE-FULLCHECK",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T22:09:51.1713902Z"
+    },
+    {
+        "RetentionId":  "TASK-1268B7A74B2549CA8B1914BF5314C492",
+        "TenantId":  "TEN-CLAUDE-FULLCHECK",
+        "ClientId":  "CLI-CLAUDE-FULLCHECK",
+        "ProjectId":  "PROJ-CLAUDE-FULLCHECK",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T22:10:11.6532332Z"
+    },
+    {
+        "RetentionId":  "TASK-941849504D46470D9C62CE6014899E75",
+        "TenantId":  "TEN-CLAUDE-FULLCHECK",
+        "ClientId":  "CLI-CLAUDE-FULLCHECK",
+        "ProjectId":  "PROJ-CLAUDE-FULLCHECK",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T22:10:29.1029874Z"
+    },
+    {
+        "RetentionId":  "TASK-58A3E2DA8F484E9A876801B5688D76C2",
+        "TenantId":  "TEN-CLAUDE-PIPELINE",
+        "ClientId":  "CLI-CLAUDE-PIPELINE",
+        "ProjectId":  "PROJ-CLAUDE-PIPELINE",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T22:25:44.6570395Z"
+    },
+    {
+        "RetentionId":  "TASK-824C98B518B2483CA4531D59089FA059",
+        "TenantId":  "TEN-CLAUDE-PIPELINE",
+        "ClientId":  "CLI-CLAUDE-PIPELINE",
+        "ProjectId":  "PROJ-CLAUDE-PIPELINE",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T22:25:55.2609452Z"
+    },
+    {
+        "RetentionId":  "TASK-BA26589BB738423AAE65510EAEDB1EEB",
+        "TenantId":  "TEN-CLAUDE-PIPECHAIN",
+        "ClientId":  "CLI-CLAUDE-PIPECHAIN",
+        "ProjectId":  "PROJ-CLAUDE-PIPECHAIN",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T22:26:32.5019895Z"
+    },
+    {
+        "RetentionId":  "TASK-2E63EB6FEE674D60AE9339181CC52363",
+        "TenantId":  "TEN-CLAUDE-PIPECHAIN",
+        "ClientId":  "CLI-CLAUDE-PIPECHAIN",
+        "ProjectId":  "PROJ-CLAUDE-PIPECHAIN",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T22:26:42.4560397Z"
+    },
+    {
+        "RetentionId":  "TASK-4FA6722159864E54ACE81BC322279C68",
+        "TenantId":  "TEN-CLAUDE-GATE",
+        "ClientId":  "CLI-CLAUDE-GATE",
+        "ProjectId":  "PROJ-CLAUDE-GATE",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T22:36:26.7861314Z"
+    },
+    {
+        "RetentionId":  "TASK-0AAE1BEFC95C47B7BADFA3EB12ABCF30",
+        "TenantId":  "TEN-CLAUDE-GATE",
+        "ClientId":  "CLI-CLAUDE-GATE",
+        "ProjectId":  "PROJ-CLAUDE-GATE",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T22:36:37.9299099Z"
+    },
+    {
+        "RetentionId":  "TASK-9ED79DBBC9E7453A91FB589A7B7FC754",
+        "TenantId":  "TEN-CLAUDE-GATE",
+        "ClientId":  "CLI-CLAUDE-GATE",
+        "ProjectId":  "PROJ-CLAUDE-GATE",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T22:36:48.6824041Z"
+    },
+    {
+        "RetentionId":  "TASK-412CD15DB033472A96444843BB25888E",
+        "TenantId":  "TEN-CLAUDE-GATE2",
+        "ClientId":  "CLI-CLAUDE-GATE2",
+        "ProjectId":  "PROJ-CLAUDE-GATE2",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T22:37:33.8295310Z"
+    },
+    {
+        "RetentionId":  "TASK-5F43CC0DC874481FAAB95C80F87D840F",
+        "TenantId":  "TEN-CLAUDE-GATE2",
+        "ClientId":  "CLI-CLAUDE-GATE2",
+        "ProjectId":  "PROJ-CLAUDE-GATE2",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T22:38:50.1515287Z"
+    },
+    {
+        "RetentionId":  "TASK-F92F438EA7164BC1B10FFB2A1CBA1854",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-DASHBOARD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T22:52:56.4964813Z"
+    },
+    {
+        "RetentionId":  "TASK-393366811F834EB1ABB04184E467B7C8",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-DASHBOARD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T22:53:07.2151392Z"
+    },
+    {
+        "RetentionId":  "TASK-9FAD4EEC3A8C4313B93FB984D88FE941",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-DASHBOARD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T22:53:40.9600716Z"
+    },
+    {
+        "RetentionId":  "TASK-5594182F1E9D4849A2DE70E5F0731F02",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-DASHBOARD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T23:03:40.1287392Z"
+    },
+    {
+        "RetentionId":  "TASK-1C813A254B3B4460818D87BF19E9B3AB",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-DASHBOARD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T23:03:50.0387639Z"
+    },
+    {
+        "RetentionId":  "TASK-137A8378AC7F45C4A7B82D21A4FDF2E1",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-DASHBOARD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-14T23:50:28.8512361Z"
+    },
+    {
+        "RetentionId":  "TASK-39E4C40AF9994F9182A70ED6D70F2958",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-DASHBOARD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-15T08:23:06.4878359Z"
+    },
+    {
+        "RetentionId":  "TASK-7B64DFB042374D408E53D075127289DA",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-DASHBOARD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-15T08:24:29.4745060Z"
+    },
+    {
+        "RetentionId":  "TASK-12BC6AF3D55B4225A60BFCC889F301D9",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-DASHBOARD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-15T08:34:02.7904956Z"
+    },
+    {
+        "RetentionId":  "TASK-F71FFC971C6A48AFB5E6515272DA02D7",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-DASHBOARD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-15T19:04:08.3284245Z"
+    },
+    {
+        "RetentionId":  "TASK-7450E4DF3FDC4C34984161076F956FA1",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-DASHBOARD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-15T19:34:46.2315453Z"
+    },
+    {
+        "RetentionId":  "TASK-6A5CFB2F24C44826873900301AF92DDC",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-DASHBOARD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-15T19:35:03.7418021Z"
+    },
+    {
+        "RetentionId":  "TASK-D0B988AA0F4B4A4897BEA9685195D403",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-DASHBOARD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-21T00:02:42.8031338Z"
+    },
+    {
+        "RetentionId":  "TASK-49A926267F334879BC4146B3A191D7DE",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-DASHBOARD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-21T00:03:44.3762292Z"
+    },
+    {
+        "RetentionId":  "TASK-C8BD1930E0984416A983A4FE7D5F7152",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-DASHBOARD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-21T00:11:34.7451302Z"
+    },
+    {
+        "RetentionId":  "TASK-20AFE2D222DE4FFA975AFE5F5B048B0B",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-DASHBOARD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-21T00:37:53.1505923Z"
+    },
+    {
+        "RetentionId":  "TASK-52F0EE7B2D314D21A89EF53B1EA39831",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-DASHBOARD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-21T00:39:38.8926983Z"
+    },
+    {
+        "RetentionId":  "TASK-511115BEA2234E83AD0F6955F0244826",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-DASHBOARD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-21T00:40:07.2563524Z"
+    },
+    {
+        "RetentionId":  "TASK-F7FF05331A13413EBF09A683F4BD9F19",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-DASHBOARD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-21T00:40:34.4380970Z"
+    },
+    {
+        "RetentionId":  "TASK-35AE6610BF174DBB97D56C045D0156F9",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-DASHBOARD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-21T00:48:13.1011310Z"
+    },
+    {
+        "RetentionId":  "TASK-B43D312BA037442B904ECBF7E1454DA1",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-DASHBOARD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-21T01:23:31.4713908Z"
+    },
+    {
+        "RetentionId":  "TASK-234D199201BF4D1F972927DF83CB1AD9",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-DASHBOARD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-21T01:24:26.3084261Z"
+    },
+    {
+        "RetentionId":  "TASK-3D5DB81EAED347A781482D7FDCE09D2C",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-DASHBOARD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-21T01:24:52.8330129Z"
+    },
+    {
+        "RetentionId":  "TASK-33824B07535E40B19CE094A0BBF08F6B",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-DASHBOARD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-21T01:29:10.7102389Z"
+    },
+    {
+        "RetentionId":  "TASK-BBAA0469C59747D88419145A192F35A0",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-DASHBOARD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-21T01:29:30.9348014Z"
+    },
+    {
+        "RetentionId":  "TASK-B183DDCDF0584221B27F198E6D2BE550",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-DASHBOARD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-21T01:29:52.1341578Z"
+    },
+    {
+        "RetentionId":  "TASK-DE5B2C619D374894AE803F1116A28431",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-DASHBOARD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-21T01:30:17.9101860Z"
+    },
+    {
+        "RetentionId":  "TASK-F3B18367BE0740078310BB2D02CB650B",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-DASHBOARD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-21T01:30:46.2360555Z"
+    },
+    {
+        "RetentionId":  "TASK-586B6031AC734967B77CA0864FE2199D",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-DASHBOARD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-21T01:31:13.1463271Z"
+    },
+    {
+        "RetentionId":  "TASK-C632317A9C574993B555F27EA7D4FFFD",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-DASHBOARD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-21T01:31:37.2613139Z"
+    },
+    {
+        "RetentionId":  "TASK-AA917FF5A33649EF95887AC28E20B348",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-DASHBOARD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-21T01:32:03.9424847Z"
+    },
+    {
+        "RetentionId":  "TASK-FD38E654AE2942FFB8AB0017D26C0FA2",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-DASHBOARD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-21T01:32:27.2051377Z"
+    },
+    {
+        "RetentionId":  "TASK-64955E6D442642A18BEECD4B525398BE",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-DASHBOARD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-21T01:32:44.3646801Z"
+    },
+    {
+        "RetentionId":  "TASK-91C1D76517974E0B8AFFFB14F109E9F4",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-DASHBOARD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-21T01:33:04.3801752Z"
+    },
+    {
+        "RetentionId":  "TASK-F41D748F981D4601BE703F2689825D9A",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-DASHBOARD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-21T01:33:28.4119904Z"
+    },
+    {
+        "RetentionId":  "TASK-BAFA469CD9F74F5189203E051DFE92C9",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-DASHBOARD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-21T01:33:50.8670377Z"
+    },
+    {
+        "RetentionId":  "TASK-45AA8F98074A4B028B07AE8198172611",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-DASHBOARD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-21T01:34:18.7050051Z"
+    },
+    {
+        "RetentionId":  "TASK-34C455B962B9469ABB990CF27CE46BC7",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-DASHBOARD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-21T01:34:44.4027427Z"
+    },
+    {
+        "RetentionId":  "TASK-053002128A5F41F6BDF851C8F11BD636",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-DASHBOARD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-21T01:35:10.7385327Z"
+    },
+    {
+        "RetentionId":  "TASK-2E8D419DDB9F44A694E5FBF67294638D",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-DASHBOARD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-21T01:35:22.2883036Z"
+    },
+    {
+        "RetentionId":  "TASK-2EC5BD072C404DFC946D671929F7773D",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-DASHBOARD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-21T09:04:38.7796345Z"
+    },
+    {
+        "RetentionId":  "TASK-57EDA2E7E51A46AE9D64A304A5541ABC",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-DASHBOARD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-21T09:05:43.1393621Z"
+    },
+    {
+        "RetentionId":  "TASK-4C7459DA7FEC4A8E8512DD29E1F3F55F",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-DASHBOARD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-21T13:01:13.5387528Z"
+    },
+    {
+        "RetentionId":  "TASK-522CCBD4FD2040E395A039164FFB7B45",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-DASHBOARD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-21T13:05:59.1510701Z"
+    },
+    {
+        "RetentionId":  "TASK-FBE4EB81A23A4201ACA14C44C47445A1",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-DASHBOARD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-21T18:08:37.9233030Z"
+    },
+    {
+        "RetentionId":  "TASK-AFED22EC26744541899042D27CF9AB1A",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-DASHBOARD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-22T14:21:11.8800356Z"
+    },
+    {
+        "RetentionId":  "TASK-3E52A0F541A642F5B5D60B047F5E49C8",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-DASHBOARD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-22T17:15:36.5527544Z"
+    },
+    {
+        "RetentionId":  "TASK-6BD90EC43C8D45D8A8D47A0498ED3C20",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-TRIAL-PUBLIC",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-22T19:02:42.2432731Z"
+    },
+    {
+        "RetentionId":  "TASK-FCE5F932E0A54AB3936B39529C17463D",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-TRIAL-PUBLIC",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-22T19:08:01.6697314Z"
+    },
+    {
+        "RetentionId":  "TASK-FDF07AEAF296406784EA574E78AAC71A",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-TRIAL-PUBLIC",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-22T19:11:10.8074873Z"
+    },
+    {
+        "RetentionId":  "TASK-EF964D3253824B6C8656CACA96E5A7B3",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-TRIAL-PUBLIC",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-22T19:11:30.4156500Z"
+    },
+    {
+        "RetentionId":  "TASK-D2969A35023C41A1904C98F7E798C4EC",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-TRIAL-PUBLIC",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-22T19:15:40.2439602Z"
+    },
+    {
+        "RetentionId":  "TASK-48DA37D6991541CF8A7DACA90D10EDA5",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-TRIAL-PUBLIC",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-22T19:16:40.2588169Z"
+    },
+    {
+        "RetentionId":  "TASK-6F5C884EE73A48FE955F2C7185C52F5F",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-TRIAL-PUBLIC",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-22T19:17:24.3397544Z"
+    },
+    {
+        "RetentionId":  "TASK-0D6F18D579F44191B00952044329B82A",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-CUST-F6B73D2E",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-22T19:36:52.1738715Z"
+    },
+    {
+        "RetentionId":  "TASK-010DC4990A2947EC9CB429CE4B55D6A6",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-CUST-36A34207",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-22T19:39:20.9199237Z"
+    },
+    {
+        "RetentionId":  "TASK-2C013A35B474417EA8E57124A4EF0CBD",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-CUST-655315BB",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-22T19:59:23.0869803Z"
+    },
+    {
+        "RetentionId":  "TASK-EEEA97A075CB40A1A05841BFBC851162",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-CUST-655315BB",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-22T20:00:37.7431636Z"
+    },
+    {
+        "RetentionId":  "TASK-8230B3ED8C144E44AD746C77303293D4",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-CUST-655315BB",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-22T20:01:08.4327919Z"
+    },
+    {
+        "RetentionId":  "TASK-C9AFCFFEA6574A6887BA1E39B645DCAE",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-CUST-655315BB",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-22T20:01:24.4322116Z"
+    },
+    {
+        "RetentionId":  "TASK-383EAF3C421144B3A09C252050622CE3",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-CUST-655315BB",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-22T20:01:45.8777282Z"
+    },
+    {
+        "RetentionId":  "TASK-B6CEFBA0AFBE4DEBBD71A7BD02AFE038",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-CUST-655315BB",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-22T20:02:06.9741867Z"
+    },
+    {
+        "RetentionId":  "TASK-EBD26F5C013A4764B763A1E0B0EB9DCF",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-CUST-655315BB",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-22T20:02:23.3227941Z"
+    },
+    {
+        "RetentionId":  "TASK-3714A07CAC634D2A8628B582F3B23EB2",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-CUST-655315BB",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-22T20:02:40.4786005Z"
+    },
+    {
+        "RetentionId":  "TASK-6FE936D82E874E02936C82BDB0D7B60E",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-CUST-655315BB",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-22T20:02:57.5523532Z"
+    },
+    {
+        "RetentionId":  "TASK-1AAAD82F0B92477397A3F6F848C00191",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-CUST-655315BB",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-22T20:03:13.4982298Z"
+    },
+    {
+        "RetentionId":  "TASK-D2801544B6EA4004BDDF44371CEF6518",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-CUST-655315BB",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-22T20:03:32.6229627Z"
+    },
+    {
+        "RetentionId":  "TASK-34F5CBE4F42C47F5A524C595C1DF468D",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-CUST-655315BB",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-22T20:03:48.8270530Z"
+    },
+    {
+        "RetentionId":  "TASK-62188BB602B24C4481E76B6D51C13098",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-CUST-655315BB",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-22T20:04:06.8867353Z"
+    },
+    {
+        "RetentionId":  "TASK-F1588A2FFAB346E794641DBE0DC3EB3A",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-CUST-655315BB",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-22T20:04:25.6063846Z"
+    },
+    {
+        "RetentionId":  "TASK-41E569CBCC964CE488C830F8AD4D42CC",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-CUST-655315BB",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-22T20:04:42.1004258Z"
+    },
+    {
+        "RetentionId":  "TASK-0C91560AE3AA430EAC34DE8B70B8DAFD",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-CUST-21956946",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-22T20:32:58.5439659Z"
+    },
+    {
+        "RetentionId":  "TASK-67B50579104A42F69188269E9C47BF19",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-CUST-21956946",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-22T20:33:19.7266818Z"
+    },
+    {
+        "RetentionId":  "TASK-4D045BD3F7084012BC03E4E261C293ED",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-CUST-21956946",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-22T20:33:42.8695491Z"
+    },
+    {
+        "RetentionId":  "TASK-60EE75C7A92F4494844AE6ECE26E4592",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-CUST-21956946",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-22T20:34:04.4106450Z"
+    },
+    {
+        "RetentionId":  "TASK-BFA95DB981414AA396D949E8F0C1BDE5",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-CUST-21956946",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-22T20:34:26.4236851Z"
+    },
+    {
+        "RetentionId":  "TASK-2303BE3D189E4801A6BF056E7FEAACA8",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-CUST-21956946",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-22T20:34:49.9604728Z"
+    },
+    {
+        "RetentionId":  "TASK-22983233A2F549E49A0BCCAF6D3407D1",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-CUST-21956946",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-22T20:35:14.1693132Z"
+    },
+    {
+        "RetentionId":  "TASK-BB9522DD0F544EB6A8CA31FD9C9ACA90",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-CUST-21956946",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-22T20:35:33.1611220Z"
+    },
+    {
+        "RetentionId":  "TASK-3E1B9CE7229141079400E783ADE7B2AF",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-CUST-21956946",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-22T20:35:50.9311716Z"
+    },
+    {
+        "RetentionId":  "TASK-6ADC3D316C1E43A394014653EF821129",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-CUST-21956946",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-22T20:36:08.6951063Z"
+    },
+    {
+        "RetentionId":  "TASK-2A68A2623794479F9E5E4FA0F26FE0FA",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-CUST-21956946",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-22T20:36:25.5763183Z"
+    },
+    {
+        "RetentionId":  "TASK-E767C12E7ED44E6F8CAD31AE4073D53E",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-CUST-21956946",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-22T20:36:42.1906335Z"
+    },
+    {
+        "RetentionId":  "TASK-57933D5241E9416DAE92F503F2A4C374",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-CUST-21956946",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-22T20:36:59.2944857Z"
+    },
+    {
+        "RetentionId":  "TASK-0B3D9228B5734F9AAEAB4720118CD4E7",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-CUST-21956946",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-22T20:37:15.6024097Z"
+    },
+    {
+        "RetentionId":  "TASK-F570CAC8789A4803ADBA66C781D98DF8",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-CUST-21956946",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-22T20:37:33.3394817Z"
+    },
+    {
+        "RetentionId":  "TASK-C3EA2AEFB88A4B18902D6B65629C90D5",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-CUST-B32CE8DD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-23T17:32:32.1067913Z"
+    },
+    {
+        "RetentionId":  "TASK-BFB6C8779E034657B9173BC4DA9930C6",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-CUST-B32CE8DD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-23T17:34:22.5905681Z"
+    },
+    {
+        "RetentionId":  "TASK-F7B57A4F2310401580F9C9A434D8CF38",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-CUST-B32CE8DD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-23T17:35:07.2878412Z"
+    },
+    {
+        "RetentionId":  "TASK-04F173C23E6D4D4C8C8C7424DCA1F425",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-CUST-B32CE8DD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-23T17:35:27.0123514Z"
+    },
+    {
+        "RetentionId":  "TASK-50D6271F5A3A4A6CA295AA51B07E8FC1",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-CUST-B32CE8DD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-23T17:38:13.4606204Z"
+    },
+    {
+        "RetentionId":  "TASK-286441D938E4476A8EB952F909A7E4EB",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-CUST-B32CE8DD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-23T17:39:10.3725769Z"
+    },
+    {
+        "RetentionId":  "TASK-DE3A998B73304E07A6F9FB571BBDF3B6",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-CUST-B32CE8DD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-23T17:40:54.8195432Z"
+    },
+    {
+        "RetentionId":  "TASK-D462C8D74A5B42568918C2969F9E1D5C",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-CUST-B32CE8DD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-23T17:42:55.8580205Z"
+    },
+    {
+        "RetentionId":  "TASK-C92A468FA5C645848D9760BCD0585EEC",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-CUST-B32CE8DD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-23T17:43:48.3278012Z"
+    },
+    {
+        "RetentionId":  "TASK-0859D785D31F4BD8A027097CFC30094C",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-CUST-B32CE8DD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-23T17:44:53.3912546Z"
+    },
+    {
+        "RetentionId":  "TASK-50419A0AB1634E5E9C63E0D0641B83F6",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-CUST-B32CE8DD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-23T17:50:27.2426676Z"
+    },
+    {
+        "RetentionId":  "TASK-BB53772FE9EB45AA9A436D2AEA05C254",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-CUST-B32CE8DD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-23T17:52:10.5798591Z"
+    },
+    {
+        "RetentionId":  "TASK-49ABEA161CDA46638F0923C84AC39084",
+        "TenantId":  "TEN-DASHBOARD",
+        "ClientId":  "CLI-CUST-B32CE8DD",
+        "ProjectId":  "PROJ-DASHBOARD",
+        "Status":  "AUTHORIZED",
+        "CreatedAtUtc":  "2026-09-23T17:52:55.3638298Z"
+    }
+]

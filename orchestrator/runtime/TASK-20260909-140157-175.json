@@ -1,0 +1,19 @@
+﻿{
+    "task_id":  "TASK-20260909-140157-175",
+    "timestamp":  "2026-09-09T14:01:57",
+    "client_id":  "bk-entreprise",
+    "project_id":  "general",
+    "source":  "runtime",
+    "target_worker":  "SAM",
+    "intent":  "it_security",
+    "objective":  "Vérifie la sécurité de mon serveur et mes permissions",
+    "priority":  "normal",
+    "status":  "routed",
+    "execution":  "SIMULATION",
+    "result":  {
+                   "message":  "Task correctly routed to SAM.",
+                   "external_action":  false
+               },
+    "blocker":  null,
+    "next_action":  "EXECUTE_WITH_SAM"
+}

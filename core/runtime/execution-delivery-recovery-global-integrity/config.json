@@ -1,0 +1,18 @@
+﻿{
+  "version": "1.0",
+  "system": "BK-AI-WORKERS",
+  "enabled": true,
+  "globalIntegrityCheckEnabled": true,
+  "crossModuleValidationEnabled": true,
+  "contextConsistencyEnabled": true,
+  "simulationOnly": true,
+  "requireCommonIdentifiers": true,
+  "requireTenantIsolation": true,
+  "requireAuditTrace": true,
+  "requireRetentionTrace": true,
+  "requireAccessDecisionTrace": true,
+  "minValidatedModules": 11,
+  "captureSecrets": false,
+  "capturePayloads": false,
+  "liveExecutionEnabled": false
+}

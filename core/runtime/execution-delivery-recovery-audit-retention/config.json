@@ -1,0 +1,17 @@
+﻿{
+  "version": "1.0",
+  "system": "BK-AI-WORKERS",
+  "enabled": true,
+  "retentionGuardEnabled": true,
+  "immutabilityEnabled": true,
+  "deletionProtectionEnabled": true,
+  "mutationProtectionEnabled": true,
+  "retentionDays": 365,
+  "allowExpiredPurge": false,
+  "allowManualDelete": false,
+  "allowManualMutation": false,
+  "maxRecords": 20000,
+  "captureSecrets": false,
+  "capturePayloads": false,
+  "liveExecutionEnabled": false
+}

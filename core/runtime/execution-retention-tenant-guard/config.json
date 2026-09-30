@@ -1,0 +1,20 @@
+﻿{
+  "version": "1.0",
+  "system": "BK-AI-WORKERS",
+  "enabled": true,
+  "tenantIsolationEnabled": true,
+  "authorizationGuardEnabled": true,
+  "requireRetentionId": true,
+  "requireTenantId": true,
+  "requireClientId": true,
+  "requireProjectId": true,
+  "preventCrossTenantAccess": true,
+  "preventCrossClientAccess": true,
+  "preventCrossProjectAccess": true,
+  "preventUnauthorizedRead": true,
+  "preventUnauthorizedMutation": true,
+  "maxRecords": 20000,
+  "captureSecrets": false,
+  "capturePayloads": false,
+  "liveExecutionEnabled": false
+}
