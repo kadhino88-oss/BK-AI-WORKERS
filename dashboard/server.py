@@ -725,7 +725,7 @@ CLIENT_CONNECTOR_PROVIDERS = {
     "dropbox", "linkedin", "facebook", "instagram", "tiktok", "x_twitter",
     "meta_ads", "whatsapp_business", "gmail", "google_calendar", "google_drive",
     "google_search_console", "google_ads", "outlook_mail", "outlook_calendar",
-    "teams", "onedrive", "salesforce", "twilio", "monitoring", "calendar_hr",
+    "teams", "onedrive", "salesforce", "twilio", "uptimerobot", "bamboohr",
 }
 
 # Le connectorId du catalogue ("calendar") ne correspond pas toujours au
