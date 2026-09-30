@@ -233,7 +233,6 @@ function Test-ReadOnlyOperation {
 $PlainKey = $null
 $ResponseText = $null; $ErrorDetail = $null; $ExitCode = 1
 $Response = $null
-$ConnectorActionTaken = $null
 
 if (-not (Test-BKSecret -Name "anthropic")) {
     Write-Result ([ordered]@{ status="ERROR"; provider="anthropic"; model=$EffectiveModel; mode="SIMULATION"; api_call=$false; answer=""; error="CREDENTIAL_NOT_CONFIGURED" })
@@ -261,9 +260,14 @@ try {
     # disponibles, independamment des connecteurs metier actives par le
     # client — ce n'est pas un connecteur au sens Chloe, juste la capacite
     # de lire une page publique, deja implicitement couverte par "READ".
+    # Code execution reel (2026-09-30, meme demande que web_search/web_fetch :
+    # "les Workers doivent avoir tout dans leur code, comme Claude Code").
+    # Outil SERVEUR lui aussi (resolu par Anthropic dans le meme appel),
+    # mais necessite l'entete beta ci-dessous — verifie en direct.
     $Tools = @(
         @{ type = "web_search_20250305"; name = "web_search"; max_uses = 5 }
         @{ type = "web_fetch_20250910"; name = "web_fetch"; max_uses = 5 }
+        @{ type = "code_execution_20250522"; name = "code_execution" }
     )
     if ($ToolDef) { $Tools += $ToolDef }
 
@@ -275,16 +279,39 @@ try {
         tools      = $Tools
     }
 
-    $Headers = @{ "x-api-key" = $PlainKey; "anthropic-version" = "2023-06-01" }
+    $Headers = @{
+        "x-api-key" = $PlainKey; "anthropic-version" = "2023-06-01"
+        "anthropic-beta" = "code-execution-2025-05-22"
+    }
     $Response = Invoke-RestMethod -Uri "https://api.anthropic.com/v1/messages" -Method Post `
         -Headers $Headers -ContentType "application/json; charset=utf-8" `
         -Body ([System.Text.Encoding]::UTF8.GetBytes(($BodyObj | ConvertTo-Json -Depth 10))) -TimeoutSec 240
 
-    # ---------------- OUTIL DEMANDE PAR CLAUDE ----------------
-    if ($Response.stop_reason -eq "tool_use") {
-        $ToolUse = $Response.content | Where-Object { $_.type -eq "tool_use" } | Select-Object -First 1
+    # ---------------- BOUCLE AGENTIQUE (2026-09-30) ----------------
+    # Avant : un SEUL aller-retour possible pour use_connector (le Worker
+    # ne pouvait jamais enchainer deux actions dans la meme mission —
+    # regarder un CRM PUIS agir dessus etait impossible). Demande
+    # explicite de Kader : "les Workers doivent pouvoir tout faire en
+    # autonomie... comme Claude Code", donc une vraie boucle, plafonnee
+    # (MaxIterations) pour rester bornee en cout/latence — jamais
+    # illimitee. web_search/web_fetch/code_execution restent geres cote
+    # Anthropic a chaque tour (jamais un "tool_use" cote client) : cette
+    # boucle ne s'occupe que de use_connector, le seul outil qui a besoin
+    # de CE code pour s'executer.
+    $ConnectorActionsList = @()
+    $MaxIterations = 8
+    $Iteration = 0
+    $StopLoop = $false
 
-        if ($ToolUse) {
+    while ($Response.stop_reason -eq "tool_use" -and $Iteration -lt $MaxIterations -and -not $StopLoop) {
+        $Iteration++
+        $ToolUses = @($Response.content | Where-Object { $_.type -eq "tool_use" })
+        if ($ToolUses.Count -eq 0) { break }
+
+        [void]$Messages.Add(@{ role = "assistant"; content = $Response.content })
+        $ToolResults = @()
+
+        foreach ($ToolUse in $ToolUses) {
             $ConnId = [string]$ToolUse.input.connectorId
             $Op     = [string]$ToolUse.input.operation
             $Reason = [string]$ToolUse.input.reason
@@ -305,36 +332,24 @@ try {
             if ($ClientId -eq "CLI-DASHBOARD" -and $IsFinancialConnector -and -not (Test-ReadOnlyOperation -Operation $Op)) {
                 $AutoApproved = $false
             }
+
             if ((Test-ReadOnlyOperation -Operation $Op) -or $AutoApproved) {
                 # Lecture : toujours executee reellement tout de suite
                 # (aucun effet externe possible). Ecriture : executee
                 # reellement tout de suite UNIQUEMENT si ce client a
                 # explicitement pre-autorise ses Workers a agir sans
                 # attendre (bascule "autoApprove", desactivee par defaut).
-                # Dans les deux cas, on redonne la main a Claude avec le
-                # resultat pour qu'il redige sa synthese finale.
                 $ActionResult = Invoke-ConnectorAction -ConnectorId "$ConnId.controlled" -Operation $Op -ClientId $ClientId -Params $OpParams
-                $ConnectorActionTaken = @{ connectorId = $ConnId; operation = $Op; status = $ActionResult.Status; executed = $true; autoApproved = $AutoApproved }
-
-                $ToolResultContent = ($ActionResult | ConvertTo-Json -Depth 10 -Compress)
-                [void]$Messages.Add(@{ role = "assistant"; content = $Response.content })
-                [void]$Messages.Add(@{ role = "user"; content = @(@{ type = "tool_result"; tool_use_id = $ToolUse.id; content = $ToolResultContent }) })
-
-                $BodyObj2 = [ordered]@{
-                    model = $EffectiveModel; max_tokens = 64000; system = $SystemPrompt; messages = $Messages
-                    tools = $Tools
-                }
-                $Response2 = Invoke-RestMethod -Uri "https://api.anthropic.com/v1/messages" -Method Post `
-                    -Headers $Headers -ContentType "application/json; charset=utf-8" `
-                    -Body ([System.Text.Encoding]::UTF8.GetBytes(($BodyObj2 | ConvertTo-Json -Depth 10))) -TimeoutSec 240
-
-                $ResponseText = (@($Response2.content | Where-Object { $_.type -eq "text" } | ForEach-Object { $_.text }) -join "`n")
-                $Response = $Response2
+                $ConnectorActionsList += @{ connectorId = $ConnId; operation = $Op; status = $ActionResult.Status; executed = $true; autoApproved = $AutoApproved }
+                $ToolResults += @{ type = "tool_result"; tool_use_id = $ToolUse.id; content = ($ActionResult | ConvertTo-Json -Depth 10 -Compress) }
             }
             else {
                 # Ecriture : JAMAIS executee ici. On ecrit l'action proposee
-                # sur disque pour confirmation explicite du client, et on
-                # redige une reponse qui l'explique clairement.
+                # sur disque pour confirmation explicite du client. Une
+                # seule action en attente possible par mission (le fichier
+                # est nomme par TaskId, pas par tool_use.id) : la premiere
+                # ecriture non auto-approuvee arrete la boucle apres ce
+                # tour, pour ne jamais en ecraser une deuxieme.
                 $PendingPath = Join-Path $ProjectRoot ("memory/runtime/PENDING-ACTION-" + $TaskId + ".json")
                 $Pending = [ordered]@{
                     taskId       = $TaskId
@@ -348,18 +363,29 @@ try {
                 }
                 ($Pending | ConvertTo-Json -Depth 10) | Set-Content -LiteralPath $PendingPath -Encoding UTF8
 
-                $ConnectorActionTaken = @{ connectorId = $ConnId; operation = $Op; status = "PENDING_CONFIRMATION"; executed = $false }
-                $ResponseText = (@($Response.content | Where-Object { $_.type -eq "text" } | ForEach-Object { $_.text }) -join "`n").Trim()
-                if ([string]::IsNullOrWhiteSpace($ResponseText)) {
-                    $ResponseText = "J'ai preparé une action réelle ($ConnId — $Op) : $Reason. Elle n'est PAS encore envoyée — confirmez-la depuis votre tableau de bord pour qu'elle parte réellement."
-                } else {
-                    $ResponseText += "`n`n(Action réelle préparée sur $ConnId — en attente de votre confirmation avant tout envoi effectif.)"
-                }
+                $ConnectorActionsList += @{ connectorId = $ConnId; operation = $Op; status = "PENDING_CONFIRMATION"; executed = $false }
+                $ToolResults += @{ type = "tool_result"; tool_use_id = $ToolUse.id; content = "PENDING_CONFIRMATION : action non executee, en attente de confirmation du client depuis son tableau de bord." }
+                $StopLoop = $true
             }
         }
+
+        [void]$Messages.Add(@{ role = "user"; content = $ToolResults })
+
+        $BodyObjN = [ordered]@{
+            model = $EffectiveModel; max_tokens = 64000; system = $SystemPrompt; messages = $Messages
+            tools = $Tools
+        }
+        $Response = Invoke-RestMethod -Uri "https://api.anthropic.com/v1/messages" -Method Post `
+            -Headers $Headers -ContentType "application/json; charset=utf-8" `
+            -Body ([System.Text.Encoding]::UTF8.GetBytes(($BodyObjN | ConvertTo-Json -Depth 10))) -TimeoutSec 240
     }
-    else {
-        $ResponseText = (@($Response.content | Where-Object { $_.type -eq "text" } | ForEach-Object { $_.text }) -join "`n")
+
+    $ResponseText = (@($Response.content | Where-Object { $_.type -eq "text" } | ForEach-Object { $_.text }) -join "`n").Trim()
+    if ([string]::IsNullOrWhiteSpace($ResponseText) -and $ConnectorActionsList.Count -gt 0) {
+        $LastPending = $ConnectorActionsList | Where-Object { $_.status -eq "PENDING_CONFIRMATION" } | Select-Object -Last 1
+        if ($LastPending) {
+            $ResponseText = "J'ai préparé une action réelle ($($LastPending.connectorId) — $($LastPending.operation)). Elle n'est PAS encore envoyée — confirmez-la depuis votre tableau de bord pour qu'elle parte réellement."
+        }
     }
 
     $ExitCode = 0
@@ -382,7 +408,10 @@ if ($ExitCode -eq 0) {
         security_status="VALID"; financial_actions=$false; external_actions=$false
         generated_at=(Get-Date).ToUniversalTime().ToString("o")
     }
-    if ($ConnectorActionTaken) { $ResultObj["connector_action"] = $ConnectorActionTaken }
+    if ($ConnectorActionsList.Count -gt 0) {
+        $ResultObj["connector_action"] = $ConnectorActionsList[0]
+        $ResultObj["connector_actions"] = $ConnectorActionsList
+    }
     Write-Result $ResultObj
     exit 0
 }
