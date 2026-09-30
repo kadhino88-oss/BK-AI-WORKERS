@@ -2588,6 +2588,19 @@ class Handler(BaseHTTPRequestHandler):
             self._send_file(os.path.join(DASHBOARD_DIR, "app.js"), "application/javascript; charset=utf-8")
         elif path == "/favicon.svg" or path == "/favicon.ico":
             self._send_file(os.path.join(DASHBOARD_DIR, "favicon.svg"), "image/svg+xml")
+        elif path == "/manifest.json":
+            self._send_file(os.path.join(DASHBOARD_DIR, "manifest.json"), "application/manifest+json; charset=utf-8")
+        elif path == "/service-worker.js":
+            # Servi a la racine (pas /dashboard/service-worker.js) : un
+            # service worker ne peut jamais controler une portee plus large
+            # que le chemin d'ou il est servi (2026-09-30, app installable).
+            self._send_file(os.path.join(DASHBOARD_DIR, "service-worker.js"), "application/javascript; charset=utf-8")
+        elif path.startswith("/icons/") and path.endswith(".png"):
+            fname = os.path.basename(path)
+            if fname in {"icon-192.png", "icon-512.png", "apple-touch-icon.png", "icon-maskable-512.png"}:
+                self._send_file(os.path.join(DASHBOARD_DIR, "icons", fname), "image/png")
+            else:
+                self._send_json({"error": "NOT_FOUND"}, 404)
         elif path.startswith("/portraits/") and path.endswith(".svg"):
             wid = path.split("/")[-1].replace(".svg", "")
             if wid in get_worker_ids() or wid == "chloe":

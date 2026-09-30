@@ -3624,3 +3624,14 @@ loadTestimonials();
     setTimeout(() => showToast(ok ? "Email confirmé ✓ — vous pouvez maintenant souscrire un plan." : "Ce lien de confirmation a expiré ou a déjà été utilisé.", ok), 600);
   }
 })();
+
+// App installable (2026-09-30) : icone sur l'ecran d'accueil, ouverture en
+// plein ecran sans barre de navigateur, resilience hors-ligne partielle.
+// Reseau-d'abord dans le service worker (voir service-worker.js) : jamais
+// de JS perime servi silencieusement, meme incident deja vecu sur ce
+// projet avec le cache navigateur seul.
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/service-worker.js", { scope: "/" }).catch(() => {});
+  });
+}
