@@ -1689,6 +1689,8 @@ def delete_account(client_id, password):
         os.remove(os.path.join(PROFILE_DIR, f"{client_id}.json"))
     except OSError:
         pass
+    _remove_client_apikey(client_id)
+    _remove_client_webhook(client_id)
     if os.path.isdir(TASKS_DIR):
         for fname in os.listdir(TASKS_DIR):
             if fname.startswith("TASK-") and fname.endswith(".json"):
