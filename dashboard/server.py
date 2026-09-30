@@ -1172,6 +1172,17 @@ def get_connector_catalog(client_id=None):
             "connectorId": c.get("connectorId"),
             "provider": c.get("provider"),
             "enabled": c.get("enabled", False),
+            # "enabled" reste un etat interne (le Capability Matrix /
+            # security gate s'en sert pour resoudre l'outil par defaut de
+            # certains Workers — voir Resolve-FullAuthorizationChain.ps1 —
+            # y toucher a deja casse 13 Workers sur 17 le 2026-09-30).
+            # "realIntegration" est la question honnete distincte que se
+            # pose un CLIENT : existe-t-il un vrai adaptateur derriere ce
+            # connecteur (realAdapter present dans le catalogue), ou est-ce
+            # une categorie generique (CRM, Reseaux sociaux, Design,
+            # Canva, Monitoring, RH, Analytics) qui ne designe encore aucun
+            # produit reel ? Seul ce champ pilote l'affichage cote client.
+            "realIntegration": bool(c.get("realAdapter")),
             "operations": c.get("operations", []),
             "activatedByClient": c.get("connectorId") in activated if client_id else None,
             "configuredByClient": cred_key in configured_providers if client_id else None,
@@ -1183,6 +1194,10 @@ def get_connector_catalog(client_id=None):
         "liveExecutionEnabled": data.get("liveExecutionEnabled", False),
         "totalConnectors": len(connectors),
         "enabledConnectors": len([c for c in connectors if c.get("enabled")]),
+        # Chiffre honnete affiche au client : combien de connecteurs ont un
+        # VRAI adaptateur derriere, pas juste une entree "enabled" dans le
+        # catalogue (qui sert aussi de bookkeeping interne, voir plus haut).
+        "realConnectorsCount": len([c for c in connectors if c.get("realAdapter")]),
         # Nombre de connecteurs REELLEMENT configures (un vrai secret
         # existe dans .secrets/, pas juste "autorise" dans le catalogue)
         # — c'est ce chiffre-la qui a du sens pour une preuve de

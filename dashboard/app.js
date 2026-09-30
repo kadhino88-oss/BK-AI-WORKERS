@@ -1199,7 +1199,7 @@ async function loadConnectors() {
   const activatedNote = accountAuthenticated && !isOperator
     ? ` · ${data.activatedByClientCount || 0} activé(s) pour votre compte`
     : "";
-  summaryEl.textContent = `${data.enabledConnectors}/${data.totalConnectors} connecteurs disponibles. ${liveNote}${activatedNote}.`;
+  summaryEl.textContent = `${data.realConnectorsCount}/${data.totalConnectors} connecteurs disponibles. ${liveNote}${activatedNote}.`;
 
   const autoApproveCard = document.getElementById("auto-approve-card");
   const autoApproveCheckbox = document.getElementById("auto-approve-checkbox");
@@ -1226,19 +1226,22 @@ async function loadConnectors() {
     card.innerHTML = `<div class="connector-category-title">${CONNECTOR_CATEGORY_LABELS[category] || humanizeTag(category)}</div>`;
     connectors.forEach((c) => {
       const row = document.createElement("div");
-      row.className = "connector-row " + (c.enabled ? "enabled" : "disabled");
+      // "realIntegration" (pas "enabled") pilote l'affichage : "enabled"
+      // reste un etat interne dont depend le security gate pour certains
+      // Workers, voir la note cote server.py / get_connector_catalog().
+      row.className = "connector-row " + (c.realIntegration ? "enabled" : "disabled");
       const needsCred = !!c.clientCanConfigure;
       const connected = needsCred ? !!c.configuredByClient : !!c.activatedByClient;
       let stateHtml;
-      if (!c.enabled) stateHtml = '<span class="cstate soon">Bientôt</span>';
+      if (!c.realIntegration) stateHtml = '<span class="cstate soon">Bientôt</span>';
       else if (!accountAuthenticated) stateHtml = '<span class="cstate">Disponible</span>';
       else if (needsCred) stateHtml = connected ? '<span class="cstate on">Connecté</span>' : '<span class="cstate off">Non connecté</span>';
       else stateHtml = c.activatedByClient ? '<span class="cstate on">Activé</span>' : '<span class="cstate off">Désactivé</span>';
 
       let actionsHtml = "";
-      if (c.enabled && !accountAuthenticated) {
+      if (c.realIntegration && !accountAuthenticated) {
         actionsHtml = '<button type="button" class="connector-primary-btn" data-need-account="1">Connecter</button>';
-      } else if (c.enabled && needsCred && c.oauthProvider) {
+      } else if (c.realIntegration && needsCred && c.oauthProvider) {
         // "Se connecter avec ..." : le client saisit son login/mot de passe
         // sur la page OFFICIELLE du fournisseur — nous ne voyons jamais son
         // mot de passe, et il n'a aucune cle/jeton a copier.
@@ -1248,17 +1251,17 @@ async function loadConnectors() {
           actionsHtml += `<button type="button" class="connector-link-btn" data-disconnect="${c.credentialProvider}">Déconnecter</button>`;
           actionsHtml += `<label class="switch" title="Autoriser vos Workers à utiliser cet outil"><input type="checkbox" class="connector-switch" ${c.activatedByClient ? "checked" : ""}><span class="switch-track"></span><span class="switch-label">Workers autorisés</span></label>`;
         }
-      } else if (c.enabled && needsCred && !isOperator) {
+      } else if (c.realIntegration && needsCred && !isOperator) {
         // Pas de connexion en un clic pour cet outil pour l'instant : on
         // n'exige JAMAIS de cle/jeton d'un client, on l'annonce comme a venir.
         stateHtml = '<span class="cstate soon">Connexion en un clic bientôt</span>';
-      } else if (c.enabled && needsCred) {
+      } else if (c.realIntegration && needsCred) {
         // Reserve au proprietaire (cles techniques).
         actionsHtml = `<button type="button" class="connector-primary-btn ${connected ? "is-secondary" : ""} connector-cred-btn" data-provider="${c.credentialProvider}">${connected ? "Modifier" : "Connecter"}</button>`;
         if (connected) {
           actionsHtml += `<label class="switch" title="Autoriser vos Workers à utiliser cet outil"><input type="checkbox" class="connector-switch" ${c.activatedByClient ? "checked" : ""}><span class="switch-track"></span><span class="switch-label">Workers autorisés</span></label>`;
         }
-      } else if (c.enabled) {
+      } else if (c.realIntegration) {
         actionsHtml = `<label class="switch"><input type="checkbox" class="connector-switch" ${c.activatedByClient ? "checked" : ""}><span class="switch-track"></span><span class="switch-label">Activer</span></label>`;
       }
 
@@ -1868,13 +1871,15 @@ async function loadTrustSignals() {
     // Nombre reel de connecteurs disponibles dans le catalogue (pas "configures
     // par un client" — ce chiffre serait 0 tant qu'aucun client n'a rien branche,
     // ce qui donnerait une fausse impression de faiblesse plutot qu'une preuve).
-    const connectorsNum = data.enabledConnectors ?? data.totalConnectors;
+    // realConnectorsCount (pas enabledConnectors) : seuls ceux avec un vrai
+    // adaptateur derriere comptent ici, voir get_connector_catalog() cote serveur.
+    const connectorsNum = data.realConnectorsCount ?? data.totalConnectors;
     document.getElementById("trust-connectors-num").textContent = connectorsNum ?? "—";
     document.getElementById("trust-workers-num").textContent = allWorkers.length || "17";
     const chips = document.getElementById("integrations-chips");
     chips.innerHTML = "";
     Object.values(data.categories || {}).flat().forEach((c) => {
-      if (!c.enabled) return;
+      if (!c.realIntegration) return;
       const brand = BRAND_LOGOS[c.provider];
       if (!brand) return; // connecteurs generiques (CRM, DESIGN...) : pas de marque a afficher
       const chip = document.createElement("span");
