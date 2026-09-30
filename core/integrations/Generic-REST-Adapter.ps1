@@ -68,6 +68,23 @@ $Script:ConnectorConfig = @{
     # {accountSid}) est fait a part dans Connector-Dispatch.ps1 — cette
     # entree ne sert ici qu'a Test-ConnectorConfigured / Get-ConnectorSecretRaw.
     "twilio" = @{ Provider = "twilio"; AuthType = "BasicUserPwd"; BaseUrlTemplate = "https://api.twilio.com/2010-04-01/Accounts/{accountSid}"; BodyEncoding = "Form" }
+
+    # Monitoring / RH (2026-09-30, choix explicite de Kader : "les plus
+    # simples a integrer"). Cle du dictionnaire = "monitoring"/"calendar_hr"
+    # (le nom du connecteur catalogue, INCHANGE — le security gate en
+    # depend pour certains Workers), mais Provider pointe vers le VRAI
+    # fournisseur choisi, pour un nom de fichier d'identifiant clair
+    # (<ClientId>/uptimerobot.json, pas <ClientId>/monitoring.json).
+    #
+    # UptimeRobot : API v2 entierement en POST, cle envoyee DANS LE CORPS
+    # (pas un header) — le seul connecteur de ce fichier dans ce cas, d'ou
+    # le nouveau AuthType "PostFormKey". Secret = JSON {"api_key":"..."}.
+    "monitoring" = @{ Provider = "uptimerobot"; AuthType = "PostFormKey"; AuthParamName = "api_key"; BaseUrl = "https://api.uptimerobot.com/v2"; BodyEncoding = "Form" }
+
+    # BambooHR : Basic Auth, cle API en nom d'utilisateur, "x" en mot de
+    # passe (standard BambooHR, pas un mot de passe reel). Secret = JSON
+    # {"user":"<cle API BambooHR>","pass":"x","companyDomain":"tonentreprise"}.
+    "calendar_hr" = @{ Provider = "bamboohr"; AuthType = "BasicUserPwd"; BaseUrlTemplate = "https://api.bamboohr.com/api/gateway.php/{companyDomain}/v1" }
 }
 
 function Test-ConnectorConfigured {
@@ -200,8 +217,18 @@ function Invoke-ConnectorRequest {
                     $Headers["Authorization"] = "Basic " + [System.Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($Pair))
                 }
                 if ($Cfg.BaseUrlTemplate) {
-                    $BaseUrl = $Cfg.BaseUrlTemplate -replace '\{subdomain\}', $Parsed.subdomain -replace '\{site\}', $Parsed.site -replace '\{accountSid\}', $Parsed.user
+                    $BaseUrl = $Cfg.BaseUrlTemplate -replace '\{subdomain\}', $Parsed.subdomain -replace '\{site\}', $Parsed.site -replace '\{accountSid\}', $Parsed.user -replace '\{companyDomain\}', $Parsed.companyDomain
                 }
+            }
+            "PostFormKey"   {
+                # Cle envoyee DANS LE CORPS POST (pas un header ni la query
+                # string) — API UptimeRobot. $Secret est le JSON brut
+                # {"api_key":"..."} : on l'utilise directement comme corps
+                # de base, fusionne avec celui de l'operation le cas echeant.
+                $Parsed = $Secret | ConvertFrom-Json
+                if (-not $Body) { $Body = @{} }
+                $Body[$Cfg.AuthParamName] = $Parsed.($Cfg.AuthParamName)
+                $Body["format"] = "json"
             }
             "QueryParam"    { $QueryExtra[$Cfg.QueryParamName] = $Secret }
             "QueryJson"     {

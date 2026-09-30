@@ -704,7 +704,10 @@
         "READ_STATUS",
         "SEARCH_INCIDENTS"
       ],
-      "note": "Categorie generique sans produit reel nomme derriere : reste enabled=true (necessaire au security gate, voir Resolve-FullAuthorizationChain.ps1 et l'incident du 2026-09-30), mais sans realAdapter donc jamais montree comme reelle a un client (voir realIntegration cote server.py)."
+      "realAdapter": {
+        "path": "core/integrations/Connector-Dispatch.ps1 -> core/integrations/Generic-REST-Adapter.ps1 (UptimeRobot)",
+        "note": "Ajoute le 2026-09-30 sur choix explicite de Kader (le plus simple a integrer : cle API unique, pas d'app OAuth a enregistrer). Categorie/provider du catalogue INCHANGES (MONITORING) - le security gate en depend pour Sam/Ines/Amina/Rayan (voir Resolve-FullAuthorizationChain.ps1) - seul le vrai fournisseur derriere (UptimeRobot) change, via le mapping credential CONNECTOR_ID_TO_CREDENTIAL_PROVIDER cote server.py. NOT_CONFIGURED tant qu'aucune cle UptimeRobot n'est enregistree pour ce client. Chemins d'API non testes en direct (pas de compte disponible) : a verifier au premier vrai test."
+      }
     },
     {
       "connectorId": "calendar_hr.controlled",
@@ -718,7 +721,10 @@
         "READ_EMPLOYEE_RECORD",
         "SEARCH_CANDIDATES"
       ],
-      "note": "Categorie generique sans produit reel nomme derriere : reste enabled=true (necessaire au security gate, voir Resolve-FullAuthorizationChain.ps1 et l'incident du 2026-09-30), mais sans realAdapter donc jamais montree comme reelle a un client (voir realIntegration cote server.py)."
+      "realAdapter": {
+        "path": "core/integrations/Connector-Dispatch.ps1 -> core/integrations/Generic-REST-Adapter.ps1 (BambooHR)",
+        "note": "Ajoute le 2026-09-30 sur choix explicite de Kader (Basic Auth simple, pas d'app OAuth a enregistrer, tres repandu en TPE/PME). Categorie/provider du catalogue INCHANGES (HR_PLATFORM) - le security gate en depend pour Sophie (voir Resolve-FullAuthorizationChain.ps1) - seul le vrai fournisseur derriere (BambooHR) change, via CONNECTOR_ID_TO_CREDENTIAL_PROVIDER cote server.py. NOT_CONFIGURED tant qu'aucune cle BambooHR n'est enregistree pour ce client. Chemins d'API non testes en direct (pas de compte disponible) : a verifier au premier vrai test."
+      }
     },
     {
       "connectorId": "twilio.controlled",

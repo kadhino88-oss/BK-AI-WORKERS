@@ -427,6 +427,28 @@ $Script:OperationTable = @{
             "SEARCH_ASSETS" = { param($P) @{ Path = "files/$($P.FileKey)"; Method = "GET" } }
         }
     }
+
+    # ---------------- MONITORING (UptimeRobot) / RH (BambooHR) —
+    # 2026-09-30, choix explicite de Kader ("les plus simples a integrer").
+    # Cle "monitoring"/"calendar_hr" volontairement INCHANGEE (nom du
+    # connecteur catalogue dont depend le security gate) ; c'est
+    # Generic-REST-Adapter.ps1 qui sait que ca pointe reellement vers
+    # UptimeRobot/BambooHR (voir son Provider dans $Script:ConnectorConfig).
+    "monitoring" = @{
+        AdapterType = "Rest"
+        Operations = @{
+            # UptimeRobot : API entierement en POST, meme pour lire.
+            "READ_STATUS"      = { param($P) @{ Path = "getMonitors"; Method = "POST"; Body = @{} } }
+            "SEARCH_INCIDENTS" = { param($P) @{ Path = "getMonitors"; Method = "POST"; Body = @{ logs = 1 } } }
+        }
+    }
+    "calendar_hr" = @{
+        AdapterType = "Rest"
+        Operations = @{
+            "READ_EMPLOYEE_RECORD" = { param($P) @{ Path = "employees/$($P.Id)/"; Method = "GET" } }
+            "SEARCH_CANDIDATES"    = { param($P) @{ Path = "applicant_tracking/applications"; Method = "GET" } }
+        }
+    }
 }
 
 function Get-ConnectorBaseId {

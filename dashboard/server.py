@@ -725,14 +725,21 @@ CLIENT_CONNECTOR_PROVIDERS = {
     "dropbox", "linkedin", "facebook", "instagram", "tiktok", "x_twitter",
     "meta_ads", "whatsapp_business", "gmail", "google_calendar", "google_drive",
     "google_search_console", "google_ads", "outlook_mail", "outlook_calendar",
-    "teams", "onedrive", "salesforce", "twilio",
+    "teams", "onedrive", "salesforce", "twilio", "monitoring", "calendar_hr",
 }
 
 # Le connectorId du catalogue ("calendar") ne correspond pas toujours au
 # nom de fichier d'identifiant ("google_calendar", voir OAuth2-Adapter.ps1
 # $Script:OAuthConnectorConfig) — seule cette entree differe, toutes les
 # autres sont identiques (verifie contre core/integrations/*.ps1).
-CONNECTOR_ID_TO_CREDENTIAL_PROVIDER = {"calendar": "google_calendar"}
+CONNECTOR_ID_TO_CREDENTIAL_PROVIDER = {
+    "calendar": "google_calendar",
+    # 2026-09-30 : le connecteur catalogue garde son nom generique
+    # (le security gate en depend pour certains Workers), mais le VRAI
+    # fournisseur choisi par Kader a son propre fichier d'identifiant.
+    "monitoring": "uptimerobot",
+    "calendar_hr": "bamboohr",
+}
 
 
 def get_client_configured_providers(client_id):

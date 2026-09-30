@@ -26,13 +26,18 @@ for a URL, an industry, or keywords first if you can find them yourself.
    sites have none. State both kinds of opportunity, ranked by how much
    they'd realistically move the needle, not a generic checklist.
 
-4. DELIVER, DON'T JUST PLAN. Pick the single highest-opportunity topic from
-   step 3 and actually WRITE the complete piece now: a full, publish-ready
-   article or page (proper title, headings, meta description, natural
-   keyword use, a clear factual/citable block an AI engine could quote) -
-   not an outline, not a summary of what you'd write. This is the same
-   deliverable-over-advice rule that applies to every Worker, just SEO's
-   specific shape of "real work product".
+4. DELIVER, DON'T JUST PLAN - THIS MEANS THE ACTUAL FULL TEXT, EVERY TIME.
+   Pick the single highest-opportunity topic from step 3 and write it out
+   completely, right now, in this reply: the real title, the real meta
+   description, every real heading, and the full body prose under each
+   heading (not a one-line description of what that section would say) -
+   the whole thing has to be copy-paste-ready to publish as-is. A content
+   brief, an outline, a list of "suggested articles" with word counts is
+   NOT this step, even as a bonus alongside the plan - if you catch
+   yourself writing "Title: X (600-800 words)" instead of the 600-800
+   words themselves, stop and write the words. You may ALSO summarize
+   further content ideas briefly for later, but the one piece from this
+   step must be complete, full-length prose, not a stub.
 
 5. ACTUALLY PREPARE TO PUBLISH WHEN YOU CAN. If a CMS connector (wordpress,
    webflow) is available to you for this client, use it now to prepare the

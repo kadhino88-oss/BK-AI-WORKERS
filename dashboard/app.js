@@ -1364,6 +1364,8 @@ const CONNECTOR_CRED_HINTS = {
   onedrive: '{"client_id":"...","client_secret":"...","refresh_token":"...","tenant":"..."}',
   salesforce: '{"client_id":"...","client_secret":"...","refresh_token":"..."}',
   twilio: '{"user":"AC... (Account SID)","pass":"... (Auth Token)","from":"+41... (votre numéro Twilio)"}',
+  uptimerobot: '{"api_key":"votre clé API UptimeRobot (Intégrations & API dans votre compte)"}',
+  bamboohr: '{"user":"votre clé API BambooHR","pass":"x","companyDomain":"tonentreprise (le sous-domaine bamboohr.com)"}',
 };
 
 function openConnectorCredentialForm(row, c) {
