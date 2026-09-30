@@ -489,6 +489,49 @@ function Invoke-ConnectorAction {
         return $Publish
     }
 
+    if ($BaseId -eq "twilio" -and $Operation -eq "PLACE_CALL") {
+        # Telephonie reelle (2026-09-30) : pas exprimable comme un simple
+        # (Path, Method, Body) comme le reste de la table — il faut lire
+        # "from" depuis le secret du client (le Worker ne le connait pas)
+        # et construire le TwiML a la volee a partir du message du Worker.
+        if (-not (Test-ConnectorConfigured -ConnectorId "twilio" -ClientId $ClientId)) {
+            return [pscustomobject]@{ Status = "NOT_CONFIGURED"; Detail = "Aucun compte Twilio enregistre pour ce compte." }
+        }
+        $To = [string]$Params.To
+        $Message = [string]$Params.Message
+        if ([string]::IsNullOrWhiteSpace($To) -or $To -notmatch '^\+[1-9]\d{6,14}$') {
+            return [pscustomobject]@{ Status = "ERROR"; Detail = "Numero invalide : 'To' doit etre au format E.164 (ex: +41791234567)."; Live = $false }
+        }
+        if ([string]::IsNullOrWhiteSpace($Message)) {
+            return [pscustomobject]@{ Status = "ERROR"; Detail = "'Message' (texte a dire au telephone) est requis."; Live = $false }
+        }
+        if ($Message.Length -gt 1500) {
+            return [pscustomobject]@{ Status = "ERROR"; Detail = "Message trop long pour un appel (1500 caracteres max)."; Live = $false }
+        }
+        try {
+            $Secret = Get-ConnectorSecretRaw -ConnectorId "twilio" -ClientId $ClientId | ConvertFrom-Json
+            if (-not $Secret.from) {
+                return [pscustomobject]@{ Status = "ERROR"; Detail = "Identifiant Twilio incomplet : 'from' (votre numero Twilio) manquant."; Live = $false }
+            }
+            $EscapedMessage = [System.Security.SecurityElement]::Escape($Message)
+            $Lang = if ($env:BK_REPLY_LANG -eq "English") { "en-US" } else { "fr-FR" }
+            $Twiml = "<Response><Say language=`"$Lang`">$EscapedMessage</Say></Response>"
+            $Pair = "$($Secret.user):$($Secret.pass)"
+            $AuthHeader = "Basic " + [System.Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($Pair))
+            $Body = "To=$([Uri]::EscapeDataString($To))&From=$([Uri]::EscapeDataString([string]$Secret.from))&Twiml=$([Uri]::EscapeDataString($Twiml))"
+            $Response = Invoke-RestMethod `
+                -Uri "https://api.twilio.com/2010-04-01/Accounts/$($Secret.user)/Calls.json" `
+                -Method Post -Headers @{ Authorization = $AuthHeader } `
+                -ContentType "application/x-www-form-urlencoded" -Body $Body -TimeoutSec 20
+            return [pscustomobject]@{
+                Status = "SUCCESS"; Detail = "Appel reel place vers $To."; Live = $true
+                Data = @{ CallSid = $Response.sid; TwilioStatus = $Response.status }
+            }
+        } catch {
+            return [pscustomobject]@{ Status = "ERROR"; Detail = $_.Exception.Message; Live = $true }
+        }
+    }
+
     $Entry = $Script:OperationTable[$BaseId]
     if (-not $Entry) {
         return [pscustomobject]@{ Status = "UNKNOWN_CONNECTOR"; Detail = $BaseId }

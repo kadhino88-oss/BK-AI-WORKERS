@@ -1186,6 +1186,7 @@ const CONNECTOR_CATEGORY_LABELS = {
   ECOMMERCE: "E-commerce", PAYMENT: "Paiement", ACCOUNTING: "Comptabilité", COMMUNICATION: "Messagerie",
   STORAGE: "Stockage de fichiers", WEB_ANALYTICS: "Analyse web", ADVERTISING: "Publicité",
   PROJECT_MANAGEMENT: "Gestion de projet", SUPPORT: "Support client", DESIGN: "Design", MONITORING: "Surveillance", HR: "Ressources humaines",
+  TELEPHONY: "Téléphonie",
 };
 
 async function loadConnectors() {
@@ -1362,6 +1363,7 @@ const CONNECTOR_CRED_HINTS = {
   teams: '{"client_id":"...","client_secret":"...","refresh_token":"...","tenant":"..."}',
   onedrive: '{"client_id":"...","client_secret":"...","refresh_token":"...","tenant":"..."}',
   salesforce: '{"client_id":"...","client_secret":"...","refresh_token":"..."}',
+  twilio: '{"user":"AC... (Account SID)","pass":"... (Auth Token)","from":"+41... (votre numéro Twilio)"}',
 };
 
 function openConnectorCredentialForm(row, c) {

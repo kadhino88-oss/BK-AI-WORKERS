@@ -138,6 +138,7 @@ $Script:OperationParamHints = @{
     "figma:READ_ASSET" = "FileKey"
     "figma:SEARCH_ASSETS" = "FileKey"
     "slack:POST_MESSAGE" = "Text, WorkerName"
+    "twilio:PLACE_CALL" = "To (numero E.164, ex: +41791234567), Message (texte que le Worker doit dire au telephone, en langage naturel)"
     "slack:DRAFT_MESSAGE" = "Text"
     "stripe:READ_CUSTOMER" = "Id"
     "stripe:CREATE_REFUND" = "ChargeId, Amount (optionnel, en centimes — total si omis)"
@@ -192,6 +193,10 @@ function Build-ConnectorToolDefinition {
     foreach ($ConnId in $Activated) {
         if ($ConnId -eq "slack") {
             $Lines += "- slack : SEARCH_MESSAGES, DRAFT_MESSAGE (prepare), POST_MESSAGE (envoie reellement, params: Text)"
+            continue
+        }
+        if ($ConnId -eq "twilio") {
+            $Lines += "- twilio : PLACE_CALL (place un vrai appel telephonique, params: To, Message)"
             continue
         }
         $Entry = $Script:OperationTable[$ConnId]

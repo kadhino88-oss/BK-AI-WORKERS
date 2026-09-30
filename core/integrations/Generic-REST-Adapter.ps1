@@ -59,6 +59,15 @@ $Script:ConnectorConfig = @{
     # Kader (utilisee ailleurs, separement, pour la facturation de la
     # plateforme — voir Stripe-Bridge.ps1). Phase 4 (2026-09-24).
     "stripe" = @{ Provider = "stripe"; AuthType = "Bearer"; BaseUrl = "https://api.stripe.com/v1"; BodyEncoding = "Form" }
+
+    # Telephonie reelle (2026-09-30, demande explicite de Kader pour se
+    # rapprocher de Delos). Secret = JSON {"user":"AC...","pass":"...",
+    # "from":"+41..."} — user/pass sont l'Account SID / Auth Token Twilio
+    # (Basic Auth standard de leur API), "from" le numero Twilio du
+    # client. Le veritable appel (construction du TwiML, URL avec
+    # {accountSid}) est fait a part dans Connector-Dispatch.ps1 — cette
+    # entree ne sert ici qu'a Test-ConnectorConfigured / Get-ConnectorSecretRaw.
+    "twilio" = @{ Provider = "twilio"; AuthType = "BasicUserPwd"; BaseUrlTemplate = "https://api.twilio.com/2010-04-01/Accounts/{accountSid}"; BodyEncoding = "Form" }
 }
 
 function Test-ConnectorConfigured {
@@ -191,7 +200,7 @@ function Invoke-ConnectorRequest {
                     $Headers["Authorization"] = "Basic " + [System.Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($Pair))
                 }
                 if ($Cfg.BaseUrlTemplate) {
-                    $BaseUrl = $Cfg.BaseUrlTemplate -replace '\{subdomain\}', $Parsed.subdomain -replace '\{site\}', $Parsed.site
+                    $BaseUrl = $Cfg.BaseUrlTemplate -replace '\{subdomain\}', $Parsed.subdomain -replace '\{site\}', $Parsed.site -replace '\{accountSid\}', $Parsed.user
                 }
             }
             "QueryParam"    { $QueryExtra[$Cfg.QueryParamName] = $Secret }

@@ -89,7 +89,7 @@
         "SEARCH_CONTACTS",
         "CREATE_TASK"
       ],
-      "note": "Categorie generique sans produit reel nomme derriere (voir Salesforce/HubSpot/Pipedrive) : desactive le 2026-09-30 pour ne plus afficher un etat 'Active' sans aucun appel possible."
+      "note": "Categorie generique sans produit reel nomme derriere : reste enabled=true (necessaire au security gate, voir Resolve-FullAuthorizationChain.ps1 et l'incident du 2026-09-30), mais sans realAdapter donc jamais montree comme reelle a un client (voir realIntegration cote server.py)."
     },
     {
       "connectorId": "salesforce.controlled",
@@ -159,7 +159,7 @@
         "READ_POSTS",
         "CREATE_DRAFT_POST"
       ],
-      "note": "Categorie generique sans produit reel nomme derriere (voir LinkedIn/Instagram/Facebook/TikTok/X) : desactive le 2026-09-30 pour ne plus afficher un etat 'Active' sans aucun appel possible."
+      "note": "Categorie generique sans produit reel nomme derriere : reste enabled=true (necessaire au security gate, voir Resolve-FullAuthorizationChain.ps1 et l'incident du 2026-09-30), mais sans realAdapter donc jamais montree comme reelle a un client (voir realIntegration cote server.py)."
     },
     {
       "connectorId": "linkedin.controlled",
@@ -504,7 +504,7 @@
         "READ_REPORT",
         "SEARCH_METRICS"
       ],
-      "note": "Categorie generique sans produit reel nomme derriere (voir Google Search Console) : desactive le 2026-09-30 pour ne plus afficher un etat 'Active' sans aucun appel possible."
+      "note": "Categorie generique sans produit reel nomme derriere : reste enabled=true (necessaire au security gate, voir Resolve-FullAuthorizationChain.ps1 et l'incident du 2026-09-30), mais sans realAdapter donc jamais montree comme reelle a un client (voir realIntegration cote server.py)."
     },
     {
       "connectorId": "google_search_console.controlled",
@@ -659,7 +659,7 @@
         "READ_ASSET",
         "CREATE_DRAFT_ASSET"
       ],
-      "note": "Categorie generique sans produit reel nomme derriere (voir Figma) : desactive le 2026-09-30 pour ne plus afficher un etat 'Active' sans aucun appel possible."
+      "note": "Categorie generique sans produit reel nomme derriere : reste enabled=true (necessaire au security gate, voir Resolve-FullAuthorizationChain.ps1 et l'incident du 2026-09-30), mais sans realAdapter donc jamais montree comme reelle a un client (voir realIntegration cote server.py)."
     },
     {
       "connectorId": "canva.controlled",
@@ -673,7 +673,7 @@
         "READ_ASSET",
         "CREATE_DRAFT_ASSET"
       ],
-      "note": "Aucun adaptateur reel branche pour Canva : desactive le 2026-09-30 pour ne plus afficher un etat 'Active' sans aucun appel possible."
+      "note": "Aucun adaptateur reel branche pour Canva : reste enabled=true (necessaire au security gate), mais sans realAdapter donc jamais montre comme reel a un client (voir realIntegration cote server.py)."
     },
     {
       "connectorId": "figma.controlled",
@@ -704,7 +704,7 @@
         "READ_STATUS",
         "SEARCH_INCIDENTS"
       ],
-      "note": "Categorie generique sans produit reel nomme derriere : desactive le 2026-09-30 pour ne plus afficher un etat 'Active' sans aucun appel possible."
+      "note": "Categorie generique sans produit reel nomme derriere : reste enabled=true (necessaire au security gate, voir Resolve-FullAuthorizationChain.ps1 et l'incident du 2026-09-30), mais sans realAdapter donc jamais montree comme reelle a un client (voir realIntegration cote server.py)."
     },
     {
       "connectorId": "calendar_hr.controlled",
@@ -718,7 +718,23 @@
         "READ_EMPLOYEE_RECORD",
         "SEARCH_CANDIDATES"
       ],
-      "note": "Categorie generique sans produit reel nomme derriere : desactive le 2026-09-30 pour ne plus afficher un etat 'Active' sans aucun appel possible."
+      "note": "Categorie generique sans produit reel nomme derriere : reste enabled=true (necessaire au security gate, voir Resolve-FullAuthorizationChain.ps1 et l'incident du 2026-09-30), mais sans realAdapter donc jamais montree comme reelle a un client (voir realIntegration cote server.py)."
+    },
+    {
+      "connectorId": "twilio.controlled",
+      "provider": "TWILIO",
+      "category": "TELEPHONY",
+      "adapterId": "twilio.default",
+      "adapterVersion": "1.0.0",
+      "status": "CONTROLLED",
+      "enabled": true,
+      "operations": [
+        "PLACE_CALL"
+      ],
+      "realAdapter": {
+        "path": "core/integrations/Connector-Dispatch.ps1 (cas special twilio/PLACE_CALL)",
+        "note": "Ajoute le 2026-09-30 sur demande explicite de Kader (telephonie reelle, comme Delos). Place un vrai appel via l'API Twilio (TwiML <Say> genere a la volee) : NOT_CONFIGURED tant qu'aucun identifiant Twilio (Account SID/Auth Token/numero) n'est enregistre pour ce client. Soumis au meme gate d'autonomie que le reste (jamais execute sans confirmation, sauf auto-approve explicite du client)."
+      }
     }
   ]
 }
