@@ -3053,7 +3053,10 @@ document.getElementById("account-cancel-btn-1").addEventListener("click", closeA
 document.getElementById("account-cancel-btn-2").addEventListener("click", closeAccountModal);
 document.getElementById("account-signup-btn").addEventListener("click", submitAccountSignup);
 document.getElementById("account-login-btn").addEventListener("click", submitAccountLogin);
-document.getElementById("account-owner-btn").addEventListener("click", switchToOwnerLogin);
+// 2026-09-30 : deplace du modal d'inscription client (Kader : "ca fait pas
+// pro" d'avoir l'acces admin mele au parcours d'inscription de ses propres
+// clients) vers un lien discret en pied de page, comme la plupart des sites.
+document.getElementById("footer-owner-btn").addEventListener("click", switchToOwnerLogin);
 document.getElementById("analytics-connect-required").querySelector("button").addEventListener("click", () => requireAccount(() => loadAnalytics()));
 document.getElementById("billing-connect-required").querySelector("button").addEventListener("click", () => requireAccount(() => loadBilling()));
 document.getElementById("billing-connect-pricing-link").addEventListener("click", (e) => {

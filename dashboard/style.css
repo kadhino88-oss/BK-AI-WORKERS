@@ -2368,6 +2368,18 @@ a:focus-visible,
 
 .footer-address { display: block; line-height: 1.6; }
 
+.footer-owner-link {
+  background: none;
+  border: none;
+  color: var(--dark-panel-muted);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+  opacity: 0.7;
+  transition: opacity 0.15s ease, color 0.15s ease;
+}
+.footer-owner-link:hover { opacity: 1; color: var(--gold-light); }
+
 .footer-bottom {
   max-width: 1240px;
   margin: 0 auto;
@@ -2376,6 +2388,7 @@ a:focus-visible,
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 16px;
   flex-wrap: wrap;
   gap: 12px;
 }
