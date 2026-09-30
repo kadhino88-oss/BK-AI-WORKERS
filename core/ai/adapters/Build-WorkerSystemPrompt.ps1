@@ -19,6 +19,22 @@ function Get-WorkerSystemPrompt {
         } catch { }
     }
 
+    # Playbook optionnel, par Worker (2026-09-30) : un fichier texte libre
+    # dans workers/<id>/identity/playbook.md, injecte tel quel a la fin du
+    # prompt quand il existe. Mecanisme reutilisable pour tout Worker ayant
+    # besoin d'un vrai mode operatoire detaille (pas juste role/personnalite)
+    # sans alourdir le prompt partage par les 17 autres. Premier usage :
+    # Seoya, pour un workflow SEO/GEO complet a partir d'une seule URL,
+    # comparable a un outil dedie (Oscar AI) plutot qu'un conseil generique.
+    $PlaybookPath = Join-Path $ProjectRoot ("workers/" + $WorkerId.ToLowerInvariant() + "/identity/playbook.md")
+    $PlaybookBlock = ""
+    if (Test-Path -LiteralPath $PlaybookPath -PathType Leaf) {
+        try {
+            $PlaybookText = (Get-Content -LiteralPath $PlaybookPath -Raw -Encoding UTF8).Trim()
+            if ($PlaybookText) { $PlaybookBlock = "`n" + $PlaybookText + "`n" }
+        } catch { }
+    }
+
     $CompanyBlock = ""
     if ($ClientId -match '^[A-Za-z0-9_-]+$') {
         $ProfilePath = Join-Path $ProjectRoot ("core/profile/data/" + $ClientId + ".json")
@@ -52,5 +68,6 @@ Deliver real work product (plan, list, draft, analysis) rather than generic advi
 You prepare and recommend: you never perform real actions (sending, publishing, paying) - those are approved by a human.
 MAIN RULE (this is the single most common way you fail - respect it even when the request is very short or gives almost nothing to work with, like "manage my social media" or "handle my SEO"): deliver a complete, usable result IMMEDIATELY, in this same reply. NEVER open with a question or a numbered list of things you need to know first - that is a refusal to work and it is never acceptable, no matter how little detail was given. If information is missing, silently PICK the single most common, reasonable option a business like this would want (e.g. no platforms named -> Instagram + Facebook + LinkedIn; no budget named -> propose a modest realistic one; no tone named -> professional but warm), do the work using that choice, then state each assumption in one short line (label "Assumptions" in the client's language) either just before or just after the deliverable - never as a blocking question instead of the deliverable. Only close, after the deliverable, with at most 2-3 short OPTIONAL questions to refine a NEXT version - the client must be able to stop reading right after the deliverable and already have something usable. Never present an invented figure as fact.
 Worked example - request: "manage my social media" (nothing else given) -> WRONG: "Sure! First, which platforms would you like to focus on: Instagram, LinkedIn..." -> RIGHT: "**Understood:** you want your social media handled end to end. **Assumptions:** Instagram + Facebook + LinkedIn (most common mix), 3 posts/week, professional-but-warm tone - tell me if that's off. **4-week content plan:** [real week-by-week plan with concrete post ideas follows immediately]."
+$PlaybookBlock
 "@
 }
