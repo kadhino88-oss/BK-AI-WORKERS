@@ -1156,7 +1156,16 @@ def get_connector_catalog(client_id=None):
     Si client_id est fourni, ajoute l'etat d'activation PROPRE a ce
     client (jamais partage entre clients, comme ses automatisations)."""
     data = load_json(CONNECTOR_CATALOG_PATH, {"liveExecutionEnabled": False, "connectors": []})
-    connectors = data.get("connectors", [])
+    # Doublons purs (2026-09-30, demande explicite de Kader) : ces 3
+    # categories generiques ne designent aucun produit et font double
+    # emploi avec des connecteurs reels deja lister a cote (crm ->
+    # Salesforce/HubSpot/Pipedrive, social_media -> LinkedIn/Instagram/
+    # Facebook/TikTok/X, design -> Figma). On les retire entierement de
+    # l'affichage (pas seulement "Bientot") : leur entree CATALOGUE reste
+    # enabled=true (le security gate en depend toujours pour certains
+    # Workers), seul ce qui est montre au client change.
+    HIDDEN_DUPLICATE_CONNECTORS = {"crm.controlled", "social_media.controlled", "design.controlled"}
+    connectors = [c for c in data.get("connectors", []) if c.get("connectorId") not in HIDDEN_DUPLICATE_CONNECTORS]
     activated = _load_client_connectors(client_id) if client_id else set()
     # 2026-09-24 : "configure" = ce client a enregistre SON PROPRE
     # identifiant (fichier present dans son espace chiffre) — distinct
