@@ -183,14 +183,31 @@ function syncAdminNavVisibility() {
 
 function syncAccountButtonLabel() {
   const btn = document.getElementById("topbar-account-btn");
+  const logoutBtn = document.getElementById("topbar-logout-btn");
   if (!btn) return;
   if (!accountAuthenticated) {
     btn.textContent = "Se connecter";
   } else if (isOperator) {
     btn.textContent = "Mon compte (propriétaire)";
   } else {
-    btn.textContent = "Mon compte";
+    btn.textContent = "Mon compte (client)";
   }
+  if (logoutBtn) logoutBtn.hidden = !accountAuthenticated;
+}
+
+// Deconnexion complete (2026-09-30) : avant, aucun bouton ne deconnectait
+// jamais rien — une session compte client restee active masquait le mode
+// propriétaire indefiniment, sans aucun moyen de s'en sortir depuis
+// l'interface (signale par Kader : plusieurs outils bloques sur "Bientot"
+// alors qu'il pensait etre connecte comme proprietaire). Efface les DEUX
+// sessions possibles (compte client ET porte proprietaire) a chaque fois,
+// pour ne plus jamais dependre de savoir laquelle est active.
+async function fullLogout() {
+  await Promise.allSettled([
+    fetchJson("/api/account/logout", { method: "POST" }),
+    fetchJson("/api/gate/logout", { method: "POST" }),
+  ]);
+  window.location.reload();
 }
 
 function requireGate(action) {
@@ -258,6 +275,7 @@ function switchToOwnerLogin() {
 
 async function afterAccountUnlocked() {
   accountAuthenticated = true;
+  syncAccountButtonLabel();
   document.getElementById("account-modal").hidden = true;
   const action = pendingAccountAction;
   pendingAccountAction = null;
@@ -2903,6 +2921,7 @@ document.getElementById("topbar-account-btn").addEventListener("click", () => {
   }
   showView(isOperator ? "admin" : "billing");
 });
+document.getElementById("topbar-logout-btn").addEventListener("click", fullLogout);
 
 const navLinksEl = document.querySelector(".nav-links");
 document.getElementById("mobile-menu-btn").addEventListener("click", () => {
