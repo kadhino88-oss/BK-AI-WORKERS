@@ -1565,7 +1565,8 @@ import phone_agent
 
 
 def _notify_owner_email(to, subject, html_body, text):
-    mailer.send_email(to, subject, html_body, text, gmail_bridge=run_mailer_bridge)
+    ok, err = mailer.send_email(to, subject, html_body, text, gmail_bridge=run_mailer_bridge)
+    print("[phone] email au proprietaire : " + ("envoye" if ok else f"ECHEC ({err})"), flush=True)
 
 
 PHONE_AGENT = phone_agent.PhoneAgent(ROOT, PS_CMD, notify=_notify_owner_email)
