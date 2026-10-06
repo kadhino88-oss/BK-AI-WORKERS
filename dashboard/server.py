@@ -1561,6 +1561,17 @@ def run_mailer_bridge(payload):
                 pass
 
 
+import phone_agent
+
+
+def _notify_owner_email(to, subject, html_body, text):
+    mailer.send_email(to, subject, html_body, text, gmail_bridge=run_mailer_bridge)
+
+
+PHONE_AGENT = phone_agent.PhoneAgent(ROOT, PS_CMD, notify=_notify_owner_email)
+PHONE_AGENT.warm_up()
+
+
 def _recent(bucket, key, window):
     now = time.time()
     rows = [t for t in bucket.get(key, []) if now - t < window]
@@ -2963,6 +2974,32 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(body_bytes)
             return
+        elif path == "/webhooks/twilio/voice":
+            # Standard telephonique (phone_agent.py). Public par nature : la
+            # protection est la signature Twilio, verifiee cote PowerShell.
+            try:
+                length = int(self.headers.get("Content-Length", 0) or 0)
+            except ValueError:
+                length = -1
+            if length < 0 or length > phone_agent.MAX_BODY_BYTES:
+                status, xml = 413, phone_agent.REJECT_TWIML
+            else:
+                raw = self.rfile.read(length) if length else b""
+                host = (self.headers.get("X-Forwarded-Host") or self.headers.get("Host") or "").split(",")[0].strip()
+                proto = (self.headers.get("X-Forwarded-Proto") or "https").split(",")[0].strip()
+                urls = [phone_agent.DEFAULT_WEBHOOK_URL]
+                if re.fullmatch(r"[A-Za-z0-9.\-]+(:\d+)?", host) and proto in ("http", "https"):
+                    derived = f"{proto}://{host}/webhooks/twilio/voice"
+                    if derived not in urls:
+                        urls.append(derived)
+                status, xml = PHONE_AGENT.handle(raw, self.headers.get("X-Twilio-Signature", ""), urls)
+            body_bytes = xml.encode("utf-8")
+            self.send_response(status)
+            self.send_header("Content-Type", "text/xml; charset=utf-8")
+            self.send_header("Content-Length", str(len(body_bytes)))
+            self.send_header("Cache-Control", "no-store")
+            self.end_headers()
+            self.wfile.write(body_bytes)
         elif path == "/webhooks/whatsapp":
             length = int(self.headers.get("Content-Length", 0))
             if length > 200000:

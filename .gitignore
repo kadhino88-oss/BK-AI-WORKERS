@@ -22,3 +22,6 @@ core/accounts/data/
 .DS_Store
 Thumbs.db
 *.log
+# Python bytecode (regenere a chaque execution, depend de la version de Python)
+__pycache__/
+*.pyc

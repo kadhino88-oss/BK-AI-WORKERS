@@ -1,0 +1,8 @@
+{
+  "companyLabel": "BK Entreprise et BK-AI-WORKERS",
+  "greeting": "Bonjour, vous êtes bien chez BK Entreprise et BK-AI-WORKERS, à Genève. Je suis l'assistante virtuelle de Kader. Comment puis-je vous aider ?",
+  "voice": "Google.fr-FR-Neural2-F",
+  "language": "fr-FR",
+  "notifyEmail": "kadhino88@gmail.com",
+  "knowledgeFile": "CLI-DASHBOARD.md"
+}
