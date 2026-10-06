@@ -1270,10 +1270,22 @@ async function loadConnectors() {
           actionsHtml += `<button type="button" class="connector-link-btn" data-disconnect="${c.credentialProvider}">Déconnecter</button>`;
           actionsHtml += `<label class="switch" title="Autoriser vos Workers à utiliser cet outil"><input type="checkbox" class="connector-switch" ${c.activatedByClient ? "checked" : ""}><span class="switch-track"></span><span class="switch-label">Workers autorisés</span></label>`;
         }
+      } else if (c.realIntegration && needsCred && c.connectGuide) {
+        // Connexion guidee (2026-10-06, demande de Kader : tous les outils
+        // doivent etre connectables facilement par les clients) : un
+        // formulaire par outil, etapes en francais, verification immediate.
+        actionsHtml = `<button type="button" class="connector-primary-btn ${connected ? "is-secondary" : ""} connector-guide-btn">${connected ? "Modifier" : "Connecter"}</button>`;
+        if (connected) {
+          actionsHtml += '<button type="button" class="connector-link-btn connector-test-btn">Tester</button>';
+          actionsHtml += `<button type="button" class="connector-link-btn" data-disconnect="${c.credentialProvider}">Déconnecter</button>`;
+          actionsHtml += `<label class="switch" title="Autoriser vos Workers à utiliser cet outil"><input type="checkbox" class="connector-switch" ${c.activatedByClient ? "checked" : ""}><span class="switch-track"></span><span class="switch-label">Workers autorisés</span></label>`;
+        }
       } else if (c.realIntegration && needsCred && !isOperator) {
-        // Pas de connexion en un clic pour cet outil pour l'instant : on
-        // n'exige JAMAIS de cle/jeton d'un client, on l'annonce comme a venir.
-        stateHtml = '<span class="cstate soon">Connexion en un clic bientôt</span>';
+        // Ni "Se connecter avec" ni formulaire guide pour cet outil (il faut
+        // d'abord une application chez le fournisseur) : pas d'impasse muette,
+        // le client peut demander a etre prevenu.
+        stateHtml = '<span class="cstate soon">Connexion en préparation</span>';
+        actionsHtml = '<button type="button" class="connector-link-btn connector-interest-btn">Me prévenir</button>';
       } else if (c.realIntegration && needsCred) {
         // Reserve au proprietaire (cles techniques).
         actionsHtml = `<button type="button" class="connector-primary-btn ${connected ? "is-secondary" : ""} connector-cred-btn" data-provider="${c.credentialProvider}">${connected ? "Modifier" : "Connecter"}</button>`;
@@ -1319,6 +1331,28 @@ async function loadConnectors() {
       if (needBtn) needBtn.addEventListener("click", () => requireAccount(() => loadConnectors()));
       const credBtn = row.querySelector(".connector-cred-btn");
       if (credBtn) credBtn.addEventListener("click", () => openConnectorCredentialForm(row, c));
+      const guideBtn = row.querySelector(".connector-guide-btn");
+      if (guideBtn) guideBtn.addEventListener("click", () => openGuidedConnectForm(row, c));
+      const testBtn = row.querySelector(".connector-test-btn");
+      if (testBtn) testBtn.addEventListener("click", async () => {
+        const label = testBtn.textContent;
+        testBtn.disabled = true; testBtn.textContent = "Test…";
+        try {
+          const r = await fetchJson(`/api/connectors/${c.credentialProvider}/test`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+          showToast(r.message || (r.ok ? "Connexion vérifiée." : "Vérification impossible."), !!(r.ok && r.verified));
+        } catch (e) { showToast(e.message || "Vérification impossible.", false); }
+        testBtn.disabled = false; testBtn.textContent = label;
+      });
+      const interestBtn = row.querySelector(".connector-interest-btn");
+      if (interestBtn) interestBtn.addEventListener("click", async () => {
+        interestBtn.disabled = true;
+        try {
+          const r = await fetchJson(`/api/connectors/${c.credentialProvider}/interest`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+          if (r.error === "ACCOUNT_REQUIRED") { interestBtn.disabled = false; requireAccount(() => loadConnectors()); return; }
+          interestBtn.textContent = "C'est noté ✓";
+          showToast("Merci ! Nous vous prévenons dès que " + brandName(c.provider) + " est connectable.");
+        } catch (e) { interestBtn.disabled = false; showToast(e.message || "Erreur, réessayez.", false); }
+      });
       card.appendChild(row);
     });
     gridEl.appendChild(card);
@@ -1437,6 +1471,110 @@ function openConnectorCredentialForm(row, c) {
       await loadConnectors();
     });
   }
+}
+
+// Formulaire de connexion guidee (2026-10-06) : etapes en francais, lien direct vers la
+// page du fournisseur, un champ par valeur, verification immediate cote serveur.
+// Rien de ce qui est saisi n'est conserve cote navigateur ; le serveur chiffre.
+function openGuidedConnectForm(row, c) {
+  document.querySelectorAll(".cg-overlay").forEach((o) => o.remove());
+  const g = c.connectGuide;
+  const label = g.label || brandName(c.provider);
+  const form = document.createElement("div");
+  form.className = "connector-guide-form";
+  form.innerHTML = `
+    <div class="cg-title">Connecter ${escapeHtml(label)}</div>
+    <ol class="cg-steps">${(g.steps || []).map((st) => `<li>${escapeHtml(st)}</li>`).join("")}</ol>
+    ${g.helpUrl ? `<a class="cg-help" href="${escapeHtml(g.helpUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(g.helpLabel || "Ouvrir")} ↗</a>` : ""}
+    <div class="cg-fields">
+      ${(g.fields || []).map((f) => `
+        <label class="cg-field">
+          <span class="cg-label">${escapeHtml(f.label)}</span>
+          <span class="cg-inputwrap">
+            <input type="${f.kind === "secret" ? "password" : "text"}" name="${escapeHtml(f.key)}" placeholder="${escapeHtml(f.placeholder || "")}" autocomplete="off" autocapitalize="off" spellcheck="false">
+            ${f.kind === "secret" ? '<button type="button" class="cg-eye" aria-label="Afficher ou masquer">Afficher</button>' : ""}
+          </span>
+          <span class="cg-error" hidden></span>
+        </label>`).join("")}
+    </div>
+    ${g.testNote ? `<div class="cg-note">${escapeHtml(g.testNote)}</div>` : ""}
+    <div class="cg-actions">
+      <button type="button" class="connector-primary-btn cg-submit">Connecter ${escapeHtml(label)}</button>
+      <button type="button" class="btn-small cg-cancel">Annuler</button>
+    </div>
+    <div class="cg-result" hidden></div>
+    <div class="cg-privacy">🔒 Vos identifiants sont chiffrés, ne sont jamais affichés ni partagés, et vous pouvez déconnecter l'outil à tout moment.</div>`;
+  // Fenetre centree (les cartes de la grille sont trop etroites pour un formulaire).
+  const overlay = document.createElement("div");
+  overlay.className = "cg-overlay";
+  overlay.setAttribute("role", "dialog");
+  overlay.setAttribute("aria-modal", "true");
+  overlay.setAttribute("aria-label", "Connecter " + label);
+  overlay.appendChild(form);
+  document.body.appendChild(overlay);
+  const closeForm = () => { overlay.remove(); document.removeEventListener("keydown", onEsc); };
+  const onEsc = (e) => { if (e.key === "Escape") closeForm(); };
+  document.addEventListener("keydown", onEsc);
+  overlay.addEventListener("mousedown", (e) => { if (e.target === overlay) closeForm(); });
+
+  const resultEl = form.querySelector(".cg-result");
+  const submit = form.querySelector(".cg-submit");
+  form.querySelector(".cg-cancel").addEventListener("click", closeForm);
+  form.querySelectorAll(".cg-eye").forEach((b) => b.addEventListener("click", () => {
+    const input = b.parentElement.querySelector("input");
+    const show = input.type === "password";
+    input.type = show ? "text" : "password";
+    b.textContent = show ? "Masquer" : "Afficher";
+  }));
+  const showResult = (msg, kind) => { resultEl.textContent = msg; resultEl.className = "cg-result " + kind; resultEl.hidden = false; };
+  const clearErrors = () => form.querySelectorAll(".cg-error").forEach((e) => { e.hidden = true; e.textContent = ""; });
+
+  const send = async () => {
+    clearErrors(); resultEl.hidden = true;
+    const fields = {};
+    let missing = false;
+    form.querySelectorAll(".cg-field input").forEach((input) => {
+      fields[input.name] = input.value;
+      if (!input.value.trim()) {
+        const err = input.closest(".cg-field").querySelector(".cg-error");
+        err.textContent = "Ce champ est obligatoire."; err.hidden = false; missing = true;
+      }
+    });
+    if (missing) return;
+    submit.disabled = true;
+    const idle = submit.textContent;
+    submit.textContent = "Vérification en cours…";
+    try {
+      const r = await fetchJson(`/api/connectors/${c.credentialProvider}/credential`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ fields }),
+      });
+      if (r.error === "ACCOUNT_REQUIRED") { requireAccount(() => loadConnectors()); return; }
+      if (r.error === "INVALID_FIELD") {
+        const input = form.querySelector(`.cg-field input[name="${CSS.escape(r.field || "")}"]`);
+        if (input) { const err = input.closest(".cg-field").querySelector(".cg-error"); err.textContent = r.message; err.hidden = false; input.focus(); }
+        else showResult(r.message || "Valeur invalide.", "bad");
+      } else if (r.error === "VERIFY_FAILED") {
+        showResult(r.message, "bad");
+      } else if (r.ok && r.verified) {
+        showToast(r.message || (label + " est connecté."));
+        closeForm();
+        await loadConnectors();
+        return;
+      } else if (r.ok) {
+        showResult(r.message, "warn");                       // enregistre mais pas encore verifie (reseau, droits...)
+        setTimeout(() => { closeForm(); loadConnectors(); }, 3500);
+      } else {
+        showResult(r.message || "Connexion impossible pour le moment. Réessayez.", "bad");
+      }
+    } catch (e) {
+      showResult(e.message || "Connexion impossible pour le moment. Réessayez.", "bad");
+    }
+    submit.disabled = false; submit.textContent = idle;
+  };
+  submit.addEventListener("click", send);
+  form.addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target.tagName === "INPUT") { e.preventDefault(); send(); } });
+  const first = form.querySelector(".cg-field input");
+  if (first) first.focus();
 }
 
 // ---------- TARIFS (proposition — voir strategie Suisse, a valider

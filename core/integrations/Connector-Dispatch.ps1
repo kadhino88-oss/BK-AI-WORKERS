@@ -460,6 +460,51 @@ function Get-ConnectorBaseId {
     return ($ConnectorId -replace '\.controlled$', '')
 }
 
+function Test-ConnectorConnection {
+    <#
+    2026-10-06 : verifie qu'un identifiant que le CLIENT vient d'enregistrer
+    fonctionne, par UN appel de lecture inoffensif defini dans
+    core/integrations/connect-guides.json (cle "test" de chaque fournisseur).
+    Ne renvoie JAMAIS les donnees recues (juste Status/Detail) : un test de
+    connexion ne doit rien divulguer. Seule exception : Slack, dont le webhook
+    ne sait qu'ecrire — un message de confirmation est poste dans le canal
+    que le client vient lui-meme de choisir.
+    #>
+    param(
+        [Parameter(Mandatory=$true)][string]$BaseId,
+        [Parameter(Mandatory=$true)][string]$ClientId
+    )
+
+    if ($BaseId -eq "slack") {
+        if (-not (Test-SlackConfigured -ClientId $ClientId)) {
+            return [pscustomobject]@{ Status = "NOT_CONFIGURED"; Detail = "Aucun webhook Slack enregistre pour ce compte." }
+        }
+        $R = Send-SlackMessage -ClientId $ClientId -Text "BK-AI-WORKERS est connecte a ce canal. Vos Workers pourront y ecrire, apres votre validation." -WorkerName "BK-AI-WORKERS"
+        return [pscustomobject]@{ Status = $(if ($R.Status -eq "SENT") { "SUCCESS" } else { "ERROR" }); Detail = [string]$R.Detail; Live = $true }
+    }
+
+    $Cfg = $Script:ConnectorConfig[$BaseId]
+    if (-not $Cfg) {
+        return [pscustomobject]@{ Status = "UNSUPPORTED_OPERATION"; Detail = "Pas de test de connexion pour $BaseId." }
+    }
+    $Root = if ($env:BK_ROOT) { $env:BK_ROOT } else { "C:/Users/FEUCOM/BK-AI-WORKERS" }
+    $Test = $null
+    try {
+        $Guides = Get-Content -LiteralPath (Join-Path $Root "core/integrations/connect-guides.json") -Raw -Encoding UTF8 | ConvertFrom-Json
+        $Test = $Guides.($Cfg.Provider).test
+    } catch { }
+    if (-not $Test -or -not $Test.method) {
+        return [pscustomobject]@{ Status = "UNSUPPORTED_OPERATION"; Detail = "Pas de test de connexion defini pour $($Cfg.Provider)." }
+    }
+    $TestBody = $null
+    if ($Test.body) {
+        $TestBody = @{}
+        $Test.body.PSObject.Properties | ForEach-Object { $TestBody[$_.Name] = $_.Value }
+    }
+    $R = Invoke-ConnectorRequest -ConnectorId $BaseId -ClientId $ClientId -Path ([string]$Test.path) -Method ([string]$Test.method) -Body $TestBody
+    return [pscustomobject]@{ Status = $R.Status; Detail = [string]$R.Detail; Live = $true }
+}
+
 function Invoke-ConnectorAction {
     <#
     Point d'entree unique : execute REELLEMENT une operation de
@@ -481,6 +526,10 @@ function Invoke-ConnectorAction {
     )
 
     $BaseId = Get-ConnectorBaseId -ConnectorId $ConnectorId
+
+    if ($Operation -eq "TEST_CONNECTION") {
+        return Test-ConnectorConnection -BaseId $BaseId -ClientId $ClientId
+    }
 
     if ($BaseId -eq "slack") {
         if ($Operation -ne "POST_MESSAGE" -and $Operation -ne "DRAFT_MESSAGE") {

@@ -741,6 +741,71 @@ CONNECTOR_ID_TO_CREDENTIAL_PROVIDER = {
     "calendar_hr": "bamboohr",
 }
 
+# Connexion guidee des outils pour les CLIENTS (2026-10-06, demande de Kader :
+# "les clients doivent connecter tous leurs outils le plus facilement possible").
+import connect_guides
+connect_guides.load_guides(os.path.join(ROOT, "core", "integrations", "connect-guides.json"))
+CRED_SAVE_RATE = {}            # client_id -> [timestamps]
+CRED_SAVE_MAX_PER_HOUR = 40
+
+
+def connector_id_for_provider(provider):
+    reverse = {v: k for k, v in CONNECTOR_ID_TO_CREDENTIAL_PROVIDER.items()}
+    return reverse.get(provider, provider) + ".controlled"
+
+
+def verify_client_tool(client_id, provider, just_saved=False):
+    """Un appel de LECTURE inoffensif chez le fournisseur (connect-guides.json, cle "test").
+    Retourne (payload, http_status). Jamais de donnees du fournisseur dans la reponse."""
+    guide = connect_guides.guide_for(provider) or {}
+    label = guide.get("label", provider)
+    connector_id = connector_id_for_provider(provider)
+    res = run_connector_dispatch_bridge(connector_id, "TEST_CONNECTION", {}, client_id)
+    if str(res.get("Status")) == "SUCCESS":
+        return {"ok": True, "connected": True, "verified": True, "message": f"{label} est connecté."}, 200
+    kind, message = connect_guides.classify_test_error(label, str(res.get("Detail") or ""))
+    if just_saved and kind in ("auth", "notfound"):
+        # Identifiants ou adresse faux : on n'en garde rien (sinon "Connecte" s'afficherait a tort).
+        store_client_connector_credential(client_id, provider, "")
+        toggle_client_connector(client_id, connector_id, False)
+        return {"ok": False, "error": "VERIFY_FAILED", "kind": kind, "message": message, "removed": True}, 200
+    return {"ok": just_saved, "connected": True, "verified": False, "kind": kind, "message": message}, 200
+
+
+CONNECTOR_INTEREST_PATH = os.path.join(ROOT, "core", "connectors", "data", "connector-interest.json")
+
+
+@_state_locked
+def record_connector_interest(client_id, provider):
+    """Bouton "Me prevenir" : l'outil n'est pas encore connectable (application a enregistrer
+    chez le fournisseur) — on garde qui le demande, pour prioriser et prevenir."""
+    data = load_json(CONNECTOR_INTEREST_PATH, {})
+    if not isinstance(data, dict):
+        data = {}
+    ids = data.setdefault(provider, [])
+    if client_id not in ids:
+        ids.append(client_id)
+    _write_json_atomic(CONNECTOR_INTEREST_PATH, data, ensure_ascii=False, indent=2)
+    return len(ids)
+
+
+def connect_client_tool(client_id, provider, fields):
+    if provider not in CLIENT_CONNECTOR_PROVIDERS or not connect_guides.guide_for(provider):
+        return {"ok": False, "error": "NO_GUIDE"}, 404
+    rows = _recent(CRED_SAVE_RATE, client_id, 3600)
+    if len(rows) >= CRED_SAVE_MAX_PER_HOUR:
+        return {"ok": False, "error": "RATE_LIMITED", "message": "Trop de tentatives. Réessayez dans une heure."}, 429
+    rows.append(time.time())
+    secret, err = connect_guides.build_secret(provider, fields)
+    if err:
+        return {"ok": False, "error": "INVALID_FIELD", "field": err["field"], "message": err["message"]}, 400
+    saved = store_client_connector_credential(client_id, provider, secret)
+    secret = None
+    if not saved.get("ok"):
+        return {"ok": False, "error": "STORE_FAILED", "message": "Enregistrement impossible pour le moment. Réessayez."}, 500
+    toggle_client_connector(client_id, connector_id_for_provider(provider), True)
+    return verify_client_tool(client_id, provider, just_saved=True)
+
 
 def get_client_configured_providers(client_id):
     """Connecteurs pour lesquels CE client a deja enregistre son propre
@@ -1205,6 +1270,7 @@ def get_connector_catalog(client_id=None):
             "clientCanConfigure": cred_key in CLIENT_CONNECTOR_PROVIDERS,
             "credentialProvider": cred_key,
             "oauthProvider": next((v for v, cfg in OAUTH_VENDORS.items() if cred_key in cfg["scopes"] and oauth_vendor_ready(v)), None),
+            "connectGuide": connect_guides.public_guide(cred_key) if cred_key in CLIENT_CONNECTOR_PROVIDERS else None,
         })
     return {
         "liveExecutionEnabled": data.get("liveExecutionEnabled", False),
@@ -3535,6 +3601,10 @@ class Handler(BaseHTTPRequestHandler):
                 body = json.loads(raw.decode("utf-8"))
             except Exception:
                 body = {}
+            if isinstance(body.get("fields"), dict):
+                payload, status = connect_client_tool(client_id, provider, body["fields"])
+                self._send_json(payload, status)
+                return
             value = (body.get("value") or "").strip()
             if len(value) > 4000:
                 self._send_json({"error": "VALUE_TOO_LONG"}, 400)
@@ -3548,6 +3618,29 @@ class Handler(BaseHTTPRequestHandler):
                 return
             result = store_client_connector_credential(client_id, provider, value)
             self._send_json(result, 200 if result.get("ok") else 400)
+        elif path.startswith("/api/connectors/") and path.endswith("/interest"):
+            client_id = self._resolve_client_id()
+            if not client_id:
+                self._send_account_required()
+                return
+            provider = path.split("/")[3]
+            if provider not in CLIENT_CONNECTOR_PROVIDERS:
+                self._send_json({"error": "UNKNOWN_PROVIDER"}, 404)
+                return
+            record_connector_interest(client_id, provider)
+            self._send_json({"ok": True})
+        elif path.startswith("/api/connectors/") and path.endswith("/test"):
+            # Re-verifie une connexion deja enregistree (bouton "Tester").
+            client_id = self._resolve_client_id()
+            if not client_id:
+                self._send_account_required()
+                return
+            provider = path.split("/")[3]
+            if provider not in CLIENT_CONNECTOR_PROVIDERS or provider not in get_client_configured_providers(client_id):
+                self._send_json({"error": "NOT_CONNECTED"}, 404)
+                return
+            payload, status = verify_client_tool(client_id, provider, just_saved=False)
+            self._send_json(payload, status)
         elif path == "/api/billing/plan":
             client_id = self._resolve_client_id()
             if not client_id:

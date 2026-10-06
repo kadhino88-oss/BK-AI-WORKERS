@@ -1,0 +1,635 @@
+{
+  "_comment": "Connexion guidee des outils pour les CLIENTS (2026-10-06, demande de Kader : tous les outils doivent etre connectables facilement). Une entree par fournisseur d'identifiants (credentialProvider). 'fields' : ce que le client saisit ; 'compose' : comment le serveur assemble le secret chiffre attendu par Generic-REST-Adapter.ps1 (raw = la valeur brute du champ unique ; json = objet JSON des champs, + 'constants'). 'test' : un appel LECTURE SEULE inoffensif execute apres l'enregistrement pour verifier que la connexion fonctionne (jamais d'ecriture, sauf Slack dont le webhook ne sait qu'ecrire : un message de test est poste). 'kind' des champs : text | secret | host (site web, nettoye en nom d'hote public) | subdomain (nom court d'un compte) | email | phone. Les etapes/URL sont a jour au 2026-10-06 ; si un fournisseur change son interface, ne corriger QUE ce fichier.",
+  "slack": {
+    "label": "Slack",
+    "compose": "raw",
+    "rawField": "webhook",
+    "helpUrl": "https://api.slack.com/apps?new_app=1",
+    "helpLabel": "Ouvrir Slack API",
+    "fields": [
+      {
+        "key": "webhook",
+        "label": "URL du webhook entrant",
+        "kind": "secret",
+        "placeholder": "https://hooks.slack.com/services/…",
+        "pattern": "^https://hooks\\.slack\\.com/services/[A-Za-z0-9/_-]+$"
+      }
+    ],
+    "steps": [
+      "Ouvrez l'écran « Create an app » de Slack (bouton ci-dessous) et choisissez « From scratch ».",
+      "Donnez un nom (ex. BK-AI-WORKERS) et choisissez votre espace de travail.",
+      "Menu « Incoming Webhooks » → activez-le → « Add New Webhook to Workspace ».",
+      "Choisissez le canal où vos Workers pourront écrire, puis copiez l'URL du webhook.",
+      "Collez-la ci-dessous : un message de test sera posté dans ce canal."
+    ],
+    "test": {
+      "special": "slack_webhook"
+    }
+  },
+  "trello": {
+    "label": "Trello",
+    "compose": "json",
+    "helpUrl": "https://trello.com/power-ups/admin",
+    "helpLabel": "Ouvrir Trello Power-Ups",
+    "fields": [
+      {
+        "key": "key",
+        "label": "Clé API",
+        "kind": "text"
+      },
+      {
+        "key": "token",
+        "label": "Jeton (token)",
+        "kind": "secret"
+      }
+    ],
+    "steps": [
+      "Ouvrez la page Power-Ups d'administration de Trello (bouton ci-dessous), créez un Power-Up « BK-AI-WORKERS » puis générez une clé API.",
+      "Copiez la « Clé API ».",
+      "Sur la même page, cliquez le lien « Jeton » (ou « Token ») et autorisez l'accès.",
+      "Copiez le jeton affiché et collez les deux valeurs ci-dessous."
+    ],
+    "test": {
+      "method": "GET",
+      "path": "members/me?fields=username"
+    }
+  },
+  "asana": {
+    "label": "Asana",
+    "compose": "raw",
+    "rawField": "token",
+    "helpUrl": "https://app.asana.com/0/my-apps",
+    "helpLabel": "Ouvrir Asana",
+    "fields": [
+      {
+        "key": "token",
+        "label": "Jeton d'accès personnel",
+        "kind": "secret"
+      }
+    ],
+    "steps": [
+      "Ouvrez « Mes applications » dans Asana (bouton ci-dessous).",
+      "Section « Personal access tokens » → « Create new token ».",
+      "Nommez-le BK-AI-WORKERS, copiez-le, puis collez-le ci-dessous."
+    ],
+    "test": {
+      "method": "GET",
+      "path": "users/me"
+    }
+  },
+  "monday": {
+    "label": "monday.com",
+    "compose": "raw",
+    "rawField": "token",
+    "helpUrl": "https://monday.com/",
+    "helpLabel": "Ouvrir monday.com",
+    "fields": [
+      {
+        "key": "token",
+        "label": "Jeton API personnel",
+        "kind": "secret"
+      }
+    ],
+    "steps": [
+      "Dans monday.com, cliquez votre photo (en bas à gauche) → « Developers ».",
+      "Menu « My access tokens » → « Show » puis copiez le jeton.",
+      "Collez-le ci-dessous."
+    ],
+    "test": {
+      "method": "POST",
+      "path": "",
+      "body": {
+        "query": "{ me { id } }"
+      }
+    }
+  },
+  "zendesk": {
+    "label": "Zendesk",
+    "compose": "zendesk",
+    "helpUrl": "https://www.zendesk.com/login/",
+    "helpLabel": "Ouvrir Zendesk",
+    "fields": [
+      {
+        "key": "subdomain",
+        "label": "Adresse de votre Zendesk",
+        "kind": "subdomain",
+        "placeholder": "monentreprise.zendesk.com",
+        "suffix": "zendesk.com"
+      },
+      {
+        "key": "email",
+        "label": "Votre email d'agent",
+        "kind": "email"
+      },
+      {
+        "key": "token",
+        "label": "Jeton d'API",
+        "kind": "secret"
+      }
+    ],
+    "steps": [
+      "Dans Zendesk, ouvrez le Centre d'administration → Apps et intégrations → API → « Zendesk API ».",
+      "Activez « Autoriser l'accès par jeton d'API », puis « Ajouter un jeton d'API ».",
+      "Copiez le jeton (il ne s'affiche qu'une fois).",
+      "Indiquez l'adresse de votre Zendesk et votre email d'agent ci-dessous."
+    ],
+    "test": {
+      "method": "GET",
+      "path": "users/me.json"
+    }
+  },
+  "intercom": {
+    "label": "Intercom",
+    "compose": "raw",
+    "rawField": "token",
+    "helpUrl": "https://app.intercom.com/a/apps/_/developer-hub",
+    "helpLabel": "Ouvrir Intercom Developer Hub",
+    "fields": [
+      {
+        "key": "token",
+        "label": "Jeton d'accès",
+        "kind": "secret"
+      }
+    ],
+    "steps": [
+      "Ouvrez le Developer Hub d'Intercom (bouton ci-dessous) → « New app » (ou une app existante).",
+      "Menu « Authentication » → copiez le « Access token ».",
+      "Collez-le ci-dessous."
+    ],
+    "test": {
+      "method": "GET",
+      "path": "me"
+    }
+  },
+  "figma": {
+    "label": "Figma",
+    "compose": "raw",
+    "rawField": "token",
+    "helpUrl": "https://www.figma.com/settings",
+    "helpLabel": "Ouvrir Figma",
+    "fields": [
+      {
+        "key": "token",
+        "label": "Jeton d'accès personnel",
+        "kind": "secret"
+      }
+    ],
+    "steps": [
+      "Dans Figma : votre profil → Settings → onglet « Security ».",
+      "« Personal access tokens » → « Generate new token » (lecture des fichiers suffit).",
+      "Copiez le jeton et collez-le ci-dessous."
+    ],
+    "test": {
+      "method": "GET",
+      "path": "me"
+    }
+  },
+  "hubspot": {
+    "label": "HubSpot",
+    "compose": "raw",
+    "rawField": "token",
+    "helpUrl": "https://app.hubspot.com/l/private-apps",
+    "helpLabel": "Ouvrir HubSpot",
+    "fields": [
+      {
+        "key": "token",
+        "label": "Jeton d'application privée",
+        "kind": "secret",
+        "placeholder": "pat-…"
+      }
+    ],
+    "steps": [
+      "Dans HubSpot : Paramètres → Intégrations → « Applications privées » (bouton ci-dessous).",
+      "« Créer une application privée », nom BK-AI-WORKERS.",
+      "Onglet « Portées » : cochez la lecture des contacts et des transactions (crm.objects.contacts.read, crm.objects.deals.read).",
+      "Créez l'application, copiez le jeton d'accès et collez-le ci-dessous."
+    ],
+    "test": {
+      "method": "GET",
+      "path": "crm/v3/objects/contacts?limit=1"
+    }
+  },
+  "pipedrive": {
+    "label": "Pipedrive",
+    "compose": "raw",
+    "rawField": "token",
+    "helpUrl": "https://app.pipedrive.com/settings/api",
+    "helpLabel": "Ouvrir Pipedrive",
+    "fields": [
+      {
+        "key": "token",
+        "label": "Jeton d'API personnel",
+        "kind": "secret"
+      }
+    ],
+    "steps": [
+      "Dans Pipedrive : votre nom (en haut à droite) → « Préférences personnelles » → onglet « API ».",
+      "Copiez le « Jeton d'API personnel ».",
+      "Collez-le ci-dessous."
+    ],
+    "test": {
+      "method": "GET",
+      "path": "users/me"
+    }
+  },
+  "webflow": {
+    "label": "Webflow",
+    "compose": "raw",
+    "rawField": "token",
+    "helpUrl": "https://webflow.com/dashboard",
+    "helpLabel": "Ouvrir Webflow",
+    "fields": [
+      {
+        "key": "token",
+        "label": "Jeton d'API du site",
+        "kind": "secret"
+      }
+    ],
+    "steps": [
+      "Dans Webflow, ouvrez votre site → Paramètres du site → « Apps & Integrations ».",
+      "Section « API access » → « Generate API token » (cochez la lecture des sites et du CMS).",
+      "Copiez le jeton et collez-le ci-dessous."
+    ],
+    "test": {
+      "method": "GET",
+      "path": "sites"
+    }
+  },
+  "shopify": {
+    "label": "Shopify",
+    "compose": "json",
+    "helpUrl": "https://admin.shopify.com/",
+    "helpLabel": "Ouvrir Shopify",
+    "fields": [
+      {
+        "key": "shop",
+        "label": "Adresse de votre boutique",
+        "kind": "subdomain",
+        "placeholder": "maboutique.myshopify.com",
+        "suffix": "myshopify.com"
+      },
+      {
+        "key": "token",
+        "label": "Jeton d'accès Admin API",
+        "kind": "secret",
+        "placeholder": "shpat_…"
+      }
+    ],
+    "steps": [
+      "Dans l'admin Shopify : Paramètres → « Applications et canaux de vente » → « Développer des applications ».",
+      "« Créer une application » (nom BK-AI-WORKERS) → « Configurer les portées de l'API Admin » : cochez read_products, read_orders, read_inventory.",
+      "« Installer l'application », puis « Révéler le jeton une seule fois » et copiez-le.",
+      "Indiquez l'adresse de la boutique et le jeton ci-dessous."
+    ],
+    "test": {
+      "method": "GET",
+      "path": "shop.json"
+    }
+  },
+  "woocommerce": {
+    "label": "WooCommerce",
+    "compose": "json",
+    "helpUrl": "https://woocommerce.com/document/woocommerce-rest-api/",
+    "helpLabel": "Aide WooCommerce",
+    "fields": [
+      {
+        "key": "site",
+        "label": "Adresse de votre site",
+        "kind": "host",
+        "placeholder": "monsite.com"
+      },
+      {
+        "key": "consumer_key",
+        "label": "Clé client (ck_…)",
+        "kind": "text"
+      },
+      {
+        "key": "consumer_secret",
+        "label": "Secret client (cs_…)",
+        "kind": "secret"
+      }
+    ],
+    "steps": [
+      "Dans WordPress : WooCommerce → Réglages → onglet « Avancé » → « API REST ».",
+      "« Ajouter une clé » : description BK-AI-WORKERS, permissions « Lecture ».",
+      "« Générer la clé API », puis copiez la clé client et le secret client.",
+      "Indiquez l'adresse de votre site et les deux clés ci-dessous."
+    ],
+    "test": {
+      "method": "GET",
+      "path": "products?per_page=1"
+    }
+  },
+  "wordpress": {
+    "label": "WordPress",
+    "compose": "json",
+    "helpUrl": "https://wordpress.org/documentation/article/application-passwords/",
+    "helpLabel": "Aide WordPress",
+    "fields": [
+      {
+        "key": "site",
+        "label": "Adresse de votre site",
+        "kind": "host",
+        "placeholder": "monsite.com"
+      },
+      {
+        "key": "user",
+        "label": "Votre identifiant WordPress",
+        "kind": "text"
+      },
+      {
+        "key": "pass",
+        "label": "Mot de passe d'application",
+        "kind": "secret",
+        "placeholder": "xxxx xxxx xxxx xxxx xxxx xxxx"
+      }
+    ],
+    "steps": [
+      "Connectez-vous à votre WordPress → Utilisateurs → Profil.",
+      "Section « Mots de passe d'application » : nom « BK-AI-WORKERS » → « Ajouter ».",
+      "Copiez le mot de passe généré (il n'est affiché qu'une fois). Ce n'est PAS votre mot de passe de connexion.",
+      "Indiquez l'adresse du site, votre identifiant et ce mot de passe d'application ci-dessous."
+    ],
+    "test": {
+      "method": "GET",
+      "path": "users/me"
+    }
+  },
+  "dropbox": {
+    "label": "Dropbox",
+    "compose": "raw",
+    "rawField": "token",
+    "helpUrl": "https://www.dropbox.com/developers/apps",
+    "helpLabel": "Ouvrir Dropbox App Console",
+    "fields": [
+      {
+        "key": "token",
+        "label": "Jeton d'accès",
+        "kind": "secret"
+      }
+    ],
+    "steps": [
+      "Ouvrez la console d'applications Dropbox (bouton ci-dessous) → « Create app » → « Scoped access » → « Full Dropbox ».",
+      "Onglet « Permissions » : cochez files.metadata.read et files.content.read, puis « Submit ».",
+      "Onglet « Settings » → « Generated access token » → « Generate », copiez le jeton.",
+      "Collez-le ci-dessous."
+    ],
+    "test": {
+      "method": "POST",
+      "path": "users/get_current_account"
+    }
+  },
+  "linkedin": {
+    "label": "LinkedIn",
+    "compose": "raw",
+    "rawField": "token",
+    "helpUrl": "https://www.linkedin.com/developers/apps",
+    "helpLabel": "Ouvrir LinkedIn Developers",
+    "fields": [
+      {
+        "key": "token",
+        "label": "Jeton d'accès",
+        "kind": "secret"
+      }
+    ],
+    "steps": [
+      "Sur LinkedIn Developers (bouton ci-dessous), créez ou ouvrez votre application.",
+      "Onglet « Auth » → « OAuth 2.0 tools » → « Create token » (cochez les permissions de lecture/publication proposées).",
+      "Copiez le jeton d'accès (valable environ 60 jours) et collez-le ci-dessous."
+    ],
+    "test": {
+      "method": "GET",
+      "path": "me"
+    }
+  },
+  "facebook": {
+    "label": "Facebook",
+    "compose": "raw",
+    "rawField": "token",
+    "helpUrl": "https://developers.facebook.com/tools/explorer/",
+    "helpLabel": "Ouvrir Graph API Explorer",
+    "fields": [
+      {
+        "key": "token",
+        "label": "Jeton d'accès de la Page",
+        "kind": "secret",
+        "placeholder": "EAA…"
+      }
+    ],
+    "steps": [
+      "Ouvrez Graph API Explorer (bouton ci-dessous) et choisissez votre application Meta.",
+      "« Obtenir le jeton » → « Jeton d'accès de Page » : sélectionnez votre Page et acceptez les autorisations (pages_show_list, pages_read_engagement, pages_manage_posts).",
+      "Copiez le jeton et collez-le ci-dessous."
+    ],
+    "test": {
+      "method": "GET",
+      "path": "me?fields=id,name"
+    }
+  },
+  "instagram": {
+    "label": "Instagram",
+    "compose": "raw",
+    "rawField": "token",
+    "helpUrl": "https://developers.facebook.com/tools/explorer/",
+    "helpLabel": "Ouvrir Graph API Explorer",
+    "fields": [
+      {
+        "key": "token",
+        "label": "Jeton d'accès",
+        "kind": "secret",
+        "placeholder": "EAA…"
+      }
+    ],
+    "steps": [
+      "Votre compte Instagram doit être « Professionnel » et relié à une Page Facebook.",
+      "Ouvrez Graph API Explorer (bouton ci-dessous), choisissez votre application Meta.",
+      "Ajoutez les autorisations instagram_basic, instagram_content_publish et pages_show_list, puis « Générer le jeton ».",
+      "Copiez le jeton et collez-le ci-dessous."
+    ],
+    "test": {
+      "method": "GET",
+      "path": "me?fields=id,name"
+    }
+  },
+  "tiktok": {
+    "label": "TikTok",
+    "compose": "raw",
+    "rawField": "token",
+    "helpUrl": "https://developers.tiktok.com/apps/",
+    "helpLabel": "Ouvrir TikTok for Developers",
+    "fields": [
+      {
+        "key": "token",
+        "label": "Jeton d'accès",
+        "kind": "secret"
+      }
+    ],
+    "steps": [
+      "Sur TikTok for Developers (bouton ci-dessous), ouvrez votre application.",
+      "Générez un jeton d'accès utilisateur (scope user.info.basic, video.list).",
+      "Copiez-le et collez-le ci-dessous."
+    ],
+    "test": {
+      "method": "GET",
+      "path": "user/info/?fields=open_id,display_name"
+    }
+  },
+  "x_twitter": {
+    "label": "X (Twitter)",
+    "compose": "raw",
+    "rawField": "token",
+    "helpUrl": "https://developer.x.com/en/portal/dashboard",
+    "helpLabel": "Ouvrir le portail développeur X",
+    "fields": [
+      {
+        "key": "token",
+        "label": "Jeton d'accès utilisateur",
+        "kind": "secret"
+      }
+    ],
+    "steps": [
+      "Sur le portail développeur X (bouton ci-dessous), ouvrez votre projet et votre application.",
+      "Onglet « Keys and tokens » → section « User Authentication tokens » → générez un jeton OAuth 2.0 (lecture et écriture).",
+      "Copiez-le et collez-le ci-dessous."
+    ],
+    "test": {
+      "method": "GET",
+      "path": "users/me"
+    }
+  },
+  "meta_ads": {
+    "label": "Meta Ads",
+    "compose": "raw",
+    "rawField": "token",
+    "helpUrl": "https://business.facebook.com/settings/system-users",
+    "helpLabel": "Ouvrir Meta Business",
+    "fields": [
+      {
+        "key": "token",
+        "label": "Jeton d'utilisateur système",
+        "kind": "secret",
+        "placeholder": "EAA…"
+      }
+    ],
+    "steps": [
+      "Dans Meta Business Suite : Paramètres de l'entreprise → Utilisateurs → « Utilisateurs système » (bouton ci-dessous).",
+      "Ajoutez un utilisateur système et donnez-lui accès à votre compte publicitaire (lecture).",
+      "« Générer un nouveau jeton », cochez ads_read, puis copiez-le.",
+      "Collez-le ci-dessous."
+    ],
+    "test": {
+      "method": "GET",
+      "path": "me?fields=id,name"
+    }
+  },
+  "whatsapp_business": {
+    "label": "WhatsApp Business",
+    "compose": "raw",
+    "rawField": "token",
+    "helpUrl": "https://business.facebook.com/settings/system-users",
+    "helpLabel": "Ouvrir Meta Business",
+    "fields": [
+      {
+        "key": "token",
+        "label": "Jeton d'accès permanent",
+        "kind": "secret",
+        "placeholder": "EAA…"
+      }
+    ],
+    "steps": [
+      "Dans Meta Business : Paramètres de l'entreprise → « Utilisateurs système » (bouton ci-dessous).",
+      "Créez un utilisateur système, attribuez-lui votre compte WhatsApp Business, puis « Générer un jeton » avec whatsapp_business_messaging.",
+      "Copiez le jeton et collez-le ci-dessous."
+    ],
+    "test": {
+      "method": "GET",
+      "path": "me?fields=id,name"
+    }
+  },
+  "twilio": {
+    "label": "Twilio",
+    "compose": "json",
+    "constants": {},
+    "helpUrl": "https://console.twilio.com/",
+    "helpLabel": "Ouvrir la console Twilio",
+    "fields": [
+      {
+        "key": "user",
+        "label": "Account SID",
+        "kind": "text",
+        "placeholder": "AC…",
+        "pattern": "^AC[0-9a-fA-F]{32}$"
+      },
+      {
+        "key": "pass",
+        "label": "Auth Token",
+        "kind": "secret"
+      },
+      {
+        "key": "from",
+        "label": "Votre numéro Twilio",
+        "kind": "phone",
+        "placeholder": "+41…"
+      }
+    ],
+    "steps": [
+      "Ouvrez la console Twilio (bouton ci-dessous) : l'« Account SID » et l'« Auth Token » sont sur la page d'accueil.",
+      "Copiez-les, puis indiquez le numéro Twilio qui servira à appeler (format +41…)."
+    ],
+    "test": {
+      "method": "GET",
+      "path": "IncomingPhoneNumbers.json?PageSize=1"
+    }
+  },
+  "uptimerobot": {
+    "label": "UptimeRobot",
+    "compose": "json",
+    "helpUrl": "https://dashboard.uptimerobot.com/integrations",
+    "helpLabel": "Ouvrir UptimeRobot",
+    "fields": [
+      {
+        "key": "api_key",
+        "label": "Clé API (lecture seule)",
+        "kind": "secret"
+      }
+    ],
+    "steps": [
+      "Dans UptimeRobot : « Intégrations & API » (bouton ci-dessous).",
+      "Section « API » → créez une « Clé API en lecture seule » (Read-only API key).",
+      "Copiez-la et collez-la ci-dessous."
+    ],
+    "test": {
+      "method": "POST",
+      "path": "getAccountDetails"
+    }
+  },
+  "bamboohr": {
+    "label": "BambooHR",
+    "compose": "bamboohr",
+    "helpUrl": "https://www.bamboohr.com/login/",
+    "helpLabel": "Ouvrir BambooHR",
+    "fields": [
+      {
+        "key": "companyDomain",
+        "label": "Adresse BambooHR",
+        "kind": "subdomain",
+        "placeholder": "monentreprise.bamboohr.com",
+        "suffix": "bamboohr.com"
+      },
+      {
+        "key": "apiKey",
+        "label": "Clé API",
+        "kind": "secret"
+      }
+    ],
+    "steps": [
+      "Dans BambooHR : cliquez votre nom (en haut à droite) → « API Keys » (bouton ci-dessous).",
+      "« Add New Key » : nom BK-AI-WORKERS, puis copiez la clé.",
+      "Indiquez l'adresse de votre BambooHR (le nom avant .bamboohr.com) et la clé ci-dessous."
+    ],
+    "test": {
+      "method": "GET",
+      "path": "employees/directory"
+    }
+  }
+}
