@@ -62,7 +62,8 @@ MAX_NOTIFICATIONS_PER_DAY = 40
 LOG_RETENTION_DAYS = 90            # transcriptions : donnees personnelles, ne pas les garder indefiniment
 TOKEN_TTL_SECONDS = 3600           # Auth Token garde en memoire (une rotation cote Twilio est rattrapee par la relecture forcee)
 TOKEN_MISS_TTL_SECONDS = 30        # pas de re-lecture plus d'une fois / 30 s (absent ou rotation)
-MODEL_TIMEOUT_SECONDS = 9          # Twilio abandonne un webhook apres 15 s
+MODEL_TIMEOUT_SECONDS = 7          # par tentative
+MODEL_BUDGET_SECONDS = 11          # total (2 tentatives) : Twilio abandonne un webhook apres 15 s
 MAX_SAY_CHARS = 700
 HISTORY_MESSAGES = 16
 
@@ -150,20 +151,32 @@ FICHE (seule source autorisee) :
 
 
 def _default_model_call(system, messages):
-    """Un appel Claude sans outil. Cle : BK_SECRET_ANTHROPIC (environnement du serveur)."""
+    """Un appel Claude sans outil, avec une seule reprise rapide (erreur reseau, 429, 5xx, 529).
+    Budget total ~11 s : Twilio abandonne un webhook apres 15 s. Cle : BK_SECRET_ANTHROPIC."""
     key = (os.environ.get("BK_SECRET_ANTHROPIC") or "").strip()
     if not key:
         return None
     body = json.dumps({"model": MODEL, "max_tokens": 500, "temperature": 0.3,
                        "system": system, "messages": messages}).encode("utf-8")
-    req = urllib.request.Request(ANTHROPIC_URL, data=body, method="POST", headers={
-        "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json"})
-    try:
-        with urllib.request.urlopen(req, timeout=MODEL_TIMEOUT_SECONDS) as r:
-            data = json.loads(r.read().decode("utf-8"))
-    except (urllib.error.URLError, OSError, ValueError):
-        return None
-    return "".join(b.get("text", "") for b in data.get("content", []) if isinstance(b, dict) and b.get("type") == "text")
+    deadline = time.time() + MODEL_BUDGET_SECONDS
+    for attempt in (1, 2):
+        remaining = deadline - time.time()
+        if remaining < 1.5:
+            return None
+        req = urllib.request.Request(ANTHROPIC_URL, data=body, method="POST", headers={
+            "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json"})
+        try:
+            with urllib.request.urlopen(req, timeout=min(MODEL_TIMEOUT_SECONDS, remaining)) as r:
+                data = json.loads(r.read().decode("utf-8"))
+            return "".join(b.get("text", "") for b in data.get("content", []) if isinstance(b, dict) and b.get("type") == "text")
+        except urllib.error.HTTPError as e:
+            if e.code not in (408, 429, 500, 502, 503, 504, 529):
+                return None                      # 400/401/403... : reessayer ne sert a rien
+        except (urllib.error.URLError, OSError, ValueError):
+            pass
+        if attempt == 1:
+            time.sleep(0.4)
+    return None
 
 
 class PhoneAgent:

@@ -370,6 +370,43 @@ class RetentionAndSpamTests(Base):
         # la route lit Content-Length : une valeur illisible doit rester un refus propre (verifie dans e2e_server)
         self.assertEqual(pa.PhoneAgent(self.make().root, ["pwsh"]).handle(b"x" * (pa.MAX_BODY_BYTES + 1), "A" * 27 + "=", [URL])[0], 413)
 
+    def test_model_call_retries_once_on_transient_errors_but_not_on_auth_errors(self):
+        import urllib.error as ue
+
+        class Resp:
+            def __enter__(self): return self
+            def __exit__(self, *a): return False
+            def read(self): return json.dumps({"content": [{"type": "text", "text": "ok"}]}).encode()
+
+        def run(errors):
+            seq = list(errors)
+            calls = []
+
+            def fake(req, timeout=None):
+                calls.append(timeout)
+                e = seq.pop(0) if seq else None
+                if e is not None:
+                    raise e
+                return Resp()
+            old, os.environ["BK_SECRET_ANTHROPIC"] = urllib.request.urlopen, "sk-test"
+            urllib.request.urlopen = fake
+            try:
+                return pa._default_model_call("s", [{"role": "user", "content": "x"}]), calls
+            finally:
+                urllib.request.urlopen = old
+                if not LIVE:
+                    os.environ.pop("BK_SECRET_ANTHROPIC", None)
+
+        out, calls = run([ue.URLError("reset")])
+        self.assertEqual((out, len(calls)), ("ok", 2))
+        out, calls = run([ue.HTTPError("u", 529, "overloaded", {}, None)])
+        self.assertEqual((out, len(calls)), ("ok", 2))
+        out, calls = run([ue.HTTPError("u", 401, "bad key", {}, None)])
+        self.assertEqual((out, len(calls)), (None, 1))
+        out, calls = run([ue.URLError("a"), ue.URLError("b")])
+        self.assertEqual((out, len(calls)), (None, 2))
+        self.assertTrue(all(c <= pa.MODEL_TIMEOUT_SECONDS for c in calls))
+
 
 @unittest.skipUnless(LIVE, "BK_SECRET_ANTHROPIC absente : tests avec le vrai modele ignores")
 class LiveModelTests(unittest.TestCase):
