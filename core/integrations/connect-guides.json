@@ -376,7 +376,11 @@
     ],
     "test": {
       "method": "POST",
-      "path": "users/get_current_account"
+      "path": "files/list_folder",
+      "body": {
+        "path": "",
+        "limit": 1
+      }
     }
   },
   "linkedin": {
@@ -394,12 +398,12 @@
     ],
     "steps": [
       "Sur LinkedIn Developers (bouton ci-dessous), créez ou ouvrez votre application.",
-      "Onglet « Auth » → « OAuth 2.0 tools » → « Create token » (cochez les permissions de lecture/publication proposées).",
+      "Onglet « Auth » → « OAuth 2.0 tools » → « Create token » (cochez openid, profile et w_member_social).",
       "Copiez le jeton d'accès (valable environ 60 jours) et collez-le ci-dessous."
     ],
     "test": {
       "method": "GET",
-      "path": "me"
+      "path": "userinfo"
     }
   },
   "facebook": {

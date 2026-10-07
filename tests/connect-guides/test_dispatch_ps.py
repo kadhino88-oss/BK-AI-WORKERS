@@ -112,8 +112,8 @@ class DispatchRequests(unittest.TestCase):
             "intercom": "https://api.intercom.io/me",
             "hubspot": "https://api.hubapi.com/crm/v3/objects/contacts?limit=1",
             "webflow": "https://api.webflow.com/v2/sites",
-            "dropbox": "https://api.dropboxapi.com/2/users/get_current_account",
-            "linkedin": "https://api.linkedin.com/v2/me",
+            "dropbox": "https://api.dropboxapi.com/2/files/list_folder",
+            "linkedin": "https://api.linkedin.com/v2/userinfo",
             "facebook": "https://graph.facebook.com/v19.0/me?fields=id,name",
             "instagram": "https://graph.facebook.com/v19.0/me?fields=id,name",
             "meta_ads": "https://graph.facebook.com/v19.0/me?fields=id,name",
@@ -126,7 +126,10 @@ class DispatchRequests(unittest.TestCase):
             self.assertEqual(c["uri"], uri, prov)
             self.assertEqual(c["headers"]["Authorization"], "Bearer " + SAMPLES[prov]["token"], prov)
         self.assertEqual(self.call("dropbox")["method"], "POST")
-        self.assertEqual(self.call("dropbox")["body"], "")             # pas de corps : Dropbox le refuserait
+        # Lecture des fichiers (droit files.metadata.read, celui que demandent le
+        # guide ET "Se connecter avec Dropbox") : users/get_current_account exige
+        # account_info.read et renvoyait 401 sur un jeton pourtant valide.
+        self.assertEqual(json.loads(self.call("dropbox")["body"]), {"path": "", "limit": 1})
 
     def test_header_and_query_auth_tools(self):
         c = self.call("figma")
