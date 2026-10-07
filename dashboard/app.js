@@ -346,7 +346,7 @@ async function submitGatePassword() {
       body: JSON.stringify({ password: input.value }),
     });
     if (result.error) {
-      errorEl.textContent = "Mot de passe incorrect.";
+      errorEl.textContent = result.error === "TOO_MANY_ATTEMPTS" ? "Trop de tentatives. Réessayez dans quelques minutes." : "Mot de passe incorrect.";
       errorEl.hidden = false;
       return;
     }

@@ -1596,6 +1596,9 @@ AUTH_FAILS = {}      # cle -> [timestamps]
 AUTH_WINDOW = 15 * 60
 AUTH_MAX_PER_ACCOUNT = 8
 AUTH_MAX_PER_IP = 40
+# Porte proprietaire ("Acces administrateur") : comptee comme un compte a part,
+# donc 8 echecs / 15 min par adresse IP, comme la connexion client.
+OWNER_GATE_THROTTLE_KEY = "__owner_gate__"
 SIGNUP_RATE = {}     # ip -> [timestamps]
 SIGNUP_MAX_PER_IP_PER_HOUR = 10
 RESET_RATE = {}      # cle -> [timestamps]
@@ -3019,9 +3022,17 @@ class Handler(BaseHTTPRequestHandler):
             if not gate_is_enabled():
                 self._send_json({"ok": True, "note": "Porte desactivee (aucun mot de passe defini)."})
                 return
+            # Sans limite, le mot de passe administrateur pouvait etre devine
+            # par essais repetes : meme regle que la connexion client.
+            ip = self._client_ip()
+            if auth_throttled(ip, OWNER_GATE_THROTTLE_KEY):
+                self._send_json({"error": "TOO_MANY_ATTEMPTS"}, 429)
+                return
             if not verify_gate_password(password):
+                auth_record_fail(ip, OWNER_GATE_THROTTLE_KEY)
                 self._send_json({"error": "INVALID_PASSWORD"}, 401)
                 return
+            auth_clear(ip, OWNER_GATE_THROTTLE_KEY)
             token = gate_create_session()
             self.send_response(200)
             self.send_header("Content-Type", "application/json; charset=utf-8")
