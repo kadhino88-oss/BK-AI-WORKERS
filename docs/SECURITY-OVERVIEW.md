@@ -1,6 +1,6 @@
 # Sécurité de BK-AI-WORKERS — vue d'ensemble technique
 
-Dernière revue du code : **7 octobre 2026** (branche `ws/trust`). Ce document est la version détaillée de la page publique
+Dernière revue du code : **7 octobre 2026** (branche `ws/trust-2`). Ce document est la version détaillée de la page publique
 [`/securite.html`](../dashboard/trust_pages.py) : mêmes faits, avec les fichiers du code qui les prouvent.
 Il décrit **uniquement ce qui existe** ; ce qui manque est dit en clair (section 6).
 
@@ -61,7 +61,7 @@ La clé `BK_SECRET_CRED_ENCRYPTION_KEY` vit dans `.env` (hôte, `chmod 600`), fo
 | Webhooks entrants | Twilio : HMAC-SHA1 de l'URL et des paramètres, comparaison constante, rejet sinon ; Meta : `X-Hub-Signature-256` HMAC-SHA256 | `phone_agent.py`, `whatsapp_channel.py` |
 | Webhooks sortants | signés HMAC-SHA256 (`X-BK-Signature`), secret par client | `server.py: dispatch_webhook_if_configured` |
 | Paiement | Stripe Checkout hébergé ; plan activé seulement si `payment_status = paid` vérifié côté serveur | `Stripe-Adapter.ps1`, `server.py` |
-| Validation humaine | lecture (`READ_*`, `SEARCH_*`) immédiate ; toute écriture → `PENDING-ACTION` + confirmation explicite ; pré-autorisation optionnelle (désactivée par défaut) ; opérations financières jamais connectables par un client et toujours manuelles sur le compte propriétaire | `core/ai/adapters/ANTHROPIC-ADAPTER.ps1` |
+| Validation humaine | lecture (`READ_*`, `SEARCH_*`) immédiate ; toute écriture → `PENDING-ACTION` + confirmation explicite ; pré-autorisation optionnelle (désactivée par défaut) ; exception déclarée : la notification Slack d'une automatisation (résumé : objectif, statut, extrait de 300 caractères) part sans carte de confirmation si le client l'a cochée (`core/automation/AUTOMATION-ENGINE.ps1`) ; opérations financières jamais connectables par un client et toujours manuelles sur le compte propriétaire | `core/ai/adapters/ANTHROPIC-ADAPTER.ps1` |
 | Chaîne d'autorisation | capacité, autorité, politique, tâche, identifiants, connecteur, fournisseur, preuve, rétention ; échec = `AI_AUTHORIZATION_BLOCKED` | `core/runtime/worker-runtime/Invoke-Worker-AI.ps1` |
 | Agent téléphonique | aucun Worker, connecteur ni donnée de client joignable : seulement la fiche publique | `dashboard/phone_agent.py`, `docs/PHONE-AGENT.md` |
 | Écritures concurrentes | verrou + écriture atomique (incident du 2026-09-28) | `server.py`, `core/runtime/State-Lock.ps1` |
@@ -86,6 +86,7 @@ Cette liste suit le code (un service n'y figure que si le code l'appelle). Colon
 | Outils tiers du client (Slack, HubSpot, Asana, Intercom, LinkedIn, Dropbox, …) | actions demandées | selon l'outil | selon l'outil | demande du client | `oauth-vendors.json`, `connect-guides.json` | le client reste responsable de son contrat avec l'outil |
 | GitHub | code source, déploiement | aucune donnée client | — | mises à jour | `.github/workflows/deploy.yml` | — |
 | Cloudflare (cdnjs) | bibliothèque d'animation | IP des visiteurs | mondial | visite de l'accueil | `index.html` | envisager l'hébergement local de la bibliothèque |
+| jsDelivr (CDN) | icônes des logos d'outils dans l'application | adresse IP des utilisateurs | mondial | quand la liste des outils s'affiche | `app.js` | envisager l'hébergement local des icônes |
 | frankfurter.dev | taux de change indicatifs | aucune donnée personnelle | — | requête serveur (cache 12 h) | `server.py: get_fx_rates` | — |
 
 Non utilisés à l'exécution (outils du propriétaire pour produire des vidéos) : D-ID, ElevenLabs (`core/avatar/`).
@@ -94,6 +95,8 @@ Non utilisés à l'exécution (outils du propriétaire pour produire des vidéos
 
 - **Publier un incident** (page `/status.html`) : `docker compose exec app python3 /data/app/deploy/status-incident.py add --title "..." --impact minor --text "..."` (voir l'en-tête du script ; `update`, `resolve`, `delete`, `list`). Le fichier `memory/runtime/status/incidents.json` est un JSON simple, modifiable à la main.
 - **Sonde de supervision** : `deploy/healthcheck.sh` (cron toutes les 5 min, à planifier) essaie `/api/health` puis `/api/workers` ; redémarre `app` après 2 échecs consécutifs. L'ancienne URL `/api/workers` reste en secours pour que le script fonctionne avant, pendant et après un déploiement.
+- **Surveillance externe (pas en place aujourd'hui)** : `/api/health`, `/api/status`, `/status.html` et `/securite.html` répondent aussi à `HEAD` (en-têtes seulement), ce qui permet à un service gratuit (ex. UptimeRobot) de les surveiller depuis l'extérieur : c'est la seule façon d'être prévenu quand tout le serveur est arrêté, la mesure intégrée tournant sur le serveur qu'elle mesure.
+- **Page de statut obsolète** : si le navigateur du visiteur ne joint pas `/api/status` (hors ligne, copie en cache), le bandeau passe à « Mesure indisponible » au lieu d'afficher un ancien « Tous les systèmes fonctionnent ».
 - **Divulgation de vulnérabilité** : adresse déjà publiée `contact@bk-entreprise.com` ; `/.well-known/security.txt` (RFC 9116).
 - **Fuite de données** (non formalisé à ce jour) : voir `docs/SOC2-READINESS.md` §6 — notification au PFPDT « dans les meilleurs délais » (nLPD art. 24) et, pour des personnes de l'UE, 72 h à l'autorité compétente (RGPD art. 33).
 
@@ -109,7 +112,7 @@ Aucun rapport SOC 2, aucune certification ISO/IEC 27001, aucun test d'intrusion 
 | 2 | Plusieurs routes lisent `Content-Length` sans plafond (`signup`, `login`, `chloe/task`, …) : un corps énorme est lu en mémoire. | Moyenne | plafond global (ex. 200 Ko) dans un point d'entrée unique |
 | 3 | Le secret d'un outil transite par un fichier temporaire en clair (`/tmp/bkaiw-cred-in-*.json`), supprimé aussitôt, créé avec les droits par défaut. | Moyenne | `os.open(..., 0o600)` ou passage par l'entrée standard |
 | 4 | Aucun en-tête HTTP de sécurité (HSTS, CSP, `X-Content-Type-Options`, `Referrer-Policy`) ; pas de jeton anti-CSRF (SameSite=Lax seul). | Moyenne | directive `header` dans `deploy/Caddyfile.docker` ; jeton CSRF sur les POST à cookie |
-| 5 | Le site affiche « personne, pas même nous, ne peut les lire » (`dashboard/index.html`, section « Connectez votre outil ») et la politique de confidentialité §6 dit « y compris par l'équipe » : techniquement faux pour un administrateur qui détient la clé serveur. | Moyenne (honnêteté) | reformuler : « jamais affichés ni renvoyés ; chiffrés ; accès serveur restreint au fondateur » |
+| 5 | **Corrigé dans cette branche.** Le site affichait « personne, pas même nous, ne peut les lire » (`dashboard/index.html`, section « Connectez votre outil ») et la politique de confidentialité §6 disait « y compris par l'équipe » : techniquement faux pour une personne qui détient la clé serveur. Les phrases (page d'accueil, FAQ, politique de confidentialité, dictionnaires anglais) disent maintenant « chiffrés au repos, jamais réaffichés ni renvoyés au navigateur ; une personne ayant accès au serveur et à son environnement pourrait techniquement les lire ». `tests/trust/test_trust_extras.py` refuse le retour de l'ancienne promesse. | Moyenne (honnêteté) | fait ; à relire par le propriétaire |
 | 6 | Conteneur exécuté en `root` (aucune directive `USER`). | Basse | utilisateur dédié, volume en lecture/écriture ciblée |
 | 7 | Les échecs de connexion ne sont pas journalisés (seulement comptés en mémoire). | Basse | événement `login_failed` dans `activity-log.json` |
 | 8 | `delete_account` ne supprime ni l'historique de facturation ni les lignes de `activity-log.json` / `demo-requests.json`. | Basse (si justifié par la loi comptable) | documenter la durée, purger ce qui n'a pas de base légale |
@@ -117,6 +120,9 @@ Aucun rapport SOC 2, aucune certification ISO/IEC 27001, aucun test d'intrusion 
 | 10 | Le secret de webhook sortant est stocké en clair et renvoyé par `GET /api/integrations/webhook` (au client concerné). | Basse | afficher une seule fois, stocker haché/chiffré |
 | 11 | `core/ai/CREDENTIAL-BOUNDARY.md` décrit un état ancien (« aucun credential, LLM désactivé ») : ne pas l'utiliser comme preuve. | Info | mettre à jour ou archiver |
 | 12 | Session client de 30 jours sans délai d'inactivité ni liste des appareils. | Basse | délai d'inactivité, bouton « fermer toutes les sessions » |
+| 13 | La politique de confidentialité (§5 de `dashboard/confidentialite.html` et le même texte dans `index.html`) affirme que les transferts à l'étranger « sont encadrés par des garanties contractuelles conformes à la nLPD ». Le dépôt ne contient ni DPA signé ni preuve d'adhésion d'un fournisseur à un cadre de transfert (voir la colonne « Garanties à documenter » du §4). Texte juridique : **non modifié** par ce travail. | Moyenne (honnêteté juridique) | rassembler les DPA et les certifications DPF fournisseur par fournisseur, puis garder la phrase ; sinon la reformuler avec un juriste |
+| 14 | La planification nocturne de `deploy/backup.sh` et le cron de `deploy/healthcheck.sh` sont **décrits** dans le dépôt (`DEPLOIEMENT-VPS.md`, en-tête du script) mais le dépôt ne peut pas prouver qu'ils sont installés sur le serveur. La page publique le dit (« le dépôt décrit cette planification mais ne peut pas prouver qu'elle est active »). | Moyenne | sur le serveur : `crontab -l` ; si absent, installer les deux lignes ; vérifier une archive récente dans `/var/backups/bk-ai-workers` |
+| 15 | L'icône de chaque outil est chargée depuis jsDelivr (`dashboard/app.js`, `simple-icons`, y compris la version `@latest` non épinglée) : l'adresse IP de l'utilisateur est vue par ce CDN et une mise à jour du paquet change ce qui s'affiche sans passer par notre code. Ajouté à la liste des sous-traitants. | Basse | héberger les quelques icônes utilisées dans le dépôt |
 
 ## 7. Rétention et suppression — décisions à prendre
 
@@ -127,6 +133,7 @@ Les durées ci-dessus sont celles **du code**. La politique de confidentialité 
 ```
 python tests/trust/test_trust_pages.py        # preuves du code, traductions, mots de certification, security.txt, hooks
 python tests/trust/test_status_monitor.py     # mesure, uptime, rotation, incidents
+python tests/trust/test_trust_extras.py       # aucune promesse contredite, inventaire des hôtes externes, page Statut jamais périmée, HEAD
 python tests/trust/check_certification_claims.py   # échoue si un mot de certification n'est ni une négation ni appuyé par un document
 python tests/trust/e2e_server.py [--long]     # vrai serveur sur copie jetable, port libre, jamais les vraies données
 python dashboard/trust_pages.py --write-i18n  # régénère dashboard/i18n-en-trust.js après toute modification du texte

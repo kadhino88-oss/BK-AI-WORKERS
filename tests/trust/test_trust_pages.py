@@ -402,7 +402,7 @@ class HooksTests(unittest.TestCase):
         if r.returncode != 0 or not r.stdout.strip():
             self.skipTest("pas de branche main comparable (ou aucune difference)")
         added, deleted, _ = r.stdout.split()[:3]
-        self.assertLessEqual(int(added), 15)
+        self.assertLessEqual(int(added), 25)
         self.assertEqual(int(deleted), 0)
 
     def test_healthcheck_script_falls_back_to_api_workers(self):

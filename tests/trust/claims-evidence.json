@@ -21,6 +21,7 @@
     {"file": ".gitignore", "match": ["^\\.env$"]},
     {"file": "docker-compose.yml", "match": ["env_file: \\.env", "bkdata:/data"]},
     {"file": "deploy/backup.sh", "match": ["VOLUME=\"\\$\\{BK_VOLUME:-bk-ai-workers_bkdata\\}\""]},
+    {"file": ".dockerignore", "match": ["(?m)^\\.env$"]},
     {"file": "deploy/entrypoint.sh", "absent": ["CRED_ENCRYPTION_KEY"]},
     {"file": "dashboard/server.py", "absent": ["CRED_ENCRYPTION_KEY"]}
   ],
@@ -170,6 +171,18 @@
     {"file": "deploy/backup.sh", "absent": ["(?i)\\b(scp|rclone|aws|gpg|openssl|gsutil)\\b"]},
     {"file": "deploy/DEPLOIEMENT-VPS.md", "match": ["les sauvegardes du même serveur ne protègent pas"]}
   ],
+  "backup-unproven": [
+    {"file": "deploy/DEPLOIEMENT-VPS.md", "match": ["crontab"]},
+    {"file": ".github/workflows/deploy.yml", "absent": ["(?i)backup|crontab"]}
+  ],
+  "host-backup": [
+    {"file": "deploy/DEPLOIEMENT-VPS.md", "match": ["OVH ajoute sa propre\\s+sauvegarde quotidienne du VPS"]},
+    {"file": "deploy/backup.sh", "absent": ["(?i)ovh"]}
+  ],
+  "automation-slack": [
+    {"file": "core/automation/AUTOMATION-ENGINE.ps1", "match": ["\\$Automation\\.notifySlack -and \\(Test-SlackConfigured", "Send-SlackMessage", "Substring\\(0, 300\\)"]},
+    {"file": "dashboard/index.html", "match": ["automation-notify-slack"]}
+  ],
   "no-restore-doc": [
     {"file": "deploy/DEPLOIEMENT-VPS.md", "absent": ["(?i)restaur|restore"]},
     {"file": "deploy/backup.sh", "absent": ["(?i)restaur|restore|tar x"]}
@@ -238,6 +251,9 @@
   ],
   "sp-cdnjs": [
     {"file": "dashboard/index.html", "match": ["https://cdnjs\\.cloudflare\\.com/ajax/libs/gsap"]}
+  ],
+  "sp-jsdelivr": [
+    {"file": "dashboard/app.js", "match": ["https://cdn\\.jsdelivr\\.net/npm/simple-icons"]}
   ],
   "sp-fx": [
     {"file": "dashboard/server.py", "match": ["https://api\\.frankfurter\\.dev/v1/latest"]}

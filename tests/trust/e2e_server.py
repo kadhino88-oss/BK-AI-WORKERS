@@ -139,8 +139,33 @@ def main():
             check(f"pied de page de {page} lie Securite et Statut", '<a href="/securite.html">' in text and '<a href="/status.html">' in text)
         status, _, home = c.call("GET", "/")
         check("page d'accueil : liens Securite et Statut dans le pied de page", '<a href="/securite.html">' in home and '<a href="/status.html">' in home)
+        check("page d'accueil servie : plus de promesse « pas meme nous » ni « y compris par l'equipe »",
+              "pas même nous" not in home and "y compris par l'équipe" not in home and "ne peut les lire" not in home)
+        status, _, text = c.call("GET", "/confidentialite.html")
+        check("politique de confidentialite : liens Securite/Statut en pied de page, promesse corrigee",
+              status == 200 and '<a href="/securite.html">' in text and '<a href="/status.html">' in text
+              and "y compris par l'équipe" not in text and "pourrait donc techniquement les lire" in text)
         status, _, text = c.call("GET", "/api/workers")
         check("/api/workers (ancienne sonde) fonctionne toujours", status == 200 and '"workers"' in text)
+
+        print("\n== HEAD : sondes de surveillance externes (en-tetes seulement) ==")
+        import http.client
+        for path in ("/api/health", "/api/status", "/status.html", "/securite.html", "/.well-known/security.txt"):
+            conn = http.client.HTTPConnection("127.0.0.1", port, timeout=15)
+            conn.request("HEAD", path)
+            resp = conn.getresponse()
+            body = resp.read()
+            check(f"HEAD {path} -> 200, Content-Length annonce, aucun corps", resp.status == 200 and int(resp.getheader("Content-Length") or 0) > 0 and body == b"",
+                  (resp.status, len(body)))
+            conn.close()
+        conn = http.client.HTTPConnection("127.0.0.1", port, timeout=15)
+        conn.request("HEAD", "/api/workers")
+        resp = conn.getresponse()
+        resp.read()
+        check("HEAD sur une route hors de ce module : comportement inchange (501)", resp.status == 501, resp.status)
+        conn.close()
+        status, _, text = c.call("GET", "/api/health")
+        check("le serveur reste sain apres les requetes HEAD", status == 200 and json.loads(text) == {"ok": True})
 
         print("\n== avant le premier echantillon : jamais d'historique invente ==")
         st, early = c.json("GET", "/api/status")

@@ -3007,6 +3007,11 @@ class Handler(BaseHTTPRequestHandler):
         else:
             self._send_json({"error": "NOT_FOUND"}, 404)
 
+    def do_HEAD(self):
+        # Sondes de surveillance externes (HEAD) : seulement les routes de trust_pages.py, sans corps.
+        if not TRUST.handle_head(self, unquote(urlparse(self.path).path)):
+            self.send_error(501, "Unsupported method ('HEAD')")
+
     def do_POST(self):
         parsed = urlparse(self.path)
         path = unquote(parsed.path)

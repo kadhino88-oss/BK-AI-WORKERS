@@ -276,7 +276,7 @@ FAQ_ITEMS = [
      "C'est une règle appliquée au niveau du code, pas juste une bonne intention."),
     ("Comment les Workers se connectent-ils à mes outils (Slack, CRM, etc.) ?",
      "Chaque connexion se fait avec votre propre compte (« Se connecter avec Google », Microsoft…), et vos accès sont stockés chiffrés — jamais "
-     "vus en clair, jamais partagés entre plusieurs comptes. Rien n'est connecté par défaut : vous "
+     "réaffichés, jamais partagés entre plusieurs comptes. Rien n'est connecté par défaut : vous "
      "choisissez quels outils brancher, et quand."),
     ("Comment fonctionne la facturation ?",
      "Chaque plan inclut un quota de crédits par cycle (1 mission réellement traitée = 1 crédit consommé). "

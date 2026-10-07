@@ -184,6 +184,8 @@ CONTROLS = [
     ], [
         _li("Une option de pré-autorisation, désactivée par défaut et réversible, laisse les Workers exécuter les écritures sans confirmation : si vous l'activez, cette protection ne s'applique plus à votre compte.",
             "A pre-authorization option, off by default and reversible, lets Workers run writes without confirmation: if you turn it on, this protection no longer applies to your account.", "autoapprove-optin"),
+        _li("Si vous cochez « Notifier sur Slack » sur une automatisation, un résumé de chaque exécution (objectif, statut, extrait de la réponse) est publié dans votre Slack sans confirmation à chaque fois.",
+            "If you tick “Notify on Slack” on an automation, a summary of each run (objective, status, excerpt of the answer) is posted in your Slack without confirmation each time.", "automation-slack"),
         _li("Les contenus lus dans vos outils (e-mails, documents) sont transmis au modèle d'IA.",
             "Content read in your tools (e-mails, documents) is passed to the AI model.", "tool-results-to-model"),
     ]),
@@ -214,11 +216,15 @@ CONTROLS = [
             "Missions and profile are stored on the server disk without application-level encryption: only tool credentials are encrypted; passwords are hashed.", "plain-missions"),
     ]),
     ("Sauvegardes", T("Sauvegardes", "Backups"), [
-        _li("Un script sauvegarde le volume de données ; la procédure d'exploitation le planifie chaque nuit à 3 h 30, avec 14 jours de conservation.",
-            "A script backs up the data volume; the operating procedure schedules it every night at 3:30 am, with 14 days of retention.", "backup"),
+        _li("Un script sauvegarde le volume de données ; la procédure d'exploitation prévoit de le lancer chaque nuit à 3 h 30 et de garder 14 jours d'archives.",
+            "A script backs up the data volume; the operating procedure plans to run it every night at 3:30 am and keep 14 days of archives.", "backup"),
     ], [
-        _li("Les archives restent sur le même serveur : aucune copie hors site n'est automatisée, et elles ne sont pas chiffrées en tant que telles.",
-            "The archives stay on the same server: no off-site copy is automated, and they are not encrypted as such.", "backup-limits"),
+        _li("Le dépôt décrit cette planification mais ne peut pas prouver qu'elle est active sur le serveur.",
+            "The repository describes this schedule but cannot prove that it is active on the server.", "backup-unproven"),
+        _li("Les archives restent sur le même serveur : aucune copie hors site n'est automatisée par nos soins, et elles ne sont pas chiffrées en tant que telles.",
+            "The archives stay on the same server: no off-site copy is automated by us, and they are not encrypted as such.", "backup-limits"),
+        _li("La procédure d'exploitation mentionne aussi une sauvegarde quotidienne du serveur par l'hébergeur : elle ne dépend pas de notre script et le dépôt ne permet pas de la vérifier.",
+            "The operating procedure also mentions a daily backup of the server by the hosting provider: it does not depend on our script and the repository cannot be used to verify it.", "host-backup"),
         _li("Aucune procédure ni aucun test de restauration n'est documenté.",
             "No restore procedure or restore test is documented.", "no-restore-doc"),
     ]),
@@ -308,6 +314,8 @@ SUBPROCESSORS = [
      T("Aucune donnée client", "No customer data"), T("Lors des mises à jour", "During updates"), "deploy-ci"),
     (T("Cloudflare (cdnjs)", "Cloudflare (cdnjs)"), T("Bibliothèque d'animation du site", "Site animation library"),
      T("Adresse IP des visiteurs", "Visitors' IP addresses"), T("À chaque visite de la page d'accueil", "On every visit to the home page"), "sp-cdnjs"),
+    (T("jsDelivr (CDN)", "jsDelivr (CDN)"), T("Icônes des logos d'outils dans l'application", "Tool logo icons in the application"),
+     T("Adresse IP des utilisateurs", "Users' IP addresses"), T("Quand la liste des outils s'affiche", "When the tool list is displayed"), "sp-jsdelivr"),
     (T("frankfurter.dev", "frankfurter.dev"), T("Taux de change indicatifs", "Indicative exchange rates"),
      T("Aucune donnée personnelle", "No personal data"), T("Requête du serveur, mise en cache 12 h", "Server request, cached for 12 h"), "sp-fx"),
 ]
@@ -325,8 +333,8 @@ NOT_DONE = [
         "No two-factor authentication or SSO. No HSTS/CSP headers. No dedicated anti-CSRF token.", "no-mfa no-sec-headers no-csrf"),
     _li("Pas de chiffrement applicatif des missions, des profils et des comptes ; pas de HSM ; pas de rotation automatique de la clé maîtresse.",
         "No application-level encryption of missions, profiles and accounts; no HSM; no automatic rotation of the master key.", "plain-missions no-rotation"),
-    _li("Pas de sauvegarde hors site ni de test de restauration documenté.",
-        "No off-site backup and no documented restore test.", "backup-limits no-restore-doc"),
+    _li("Pas de sauvegarde hors site automatisée par nos soins, ni de test de restauration documenté.",
+        "No off-site backup automated by us, and no documented restore test.", "backup-limits no-restore-doc"),
     _li("Pas de surveillance externe indépendante, pas de SLA, pas de redondance.",
         "No independent external monitoring, no SLA, no redundancy.", "single-server"),
 ]
@@ -533,18 +541,22 @@ _STATUS_JS = r"""
 
   function render() {
     root.textContent = "";
-    var b = el("div", "st-banner " + data.status, L(BANNER[data.status][0], BANNER[data.status][1]));
+    // Si le navigateur ne peut pas joindre /api/status (hors ligne, copie en cache d'un service worker,
+    // serveur arrete), l'etat embarque dans la page est PERIME : on n'affiche jamais un « tout va bien » perime.
+    var shown = failed ? "unknown" : data.status;
+    var b = el("div", "st-banner " + shown, L(BANNER[shown][0], BANNER[shown][1]));
     b.setAttribute("role", "status");
     root.appendChild(b);
-    if (failed) root.appendChild(el("p", "st-empty", L("Impossible de joindre le serveur depuis votre navigateur : les données ci-dessous datent de la dernière actualisation réussie.", "Cannot reach the server from your browser: the data below dates from the last successful refresh.")));
+    if (failed) root.appendChild(el("p", "st-empty", L("Impossible de joindre le serveur depuis votre navigateur : l'état actuel est inconnu. L'historique ci-dessous date de la dernière actualisation réussie.", "Cannot reach the server from your browser: the current state is unknown. The history below dates from the last successful refresh.")));
 
     var comps = el("ul", "st-comps");
     data.components.forEach(function (c) {
       var li = el("li");
       var label = COMP[c.id] || [c.id, c.id];
+      var state = failed ? "unknown" : c.state;
       li.appendChild(el("span", "", L(label[0], label[1])));
-      var st = c.state === "down" && c.id === "ai" ? [L("Injoignable", "Unreachable")] : [L(STATE[c.state][0], STATE[c.state][1])];
-      li.appendChild(el("span", "v " + c.state, st[0]));
+      var st = state === "down" && c.id === "ai" ? L("Injoignable", "Unreachable") : L(STATE[state][0], STATE[state][1]);
+      li.appendChild(el("span", "v " + state, st));
       comps.appendChild(li);
     });
     root.appendChild(comps);
@@ -622,6 +634,7 @@ _STATUS_JS = r"""
   document.addEventListener("bk:lang", render);
   setInterval(refresh, 60000);
   render();
+  refresh();      // tout de suite : une page restee en cache ne doit pas afficher son ancien etat comme s'il etait actuel
 })();
 """
 
@@ -674,6 +687,26 @@ def render_security_txt(base_url, now=None):
 
 
 # --------------------------------------------------------------------------- service (crochets de server.py)
+class _HeadOnlyWriter:
+    """Laisse passer les en-tetes HTTP (jusqu'a la ligne vide) et jette le corps : reponse a une requete HEAD."""
+
+    def __init__(self, real):
+        self.real, self._buf, self._done = real, b"", False
+
+    def write(self, data):
+        if self._done:
+            return len(data)
+        self._buf += bytes(data)
+        end = self._buf.find(b"\r\n\r\n")
+        if end >= 0:
+            self.real.write(self._buf[:end + 4])
+            self._buf, self._done = b"", True
+        return len(data)
+
+    def flush(self):
+        pass
+
+
 class TrustService:
     def __init__(self, root, public_base_url, data_dir=None):
         self.root = root
@@ -743,6 +776,20 @@ class TrustService:
         else:
             return False
         return True
+
+    HEAD_PATHS = ("/api/health", "/api/status", "/status.html", "/status", "/securite.html", "/securite", "/.well-known/security.txt")
+
+    def handle_head(self, h_, path):
+        """HEAD (sondes de surveillance externes, ex. UptimeRobot) : memes en-tetes que GET, sans corps.
+        Limite aux routes de ce module ; toute autre route garde le comportement habituel (501)."""
+        if path not in self.HEAD_PATHS:
+            return False
+        real = h_.wfile
+        h_.wfile = _HeadOnlyWriter(real)
+        try:
+            return self.handle_get(h_, path)
+        finally:
+            h_.wfile = real
 
     def handle_post(self, h_, path):
         if path != "/api/admin/status/incident":
