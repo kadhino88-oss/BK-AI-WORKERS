@@ -1,0 +1,35 @@
+{
+  "uid": "bk_ai_workers_app",
+  "type": "app",
+  "config": {
+    "description": "BK-AI-WORKERS connecte vos Workers IA a votre CRM HubSpot : ils lisent vos contacts, entreprises et transactions et preparent des mises a jour que vous validez avant tout envoi.",
+    "name": "BK-AI-WORKERS",
+    "distribution": "marketplace",
+    "auth": {
+      "type": "oauth",
+      "redirectUrls": [
+        "https://bk-ai-workers.com/oauth/hubspot/callback"
+      ],
+      "requiredScopes": [
+        "oauth",
+        "crm.objects.contacts.read",
+        "crm.objects.contacts.write",
+        "crm.objects.companies.read",
+        "crm.objects.deals.read",
+        "crm.objects.deals.write"
+      ],
+      "optionalScopes": [],
+      "conditionallyRequiredScopes": []
+    },
+    "permittedUrls": {
+      "fetch": [],
+      "iframe": [],
+      "img": []
+    },
+    "support": {
+      "supportEmail": "contact@bk-entreprise.com",
+      "documentationUrl": "https://bk-ai-workers.com/faq.html",
+      "supportUrl": "https://bk-ai-workers.com/"
+    }
+  }
+}
