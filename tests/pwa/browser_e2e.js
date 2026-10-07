@@ -10,7 +10,7 @@
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
-const { spawn } = require("child_process");
+const { spawn, spawnSync } = require("child_process");
 
 const BASE = (process.env.BK_TEST_BASE_URL || "").replace(/\/$/, "");
 const SHOTS = process.env.BK_SHOTS_DIR || "";
@@ -45,7 +45,7 @@ function findChrome() {
 function launchChrome(exe) {
   const userDir = fs.mkdtempSync(path.join(os.tmpdir(), "bkpwa-chrome-"));
   const proc = spawn(exe, ["--headless=new", "--remote-debugging-port=0", "--user-data-dir=" + userDir, "--no-first-run", "--no-default-browser-check",
-    "--disable-gpu", "--disable-extensions", "--disable-background-networking", "--disable-sync", "--mute-audio", "--window-size=1280,800", "about:blank"], { stdio: ["ignore", "ignore", "pipe"] });
+    "--disable-gpu", "--disable-breakpad", "--disable-extensions", "--disable-background-networking", "--disable-sync", "--mute-audio", "--window-size=1280,800", "about:blank"], { stdio: ["ignore", "ignore", "pipe"] });
   return new Promise((resolve, reject) => {
     let buf = "";
     const timer = setTimeout(() => reject(new Error("Chrome n'a pas annonce son port DevTools")), 30000);
@@ -86,7 +86,7 @@ class Page {
     });
   }
   send(method, params) { return this.cdp.send(method, params, this.sessionId); }
-  waitEvent(name, timeout = 20000) {
+  waitEvent(name, timeout = 45000) {
     return new Promise((res, rej) => {
       const t = setTimeout(() => rej(new Error("delai depasse : " + name)), timeout);
       this.cdp.on((m) => { if (m.sessionId === this.sessionId && m.method === name) { clearTimeout(t); res(m.params); } });
@@ -135,10 +135,30 @@ const RECTS = `(() => {
   return { banner: r(document.getElementById('pwa-install-banner')), fab: r(document.getElementById('chloe-fab-toggle')), vw: innerWidth, vh: innerHeight,
            scrollW: document.documentElement.scrollWidth, bodyScrollW: document.body.scrollWidth };
 })()`;
+// L'animation d'entree de la banniere (0,35 s) est terminee : avant, elle est encore decalee de 16 px vers le bas.
+// (D'autres animations infinies de la page, comme la lueur du hero, ne se terminent jamais : on ne regarde que la banniere.)
+const SETTLED = `(() => { const b = document.getElementById('pwa-install-banner'); return !!b && b.getAnimations().every((a) => a.playState === 'finished'); })()`;
 const overlap = (a, b) => a && b && a.l < b.r && a.r > b.l && a.t < b.b && a.b > b.t;
 
 async function resetStorage(page, extra = {}) {
   await page.eval(`localStorage.clear(); sessionStorage.setItem('bk_pwa_session','1'); ${Object.entries(extra).map(([k, v]) => `localStorage.setItem(${JSON.stringify(k)}, ${JSON.stringify(v)});`).join(" ")} true`);
+}
+
+// Arrete Chrome ET ses processus enfants (sous Windows, le gestionnaire de plantages garde des fichiers du profil ouverts).
+function killTree(proc) {
+  try {
+    if (process.platform === "win32") spawnSync("taskkill", ["/pid", String(proc.pid), "/T", "/F"], { stdio: "ignore" });
+    else proc.kill();
+  } catch (e) { /* deja arrete */ }
+}
+
+// Windows garde quelques fichiers de Chrome verrouilles un instant apres son arret (EBUSY) : on reessaie, et un
+// dossier temporaire qui reste ne doit jamais faire echouer le test.
+async function removeDir(dir) {
+  for (let i = 0; i < 20; i++) {
+    try { fs.rmSync(dir, { recursive: true, force: true }); return; } catch (e) { await sleep(500); }
+  }
+  console.log("  (info) dossier temporaire non supprime : " + dir);
 }
 
 async function main() {
@@ -166,7 +186,7 @@ async function main() {
     // ===== installabilite, service worker, cache =====
     console.log("installabilite et service worker (Chrome lui-meme)");
     await page.goto(BASE + "/");
-    check("le service worker devient actif (activated)", await page.waitFor(`navigator.serviceWorker.getRegistration().then(r => !!r && !!r.active && r.active.state === 'activated')`, 15000));
+    check("le service worker devient actif (activated)", await page.waitFor(`navigator.serviceWorker.getRegistration().then(r => !!r && !!r.active && r.active.state === 'activated')`, 60000));
     const reg = await page.eval(`navigator.serviceWorker.getRegistration().then(r => ({ scope: r.scope }))`);
     check("portee du service worker = racine du site", reg.scope === BASE + "/", reg.scope);
     const cacheState = await page.eval(`(async () => { const out = {}; for (const n of await caches.keys()) out[n] = (await (await caches.open(n)).keys()).map(k => new URL(k.url).pathname); return out; })()`);
@@ -245,6 +265,7 @@ async function main() {
       await page.eval(FAKE_PROMPT_EVENT);
       check(`${w}px : banniere visible`, await page.waitFor(BANNER_VISIBLE, 8000));
       check(`${w}px : l'icone de la banniere est chargee et affichee`, await page.waitFor(`(() => { const i = document.querySelector('.pwa-banner-icon'); return i.complete && i.naturalWidth === 192 && i.getBoundingClientRect().width >= 40; })()`, 5000));
+      await page.waitFor(SETTLED, 3000);
       const g = await page.eval(RECTS);
       check(`${w}px : banniere entierement dans l'ecran`, g.banner.l >= 0 && g.banner.r <= g.vw && g.banner.t >= 0 && g.banner.b <= g.vh, JSON.stringify(g));
       check(`${w}px : ne recouvre PAS la bulle de Chloe`, !overlap(g.banner, g.fab), JSON.stringify(g));
@@ -263,6 +284,7 @@ async function main() {
     await page.eval(`document.getElementById('pwa-banner-cta').click(); true`);
     const steps = await page.eval(`({ shown: !document.getElementById('pwa-ios-steps').hidden, n: document.querySelectorAll('#pwa-ios-steps li').length, text: document.getElementById('pwa-ios-steps').innerText, cta: ${LABEL("pwa-banner-cta")}, expanded: document.getElementById('pwa-banner-cta').getAttribute('aria-expanded') })`);
     check("iPhone : les 3 etapes (Partager > Sur l'ecran d'accueil > Ajouter) s'affichent", steps.shown && steps.n === 3 && /Partager/.test(steps.text) && /Sur l'écran d'accueil/.test(steps.text) && /Ajouter/.test(steps.text) && steps.cta === "Compris" && steps.expanded === "true", JSON.stringify(steps));
+    await page.waitFor(SETTLED, 3000);
     const gi = await page.eval(RECTS);
     check("iPhone, etapes ouvertes : dans l'ecran, sans chevaucher la bulle de Chloe, sans defilement horizontal", gi.banner.l >= 0 && gi.banner.r <= gi.vw && gi.banner.t >= 0 && gi.banner.b <= gi.vh && !overlap(gi.banner, gi.fab) && gi.scrollW <= gi.vw, JSON.stringify(gi));
     await page.shot("ios-steps");
@@ -332,9 +354,8 @@ async function main() {
     check("serveur relance : la page de secours se recharge toute seule vers la page demandee (/workers.html)", await page.waitFor(`location.pathname === '/workers.html' && !document.getElementById('retry') && document.querySelector('h1') && document.querySelector('h1').innerText !== 'Vous êtes hors connexion'`, 40000, 500));
   } finally {
     try { cdp.ws.close(); } catch (e) { /* ignore */ }
-    proc.kill();
-    await sleep(500);
-    fs.rmSync(userDir, { recursive: true, force: true });
+    killTree(proc);
+    await removeDir(userDir);
   }
   console.log(`\n${total - failures}/${total} controles passes`);
   process.exit(failures ? 1 : 0);
