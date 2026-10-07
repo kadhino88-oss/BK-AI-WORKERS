@@ -1266,6 +1266,14 @@ async function loadConnectors() {
         // mot de passe, et il n'a aucune cle/jeton a copier.
         const v = OAUTH_VENDOR_UI[c.oauthProvider] || { label: brandName(c.provider), svg: "" };
         actionsHtml = `<button type="button" class="connector-oauth-btn" data-oauth="${c.oauthProvider}" data-provider="${c.credentialProvider}">${v.svg}<span>${connected ? "Reconnecter avec " : "Se connecter avec "}${v.label}</span></button>`;
+        if (c.connectGuide) {
+          // Repli : si la connexion en un clic n'est pas possible pour ce client
+          // (application du fournisseur pas encore approuvee pour son espace de
+          // travail, compte d'entreprise restreint...), il garde le formulaire
+          // guide — jamais d'impasse.
+          actionsHtml += '<button type="button" class="connector-link-btn connector-guide-btn">Connexion manuelle</button>';
+          if (connected) actionsHtml += '<button type="button" class="connector-link-btn connector-test-btn">Tester</button>';
+        }
         if (connected) {
           actionsHtml += `<button type="button" class="connector-link-btn" data-disconnect="${c.credentialProvider}">Déconnecter</button>`;
           actionsHtml += `<label class="switch" title="Autoriser vos Workers à utiliser cet outil"><input type="checkbox" class="connector-switch" ${c.activatedByClient ? "checked" : ""}><span class="switch-track"></span><span class="switch-label">Workers autorisés</span></label>`;
