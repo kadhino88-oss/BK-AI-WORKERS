@@ -135,6 +135,11 @@ class ValidatorCatchesDefects(unittest.TestCase):
         wr(os.path.join(self.tmp, "dashboard", "icons", "apple-touch-icon.png"), make_png(152, 152, color_type=2))
         self.assertTrue(any("180x180" in n for n in self.failing()))
 
+    def test_svg_apple_touch_icon_on_another_page_rejected(self):
+        p = os.path.join(self.tmp, "dashboard", "seo_pages.py")
+        wr(p, rd(p).replace("/icons/apple-touch-icon.png", "/favicon.svg"))
+        self.assertTrue(any("toutes les pages publiques" in n for n in self.failing()), self.failing())
+
     def test_svg_apple_touch_icon_rejected(self):
         p = os.path.join(self.tmp, "dashboard", "index.html")
         s = rd(p).replace('<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">',
@@ -212,6 +217,17 @@ class PwaStaticRoutes(unittest.TestCase):
         self.assertEqual(h2.wfile.getvalue(), b"")
         _, h3 = self.serve("/service-worker.js", {"If-None-Match": '"autre"'})
         self.assertEqual(h3.status, 200)
+
+    def test_etag_matching_is_tolerant_to_the_https_proxy(self):
+        # Derriere Caddy (encode gzip), le navigateur peut renvoyer un ETag faible ou une liste d'ETags.
+        _, h1 = self.serve("/offline.html")
+        etag = h1.sent["ETag"]
+        for header in ("W/" + etag, '"autre", ' + etag, "W/" + etag + ', "autre"', "*"):
+            _, h = self.serve("/offline.html", {"If-None-Match": header})
+            self.assertEqual(h.status, 304, header)
+        for header in ("", '"autre"', "W/\"autre\"", etag[:-2] + '"'):
+            _, h = self.serve("/offline.html", {"If-None-Match": header})
+            self.assertEqual(h.status, 200, header)
 
     def test_static_files_and_types(self):
         expect = {"/offline.html": "text/html", "/pwa-install.js": "text/javascript", "/pwa-install.css": "text/css",

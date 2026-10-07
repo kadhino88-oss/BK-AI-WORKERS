@@ -53,8 +53,8 @@ window.BK_EN = Object.assign(window.BK_EN || {}, {
   "Ce qui peut être conservé": "What may be kept",
   "Certaines pièces de facturation peuvent devoir être conservées pour répondre à des obligations légales (comptabilité : 10 ans). Les paiements sont traités par Stripe ; voir la politique de confidentialité.":
     "Some billing records may have to be kept to meet legal obligations (accounting: 10 years). Payments are processed by Stripe; see the privacy policy.",
-  "Les sauvegardes techniques tournantes du serveur peuvent contenir vos données quelques jours avant d'être remplacées automatiquement.":
-    "The server's rotating technical backups may contain your data for a few days before they are replaced automatically.",
+  "Les sauvegardes techniques (les nôtres et celles de l'hébergeur) peuvent contenir vos données pendant une durée limitée, jusqu'à leur remplacement automatique.":
+    "Technical backups (ours and the host's) may contain your data for a limited time, until they are replaced automatically.",
   "Vous ne pouvez plus vous connecter ?": "Can't sign in any more?",
   "Écrivez-nous depuis l'adresse email de votre compte, nous répondons sous 30 jours :":
     "Write to us from your account's email address; we reply within 30 days:",

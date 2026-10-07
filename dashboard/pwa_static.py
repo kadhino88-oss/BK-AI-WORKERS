@@ -66,6 +66,20 @@ def _etag(body):
     return '"' + hashlib.sha1(body).hexdigest()[:20] + '"'
 
 
+def etag_matches(if_none_match, etag):
+    """Vrai si l'en-tete If-None-Match designe cet ETag. Tolere la liste, "*" et le prefixe faible W/ :
+    derriere le proxy HTTPS (Caddy, encode gzip) un ETag fort peut revenir sous la forme W/"..."."""
+    for part in (if_none_match or "").split(","):
+        part = part.strip()
+        if part == "*":
+            return True
+        if part[:2] == "W/":
+            part = part[2:]
+        if part == etag:
+            return True
+    return False
+
+
 def serve(handler, path, dashboard_dir):
     """Envoie le fichier PWA correspondant a `path`. Renvoie False si ce chemin n'est pas
     un fichier PWA (le serveur continue alors son routage normal)."""
@@ -87,7 +101,7 @@ def serve(handler, path, dashboard_dir):
     with open(full, "rb") as f:
         body = f.read()
     etag = _etag(body)
-    not_modified = (handler.headers.get("If-None-Match") or "").strip() == etag
+    not_modified = etag_matches(handler.headers.get("If-None-Match"), etag)
     handler.send_response(304 if not_modified else 200)
     handler.send_header("Content-Type", content_type)
     handler.send_header("Cache-Control", cache_control)

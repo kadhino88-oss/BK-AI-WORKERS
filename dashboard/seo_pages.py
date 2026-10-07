@@ -111,7 +111,7 @@ def _head(title, description, canonical_path):
         '<meta property="og:image" content="https://bk-ai-workers.com/portraits/chloe.jpg">\n'
         '<meta name="twitter:card" content="summary_large_image">\n'
         '<link rel="icon" type="image/svg+xml" href="/favicon.svg">\n'
-        '<link rel="apple-touch-icon" href="/favicon.svg">\n'
+        '<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">\n'
         '<link rel="preconnect" href="https://fonts.googleapis.com">\n'
         '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n'
         '<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap" rel="stylesheet">\n'

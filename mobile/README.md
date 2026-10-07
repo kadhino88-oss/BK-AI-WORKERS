@@ -7,7 +7,7 @@ Tout le mode d'emploi, les prix, les risques de validation et la liste de contr�
 | Dossier | Contenu | État |
 |---|---|---|
 | `capacitor/` | Coque iOS (Capacitor) : `capacitor.config.json`, écran « hors connexion » local (`www/offline.html`), page de démarrage (`www/index.html`) | Fichiers de configuration relus et testés (`tests/pwa/test_pwa.py`). **Non compilée** : il faut un Mac avec Xcode, qui n'est pas disponible ici. |
-| Android | Aucun dossier : la coque Android (Trusted Web Activity) est **générée par Bubblewrap** à partir de `https://bk-ai-workers.com/manifest.json` (`bubblewrap init`), voir `docs/MOBILE-APPS.md` §3. | Non générée (demande JDK 17 + Android SDK + le compte Google Play). |
+| Android | Aucun dossier : la coque Android (Trusted Web Activity) est **générée par Bubblewrap** à partir de `https://bk-ai-workers.com/manifest.json` (`bubblewrap init`), voir `docs/MOBILE-APPS.md` §4. | Non générée (demande JDK 17 + Android SDK + le compte Google Play). |
 
 Le fichier `capacitor/capacitor.config.json` ajoute `BKAIWorkersApp/1.0` au User-Agent : `dashboard/pwa-install.js`
 reconnaît cette marque, ne propose alors jamais « Installer l'application » et ajoute les classes CSS

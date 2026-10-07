@@ -291,6 +291,15 @@ def run(repo=REPO):
             info = png_info(read_file(p))
             check(f"apple-touch-icon {l['href']}: 180x180", (info["width"], info["height"]) == (180, 180), f"{info['width']}x{info['height']}")
             check(f"apple-touch-icon {l['href']}: sans transparence (sinon coins noirs sur iOS)", opaque(info), f"alpha min {info['min_alpha']}")
+    # Toutes les pages publiques (HTML statiques + gabarit de seo_pages.py), pas seulement l'accueil.
+    svg_touch = []
+    for fn in sorted(os.listdir(dash)):
+        if fn.endswith((".html", ".py")):
+            for tag in re.findall(r"<link\b[^>]*apple-touch-icon[^>]*>", read_text(repo, "dashboard", fn)):
+                href = re.search(r'href="([^"]+)"', tag)
+                if not href or not href.group(1).endswith(".png"):
+                    svg_touch.append(fn + " -> " + (href.group(1) if href else "?"))
+    check("toutes les pages publiques: apple-touch-icon en PNG (iOS ignore le SVG)", not svg_touch, svg_touch)
     check("index.html: meta viewport", "viewport" in metas)
     check("index.html: meta apple-mobile-web-app-title", bool(metas.get("apple-mobile-web-app-title")))
     check("index.html: meta mobile-web-app-capable", metas.get("mobile-web-app-capable") == "yes")
