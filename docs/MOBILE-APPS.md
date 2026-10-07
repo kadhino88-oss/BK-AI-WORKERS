@@ -206,14 +206,14 @@ Les icônes se régénèrent avec `python tests/pwa/make_store_icons.py` (Pillow
 ## 8. Tests
 
 ```
-python tests/pwa/validate_pwa.py            # manifeste, icônes (taille réelle, transparence, zone de sécurité), cohérence avec le site, service worker, pages, traductions
-python tests/pwa/test_pwa.py                # 37 tests : validateur (dont fautes volontaires), routes, node --check, service worker sous Node, « test des tests » (9 service workers cassés doivent être refusés), coque Capacitor
+python tests/pwa/validate_pwa.py            # 94 contrôles : manifeste, icônes (taille réelle, transparence, zone de sécurité), cohérence avec le site, service worker, pages, traductions
+python tests/pwa/test_pwa.py                # 42 tests : validateur (dont fautes volontaires), routes, ETag, node --check, service worker sous Node, « test des tests » (9 service workers cassés doivent être refusés), coque Capacitor
 python tests/pwa/e2e_server.py              # vrai serveur sur copie jetable (port aléatoire) : en-têtes, types MIME, icônes, assetlinks, chemins hostiles, anciennes routes, service worker réel contre ce serveur
 python tests/pwa/browser_e2e.py             # vrai Chrome/Edge headless (DevTools) : installabilité selon Chrome, service worker, invitation (ordinateur/Android/iPhone), mise en page 390/320 px, raccourcis, serveur coupé puis relancé
 node tests/pwa/test_service_worker.js       # (aussi lancé par les précédents)
 node tests/pwa/test_pwa_install.js
 ```
-`browser_e2e.py` accepte `BK_CHROME=<chemin>` et `BK_SHOTS_DIR=<dossier>` (captures PNG). Sans Chrome/Edge : ignoré.
+`browser_e2e.py` accepte `BK_CHROME=<chemin>` et `BK_SHOTS_DIR=<dossier>` (captures PNG). Sans Chrome/Edge : ignoré. Sur un Chrome à profil neuf, l'activation du service worker prend une dizaine de secondes (il s'enregistre à la fin du chargement de la page) : le test l'attend jusqu'à 60 s.
 
 Pas testé : iPhone/iPad réels, Android réel, coque Capacitor compilée, TWA générée, soumission aux stores.
 
