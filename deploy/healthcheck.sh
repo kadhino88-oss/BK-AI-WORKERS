@@ -6,12 +6,17 @@
 # Pour etre PREVENU par email en plus : ajouter le site a un service gratuit
 # de surveillance externe (ex. UptimeRobot) — il voit aussi les pannes du serveur entier.
 set -u
-URL="${BK_HEALTH_URL:-https://bk-ai-workers.com/api/workers}"
+# /api/health est la sonde legere (ajoutee avec la page /status.html). Tant que le conteneur n'a pas ete
+# reconstruit avec elle, /api/health repond 404 : on retombe alors sur /api/workers, donc ce script
+# marche avant, pendant et apres un deploiement. Une panne = les DEUX adresses en echec.
+BASE="${BK_HEALTH_BASE:-https://bk-ai-workers.com}"
+URL="${BK_HEALTH_URL:-$BASE/api/health}"
+FALLBACK_URL="${BK_HEALTH_FALLBACK_URL:-$BASE/api/workers}"
 STATE="${BK_HEALTH_STATE:-$HOME/.bk-health-fails}"
 LOG="${BK_HEALTH_LOG:-$HOME/bk-health.log}"
 DIR="${BK_PROJECT_DIR:-$HOME/BK-AI-WORKERS}"
 
-if curl -fsS -m 15 -o /dev/null "$URL"; then
+if curl -fsS -m 15 -o /dev/null "$URL" || curl -fsS -m 15 -o /dev/null "$FALLBACK_URL"; then
   [ -f "$STATE" ] && { echo "$(date -u +%FT%TZ) OK again after $(cat "$STATE") failure(s)" >> "$LOG"; rm -f "$STATE"; }
   exit 0
 fi

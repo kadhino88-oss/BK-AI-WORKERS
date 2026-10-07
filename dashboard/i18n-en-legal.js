@@ -113,3 +113,7 @@ window.BK_EN = Object.assign(window.BK_EN || {}, {
 Object.assign(window.BK_EN, {
   "La plateforme n'utilise que des cookies techniques strictement nécessaires (session de connexion) et un stockage local du navigateur pour mémoriser votre langue. Aucun cookie publicitaire ni de suivi n'est utilisé : aucun consentement n'est donc requis.": "The platform only uses strictly necessary technical cookies (login session) and browser local storage to remember your language. No advertising or tracking cookie is used, so no consent is required."
 });
+
+Object.assign(window.BK_EN, {
+  "Sécurité et confiance": "Security and trust", "Statut du service": "Service status"
+});

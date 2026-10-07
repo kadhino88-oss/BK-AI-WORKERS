@@ -21,6 +21,7 @@ import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, unquote, parse_qs, urlencode
 import seo_pages
+import trust_pages
 
 # ---------------------------------------------------------------------
 # Ecritures concurrentes (2026-09-28) : le serveur traite les requetes en
@@ -1815,6 +1816,9 @@ def delete_account(client_id, password):
 
 
 SITEMAP_PATHS = ['/', '/workers.html', '/tarifs.html', '/faq.html', '/chloe.html', '/demarrer.html', '/automatisations.html', '/analytics.html', '/facturation.html', '/cgv.html', '/mentions-legales.html', '/cookies.html', '/confidentialite.html']
+# Pages de confiance + mesure de disponibilite (dashboard/trust_pages.py, status_monitor.py).
+SITEMAP_PATHS.extend(p for p in trust_pages.SITEMAP_PATHS if p not in SITEMAP_PATHS)
+TRUST = trust_pages.TrustService(ROOT, PUBLIC_BASE_URL)
 
 # ---------------------------------------------------------------------
 # Temoignages clients (2026-09-26) : AUCUN avis n'est invente. Seul le
@@ -2654,6 +2658,9 @@ class Handler(BaseHTTPRequestHandler):
             self._send_gate_required()
             return
 
+        if TRUST.handle_get(self, path):  # /securite.html /status.html /api/status /api/health /.well-known/security.txt
+            return
+
         if path == "/" or path == "/index.html":
             self._send_file(os.path.join(DASHBOARD_DIR, "index.html"), "text/html; charset=utf-8")
         elif path == "/style.css":
@@ -3006,6 +3013,9 @@ class Handler(BaseHTTPRequestHandler):
 
         if route_requires_gate(path) and not self._gate_authenticated():
             self._send_gate_required()
+            return
+
+        if TRUST.handle_post(self, path):  # journal d'incidents (proprietaire)
             return
 
         if path == "/api/gate/login":
@@ -3810,4 +3820,5 @@ if __name__ == "__main__":
     print(f"BK-AI-WORKERS dashboard sur http://{os.environ.get('BK_LISTEN_HOST', '127.0.0.1')}:{port}")
     if not gate_is_enabled():
         print("ATTENTION : aucune porte d'acces definie (.secrets\\Set-DashboardGate.ps1) — les vues operationnelles sont ouvertes a quiconque atteint ce serveur.")
+    TRUST.start(port, os.environ.get("BK_LISTEN_HOST", "127.0.0.1"))  # mesure de disponibilite toutes les 60 s
     server.serve_forever()

@@ -1,0 +1,253 @@
+{
+  "_comment": "Chaque identifiant (data-claim sur dashboard/trust_pages.py) est relie a une preuve lisible dans le depot. 'match' : tous ces motifs (regex, multiligne) doivent etre presents ; 'absent' : aucun ne doit l'etre ; 'function' : cherche seulement dans cette fonction Python ; 'absent_files' : aucun fichier ne doit correspondre (un rapport depose dans docs/evidence/ invaliderait une phrase 'non fait') ; 'assign_excludes' : la constante Python ne doit contenir aucune de ces valeurs. Si le code change et qu'un motif ne correspond plus, le test echoue : la page doit etre relue.",
+
+  "https": [
+    {"file": "docker-compose.yml", "match": ["image: caddy:2", "- \"443:443\""]},
+    {"file": "deploy/Caddyfile.docker", "match": ["reverse_proxy app:8787"]}
+  ],
+  "local-bind": [
+    {"file": "docker-compose.yml", "match": ["\"127\\.0\\.0\\.1:8787:8787\""], "absent": ["^\\s*- \"8787:8787\""]}
+  ],
+  "no-sec-headers": [
+    {"file": "dashboard/server.py", "absent": ["Strict-Transport-Security", "Content-Security-Policy", "X-Frame-Options"]},
+    {"file": "deploy/Caddyfile.docker", "absent": ["Strict-Transport-Security", "Content-Security-Policy", "X-Frame-Options", "header "]}
+  ],
+  "aes-gcm": [
+    {"file": "core/connectors/Crypto-Helper.ps1", "match": ["\\[System\\.Security\\.Cryptography\\.AesGcm\\]::new\\(\\$Key\\)", "\\[byte\\[\\]\\]::new\\(12\\)", "Length -ne 32", "RandomNumberGenerator\\]::Fill\\(\\$Nonce\\)"]},
+    {"file": "core/connectors/Client-Credential-Store.ps1", "match": ["client-credentials/data/\\$SafeClientId"]}
+  ],
+  "key-env": [
+    {"file": "core/connectors/Crypto-Helper.ps1", "match": ["GetEnvironmentVariable\\(\"BK_SECRET_CRED_ENCRYPTION_KEY\"\\)"]},
+    {"file": ".gitignore", "match": ["^\\.env$"]},
+    {"file": "docker-compose.yml", "match": ["env_file: \\.env", "bkdata:/data"]},
+    {"file": "deploy/backup.sh", "match": ["VOLUME=\"\\$\\{BK_VOLUME:-bk-ai-workers_bkdata\\}\""]},
+    {"file": "deploy/entrypoint.sh", "absent": ["CRED_ENCRYPTION_KEY"]},
+    {"file": "dashboard/server.py", "absent": ["CRED_ENCRYPTION_KEY"]}
+  ],
+  "secret-never-returned": [
+    {"file": "dashboard/connect_guides.py", "match": ["le secret n'est jamais renvoye au navigateur"]},
+    {"file": "dashboard/server.py", "function": "get_client_configured_providers", "match": ["jamais dechiffre ici"]},
+    {"file": "dashboard/server.py", "match": ["puis jamais renvoyee en clair, meme a lui-meme"]}
+  ],
+  "no-rotation": [
+    {"file": "core/connectors/Crypto-Helper.ps1", "absent": ["(?i)rotat", "(?i)key.?id\\b", "(?i)\\bkid\\b"]}
+  ],
+  "temp-file": [
+    {"file": "dashboard/server.py", "function": "store_client_connector_credential", "match": ["bkaiw-cred-in-", "os\\.remove\\(f\\)"]}
+  ],
+  "passwords": [
+    {"file": "dashboard/server.py", "function": "_hash_password", "match": ["pbkdf2_hmac\\(\"sha256\"", "os\\.urandom\\(16\\)", "200000"]},
+    {"file": "dashboard/server.py", "function": "_verify_password", "match": ["hmac\\.compare_digest"]},
+    {"file": "dashboard/server.py", "function": "create_account", "match": ["len\\(password or \"\"\\) < 8"]},
+    {"file": "dashboard/server.py", "absent": ["log_activity\\([^\\n]*\\bpassword\\s*="]}
+  ],
+  "no-mfa": [
+    {"file": "dashboard/server.py", "absent": ["(?i)\\b(totp|2fa|mfa|two[-_ ]?factor)\\b"]}
+  ],
+  "no-breach-check": [
+    {"file": "dashboard/server.py", "absent": ["(?i)pwned|breach|zxcvbn"]}
+  ],
+  "email-verify": [
+    {"file": "dashboard/server.py", "match": ["VERIFY_TTL_SECONDS = 7 \\* 24 \\* 3600", "EMAIL_NOT_VERIFIED", "PAID_PLANS_WITH_CHECKOUT and client_id != DASHBOARD_CLIENT_ID and not account_email_verified"]}
+  ],
+  "reset-flow": [
+    {"file": "dashboard/server.py", "match": ["RESET_TTL_SECONDS = 3600", "Reponse identique que le compte existe ou non", "entry = data\\.pop\\(_session_key\\(token or \"\"\\), None\\)"]}
+  ],
+  "sessions": [
+    {"file": "dashboard/server.py", "match": ["secrets\\.token_urlsafe\\(32\\)", "HttpOnly; SameSite=Lax", "COOKIE_SECURE = \"; Secure\" if PUBLIC_BASE_URL\\.startswith\\(\"https\"\\)", "ACCOUNT_SESSION_TTL_SECONDS = 60 \\* 60 \\* 24 \\* 30", "hashlib\\.sha256\\(\\(token or \"\"\\)\\.encode", "0o600", "Seuls les EMPREINTES sha256 des jetons sont ecrites"]}
+  ],
+  "session-invalidation": [
+    {"file": "dashboard/server.py", "function": "reset_password_with_token", "match": ["account_clear_all_sessions"]},
+    {"file": "dashboard/server.py", "function": "delete_account", "match": ["account_clear_all_sessions"]}
+  ],
+  "no-csrf": [
+    {"file": "dashboard/server.py", "absent": ["(?i)csrf"]}
+  ],
+  "no-idle-timeout": [
+    {"file": "dashboard/server.py", "absent": ["(?i)\\bidle\\b|inactiv"]}
+  ],
+  "tenant-isolation": [
+    {"file": "dashboard/server.py", "match": ["def _resolve_client_id", "pending\\.get\\(\"clientId\"\\) != client_id", "data\\.get\\(\"ClientId\"\\) != client_id", "def _find_client_by_api_key"]},
+    {"file": "core/connectors/Client-Credential-Store.ps1", "match": ["Aucun repli\\s+#\\s+implicite vers l'identifiant d'un autre client"]},
+    {"file": "dashboard/server.py", "function": "get_billing", "match": ["_billing_load"]}
+  ],
+  "no-pentest": [
+    {"absent_files": ["docs/**/*pentest*", "docs/**/*penetration*", "docs/**/*intrusion*", "docs/evidence/pentest-*"]}
+  ],
+  "no-soc2": [
+    {"absent_files": ["docs/**/*soc2-report*", "docs/**/*soc2-type*", "docs/evidence/soc2-*"]}
+  ],
+  "no-iso": [
+    {"absent_files": ["docs/**/*iso27001-cert*", "docs/evidence/iso27001-*", "docs/evidence/iso-27001-*"]}
+  ],
+  "no-sector": [
+    {"absent_files": ["docs/evidence/hipaa-*", "docs/evidence/pci-*", "docs/evidence/hds-*"]}
+  ],
+  "rate-limits": [
+    {"file": "dashboard/server.py", "match": ["AUTH_MAX_PER_ACCOUNT = 8", "AUTH_MAX_PER_IP = 40", "AUTH_WINDOW = 15 \\* 60", "SIGNUP_MAX_PER_IP_PER_HOUR = 10", "DEMO_MAX_PER_IP_PER_HOUR = 4", "CRED_SAVE_MAX_PER_HOUR = 40", "PUBLIC_API_MAX_PER_MINUTE = 20", "RESET_RATE, f\"i\\|\\{ip\\}\", 3600\\)\\) >= 6", "RESET_RATE, f\"e\\|\\{email\\}\", 3600\\)\\) >= 3"]}
+  ],
+  "rate-in-memory": [
+    {"file": "dashboard/server.py", "match": ["AUTH_FAILS = \\{\\}", "SIGNUP_RATE = \\{\\}", "CRED_SAVE_RATE = \\{\\}"], "absent": ["_write_json_atomic\\(AUTH_", "_write_json_atomic\\(SIGNUP_"]}
+  ],
+  "ssrf-guard": [
+    {"file": "dashboard/connect_guides.py", "match": ["def _is_public_ip", "_BLOCKED_SUFFIXES", "Cette adresse n'est pas accessible publiquement", "def normalize_subdomain", "not all\\(_is_public_ip\\(ip\\) for ip in ips\\)"]},
+    {"file": "core/integrations/connect-guides.json", "match": ["\"suffix\": \"zendesk\\.com\"", "\"suffix\": \"myshopify\\.com\"", "\"suffix\": \"bamboohr\\.com\""]},
+    {"file": "dashboard/connect_guides.py", "function": "build_secret", "match": ["normalize_value"]}
+  ],
+  "verify-removes": [
+    {"file": "dashboard/server.py", "function": "verify_client_tool", "match": ["store_client_connector_credential\\(client_id, provider, \"\"\\)", "\"removed\": True", "TEST_CONNECTION"]}
+  ],
+  "ssrf-webhook-gap": [
+    {"file": "dashboard/server.py", "match": ["INVALID_URL", "url\\.startswith\\(\"https://\"\\) or url\\.startswith\\(\"http://\"\\)"], "absent": ["normalize_host", "_is_public_ip"]}
+  ],
+  "twilio-sig": [
+    {"file": "dashboard/phone_agent.py", "match": ["hashlib\\.sha1", "hmac\\.compare_digest\\(twilio_signature", "rien n'est traite sans la signature Twilio valide", "REJECT_TWIML"]}
+  ],
+  "phone-no-access": [
+    {"file": "dashboard/phone_agent.py", "match": ["aucun Worker,", "aucun connecteur, aucune donnee de mission ni historique du proprietaire"]}
+  ],
+  "meta-sig": [
+    {"file": "dashboard/whatsapp_channel.py", "function": "verify_signature", "match": ["hashlib\\.sha256", "hmac\\.compare_digest\\(expected, header"]}
+  ],
+  "outgoing-webhook-sig": [
+    {"file": "dashboard/server.py", "match": ["X-BK-Signature", "hmac\\.new\\(cfg\\[\"secret\"\\]\\.encode\\(\"utf-8\"\\), body, hashlib\\.sha256\\)", "secret = existing\\.get\\(\"secret\"\\) or secrets\\.token_hex\\(32\\)"]}
+  ],
+  "stripe-hosted": [
+    {"file": "core/integrations/Stripe-Adapter.ps1", "match": ["Paid +=\\s*\\(\\$Response\\.payment_status -eq \"paid\"\\)"]},
+    {"file": "dashboard/server.py", "match": ["PAYMENT_NOT_CONFIRMED", "Aucune donnee de\\s+carte ne transite jamais par ce serveur"]}
+  ],
+  "human-validation": [
+    {"file": "core/ai/adapters/ANTHROPIC-ADAPTER.ps1", "match": ["JAMAIS executee ici", "PENDING_CONFIRMATION", "-like \"READ_\\*\" -or \\$Operation -like \"SEARCH_\\*\""]},
+    {"file": "dashboard/server.py", "match": ["/api/connector-action/confirm"]}
+  ],
+  "autoapprove-optin": [
+    {"file": "core/ai/adapters/ANTHROPIC-ADAPTER.ps1", "match": ["Faux par defaut", "autoapprove\\.json"]},
+    {"file": "dashboard/server.py", "match": ["_save_client_autoapprove"]}
+  ],
+  "finance-manual": [
+    {"file": "core/ai/adapters/ANTHROPIC-ADAPTER.ps1", "match": ["-in @\\(\"stripe\", \"paypal\", \"quickbooks\", \"xero\"\\)", "\\$ClientId -eq \"CLI-DASHBOARD\" -and \\$IsFinancialConnector -and -not \\(Test-ReadOnlyOperation"]},
+    {"file": "dashboard/server.py", "assign_excludes": {"name": "CLIENT_CONNECTOR_PROVIDERS", "values": ["stripe", "paypal", "quickbooks", "xero"]}}
+  ],
+  "auth-chain": [
+    {"file": "core/runtime/worker-runtime/Invoke-Worker-AI.ps1", "match": ["AI_AUTHORIZATION_BLOCKED", "CapabilityAuthorized", "AuthorityAuthorized", "PolicyAuthorized", "CredentialAuthorized", "ConnectorAuthorized"]}
+  ],
+  "tool-results-to-model": [
+    {"file": "core/ai/adapters/ANTHROPIC-ADAPTER.ps1", "match": ["type = \"tool_result\"", "tool_use_id"]}
+  ],
+  "activity-log": [
+    {"file": "dashboard/server.py", "match": ["events\\[-1000:\\]", "log_activity\\(\"login\"", "log_activity\\(\"signup\"", "log_activity\\(\"account_deleted\"", "path == \"/api/admin/activity\":\\s+if not self\\._gate_authenticated\\(\\)"]}
+  ],
+  "mission-history": [
+    {"file": "dashboard/server.py", "function": "get_client_missions", "match": ["\"answer\": \\(data\\.get\\(\"Result\"\\) or \\{\\}\\)\\.get\\(\"Answer\"\\)"]}
+  ],
+  "no-failed-login-log": [
+    {"file": "dashboard/server.py", "match": ["def auth_record_fail"], "absent": ["log_activity\\(\"login_fail", "log_activity\\(\"auth_fail", "log_activity\\(\"failed"]}
+  ],
+  "no-siem": [
+    {"file": "dashboard/server.py", "absent": ["(?i)\\b(siem|splunk|datadog|sentry|syslog)\\b"]}
+  ],
+  "export-delete": [
+    {"file": "dashboard/server.py", "match": ["def export_account_data", "def delete_account", "ACTIVE_SUBSCRIPTION", "shutil\\.rmtree\\(cdir"]},
+    {"file": "dashboard/server.py", "function": "delete_account", "match": ["_remove_client_apikey", "_remove_client_webhook", "PROFILE_DIR", "TASKS_DIR", "automations\\.json", "_verify_password"]},
+    {"file": "dashboard/server.py", "function": "export_account_data", "match": ["\"companyProfile\"", "\"billing\"", "\"missions\"", "\"automations\""]}
+  ],
+  "phone-retention": [
+    {"file": "dashboard/phone_agent.py", "match": ["LOG_RETENTION_DAYS = 90"]}
+  ],
+  "delete-keeps-billing": [
+    {"file": "dashboard/server.py", "function": "delete_account", "absent": ["_billing_path", "BILLING_DATA", "os\\.remove\\([^)]*billing"]},
+    {"file": "dashboard/server.py", "match": ["events\\[-1000:\\]"]}
+  ],
+  "plain-missions": [
+    {"file": "dashboard/server.py", "function": "get_client_missions", "match": ["\"request\": data\\.get\\(\"Request\"\\)"], "absent": ["(?i)unprotect|decrypt"]},
+    {"file": "dashboard/Submit-Task.ps1", "absent": ["Protect-BKClientCredential"]}
+  ],
+  "backup": [
+    {"file": "deploy/backup.sh", "match": ["tar czf", "BK_BACKUP_KEEP:-14", "alpine", ":/data:ro"]},
+    {"file": "deploy/DEPLOIEMENT-VPS.md", "match": ["30 3 \\* \\* \\*", "gardée 14 jours"]}
+  ],
+  "backup-limits": [
+    {"file": "deploy/backup.sh", "absent": ["(?i)\\b(scp|rclone|aws|gpg|openssl|gsutil)\\b"]},
+    {"file": "deploy/DEPLOIEMENT-VPS.md", "match": ["les sauvegardes du même serveur ne protègent pas"]}
+  ],
+  "no-restore-doc": [
+    {"file": "deploy/DEPLOIEMENT-VPS.md", "absent": ["(?i)restaur|restore"]},
+    {"file": "deploy/backup.sh", "absent": ["(?i)restaur|restore|tar x"]}
+  ],
+  "deploy-ci": [
+    {"file": ".github/workflows/deploy.yml", "match": ["docker compose up -d --build", "BK_DEPLOY_SSH_KEY", "branches: \\[main\\]"], "absent": ["(?i)pytest|unittest|npm test|trivy|snyk|dependabot|codeql"]},
+    {"absent_files": [".github/dependabot.yml", ".github/dependabot.yaml"]}
+  ],
+  "secrets-env": [
+    {"file": ".gitignore", "match": ["^\\.env$", "^\\.secrets/$"]},
+    {"file": "deploy/set-secrets.py", "match": ["getpass\\.getpass"]}
+  ],
+  "solo-ops": [
+    {"file": "dashboard/seo_pages.py", "match": ["Entreprise individuelle", "Responsable de la publication"]}
+  ],
+  "container-root": [
+    {"file": "Dockerfile", "absent": ["(?m)^USER\\s"]}
+  ],
+  "single-server": [
+    {"file": "docker-compose.yml", "match": ["(?m)^  app:", "(?m)^  caddy:"], "absent": ["replicas", "(?m)^    deploy:"]}
+  ],
+  "status-page": [
+    {"file": "dashboard/status_monitor.py", "match": ["SLOT_SECONDS = 60", "RETENTION_DAYS = 90", "AI_HOST = \"api\\.anthropic\\.com\"", "def check_app", "/api/health", "def check_ai_reachable", "getaddrinfo"]},
+    {"file": "dashboard/status_monitor.py", "function": "check_ai_reachable", "absent": ["urlopen", "http", "request"]}
+  ],
+  "security-txt": [
+    {"file": "dashboard/trust_pages.py", "match": ["Contact: mailto:", "RFC 9116"]},
+    {"file": "dashboard/seo_pages.py", "match": ["contact@bk-entreprise\\.com"]},
+    {"file": "dashboard/confidentialite.html", "match": ["contact@bk-entreprise\\.com"]}
+  ],
+  "hosting": [
+    {"file": "dashboard/seo_pages.py", "match": ["OVHcloud \\(France\\)"]},
+    {"file": "dashboard/confidentialite.html", "match": ["OVHcloud \\(France\\)"]}
+  ],
+  "sp-anthropic": [
+    {"file": "core/ai/adapters/ANTHROPIC-ADAPTER.ps1", "match": ["https://api\\.anthropic\\.com/v1/messages"]},
+    {"file": "dashboard/phone_agent.py", "match": ["https://api\\.anthropic\\.com/v1/messages"]}
+  ],
+  "sp-google": [
+    {"file": "dashboard/Mailer-Bridge.ps1", "match": ["https://gmail\\.googleapis\\.com/gmail/v1/users/me/messages/send"]},
+    {"file": "dashboard/server.py", "match": ["https://accounts\\.google\\.com/o/oauth2/v2/auth"]}
+  ],
+  "sp-fonts": [
+    {"file": "dashboard/seo_pages.py", "match": ["https://fonts\\.googleapis\\.com/css2"]}
+  ],
+  "sp-microsoft": [
+    {"file": "dashboard/server.py", "match": ["login\\.microsoftonline\\.com"]},
+    {"file": "dashboard/Google-OAuth-Bridge.ps1", "match": ["graph\\.microsoft\\.com"]}
+  ],
+  "sp-twilio": [
+    {"file": "dashboard/phone_agent.py", "match": ["Twilio Voice", "webhooks/twilio/voice"]},
+    {"file": "core/integrations/connect-guides.json", "match": ["console\\.twilio\\.com"]}
+  ],
+  "sp-meta": [
+    {"file": "dashboard/whatsapp_channel.py", "match": ["https://graph\\.facebook\\.com/"]}
+  ],
+  "sp-tools": [
+    {"file": "core/integrations/oauth-vendors.json", "match": ["\"slack\"", "\"hubspot\"", "\"asana\""]}
+  ],
+  "sp-smtp": [
+    {"file": "dashboard/mailer.py", "match": ["BK_SMTP_HOST", "gmail_bridge"]}
+  ],
+  "sp-openai": [
+    {"file": "core/ai/Get-DefaultProvider.ps1", "match": ["(?s)return \"ANTHROPIC\".*return \"OPENAI\""]},
+    {"file": "core/ai/adapters/OPENAI-ADAPTER.ps1", "match": ["https://api\\.openai\\.com/v1/chat/completions"]}
+  ],
+  "sp-cdnjs": [
+    {"file": "dashboard/index.html", "match": ["https://cdnjs\\.cloudflare\\.com/ajax/libs/gsap"]}
+  ],
+  "sp-fx": [
+    {"file": "dashboard/server.py", "match": ["https://api\\.frankfurter\\.dev/v1/latest"]}
+  ],
+  "channels-optional": [
+    {"file": "dashboard/whatsapp_channel.py", "function": "is_enabled", "match": ["WHATSAPP_APP_SECRET"]},
+    {"file": "docs/PHONE-AGENT.md", "match": ["Mise en service"]}
+  ],
+  "roadmap": [
+    {"file": "docs/SOC2-READINESS.md", "match": ["(?i)ssrf", "(?i)hsts", "(?i)deux facteurs|2fa|mfa", "(?i)hors site|hors serveur|off-site", "(?i)surveillance externe"]},
+    {"file": "docs/SECURITY-OVERVIEW.md", "match": ["(?i)sous-traitants"]}
+  ]
+}
