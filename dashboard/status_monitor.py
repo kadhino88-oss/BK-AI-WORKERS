@@ -138,6 +138,7 @@ class DataChecker:
         self._seen = {}             # chemin -> (mtime_ns, size) deja valide
         self._files = []
         self._files_at = 0
+        self._logged_at = -1e12
         self._refresh = state_glob_refresh
 
     def _state_files(self, now):
@@ -164,13 +165,31 @@ class DataChecker:
             self._seen.pop(path, None)
             return False
 
+    RETRIES = 3                                 # relectures espacees de 0,3 s : une ecriture concurrente en cours n'est pas une panne
+    LOG_EVERY_SECONDS = 600
+
+    def _log_bad(self, path, now):
+        """Journal INTERNE du serveur (jamais la page publique) : quel fichier d'etat est illisible, pour le retrouver."""
+        if now - self._logged_at >= self.LOG_EVERY_SECONDS:
+            self._logged_at = now
+            try:
+                rel = os.path.relpath(path, self.root)
+            except ValueError:
+                rel = os.path.basename(path)
+            print(f"[status] fichier d'etat illisible ou invalide : {rel}", flush=True)
+
     def __call__(self, now=None):
         now = now if now is not None else time.time()
         for path in self._state_files(now):
-            if not self._ok_file(path):
-                time.sleep(0.3)                 # relecture : ecriture concurrente en cours ?
-                if not self._ok_file(path):
-                    return False
+            ok = self._ok_file(path)
+            for _ in range(self.RETRIES - 1):
+                if ok:
+                    break
+                time.sleep(0.3)
+                ok = self._ok_file(path)
+            if not ok:
+                self._log_bad(path, now)
+                return False
         for d in (os.path.join(self.root, "core", "accounts", "data"), os.path.join(self.root, "runtime", "tasks")):
             if os.path.isdir(d):
                 try:

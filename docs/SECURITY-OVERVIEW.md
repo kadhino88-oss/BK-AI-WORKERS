@@ -131,6 +131,7 @@ Les durées ci-dessus sont celles **du code**. La politique de confidentialité 
 ## 8. Garder la page publique honnête
 
 ```
+python tests/trust/run_all.py [--fast]        # tout d'un coup (--fast : sans le test de bout en bout)
 python tests/trust/test_trust_pages.py        # preuves du code, traductions, mots de certification, security.txt, hooks
 python tests/trust/test_status_monitor.py     # mesure, uptime, rotation, incidents
 python tests/trust/test_trust_extras.py       # aucune promesse contredite, inventaire des hôtes externes, page Statut jamais périmée, HEAD

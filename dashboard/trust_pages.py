@@ -236,8 +236,8 @@ CONTROLS = [
     ], [
         _li("Une seule personne exploite et développe le service : pas de relecture de code par un second ingénieur, pas de séparation des tâches entre administrateurs.",
             "One person operates and develops the service: no code review by a second engineer, no separation of duties between administrators.", "solo-ops"),
-        _li("Pas d'analyse automatique des dépendances, ni de tests qui bloquent le déploiement. Le conteneur de l'application s'exécute avec l'utilisateur root.",
-            "No automatic dependency scanning, and no tests that block deployment. The application container runs as the root user.", "deploy-ci container-root"),
+        _li("Aucune analyse des dépendances ni aucun test bloquant le déploiement n'est configuré dans le dépôt. Le conteneur de l'application s'exécute avec l'utilisateur root.",
+            "No dependency scanning and no test blocking deployment is configured in the repository. The application container runs as the root user.", "deploy-ci container-root"),
     ]),
     ("Disponibilité", T("Disponibilité", "Availability"), [
         _li("Mesure réelle toutes les 60 secondes (application, données, joignabilité du fournisseur d'IA), publiée sur la page de statut avec l'historique des jours réellement mesurés.",
@@ -284,8 +284,8 @@ SUBPROCESSORS = [
     (T("OVHcloud (France)", "OVHcloud (France)"), T("Hébergement du serveur, des données et des sauvegardes", "Hosting of the server, the data and the backups"),
      T("Toutes les données de la plateforme", "All platform data"), T("Toujours", "Always"), "hosting"),
     (T("Anthropic (États-Unis)", "Anthropic (United States)"), T("Modèle d'IA qui rédige les réponses des Workers", "AI model that writes the Workers' answers"),
-     T("Contenu de vos missions, profil d'entreprise, résultats lus dans vos outils", "Content of your missions, company profile, results read in your tools"),
-     T("À chaque mission", "On every mission"), "sp-anthropic"),
+     T("Contenu de vos missions, profil d'entreprise, résultats lus dans vos outils ; propos des appelants si l'agent téléphonique est en service", "Content of your missions, company profile, results read in your tools; callers' words if the phone agent is in service"),
+     T("À chaque mission, et à chaque échange d'un appel", "On every mission, and on every exchange of a call"), "sp-anthropic"),
     (T("Stripe", "Stripe"), T("Paiement des abonnements", "Subscription payments"),
      T("Adresse e-mail, plan, identifiant client ; la carte est saisie chez Stripe", "E-mail address, plan, customer identifier; the card is entered at Stripe"),
      T("À la souscription", "When subscribing"), "stripe-hosted"),

@@ -200,6 +200,44 @@ class ProbeTests(unittest.TestCase):
         finally:
             shutil.rmtree(root, ignore_errors=True)
 
+    def test_data_checker_tolerates_a_write_in_progress_but_not_a_lasting_corruption(self):
+        root = tempfile.mkdtemp(prefix="bkdata-")
+        try:
+            sdir = os.path.join(root, "core", "security", "x", "state")
+            os.makedirs(sdir)
+            f = os.path.join(sdir, "bindings.json")
+            write(f, '[{"a":1}]')
+            checker = sm.DataChecker(root)
+            self.assertTrue(checker(time.time()))
+            time.sleep(0.02)
+            write(f, '[{"a":')                                     # ecriture en cours...
+
+            def finish():
+                time.sleep(0.4)                                    # ...terminee avant la 3e lecture
+                write(f, '[{"a":1}]')
+            t = threading.Thread(target=finish)
+            t.start()
+            self.assertTrue(checker(time.time()), "une ecriture concurrente brève ne doit pas etre comptee comme une panne")
+            t.join()
+            time.sleep(0.02)
+            write(f, '[{"a":')                                     # corruption durable
+            import contextlib
+            import io
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                self.assertFalse(checker(time.time()))
+                self.assertFalse(checker(time.time()))
+            lines = [x for x in buf.getvalue().splitlines() if "[status]" in x]
+            self.assertEqual(len(lines), 1, "une seule ligne de journal interne par fenetre (pas de spam)")
+            self.assertIn("bindings.json", lines[0])               # le fichier est retrouvable dans le journal prive du serveur...
+            rec = sm.StatusRecorder(tempfile.mkdtemp(prefix="bkstatus-"))
+            rec.record({"app": True, "data": False, "ai": True}, ts=T0)
+            blob = json.dumps(sm.public_payload(rec, sm.IncidentLog(os.path.join(rec.dir, "i.json")), now=T0 + 30))
+            self.assertNotIn("bindings.json", blob)                # ...jamais dans la charge utile publique
+            shutil.rmtree(rec.dir, ignore_errors=True)
+        finally:
+            shutil.rmtree(root, ignore_errors=True)
+
     def test_probe_exception_counts_as_failure_and_loop_survives(self):
         tmp = tempfile.mkdtemp(prefix="bkstatus-")
         try:
