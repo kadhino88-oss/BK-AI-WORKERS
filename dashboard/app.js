@@ -671,6 +671,7 @@ let adminActivityTimer = null;
 async function loadAdminActivity() {
   loadAdminDemos();
   loadAdminTestimonials();
+  if (window.loadAdminPilot) window.loadAdminPilot();   // candidatures du programme pilote (pilot-admin.js)
   const data = await fetchJson("/api/admin/activity");
   if (data.error) return;
   const t = data.last24h || {};
