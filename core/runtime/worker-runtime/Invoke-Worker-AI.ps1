@@ -220,6 +220,7 @@ $result=[ordered]@{
     FallbackReason=$(Get-ProviderField $ProviderResult 'fallback_reason')
     Answer=$(Get-ProviderField $ProviderResult 'answer')
     Usage=$(Get-ProviderField $ProviderResult 'usage')
+    Files=@(@($(Get-ProviderField $ProviderResult 'files')) | Where-Object { $null -ne $_ })
     Recommendations=$(Get-ProviderField $ProviderResult 'recommendations')
     NextAction=$(Get-ProviderField $ProviderResult 'next_action')
     SecurityStatus=$(Get-ProviderField $ProviderResult 'security_status')

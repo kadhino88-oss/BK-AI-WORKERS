@@ -2677,6 +2677,32 @@ function renderPendingActionCard(pendingAction) {
   return el;
 }
 
+// Taille lisible pour l'affichage des fichiers produits.
+function formatFileSize(bytes) {
+  if (!bytes || bytes < 1024) return `${bytes || 0} o`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} Ko`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} Mo`;
+}
+
+// Fichiers produits par un Worker (Excel/Word/PDF/CSV/image) via code
+// execution (voir ANTHROPIC-ADAPTER.ps1) — un lien de telechargement par
+// fichier, servi par GET /api/missions/<taskId>/files/<filename>.
+function renderTaskFilesBlock(taskId, files) {
+  if (!taskId || !Array.isArray(files) || !files.length) return null;
+  const links = files.map((file) => {
+    const fname = file && file.filename ? String(file.filename) : "";
+    if (!fname) return "";
+    const size = file && typeof file.sizeBytes === "number" ? ` (${formatFileSize(file.sizeBytes)})` : "";
+    const href = `/api/missions/${encodeURIComponent(taskId)}/files/${encodeURIComponent(fname)}`;
+    return `<a class="task-file-link" href="${href}" download>📎 ${escapeHtml(fname)}${escapeHtml(size)}</a>`;
+  }).join("");
+  if (!links) return null;
+  const el = document.createElement("div");
+  el.className = "task-files-block";
+  el.innerHTML = `<div class="task-files-title">Fichiers produits</div>${links}`;
+  return el;
+}
+
 async function runTask(objective) {
   if (!accountAuthenticated) {
     requireAccount(() => runTask(objective));
@@ -2807,6 +2833,19 @@ async function runTask(objective) {
         : (result.ExecutionNote || (needsChloe ? "Cette action passe par le chat avec Chloé pour vérification." : "Tâche autorisée, en attente de routage vers un Worker."));
       responseEl.innerHTML = `<div class="status-line">${escapeHtml(statusLine)}</div>${renderAnswer(answer)}`;
       await loadActivity(currentWorkerId);
+    }
+    // Fichiers produits (telechargement) — branche Chloe (un TaskId par
+    // Worker dans Results[]) ou branche directe (result.Result.TaskId).
+    if (currentWorkerId === "chloe" && Array.isArray(result.Results)) {
+      result.Results.forEach((r) => {
+        if (r && r.Result && Array.isArray(r.Result.Files)) {
+          const block = renderTaskFilesBlock(r.Result.TaskId, r.Result.Files);
+          if (block) turn.appendChild(block);
+        }
+      });
+    } else if (result.Result && Array.isArray(result.Result.Files) && result.Result.Files.length) {
+      const block = renderTaskFilesBlock(result.Result.TaskId, result.Result.Files);
+      if (block) turn.appendChild(block);
     }
     if (result.pendingAction) {
       turn.appendChild(renderPendingActionCard(result.pendingAction));

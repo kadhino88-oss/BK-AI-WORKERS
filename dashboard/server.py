@@ -11,6 +11,7 @@ Aucune dependance externe : http.server de la bibliotheque standard.
 import json
 import os
 import re
+import mimetypes
 import subprocess
 import datetime
 import hashlib
@@ -78,6 +79,7 @@ DASHBOARD_DIR = os.path.join(ROOT, "dashboard")
 WORKERS_DIR = os.path.join(ROOT, "workers")
 CHLOE_DIR = os.path.join(ROOT, "chloe")
 TASKS_DIR = os.path.join(ROOT, "runtime", "tasks")
+TASK_FILES_DIR = os.path.join(ROOT, "runtime", "task-files")
 ASYNC_JOBS_DIR = os.path.join(ROOT, "runtime", "async-jobs")
 CAPABILITY_MATRIX_PATH = os.path.join(ROOT, "core", "permissions", "capability-matrix", "CAPABILITY-MATRIX.json")
 SUBMIT_SCRIPT = os.path.join(DASHBOARD_DIR, "Submit-Task.ps1")
@@ -1221,6 +1223,7 @@ def _summarize_mission_result(result):
                     "worker": r.get("Worker"),
                     "status": r.get("Status"),
                     "answer": (r.get("Result") or {}).get("Answer"),
+                    "files": (r.get("Result") or {}).get("Files"),
                 }
                 for r in result.get("Results", []) if isinstance(r, dict)
             ],
@@ -1230,6 +1233,7 @@ def _summarize_mission_result(result):
         "worker": result.get("Worker"),
         "status": result.get("Status"),
         "answer": (result.get("Result") or {}).get("Answer"),
+        "files": (result.get("Result") or {}).get("Files"),
     }
 
 
@@ -2912,6 +2916,53 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json({"error": "NOT_FOUND"}, 404)
                 return
             self._send_json(_summarize_mission_result(data))
+        elif path.startswith("/api/missions/") and "/files/" in path:
+            # Telechargement securise d'un fichier produit par un Worker
+            # (voir ANTHROPIC-ADAPTER.ps1 : capture via code execution,
+            # depose dans runtime/task-files/<TaskId>/<name>). Reserve au
+            # client proprietaire de la mission (ou a Kader/CLI-DASHBOARD).
+            client_id = self._resolve_client_id()
+            if not client_id:
+                self._send_account_required()
+                return
+            rest = path[len("/api/missions/"):]
+            task_id, _, name = rest.partition("/files/")
+            name = unquote(name)
+            if not TASK_ID_PATTERN.match(task_id or ""):
+                self._send_json({"error": "NOT_FOUND"}, 404)
+                return
+            # name doit etre un pur basename, sans separateur ni ./..
+            if not (os.path.basename(name) == name and name not in ("", ".", "..")
+                    and "/" not in name and "\\" not in name):
+                self._send_json({"error": "NOT_FOUND"}, 404)
+                return
+            rec = load_json(os.path.join(TASKS_DIR, f"{task_id}.json"))
+            if not rec:
+                self._send_json({"error": "NOT_FOUND"}, 404)
+                return
+            if rec.get("ClientId") != client_id and client_id != DASHBOARD_CLIENT_ID:
+                self._send_json({"error": "FORBIDDEN"}, 403)
+                return
+            fpath = os.path.join(TASK_FILES_DIR, task_id, name)
+            # Defense en profondeur : le chemin reel doit rester CONFINE
+            # dans le dossier de la tache (aucune remontee ../ possible).
+            task_dir_real = os.path.realpath(os.path.join(TASK_FILES_DIR, task_id))
+            if not os.path.realpath(fpath).startswith(task_dir_real + os.sep):
+                self._send_json({"error": "NOT_FOUND"}, 404)
+                return
+            if not os.path.isfile(fpath):
+                self._send_json({"error": "NOT_FOUND"}, 404)
+                return
+            with open(fpath, "rb") as f:
+                body = f.read()
+            ctype = mimetypes.guess_type(name)[0] or "application/octet-stream"
+            self.send_response(200)
+            self.send_header("Content-Type", ctype)
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Content-Disposition", 'attachment; filename="%s"' % name)
+            self.send_header("Cache-Control", "no-cache, must-revalidate")
+            self.end_headers()
+            self.wfile.write(body)
         elif path.startswith("/api/missions/async/"):
             # Interrogation du statut d'une mission lancee en arriere-plan.
             # Reserve au client proprietaire du job (ou a Kader/CLI-DASHBOARD).
