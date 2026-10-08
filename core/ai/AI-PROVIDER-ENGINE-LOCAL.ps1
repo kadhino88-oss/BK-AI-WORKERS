@@ -234,6 +234,7 @@ else {
     $providerAnswer = ""
     $providerMode = ""
     $providerUsage = $null
+    $providerFiles = @()
     $providerResult = $null
     $providerError = ""
 
@@ -326,6 +327,7 @@ else {
                         $providerMode = "ANTHROPIC"
                         $providerAnswer = [string]$ParsedAnthropic.answer
                         $providerUsage = $ParsedAnthropic.usage
+                        $providerFiles = if ($ParsedAnthropic.files) { $ParsedAnthropic.files } else { @() }
                     }
                     else {
                         $providerError = "ANTHROPIC_EMPTY_RESPONSE"
@@ -354,6 +356,7 @@ else {
             project_id = $ProjectId
             answer = $providerAnswer
             usage = $providerUsage
+            files = @($providerFiles)
             recommendations = @()
             next_action = "Utiliser la réponse du fournisseur dans le traitement du Worker."
             security_status = "VALID"

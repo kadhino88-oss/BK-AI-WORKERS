@@ -2677,6 +2677,32 @@ function renderPendingActionCard(pendingAction) {
   return el;
 }
 
+// Taille lisible pour l'affichage des fichiers produits.
+function formatFileSize(bytes) {
+  if (!bytes || bytes < 1024) return `${bytes || 0} o`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} Ko`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} Mo`;
+}
+
+// Fichiers produits par un Worker (Excel/Word/PDF/CSV/image) via code
+// execution (voir ANTHROPIC-ADAPTER.ps1) — un lien de telechargement par
+// fichier, servi par GET /api/missions/<taskId>/files/<filename>.
+function renderTaskFilesBlock(taskId, files) {
+  if (!taskId || !Array.isArray(files) || !files.length) return null;
+  const links = files.map((file) => {
+    const fname = file && file.filename ? String(file.filename) : "";
+    if (!fname) return "";
+    const size = file && typeof file.sizeBytes === "number" ? ` (${formatFileSize(file.sizeBytes)})` : "";
+    const href = `/api/missions/${encodeURIComponent(taskId)}/files/${encodeURIComponent(fname)}`;
+    return `<a class="task-file-link" href="${href}" download>📎 ${escapeHtml(fname)}${escapeHtml(size)}</a>`;
+  }).join("");
+  if (!links) return null;
+  const el = document.createElement("div");
+  el.className = "task-files-block";
+  el.innerHTML = `<div class="task-files-title">Fichiers produits</div>${links}`;
+  return el;
+}
+
 async function runTask(objective) {
   if (!accountAuthenticated) {
     requireAccount(() => runTask(objective));
@@ -2710,15 +2736,66 @@ async function runTask(objective) {
   const responseEl = turn.querySelector(".chat-msg-worker");
 
   try {
+    // Mission en arriere-plan : on ne bloque plus la connexion HTTP le
+    // temps du pipeline (qui pouvait durer plusieurs minutes et se faire
+    // trancher par le proxy). Le POST /async renvoie un jobId immediatement
+    // (202), puis on interroge GET /api/missions/async/<jobId> toutes les
+    // 2 s jusqu'a DONE/ERROR. Les endpoints synchrones restent disponibles
+    // cote serveur (retrocompatibilite) ; seule l'UI live passe par /async.
     const endpoint = currentWorkerId === "chloe"
       ? "/api/chloe/task"
       : `/api/workers/${currentWorkerId}/task`;
+    const asyncEndpoint = endpoint + "/async";
 
-    const result = await fetchJson(endpoint, {
+    let result;
+    const started = await fetchJson(asyncEndpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ objective }),
     });
+
+    if (started.error || !started.jobId) {
+      // Garde refusee en amont (compte, abonnement, objectif...) : on
+      // traite started comme le resultat et on laisse le rendu habituel
+      // ci-dessous l'afficher.
+      result = started;
+    } else {
+      const POLL_INTERVAL_MS = 2000;
+      const MAX_POLL_ATTEMPTS = 330; // ~11 min
+      for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt++) {
+        await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
+        const job = await fetchJson(`/api/missions/async/${started.jobId}`, {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        });
+        if (job.error === "ACCOUNT_REQUIRED") {
+          turn.remove();
+          requireAccount(() => runTask(objective));
+          return;
+        }
+        if (job.error) {
+          result = job;
+          break;
+        }
+        if (job.status === "DONE") {
+          result = job.result || {};
+          break;
+        }
+        if (job.status === "ERROR") {
+          result = { error: "SUBMIT_EXCEPTION", detail: job.error };
+          break;
+        }
+      }
+      if (result === undefined) {
+        // Plafond de securite atteint : on cesse d'interroger plutot que
+        // de boucler indefiniment. La mission continue cote serveur.
+        responseEl.className = "chat-msg chat-msg-worker needs-chloe";
+        responseEl.innerHTML = `<div class="status-line">Toujours en cours</div>
+          <p>La mission prend plus de temps que prévu. Elle continue en arrière-plan — réessayez dans un instant.</p>`;
+        turn.scrollIntoView({ behavior: "smooth", block: "end" });
+        return;
+      }
+    }
 
     if (result.error === "ACCOUNT_REQUIRED") {
       // La session a expire entre-temps : redemande une connexion
@@ -2756,6 +2833,19 @@ async function runTask(objective) {
         : (result.ExecutionNote || (needsChloe ? "Cette action passe par le chat avec Chloé pour vérification." : "Tâche autorisée, en attente de routage vers un Worker."));
       responseEl.innerHTML = `<div class="status-line">${escapeHtml(statusLine)}</div>${renderAnswer(answer)}`;
       await loadActivity(currentWorkerId);
+    }
+    // Fichiers produits (telechargement) — branche Chloe (un TaskId par
+    // Worker dans Results[]) ou branche directe (result.Result.TaskId).
+    if (currentWorkerId === "chloe" && Array.isArray(result.Results)) {
+      result.Results.forEach((r) => {
+        if (r && r.Result && Array.isArray(r.Result.Files)) {
+          const block = renderTaskFilesBlock(r.Result.TaskId, r.Result.Files);
+          if (block) turn.appendChild(block);
+        }
+      });
+    } else if (result.Result && Array.isArray(result.Result.Files) && result.Result.Files.length) {
+      const block = renderTaskFilesBlock(result.Result.TaskId, result.Result.Files);
+      if (block) turn.appendChild(block);
     }
     if (result.pendingAction) {
       turn.appendChild(renderPendingActionCard(result.pendingAction));
