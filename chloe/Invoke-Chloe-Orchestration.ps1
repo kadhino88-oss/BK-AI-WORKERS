@@ -139,6 +139,18 @@ or, when no Worker is needed:
 The values of "workers" must be EXACTLY identifiers from the list above (lowercase), never invented.$RouteLangHint
 "@
 
+        # Playbook de Chloe (meme mecanisme que le playbook Worker dans
+        # core/ai/adapters/Build-WorkerSystemPrompt.ps1) : chloe/identity/
+        # playbook.md est injecte tel quel a la fin du prompt quand il existe,
+        # pour que Chloe opere depuis son vrai mode operatoire d'orchestration.
+        $ChloePlaybookPath = Join-Path $Root "chloe/identity/playbook.md"
+        if (Test-Path -LiteralPath $ChloePlaybookPath -PathType Leaf) {
+            try {
+                $ChloePlaybookText = (Get-Content -LiteralPath $ChloePlaybookPath -Raw -Encoding UTF8).Trim()
+                if ($ChloePlaybookText) { $SystemPrompt = $SystemPrompt + "`n`n" + $ChloePlaybookText }
+            } catch { }
+        }
+
         $BodyObj = [ordered]@{
             model      = "claude-haiku-4-5-20251001"
             max_tokens = 300
