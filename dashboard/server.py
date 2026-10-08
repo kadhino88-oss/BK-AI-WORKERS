@@ -1327,11 +1327,49 @@ ESTIMATED_MINUTES_SAVED_PER_MISSION = 12
 
 
 # Tarifs publics indicatifs (USD par million de tokens : entree, sortie).
+# Tarifs API Anthropic de premiere partie + OpenAI (indicatifs, 2026).
 # Un modele absent de cette table n'a PAS de cout affiche (jamais devine).
+# La table couvre desormais les modeles "forts" (Fable/Opus/Sonnet), pas
+# seulement Haiku : basculer un Worker sur un modele fort donne ainsi un
+# cout mesure et non "sans prix".
 MODEL_PRICING_USD_PER_MTOK = {
-    "claude-haiku-4-5-20251001": (1.00, 5.00),
+    # Anthropic — famille Claude
+    "claude-fable-5-1": (10.00, 50.00),
+    "claude-fable-5": (10.00, 50.00),
+    "claude-opus-5-5": (4.00, 20.00),
+    "claude-opus-5": (5.00, 25.00),
+    "claude-opus-4-8": (5.00, 25.00),
+    "claude-opus-4-7": (5.00, 25.00),
+    "claude-opus-4-6": (5.00, 25.00),
+    "claude-sonnet-5-5": (2.00, 10.00),
+    "claude-sonnet-5": (2.00, 10.00),
+    "claude-sonnet-4-6": (3.00, 15.00),
+    "claude-haiku-5-5": (0.10, 0.50),
+    "claude-haiku-4-5": (1.00, 5.00),
+    # OpenAI
+    "gpt-4o": (2.50, 10.00),
     "gpt-4o-mini": (0.15, 0.60),
 }
+
+
+def price_for_model(model_id):
+    """Tarif (entree, sortie) pour un identifiant de modele, tolerant aux
+    suffixes de date ('claude-opus-4-8-20260101', 'claude-opus-4-5@20251101')
+    et rapproche par famille. Renvoie None si aucun tarif connu."""
+    if not model_id:
+        return None
+    m = str(model_id).strip().lower()
+    price = MODEL_PRICING_USD_PER_MTOK.get(m)
+    if price:
+        return price
+    base = re.sub(r"[-@]\d{6,8}$", "", m)
+    price = MODEL_PRICING_USD_PER_MTOK.get(base)
+    if price:
+        return price
+    for key in sorted(MODEL_PRICING_USD_PER_MTOK, key=len, reverse=True):
+        if base.startswith(key) or m.startswith(key):
+            return MODEL_PRICING_USD_PER_MTOK[key]
+    return None
 AI_PROVIDERS_PATH = os.path.join(ROOT, "core", "ai", "AI-PROVIDERS.json")
 
 
@@ -1366,7 +1404,8 @@ def get_ai_cost_summary(client_id=DASHBOARD_CLIENT_ID):
             input_tokens += i
             output_tokens += o
             missions += 1
-            price = MODEL_PRICING_USD_PER_MTOK.get(configured_model_for(res.get("Provider")))
+            model_used = res.get("Model") or res.get("model") or configured_model_for(res.get("Provider"))
+            price = price_for_model(model_used)
             if price:
                 cost_usd += (i * price[0] + o * price[1]) / 1_000_000
             else:
