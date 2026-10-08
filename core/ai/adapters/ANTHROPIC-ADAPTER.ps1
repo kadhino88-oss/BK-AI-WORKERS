@@ -248,6 +248,14 @@ try {
     if ([string]::IsNullOrWhiteSpace($PlainKey)) { throw "CREDENTIAL_EMPTY" }
 
     $SystemPrompt = Get-WorkerSystemPrompt -WorkerId $WorkerId -ClientId $ClientId
+    # Indice de capture de fichiers (2026-10-08) : si le modele produit un
+    # livrable (Excel/Word/PDF/CSV/image) via code execution, il doit
+    # l'ecrire dans le repertoire $OUTPUT_DIR de l'environnement d'execution
+    # pour qu'il soit capture et propose au telechargement. Simple ajout de
+    # chaine sur la variable locale (sans risque pour le chemin critique).
+    if (-not [string]::IsNullOrWhiteSpace($SystemPrompt)) {
+        $SystemPrompt = [string]$SystemPrompt + "`n`nSi tu produis un fichier livrable (Excel, Word, PDF, CSV, image) via l'outil d'execution de code, ecris-le ou copie-le dans le repertoire `$OUTPUT_DIR de l'environnement d'execution afin qu'il soit capture et mis a disposition pour telechargement."
+    }
     $ToolDef = Build-ConnectorToolDefinition -ClientId $ClientId
     $Messages = [System.Collections.ArrayList]@()
     foreach ($Turn in (Get-BKRecentConversationTurns -Root $ProjectRoot -ClientId $ClientId -WorkerId $WorkerId)) {
@@ -268,28 +276,59 @@ try {
     # "les Workers doivent avoir tout dans leur code, comme Claude Code").
     # Outil SERVEUR lui aussi (resolu par Anthropic dans le meme appel),
     # mais necessite l'entete beta ci-dessous — verifie en direct.
-    $Tools = @(
+    # Deux variantes d'outils + entetes (2026-10-08) :
+    #   NEW (preferee) : code_execution_20250825, qui ne requiert PLUS
+    #     l'entete beta 'code-execution-2025-05-22'.
+    #   OLD (prod connue-bonne) : exactement la config d'avant
+    #     (code_execution_20250522 + l'entete beta).
+    # On tente NEW au premier POST ; si l'API la rejette (modele/compte),
+    # on bascule sur OLD et on rejoue CE POST une seule fois. La variante
+    # qui reussit ($Tools/$Headers) est reutilisee pour toute la boucle,
+    # ce qui garantit que le chemin critique ne regresse jamais sous le
+    # comportement d'aujourd'hui. Si les DEUX echouent, l'exception remonte
+    # au catch principal (aucune erreur reelle n'est avalee).
+    $ToolsNew = @(
+        @{ type = "web_search_20250305"; name = "web_search"; max_uses = 5 }
+        @{ type = "web_fetch_20250910"; name = "web_fetch"; max_uses = 5 }
+        @{ type = "code_execution_20250825"; name = "code_execution" }
+    )
+    $ToolsOld = @(
         @{ type = "web_search_20250305"; name = "web_search"; max_uses = 5 }
         @{ type = "web_fetch_20250910"; name = "web_fetch"; max_uses = 5 }
         @{ type = "code_execution_20250522"; name = "code_execution" }
     )
-    if ($ToolDef) { $Tools += $ToolDef }
+    if ($ToolDef) { $ToolsNew += $ToolDef; $ToolsOld += $ToolDef }
 
-    $BodyObj = [ordered]@{
-        model      = $EffectiveModel
-        max_tokens = 64000
-        system     = $SystemPrompt
-        messages   = $Messages
-        tools      = $Tools
+    $HeadersNew = @{
+        "x-api-key" = $PlainKey; "anthropic-version" = "2023-06-01"
     }
-
-    $Headers = @{
+    $HeadersOld = @{
         "x-api-key" = $PlainKey; "anthropic-version" = "2023-06-01"
         "anthropic-beta" = "code-execution-2025-05-22"
     }
-    $Response = Invoke-RestMethod -Uri "https://api.anthropic.com/v1/messages" -Method Post `
-        -Headers $Headers -ContentType "application/json; charset=utf-8" `
-        -Body ([System.Text.Encoding]::UTF8.GetBytes(($BodyObj | ConvertTo-Json -Depth 10))) -TimeoutSec 240
+
+    $Tools = $ToolsNew
+    $Headers = $HeadersNew
+    try {
+        $BodyObj = [ordered]@{
+            model = $EffectiveModel; max_tokens = 64000; system = $SystemPrompt; messages = $Messages; tools = $Tools
+        }
+        $Response = Invoke-RestMethod -Uri "https://api.anthropic.com/v1/messages" -Method Post `
+            -Headers $Headers -ContentType "application/json; charset=utf-8" `
+            -Body ([System.Text.Encoding]::UTF8.GetBytes(($BodyObj | ConvertTo-Json -Depth 10))) -TimeoutSec 240
+    }
+    catch {
+        # La nouvelle version d'outil a ete refusee : repli sur la config
+        # prod connue-bonne, un seul re-essai du premier POST.
+        $Tools = $ToolsOld
+        $Headers = $HeadersOld
+        $BodyObj = [ordered]@{
+            model = $EffectiveModel; max_tokens = 64000; system = $SystemPrompt; messages = $Messages; tools = $Tools
+        }
+        $Response = Invoke-RestMethod -Uri "https://api.anthropic.com/v1/messages" -Method Post `
+            -Headers $Headers -ContentType "application/json; charset=utf-8" `
+            -Body ([System.Text.Encoding]::UTF8.GetBytes(($BodyObj | ConvertTo-Json -Depth 10))) -TimeoutSec 240
+    }
 
     # ---------------- BOUCLE AGENTIQUE (2026-09-30) ----------------
     # Avant : un SEUL aller-retour possible pour use_connector (le Worker
@@ -392,6 +431,90 @@ try {
         }
     }
 
+    # ---------------- CAPTURE DES FICHIERS GENERES (2026-10-08) --------
+    # Les Workers peuvent produire un livrable (Excel/Word/PDF/CSV/image)
+    # via code execution. Anthropic renvoie alors des blocs resultat
+    # contenant un file_id ; on recupere les metadonnees puis les octets
+    # via la Files API et on depose chaque fichier dans
+    # runtime/task-files/<TaskId>/. Tout est encapsule dans un try/catch :
+    # la moindre erreur laisse $CapturedFiles tel quel et la mission se
+    # poursuit normalement (jamais de throw depuis ce bloc).
+    $CapturedFiles = @()
+    try {
+        $FileIds = @()
+        if ($null -ne $Response -and $null -ne $Response.content) {
+            foreach ($Block in $Response.content) {
+                if ($null -eq $Block) { continue }
+                $IsCurrent = ($Block.type -eq "bash_code_execution_tool_result")
+                $IsLegacy  = ($Block.type -eq "code_execution_tool_result")
+                if (-not ($IsCurrent -or $IsLegacy)) { continue }
+                $Inner = $Block.content
+                if ($null -eq $Inner -or $null -eq $Inner.content) { continue }
+                $WantType = if ($IsCurrent) { "bash_code_execution_output" } else { "code_execution_output" }
+                foreach ($Entry in @($Inner.content)) {
+                    if ($null -eq $Entry) { continue }
+                    if ($Entry.type -eq $WantType -and $Entry.file_id) {
+                        $FileIds += [string]$Entry.file_id
+                    }
+                }
+            }
+        }
+
+        $Counter = 0
+        foreach ($FileId in $FileIds) {
+            $Counter++
+            $FileName = $null; $Mime = $null; $SizeBytes = 0
+            try {
+                $Meta = Invoke-RestMethod -Uri "https://api.anthropic.com/v1/files/$FileId" `
+                    -Headers @{ "x-api-key" = $PlainKey; "anthropic-version" = "2023-06-01" } -TimeoutSec 60
+                $FileName  = [string]$Meta.filename
+                $Mime      = [string]$Meta.mime_type
+                $SizeBytes = [long]$Meta.size_bytes
+            }
+            catch {
+                $FileName  = "$FileId.bin"
+                $Mime      = "application/octet-stream"
+                $SizeBytes = 0
+            }
+            if ([string]::IsNullOrWhiteSpace($Mime)) { $Mime = "application/octet-stream" }
+
+            # Nom de fichier sur : on ne garde que le basename, puis on ne
+            # conserve que [A-Za-z0-9._-], on borne la longueur.
+            $SafeName = ""
+            if (-not [string]::IsNullOrWhiteSpace($FileName)) {
+                $Leaf = $FileName -replace '.*[\\/]', ''
+                $SafeName = ($Leaf -replace '[^A-Za-z0-9._-]', '_')
+                if ($SafeName.Length -gt 120) { $SafeName = $SafeName.Substring(0, 120) }
+            }
+            if ([string]::IsNullOrWhiteSpace($SafeName) -or $SafeName -eq "." -or $SafeName -eq "..") {
+                $SafeName = "$FileId.bin"
+            }
+
+            $DestDir = Join-Path (Join-Path $ProjectRoot "runtime/task-files") $TaskId
+            $DestPath = Join-Path $DestDir $SafeName
+            if (Test-Path -LiteralPath $DestPath) {
+                $SafeName = "$Counter-$SafeName"
+                $DestPath = Join-Path $DestDir $SafeName
+            }
+            New-Item -ItemType Directory -Force -Path $DestDir | Out-Null
+
+            Invoke-WebRequest -Uri "https://api.anthropic.com/v1/files/$FileId/content" `
+                -Headers @{ "x-api-key" = $PlainKey; "anthropic-version" = "2023-06-01" } `
+                -TimeoutSec 240 -OutFile $DestPath
+
+            $CapturedFiles += [ordered]@{
+                fileId    = $FileId
+                filename  = $SafeName
+                mime      = $Mime
+                sizeBytes = $SizeBytes
+                path      = "$TaskId/$SafeName"
+            }
+        }
+    }
+    catch {
+        # Jamais fatal : on conserve ce qui a ete capture jusqu'ici.
+    }
+
     $ExitCode = 0
 }
 catch {
@@ -407,6 +530,7 @@ if ($ExitCode -eq 0) {
         status="SUCCESS"; provider="anthropic"; model=$EffectiveModel; mode="LLM"; api_call=$true
         client_id=$ClientId; project_id=$ProjectId; worker=$WorkerId.ToUpper(); task_id=$TaskId
         answer=$ResponseText; recommendations=@()
+        files=@($CapturedFiles)
         usage=[ordered]@{ input_tokens=[int]$Response.usage.input_tokens; output_tokens=[int]$Response.usage.output_tokens }
         next_action="Utiliser la reponse du fournisseur dans le traitement du Worker."
         security_status="VALID"; financial_actions=$false; external_actions=$false
