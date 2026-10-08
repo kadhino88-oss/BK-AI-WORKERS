@@ -2632,12 +2632,62 @@ async function runTrialTask(objective) {
 // ECRITURE : jamais envoye automatiquement (voir ANTHROPIC-ADAPTER.ps1)
 // — cette carte est le seul endroit ou le client confirme explicitement
 // avant qu'un appel reel ne parte.
+// Libellés français pour les clés de payload les plus courantes ; toute
+// clé inconnue est affichée telle quelle (son nom brut).
+const PENDING_PARAM_LABELS = {
+  to: "Destinataire",
+  recipient: "Destinataire",
+  cc: "Copie",
+  bcc: "Copie cachée",
+  subject: "Objet",
+  body: "Message",
+  message: "Message",
+  text: "Message",
+  content: "Message",
+  amount: "Montant",
+  currency: "Devise",
+  from: "Expéditeur",
+  title: "Titre",
+  url: "URL",
+  phone: "Téléphone",
+};
+
+// Bloc « Contenu exact qui sera envoyé » : une ligne par champ du payload
+// remonté depuis le fichier PENDING-ACTION. Toute valeur passe par
+// escapeHtml ; un champ long est rendu dans un <pre> défilable.
+function renderPendingActionPayload(params) {
+  if (!params || typeof params !== "object" || Array.isArray(params)) return "";
+  const keys = Object.keys(params);
+  if (!keys.length) return "";
+  const rows = keys.map((key) => {
+    const label = PENDING_PARAM_LABELS[String(key).toLowerCase()] || key;
+    let value = params[key];
+    if (value !== null && typeof value === "object") {
+      value = JSON.stringify(value, null, 2);
+    } else {
+      value = String(value ?? "");
+    }
+    const longField = value.length > 120 || value.includes("\n");
+    const valueHtml = longField
+      ? `<pre class="pending-action-payload-pre">${escapeHtml(value)}</pre>`
+      : `<span class="pending-action-payload-value">${escapeHtml(value)}</span>`;
+    return `<div class="pending-action-payload-row"><span class="pending-action-payload-key">${escapeHtml(label)}</span>${valueHtml}</div>`;
+  }).join("");
+  return `
+    <div class="pending-action-payload">
+      <div class="pending-action-payload-title">Contenu exact qui sera envoyé</div>
+      ${rows}
+    </div>
+  `;
+}
+
 function renderPendingActionCard(pendingAction) {
   const el = document.createElement("div");
   el.className = "pending-action-card";
   el.innerHTML = `
     <div class="pending-action-title">🔓 Action réelle préparée — pas encore envoyée</div>
     <p class="pending-action-detail"><strong>${escapeHtml(pendingAction.connectorId)}</strong> — ${escapeHtml(pendingAction.operation)}${pendingAction.reason ? "<br>" + escapeHtml(pendingAction.reason) : ""}</p>
+    ${renderPendingActionPayload(pendingAction.params)}
     <div class="pending-action-buttons">
       <button type="button" class="btn btn-gold" data-action="confirm">Confirmer et envoyer</button>
       <button type="button" class="btn btn-ghost" data-action="cancel">Annuler</button>

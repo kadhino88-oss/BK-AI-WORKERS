@@ -647,6 +647,45 @@ def _pending_action_path(task_id):
     return os.path.join(PENDING_ACTIONS_DIR, f"PENDING-ACTION-{task_id}.json")
 
 
+_SENSITIVE_PARAM_HINTS = (
+    "token", "secret", "password", "apikey", "api_key", "authorization",
+    "auth", "bearer", "key", "credential", "signature", "hash",
+)
+_PARAM_VALUE_MAX = 2000
+_MASKED = "•••masqué•••"
+
+
+def _safe_param_value(value, _depth=0):
+    """Nettoie une valeur de parametre avant de la renvoyer au client :
+    tronque les chaines trop longues. Les dicts sont parcourus sur un
+    seul niveau supplementaire (pas d'over-engineering)."""
+    if isinstance(value, str):
+        if len(value) > _PARAM_VALUE_MAX:
+            return value[:_PARAM_VALUE_MAX] + " …(tronqué)"
+        return value
+    if isinstance(value, dict) and _depth == 0:
+        return _safe_action_params(value, _depth + 1)
+    return value
+
+
+def _safe_action_params(params, _depth=0):
+    """Copie peu profonde et assainie des parametres d'une action en
+    attente : masque toute valeur dont la cle ressemble a un secret
+    (token/secret/password/cle/signature…) et tronque les chaines trop
+    longues. Ne JAMAIS renvoyer les parametres bruts : le fichier
+    PENDING-ACTION peut contenir des jetons ou identifiants."""
+    if not isinstance(params, dict):
+        return {}
+    safe = {}
+    for key, value in params.items():
+        lowered = str(key).lower()
+        if any(hint in lowered for hint in _SENSITIVE_PARAM_HINTS):
+            safe[key] = _MASKED
+        else:
+            safe[key] = _safe_param_value(value, _depth)
+    return safe
+
+
 def attach_pending_action(result):
     """Si la mission qu'on vient de traiter a demande a Claude d'utiliser
     un connecteur en ECRITURE, ANTHROPIC-ADAPTER.ps1 a ecrit un fichier
@@ -680,12 +719,19 @@ def attach_pending_action(result):
     for task_id in candidate_ids:
         pending = load_json(_pending_action_path(task_id))
         if pending:
-            found.append({
+            entry = {
                 "taskId": pending.get("taskId"),
                 "connectorId": pending.get("connectorId"),
                 "operation": pending.get("operation"),
                 "reason": pending.get("reason"),
-            })
+            }
+            # Contenu exact qui sera envoye (destinataire, objet, corps,
+            # montant…), remonte depuis le fichier PENDING-ACTION, avec
+            # masquage des secrets et troncature des champs trop longs.
+            raw_params = pending.get("params")
+            if isinstance(raw_params, dict) and raw_params:
+                entry["params"] = _safe_action_params(raw_params)
+            found.append(entry)
     if found:
         result["pendingAction"] = found[0]
         result["pendingActions"] = found
