@@ -78,6 +78,7 @@ DASHBOARD_DIR = os.path.join(ROOT, "dashboard")
 WORKERS_DIR = os.path.join(ROOT, "workers")
 CHLOE_DIR = os.path.join(ROOT, "chloe")
 TASKS_DIR = os.path.join(ROOT, "runtime", "tasks")
+ASYNC_JOBS_DIR = os.path.join(ROOT, "runtime", "async-jobs")
 CAPABILITY_MATRIX_PATH = os.path.join(ROOT, "core", "permissions", "capability-matrix", "CAPABILITY-MATRIX.json")
 SUBMIT_SCRIPT = os.path.join(DASHBOARD_DIR, "Submit-Task.ps1")
 AUTOMATION_BRIDGE_SCRIPT = os.path.join(DASHBOARD_DIR, "Automation-Bridge.ps1")
@@ -570,6 +571,66 @@ def submit_task(worker_hint_text, worker_id="", plan_only=False, client_id=""):
                 os.remove(out_file)
         except Exception:
             pass
+
+
+ASYNC_JOB_ID_PATTERN = re.compile(r"^JOB-[A-F0-9]{32}$")
+
+
+def _async_job_path(job_id):
+    return os.path.join(ASYNC_JOBS_DIR, f"{job_id}.json")
+
+
+def _write_async_job(data):
+    os.makedirs(ASYNC_JOBS_DIR, exist_ok=True)
+    _write_json_atomic(_async_job_path(data["jobId"]), data, ensure_ascii=False, indent=2)
+
+
+def read_async_job(job_id):
+    if not ASYNC_JOB_ID_PATTERN.match(job_id or ""):
+        return None
+    return load_json(_async_job_path(job_id))
+
+
+def submit_task_async(objective, worker_id="", client_id="", plan_only=False):
+    """Lance une mission en arriere-plan, renvoie un jobId a interroger.
+    Le job (runtime/async-jobs/<jobId>.json) passe de RUNNING a DONE/ERROR.
+    IMPORTANT : le job n'est PAS un TASK-*.json -> aucun double comptage de
+    credits (le pipeline ecrit son propre TASK-*.json, compte une seule fois).
+
+    submit_task garde EXACTEMENT sa signature synchrone
+    (worker_hint_text, worker_id, plan_only, client_id) : on se contente de
+    la lancer dans un thread demon pour debloquer la connexion HTTP."""
+    job_id = "JOB-" + secrets.token_hex(16).upper()
+    now = datetime.datetime.utcnow().isoformat() + "Z"
+    base = {"jobId": job_id, "status": "RUNNING", "clientId": client_id,
+            "worker": worker_id or "chloe", "objective": objective,
+            "planOnly": bool(plan_only), "createdAtUtc": now}
+    _write_async_job(base)
+
+    def _run():
+        record = dict(base)
+        try:
+            result = submit_task(objective, worker_id=worker_id,
+                                 plan_only=plan_only, client_id=client_id)
+            if not plan_only:
+                try:
+                    result = attach_pending_action(result)
+                except Exception:
+                    pass
+            record.update(status="DONE",
+                          finishedAtUtc=datetime.datetime.utcnow().isoformat() + "Z",
+                          result=result)
+        except Exception as exc:  # noqa: BLE001
+            record.update(status="ERROR",
+                          finishedAtUtc=datetime.datetime.utcnow().isoformat() + "Z",
+                          error=str(exc))
+        try:
+            _write_async_job(record)
+        except Exception:
+            pass
+
+    threading.Thread(target=_run, daemon=True).start()
+    return {"jobId": job_id, "status": "RUNNING"}
 
 
 TASK_ID_PATTERN = re.compile(r"^TASK-[A-F0-9]{32}$")
@@ -2851,6 +2912,25 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json({"error": "NOT_FOUND"}, 404)
                 return
             self._send_json(_summarize_mission_result(data))
+        elif path.startswith("/api/missions/async/"):
+            # Interrogation du statut d'une mission lancee en arriere-plan.
+            # Reserve au client proprietaire du job (ou a Kader/CLI-DASHBOARD).
+            client_id = self._resolve_client_id()
+            if not client_id:
+                self._send_account_required()
+                return
+            job_id = path.split("/")[-1]
+            if not ASYNC_JOB_ID_PATTERN.match(job_id or ""):
+                self._send_json({"error": "NOT_FOUND"}, 404)
+                return
+            job = read_async_job(job_id)
+            if job is None:
+                self._send_json({"error": "NOT_FOUND"}, 404)
+                return
+            if job.get("clientId") != client_id and client_id != DASHBOARD_CLIENT_ID:
+                self._send_json({"error": "FORBIDDEN"}, 403)
+                return
+            self._send_json(job)
         elif path == "/api/admin/overview":
             # Reserve au proprietaire : la porte historique uniquement,
             # jamais une session de compte client (meme un client tres
@@ -3336,6 +3416,32 @@ class Handler(BaseHTTPRequestHandler):
                 return
             result = submit_task(objective, worker_id="chloe", client_id=client_id)
             self._send_json(attach_pending_action(result))
+        elif path == "/api/chloe/task/async":
+            # Variante asynchrone de /api/chloe/task : memes gardes (compte,
+            # abonnement, objectif requis) verifiees AVANT de lancer le thread
+            # (quota controle en amont, une seule fois). Renvoie un jobId (202)
+            # a interroger via GET /api/missions/async/<jobId> ; le thread
+            # demon execute submit_task identiquement a la version synchrone.
+            client_id = self._resolve_client_id()
+            if not client_id:
+                self._send_account_required()
+                return
+            block = subscription_blocks_mission(client_id)
+            if block:
+                self._send_json({"error": "SUBSCRIPTION_REQUIRED", "detail": block}, 402)
+                return
+            length = int(self.headers.get("Content-Length", 0))
+            raw = self.rfile.read(length) if length else b"{}"
+            try:
+                body = json.loads(raw.decode("utf-8"))
+            except Exception:
+                body = {}
+            objective = (body.get("objective") or "").strip()
+            if not objective:
+                self._send_json({"error": "OBJECTIVE_REQUIRED"}, 400)
+                return
+            res = submit_task_async(objective, worker_id="chloe", client_id=client_id)
+            self._send_json(res, 202)
         elif path == "/api/chloe/plan":
             # Etape "Demander a Chloe" du parcours Demarrer : reservee aux
             # comptes clients (plus au mot de passe proprietaire, qui
@@ -3382,6 +3488,35 @@ class Handler(BaseHTTPRequestHandler):
                 return
             result = submit_task(objective, worker_id=wid, client_id=client_id)
             self._send_json(attach_pending_action(result))
+        elif path.startswith("/api/workers/") and path.endswith("/task/async"):
+            # Variante asynchrone de /api/workers/<id>/task : memes gardes
+            # (worker connu, compte, abonnement, objectif requis) verifiees
+            # AVANT de lancer le thread. Renvoie un jobId (202) a interroger
+            # via GET /api/missions/async/<jobId>.
+            wid = path.split("/")[3]
+            if wid not in get_worker_ids():
+                self._send_json({"error": "UNKNOWN_WORKER"}, 404)
+                return
+            client_id = self._resolve_client_id()
+            if not client_id:
+                self._send_account_required()
+                return
+            block = subscription_blocks_mission(client_id)
+            if block:
+                self._send_json({"error": "SUBSCRIPTION_REQUIRED", "detail": block}, 402)
+                return
+            length = int(self.headers.get("Content-Length", 0))
+            raw = self.rfile.read(length) if length else b"{}"
+            try:
+                body = json.loads(raw.decode("utf-8"))
+            except Exception:
+                body = {}
+            objective = (body.get("objective") or "").strip()
+            if not objective:
+                self._send_json({"error": "OBJECTIVE_REQUIRED"}, 400)
+                return
+            res = submit_task_async(objective, worker_id=wid, client_id=client_id)
+            self._send_json(res, 202)
         elif path == "/api/connector-action/confirm":
             client_id = self._resolve_client_id()
             if not client_id:
