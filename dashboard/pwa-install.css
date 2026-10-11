@@ -1,0 +1,92 @@
+/* Invitation a installer l'application (voir pwa-install.js). Fichier a part pour ne pas
+   toucher style.css. Superposition fixe : aucun decalage de la mise en page (pas de CLS).
+   Au-dessus de la barre du haut, sous les fenetres modales (connexion, connecteurs) ;
+   a gauche pour laisser la bulle de Chloe (bas droite, 58 px) libre. */
+.pwa-banner {
+  position: fixed;
+  left: 16px;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  z-index: 120;
+  width: min(400px, calc(100vw - 32px));
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  grid-template-areas:
+    "icon text close"
+    ". cta cta";
+  column-gap: 12px;
+  row-gap: 10px;
+  align-items: start;
+  padding: 14px 12px 14px 14px;
+  background: var(--card, #ffffff);
+  color: var(--ink, #16171c);
+  border: 1px solid var(--card-border, rgba(20, 20, 25, 0.09));
+  border-radius: 18px;
+  box-shadow: 0 1px 2px rgba(20, 20, 25, 0.06), 0 14px 36px rgba(20, 20, 25, 0.18);
+}
+.pwa-banner[hidden] { display: none; }
+/* Etapes iPhone/iPad ouvertes : une ligne de plus entre le texte et le bouton. */
+.pwa-banner.is-open {
+  grid-template-areas:
+    "icon text close"
+    "steps steps steps"
+    ". cta cta";
+}
+.pwa-banner-icon { grid-area: icon; width: 44px; height: 44px; border-radius: 12px; display: block; }
+.pwa-banner-text { grid-area: text; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.pwa-banner-title { font-size: 15px; line-height: 1.3; }
+.pwa-banner-sub { font-size: 13px; line-height: 1.4; color: var(--ink-muted, #6b6f7b); }
+.pwa-banner-close {
+  grid-area: close;
+  width: 36px;
+  height: 36px;
+  margin: -6px -4px 0 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink-muted, #6b6f7b);
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+.pwa-banner-close:hover { background: var(--gold-dim, rgba(165, 118, 31, 0.1)); color: var(--ink, #16171c); }
+.pwa-banner-cta { grid-area: cta; justify-self: start; min-height: 40px; }
+.pwa-banner-close:focus-visible,
+.pwa-banner-cta:focus-visible { outline: 3px solid var(--gold-light, #c9973a); outline-offset: 2px; }
+
+.pwa-ios-steps {
+  grid-area: steps;
+  margin: 0;
+  padding: 10px 12px 10px 30px;
+  border-radius: 12px;
+  background: var(--gold-dim, rgba(165, 118, 31, 0.1));
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+.pwa-ios-steps[hidden] { display: none; }
+.pwa-ios-steps li { padding: 3px 0; }
+.pwa-ios-steps li + li { margin-top: 4px; }
+.pwa-share-ico { display: inline-flex; vertical-align: -5px; margin-right: 6px; color: var(--gold, #a5761f); }
+
+/* Telephone : on laisse la bulle de Chloe (bas droite) libre. */
+@media (max-width: 720px) {
+  .pwa-banner {
+    left: 12px;
+    width: auto;
+    right: 84px;
+    bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  }
+}
+/* Tres petits ecrans : le bouton prend toute la largeur utile. */
+@media (max-width: 360px) {
+  .pwa-banner { grid-template-columns: 40px minmax(0, 1fr) auto; column-gap: 10px; padding: 12px 8px 12px 12px; }
+  .pwa-banner-icon { width: 40px; height: 40px; }
+  .pwa-banner-cta { justify-self: stretch; justify-content: center; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .pwa-banner:not([hidden]) { animation: pwa-banner-in 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+}
+@keyframes pwa-banner-in {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: none; }
+}

@@ -1,0 +1,11 @@
+{
+  "appId": "com.bkaiworkers.app",
+  "appName": "BK-AI-WORKERS",
+  "webDir": "www",
+  "appendUserAgent": "BKAIWorkersApp/1.0",
+  "server": {
+    "url": "https://bk-ai-workers.com/?pwa=1",
+    "allowNavigation": ["bk-ai-workers.com"],
+    "errorPath": "offline.html"
+  }
+}
