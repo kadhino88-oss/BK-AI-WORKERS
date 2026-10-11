@@ -2632,12 +2632,62 @@ async function runTrialTask(objective) {
 // ECRITURE : jamais envoye automatiquement (voir ANTHROPIC-ADAPTER.ps1)
 // — cette carte est le seul endroit ou le client confirme explicitement
 // avant qu'un appel reel ne parte.
+// Libellés français pour les clés de payload les plus courantes ; toute
+// clé inconnue est affichée telle quelle (son nom brut).
+const PENDING_PARAM_LABELS = {
+  to: "Destinataire",
+  recipient: "Destinataire",
+  cc: "Copie",
+  bcc: "Copie cachée",
+  subject: "Objet",
+  body: "Message",
+  message: "Message",
+  text: "Message",
+  content: "Message",
+  amount: "Montant",
+  currency: "Devise",
+  from: "Expéditeur",
+  title: "Titre",
+  url: "URL",
+  phone: "Téléphone",
+};
+
+// Bloc « Contenu exact qui sera envoyé » : une ligne par champ du payload
+// remonté depuis le fichier PENDING-ACTION. Toute valeur passe par
+// escapeHtml ; un champ long est rendu dans un <pre> défilable.
+function renderPendingActionPayload(params) {
+  if (!params || typeof params !== "object" || Array.isArray(params)) return "";
+  const keys = Object.keys(params);
+  if (!keys.length) return "";
+  const rows = keys.map((key) => {
+    const label = PENDING_PARAM_LABELS[String(key).toLowerCase()] || key;
+    let value = params[key];
+    if (value !== null && typeof value === "object") {
+      value = JSON.stringify(value, null, 2);
+    } else {
+      value = String(value ?? "");
+    }
+    const longField = value.length > 120 || value.includes("\n");
+    const valueHtml = longField
+      ? `<pre class="pending-action-payload-pre">${escapeHtml(value)}</pre>`
+      : `<span class="pending-action-payload-value">${escapeHtml(value)}</span>`;
+    return `<div class="pending-action-payload-row"><span class="pending-action-payload-key">${escapeHtml(label)}</span>${valueHtml}</div>`;
+  }).join("");
+  return `
+    <div class="pending-action-payload">
+      <div class="pending-action-payload-title">Contenu exact qui sera envoyé</div>
+      ${rows}
+    </div>
+  `;
+}
+
 function renderPendingActionCard(pendingAction) {
   const el = document.createElement("div");
   el.className = "pending-action-card";
   el.innerHTML = `
     <div class="pending-action-title">🔓 Action réelle préparée — pas encore envoyée</div>
     <p class="pending-action-detail"><strong>${escapeHtml(pendingAction.connectorId)}</strong> — ${escapeHtml(pendingAction.operation)}${pendingAction.reason ? "<br>" + escapeHtml(pendingAction.reason) : ""}</p>
+    ${renderPendingActionPayload(pendingAction.params)}
     <div class="pending-action-buttons">
       <button type="button" class="btn btn-gold" data-action="confirm">Confirmer et envoyer</button>
       <button type="button" class="btn btn-ghost" data-action="cancel">Annuler</button>
@@ -2677,6 +2727,32 @@ function renderPendingActionCard(pendingAction) {
   return el;
 }
 
+// Taille lisible pour l'affichage des fichiers produits.
+function formatFileSize(bytes) {
+  if (!bytes || bytes < 1024) return `${bytes || 0} o`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} Ko`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} Mo`;
+}
+
+// Fichiers produits par un Worker (Excel/Word/PDF/CSV/image) via code
+// execution (voir ANTHROPIC-ADAPTER.ps1) — un lien de telechargement par
+// fichier, servi par GET /api/missions/<taskId>/files/<filename>.
+function renderTaskFilesBlock(taskId, files) {
+  if (!taskId || !Array.isArray(files) || !files.length) return null;
+  const links = files.map((file) => {
+    const fname = file && file.filename ? String(file.filename) : "";
+    if (!fname) return "";
+    const size = file && typeof file.sizeBytes === "number" ? ` (${formatFileSize(file.sizeBytes)})` : "";
+    const href = `/api/missions/${encodeURIComponent(taskId)}/files/${encodeURIComponent(fname)}`;
+    return `<a class="task-file-link" href="${href}" download>📎 ${escapeHtml(fname)}${escapeHtml(size)}</a>`;
+  }).join("");
+  if (!links) return null;
+  const el = document.createElement("div");
+  el.className = "task-files-block";
+  el.innerHTML = `<div class="task-files-title">Fichiers produits</div>${links}`;
+  return el;
+}
+
 async function runTask(objective) {
   if (!accountAuthenticated) {
     requireAccount(() => runTask(objective));
@@ -2710,15 +2786,66 @@ async function runTask(objective) {
   const responseEl = turn.querySelector(".chat-msg-worker");
 
   try {
+    // Mission en arriere-plan : on ne bloque plus la connexion HTTP le
+    // temps du pipeline (qui pouvait durer plusieurs minutes et se faire
+    // trancher par le proxy). Le POST /async renvoie un jobId immediatement
+    // (202), puis on interroge GET /api/missions/async/<jobId> toutes les
+    // 2 s jusqu'a DONE/ERROR. Les endpoints synchrones restent disponibles
+    // cote serveur (retrocompatibilite) ; seule l'UI live passe par /async.
     const endpoint = currentWorkerId === "chloe"
       ? "/api/chloe/task"
       : `/api/workers/${currentWorkerId}/task`;
+    const asyncEndpoint = endpoint + "/async";
 
-    const result = await fetchJson(endpoint, {
+    let result;
+    const started = await fetchJson(asyncEndpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ objective }),
     });
+
+    if (started.error || !started.jobId) {
+      // Garde refusee en amont (compte, abonnement, objectif...) : on
+      // traite started comme le resultat et on laisse le rendu habituel
+      // ci-dessous l'afficher.
+      result = started;
+    } else {
+      const POLL_INTERVAL_MS = 2000;
+      const MAX_POLL_ATTEMPTS = 330; // ~11 min
+      for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt++) {
+        await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
+        const job = await fetchJson(`/api/missions/async/${started.jobId}`, {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        });
+        if (job.error === "ACCOUNT_REQUIRED") {
+          turn.remove();
+          requireAccount(() => runTask(objective));
+          return;
+        }
+        if (job.error) {
+          result = job;
+          break;
+        }
+        if (job.status === "DONE") {
+          result = job.result || {};
+          break;
+        }
+        if (job.status === "ERROR") {
+          result = { error: "SUBMIT_EXCEPTION", detail: job.error };
+          break;
+        }
+      }
+      if (result === undefined) {
+        // Plafond de securite atteint : on cesse d'interroger plutot que
+        // de boucler indefiniment. La mission continue cote serveur.
+        responseEl.className = "chat-msg chat-msg-worker needs-chloe";
+        responseEl.innerHTML = `<div class="status-line">Toujours en cours</div>
+          <p>La mission prend plus de temps que prévu. Elle continue en arrière-plan — réessayez dans un instant.</p>`;
+        turn.scrollIntoView({ behavior: "smooth", block: "end" });
+        return;
+      }
+    }
 
     if (result.error === "ACCOUNT_REQUIRED") {
       // La session a expire entre-temps : redemande une connexion
@@ -2756,6 +2883,19 @@ async function runTask(objective) {
         : (result.ExecutionNote || (needsChloe ? "Cette action passe par le chat avec Chloé pour vérification." : "Tâche autorisée, en attente de routage vers un Worker."));
       responseEl.innerHTML = `<div class="status-line">${escapeHtml(statusLine)}</div>${renderAnswer(answer)}`;
       await loadActivity(currentWorkerId);
+    }
+    // Fichiers produits (telechargement) — branche Chloe (un TaskId par
+    // Worker dans Results[]) ou branche directe (result.Result.TaskId).
+    if (currentWorkerId === "chloe" && Array.isArray(result.Results)) {
+      result.Results.forEach((r) => {
+        if (r && r.Result && Array.isArray(r.Result.Files)) {
+          const block = renderTaskFilesBlock(r.Result.TaskId, r.Result.Files);
+          if (block) turn.appendChild(block);
+        }
+      });
+    } else if (result.Result && Array.isArray(result.Result.Files) && result.Result.Files.length) {
+      const block = renderTaskFilesBlock(result.Result.TaskId, result.Result.Files);
+      if (block) turn.appendChild(block);
     }
     if (result.pendingAction) {
       turn.appendChild(renderPendingActionCard(result.pendingAction));

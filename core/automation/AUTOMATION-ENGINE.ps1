@@ -176,6 +176,76 @@ function Invoke-AutomationRun {
     param([Parameter(Mandatory=$true)]$Automation)
 
     Initialize-AutomationStore
+
+    # -----------------------------------------------------------------
+    # Garde-fou quota (correctif securite).
+    # Le controle de quota subscription_blocks_mission ne vivait QUE dans
+    # les endpoints HTTP de dashboard/server.py. Les automatisations
+    # declenchees par cron (deploy/tick-automations.sh -> Automation-Bridge.ps1
+    # -Action tick -> Invoke-AutomationTick -> Invoke-AutomationRun ->
+    # Submit-Task.ps1) ne passent par AUCUN de ces endpoints : un client au
+    # quota epuise voyait quand meme ses automatisations recurrentes
+    # s'executer. On reutilise ici EXACTEMENT la meme regle (via le pont
+    # Python dashboard/quota-check.py, qui importe server.py — aucune
+    # duplication de la logique de facturation) AVANT de soumettre la tache.
+    # Tout echec du verificateur est fail-open (quota indicatif, aucun PSP
+    # branche) : on n'interrompt jamais une automatisation a cause d'un bug
+    # du check — le helper echoue deja open, on double-protege ici.
+    try {
+        $QuotaClientId = Get-AutomationClientId $Automation
+        $QuotaScript = Join-Path $Script:AutomationRoot "dashboard/quota-check.py"
+        $PyCmd = if ($env:BK_PYTHON) { $env:BK_PYTHON } else { "python3" }
+        if (Test-Path -LiteralPath $QuotaScript -PathType Leaf) {
+            $QuotaLine = & $PyCmd $QuotaScript $QuotaClientId 2>$null | Select-Object -Last 1
+            if ($QuotaLine) {
+                $QuotaVerdict = $QuotaLine | ConvertFrom-Json
+                if ($QuotaVerdict.blocked) {
+                    # Quota epuise : on NE soumet PAS la tache. On trace le
+                    # saut avec le MEME mecanisme de persistance qu'un run
+                    # normal (meme forme de RunRecord + meme dossier runs/<id>/,
+                    # lu par Get-AutomationRuns), au statut quota_exceeded, on
+                    # avance l'echeance comme un passage normal, puis on
+                    # retourne tot un objet de la meme forme que le retour
+                    # habituel (le pont lira $RunResult.status = "quota_exceeded").
+                    $SkipRecord = [ordered]@{
+                        automationId = $Automation.id
+                        ranAtUtc     = [DateTime]::UtcNow.ToString("o")
+                        status       = "quota_exceeded"
+                        detail       = $QuotaVerdict.detail
+                    }
+                    $SkipDir = Join-Path $Script:AutomationRunsDir $Automation.id
+                    if (-not (Test-Path -LiteralPath $SkipDir -PathType Container)) {
+                        New-Item -ItemType Directory -Path $SkipDir -Force | Out-Null
+                    }
+                    $SkipFile = Join-Path $SkipDir ("run-" + [DateTime]::UtcNow.ToString("yyyyMMdd-HHmmss") + ".json")
+                    ($SkipRecord | ConvertTo-Json -Depth 20) | Set-Content -LiteralPath $SkipFile -Encoding UTF8
+
+                    Invoke-BKStateLocked {
+                        $Automations = @(Get-Automations)
+                        foreach ($A in $Automations) {
+                            if ($A.id -eq $Automation.id) {
+                                $A.lastRunAtUtc  = $SkipRecord.ranAtUtc
+                                $A.lastRunStatus = "quota_exceeded"
+                                $A.nextRunAtUtc  = [DateTime]::UtcNow.AddMinutes($A.frequencyMinutes).ToString("o")
+                                $A.runCount      = [int]$A.runCount + 1
+                            }
+                        }
+                        Save-Automations -Automations $Automations
+                    } | Out-Null
+
+                    return $SkipRecord
+                }
+            }
+        }
+    }
+    catch {
+        # Fail-open : toute defaillance du verificateur de quota (python
+        # absent, import impossible, JSON invalide...) ne doit JAMAIS faire
+        # echouer l'automatisation — le quota est indicatif. On laisse
+        # passer et on execute normalement.
+        Write-Verbose "Verification de quota ignoree (echec non bloquant) : $($_.Exception.Message)"
+    }
+
     $OutFile = Join-Path $Script:AutomationRunsDir ("tmp-" + [guid]::NewGuid().ToString("N") + ".json")
 
     function QuoteArg([string]$Value) {

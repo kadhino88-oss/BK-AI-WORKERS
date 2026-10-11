@@ -11,6 +11,7 @@ Aucune dependance externe : http.server de la bibliotheque standard.
 import json
 import os
 import re
+import mimetypes
 import subprocess
 import datetime
 import hashlib
@@ -78,6 +79,8 @@ DASHBOARD_DIR = os.path.join(ROOT, "dashboard")
 WORKERS_DIR = os.path.join(ROOT, "workers")
 CHLOE_DIR = os.path.join(ROOT, "chloe")
 TASKS_DIR = os.path.join(ROOT, "runtime", "tasks")
+TASK_FILES_DIR = os.path.join(ROOT, "runtime", "task-files")
+ASYNC_JOBS_DIR = os.path.join(ROOT, "runtime", "async-jobs")
 CAPABILITY_MATRIX_PATH = os.path.join(ROOT, "core", "permissions", "capability-matrix", "CAPABILITY-MATRIX.json")
 SUBMIT_SCRIPT = os.path.join(DASHBOARD_DIR, "Submit-Task.ps1")
 AUTOMATION_BRIDGE_SCRIPT = os.path.join(DASHBOARD_DIR, "Automation-Bridge.ps1")
@@ -572,6 +575,66 @@ def submit_task(worker_hint_text, worker_id="", plan_only=False, client_id=""):
             pass
 
 
+ASYNC_JOB_ID_PATTERN = re.compile(r"^JOB-[A-F0-9]{32}$")
+
+
+def _async_job_path(job_id):
+    return os.path.join(ASYNC_JOBS_DIR, f"{job_id}.json")
+
+
+def _write_async_job(data):
+    os.makedirs(ASYNC_JOBS_DIR, exist_ok=True)
+    _write_json_atomic(_async_job_path(data["jobId"]), data, ensure_ascii=False, indent=2)
+
+
+def read_async_job(job_id):
+    if not ASYNC_JOB_ID_PATTERN.match(job_id or ""):
+        return None
+    return load_json(_async_job_path(job_id))
+
+
+def submit_task_async(objective, worker_id="", client_id="", plan_only=False):
+    """Lance une mission en arriere-plan, renvoie un jobId a interroger.
+    Le job (runtime/async-jobs/<jobId>.json) passe de RUNNING a DONE/ERROR.
+    IMPORTANT : le job n'est PAS un TASK-*.json -> aucun double comptage de
+    credits (le pipeline ecrit son propre TASK-*.json, compte une seule fois).
+
+    submit_task garde EXACTEMENT sa signature synchrone
+    (worker_hint_text, worker_id, plan_only, client_id) : on se contente de
+    la lancer dans un thread demon pour debloquer la connexion HTTP."""
+    job_id = "JOB-" + secrets.token_hex(16).upper()
+    now = datetime.datetime.utcnow().isoformat() + "Z"
+    base = {"jobId": job_id, "status": "RUNNING", "clientId": client_id,
+            "worker": worker_id or "chloe", "objective": objective,
+            "planOnly": bool(plan_only), "createdAtUtc": now}
+    _write_async_job(base)
+
+    def _run():
+        record = dict(base)
+        try:
+            result = submit_task(objective, worker_id=worker_id,
+                                 plan_only=plan_only, client_id=client_id)
+            if not plan_only:
+                try:
+                    result = attach_pending_action(result)
+                except Exception:
+                    pass
+            record.update(status="DONE",
+                          finishedAtUtc=datetime.datetime.utcnow().isoformat() + "Z",
+                          result=result)
+        except Exception as exc:  # noqa: BLE001
+            record.update(status="ERROR",
+                          finishedAtUtc=datetime.datetime.utcnow().isoformat() + "Z",
+                          error=str(exc))
+        try:
+            _write_async_job(record)
+        except Exception:
+            pass
+
+    threading.Thread(target=_run, daemon=True).start()
+    return {"jobId": job_id, "status": "RUNNING"}
+
+
 TASK_ID_PATTERN = re.compile(r"^TASK-[A-F0-9]{32}$")
 
 
@@ -582,6 +645,45 @@ def _pending_action_path(task_id):
     if not TASK_ID_PATTERN.match(task_id or ""):
         return None
     return os.path.join(PENDING_ACTIONS_DIR, f"PENDING-ACTION-{task_id}.json")
+
+
+_SENSITIVE_PARAM_HINTS = (
+    "token", "secret", "password", "apikey", "api_key", "authorization",
+    "auth", "bearer", "key", "credential", "signature", "hash",
+)
+_PARAM_VALUE_MAX = 2000
+_MASKED = "•••masqué•••"
+
+
+def _safe_param_value(value, _depth=0):
+    """Nettoie une valeur de parametre avant de la renvoyer au client :
+    tronque les chaines trop longues. Les dicts sont parcourus sur un
+    seul niveau supplementaire (pas d'over-engineering)."""
+    if isinstance(value, str):
+        if len(value) > _PARAM_VALUE_MAX:
+            return value[:_PARAM_VALUE_MAX] + " …(tronqué)"
+        return value
+    if isinstance(value, dict) and _depth == 0:
+        return _safe_action_params(value, _depth + 1)
+    return value
+
+
+def _safe_action_params(params, _depth=0):
+    """Copie peu profonde et assainie des parametres d'une action en
+    attente : masque toute valeur dont la cle ressemble a un secret
+    (token/secret/password/cle/signature…) et tronque les chaines trop
+    longues. Ne JAMAIS renvoyer les parametres bruts : le fichier
+    PENDING-ACTION peut contenir des jetons ou identifiants."""
+    if not isinstance(params, dict):
+        return {}
+    safe = {}
+    for key, value in params.items():
+        lowered = str(key).lower()
+        if any(hint in lowered for hint in _SENSITIVE_PARAM_HINTS):
+            safe[key] = _MASKED
+        else:
+            safe[key] = _safe_param_value(value, _depth)
+    return safe
 
 
 def attach_pending_action(result):
@@ -617,12 +719,19 @@ def attach_pending_action(result):
     for task_id in candidate_ids:
         pending = load_json(_pending_action_path(task_id))
         if pending:
-            found.append({
+            entry = {
                 "taskId": pending.get("taskId"),
                 "connectorId": pending.get("connectorId"),
                 "operation": pending.get("operation"),
                 "reason": pending.get("reason"),
-            })
+            }
+            # Contenu exact qui sera envoye (destinataire, objet, corps,
+            # montant…), remonte depuis le fichier PENDING-ACTION, avec
+            # masquage des secrets et troncature des champs trop longs.
+            raw_params = pending.get("params")
+            if isinstance(raw_params, dict) and raw_params:
+                entry["params"] = _safe_action_params(raw_params)
+            found.append(entry)
     if found:
         result["pendingAction"] = found[0]
         result["pendingActions"] = found
@@ -1160,6 +1269,7 @@ def _summarize_mission_result(result):
                     "worker": r.get("Worker"),
                     "status": r.get("Status"),
                     "answer": (r.get("Result") or {}).get("Answer"),
+                    "files": (r.get("Result") or {}).get("Files"),
                 }
                 for r in result.get("Results", []) if isinstance(r, dict)
             ],
@@ -1169,6 +1279,7 @@ def _summarize_mission_result(result):
         "worker": result.get("Worker"),
         "status": result.get("Status"),
         "answer": (result.get("Result") or {}).get("Answer"),
+        "files": (result.get("Result") or {}).get("Files"),
     }
 
 
@@ -1327,11 +1438,49 @@ ESTIMATED_MINUTES_SAVED_PER_MISSION = 12
 
 
 # Tarifs publics indicatifs (USD par million de tokens : entree, sortie).
+# Tarifs API Anthropic de premiere partie + OpenAI (indicatifs, 2026).
 # Un modele absent de cette table n'a PAS de cout affiche (jamais devine).
+# La table couvre desormais les modeles "forts" (Fable/Opus/Sonnet), pas
+# seulement Haiku : basculer un Worker sur un modele fort donne ainsi un
+# cout mesure et non "sans prix".
 MODEL_PRICING_USD_PER_MTOK = {
-    "claude-haiku-4-5-20251001": (1.00, 5.00),
+    # Anthropic — famille Claude
+    "claude-fable-5-1": (10.00, 50.00),
+    "claude-fable-5": (10.00, 50.00),
+    "claude-opus-5-5": (4.00, 20.00),
+    "claude-opus-5": (5.00, 25.00),
+    "claude-opus-4-8": (5.00, 25.00),
+    "claude-opus-4-7": (5.00, 25.00),
+    "claude-opus-4-6": (5.00, 25.00),
+    "claude-sonnet-5-5": (2.00, 10.00),
+    "claude-sonnet-5": (2.00, 10.00),
+    "claude-sonnet-4-6": (3.00, 15.00),
+    "claude-haiku-5-5": (0.10, 0.50),
+    "claude-haiku-4-5": (1.00, 5.00),
+    # OpenAI
+    "gpt-4o": (2.50, 10.00),
     "gpt-4o-mini": (0.15, 0.60),
 }
+
+
+def price_for_model(model_id):
+    """Tarif (entree, sortie) pour un identifiant de modele, tolerant aux
+    suffixes de date ('claude-opus-4-8-20260101', 'claude-opus-4-5@20251101')
+    et rapproche par famille. Renvoie None si aucun tarif connu."""
+    if not model_id:
+        return None
+    m = str(model_id).strip().lower()
+    price = MODEL_PRICING_USD_PER_MTOK.get(m)
+    if price:
+        return price
+    base = re.sub(r"[-@]\d{6,8}$", "", m)
+    price = MODEL_PRICING_USD_PER_MTOK.get(base)
+    if price:
+        return price
+    for key in sorted(MODEL_PRICING_USD_PER_MTOK, key=len, reverse=True):
+        if base.startswith(key) or m.startswith(key):
+            return MODEL_PRICING_USD_PER_MTOK[key]
+    return None
 AI_PROVIDERS_PATH = os.path.join(ROOT, "core", "ai", "AI-PROVIDERS.json")
 
 
@@ -1366,7 +1515,8 @@ def get_ai_cost_summary(client_id=DASHBOARD_CLIENT_ID):
             input_tokens += i
             output_tokens += o
             missions += 1
-            price = MODEL_PRICING_USD_PER_MTOK.get(configured_model_for(res.get("Provider")))
+            model_used = res.get("Model") or res.get("model") or configured_model_for(res.get("Provider"))
+            price = price_for_model(model_used)
             if price:
                 cost_usd += (i * price[0] + o * price[1]) / 1_000_000
             else:
@@ -2812,6 +2962,72 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json({"error": "NOT_FOUND"}, 404)
                 return
             self._send_json(_summarize_mission_result(data))
+        elif path.startswith("/api/missions/") and "/files/" in path:
+            # Telechargement securise d'un fichier produit par un Worker
+            # (voir ANTHROPIC-ADAPTER.ps1 : capture via code execution,
+            # depose dans runtime/task-files/<TaskId>/<name>). Reserve au
+            # client proprietaire de la mission (ou a Kader/CLI-DASHBOARD).
+            client_id = self._resolve_client_id()
+            if not client_id:
+                self._send_account_required()
+                return
+            rest = path[len("/api/missions/"):]
+            task_id, _, name = rest.partition("/files/")
+            name = unquote(name)
+            if not TASK_ID_PATTERN.match(task_id or ""):
+                self._send_json({"error": "NOT_FOUND"}, 404)
+                return
+            # name doit etre un pur basename, sans separateur ni ./..
+            if not (os.path.basename(name) == name and name not in ("", ".", "..")
+                    and "/" not in name and "\\" not in name):
+                self._send_json({"error": "NOT_FOUND"}, 404)
+                return
+            rec = load_json(os.path.join(TASKS_DIR, f"{task_id}.json"))
+            if not rec:
+                self._send_json({"error": "NOT_FOUND"}, 404)
+                return
+            if rec.get("ClientId") != client_id and client_id != DASHBOARD_CLIENT_ID:
+                self._send_json({"error": "FORBIDDEN"}, 403)
+                return
+            fpath = os.path.join(TASK_FILES_DIR, task_id, name)
+            # Defense en profondeur : le chemin reel doit rester CONFINE
+            # dans le dossier de la tache (aucune remontee ../ possible).
+            task_dir_real = os.path.realpath(os.path.join(TASK_FILES_DIR, task_id))
+            if not os.path.realpath(fpath).startswith(task_dir_real + os.sep):
+                self._send_json({"error": "NOT_FOUND"}, 404)
+                return
+            if not os.path.isfile(fpath):
+                self._send_json({"error": "NOT_FOUND"}, 404)
+                return
+            with open(fpath, "rb") as f:
+                body = f.read()
+            ctype = mimetypes.guess_type(name)[0] or "application/octet-stream"
+            self.send_response(200)
+            self.send_header("Content-Type", ctype)
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Content-Disposition", 'attachment; filename="%s"' % name)
+            self.send_header("Cache-Control", "no-cache, must-revalidate")
+            self.end_headers()
+            self.wfile.write(body)
+        elif path.startswith("/api/missions/async/"):
+            # Interrogation du statut d'une mission lancee en arriere-plan.
+            # Reserve au client proprietaire du job (ou a Kader/CLI-DASHBOARD).
+            client_id = self._resolve_client_id()
+            if not client_id:
+                self._send_account_required()
+                return
+            job_id = path.split("/")[-1]
+            if not ASYNC_JOB_ID_PATTERN.match(job_id or ""):
+                self._send_json({"error": "NOT_FOUND"}, 404)
+                return
+            job = read_async_job(job_id)
+            if job is None:
+                self._send_json({"error": "NOT_FOUND"}, 404)
+                return
+            if job.get("clientId") != client_id and client_id != DASHBOARD_CLIENT_ID:
+                self._send_json({"error": "FORBIDDEN"}, 403)
+                return
+            self._send_json(job)
         elif path == "/api/admin/overview":
             # Reserve au proprietaire : la porte historique uniquement,
             # jamais une session de compte client (meme un client tres
@@ -3297,6 +3513,32 @@ class Handler(BaseHTTPRequestHandler):
                 return
             result = submit_task(objective, worker_id="chloe", client_id=client_id)
             self._send_json(attach_pending_action(result))
+        elif path == "/api/chloe/task/async":
+            # Variante asynchrone de /api/chloe/task : memes gardes (compte,
+            # abonnement, objectif requis) verifiees AVANT de lancer le thread
+            # (quota controle en amont, une seule fois). Renvoie un jobId (202)
+            # a interroger via GET /api/missions/async/<jobId> ; le thread
+            # demon execute submit_task identiquement a la version synchrone.
+            client_id = self._resolve_client_id()
+            if not client_id:
+                self._send_account_required()
+                return
+            block = subscription_blocks_mission(client_id)
+            if block:
+                self._send_json({"error": "SUBSCRIPTION_REQUIRED", "detail": block}, 402)
+                return
+            length = int(self.headers.get("Content-Length", 0))
+            raw = self.rfile.read(length) if length else b"{}"
+            try:
+                body = json.loads(raw.decode("utf-8"))
+            except Exception:
+                body = {}
+            objective = (body.get("objective") or "").strip()
+            if not objective:
+                self._send_json({"error": "OBJECTIVE_REQUIRED"}, 400)
+                return
+            res = submit_task_async(objective, worker_id="chloe", client_id=client_id)
+            self._send_json(res, 202)
         elif path == "/api/chloe/plan":
             # Etape "Demander a Chloe" du parcours Demarrer : reservee aux
             # comptes clients (plus au mot de passe proprietaire, qui
@@ -3343,6 +3585,35 @@ class Handler(BaseHTTPRequestHandler):
                 return
             result = submit_task(objective, worker_id=wid, client_id=client_id)
             self._send_json(attach_pending_action(result))
+        elif path.startswith("/api/workers/") and path.endswith("/task/async"):
+            # Variante asynchrone de /api/workers/<id>/task : memes gardes
+            # (worker connu, compte, abonnement, objectif requis) verifiees
+            # AVANT de lancer le thread. Renvoie un jobId (202) a interroger
+            # via GET /api/missions/async/<jobId>.
+            wid = path.split("/")[3]
+            if wid not in get_worker_ids():
+                self._send_json({"error": "UNKNOWN_WORKER"}, 404)
+                return
+            client_id = self._resolve_client_id()
+            if not client_id:
+                self._send_account_required()
+                return
+            block = subscription_blocks_mission(client_id)
+            if block:
+                self._send_json({"error": "SUBSCRIPTION_REQUIRED", "detail": block}, 402)
+                return
+            length = int(self.headers.get("Content-Length", 0))
+            raw = self.rfile.read(length) if length else b"{}"
+            try:
+                body = json.loads(raw.decode("utf-8"))
+            except Exception:
+                body = {}
+            objective = (body.get("objective") or "").strip()
+            if not objective:
+                self._send_json({"error": "OBJECTIVE_REQUIRED"}, 400)
+                return
+            res = submit_task_async(objective, worker_id=wid, client_id=client_id)
+            self._send_json(res, 202)
         elif path == "/api/connector-action/confirm":
             client_id = self._resolve_client_id()
             if not client_id:
