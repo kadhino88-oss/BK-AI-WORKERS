@@ -1793,6 +1793,19 @@ def _notify_owner_email(to, subject, html_body, text):
 PHONE_AGENT = phone_agent.PhoneAgent(ROOT, PS_CMD, notify=_notify_owner_email)
 PHONE_AGENT.warm_up()
 
+# Programme pilote (dashboard/pilot_program.py) : candidatures de premiers clients reels. Meme chemin d'email
+# que le standard telephonique (mailer.send_email -> SMTP dedie ou pont Gmail) ; ecriture sous _STATE_LOCK.
+import pilot_program
+
+
+def _notify_pilot_email(to, subject, html_body, text):
+    ok, err = mailer.send_email(to, subject, html_body, text, gmail_bridge=run_mailer_bridge)
+    print("[pilot] email au proprietaire : " + ("envoye" if ok else f"ECHEC ({err})"), flush=True)
+
+
+PILOT = pilot_program.PilotService(ROOT, PUBLIC_BASE_URL, lock=_STATE_LOCK, write_json=_write_json_atomic,
+                                   notify=_notify_pilot_email)
+
 
 def _recent(bucket, key, window):
     now = time.time()
@@ -2862,7 +2875,7 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(body)
         elif path == "/sitemap.xml":
-            urls = "".join(f"<url><loc>{PUBLIC_BASE_URL}{p}</loc></url>" for p in SITEMAP_PATHS)
+            urls = "".join(f"<url><loc>{PUBLIC_BASE_URL}{p}</loc></url>" for p in SITEMAP_PATHS + [q for q in pilot_program.SITEMAP_PATHS if q not in SITEMAP_PATHS])
             body = ('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
                     + urls + "</urlset>").encode("utf-8")
             self.send_response(200)
@@ -3132,6 +3145,8 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_account_required()
                 return
             self._send_json(whatsapp_status(client_id))
+        elif PILOT.handle_get(self, path):   # programme pilote : /pilote.html, ses scripts, GET /api/pilot/applications (operateur)
+            pass
         elif path == "/api/testimonials":
             self._send_json({"testimonials": public_testimonials()})
         elif path == "/api/admin/demo-requests":
@@ -3352,6 +3367,8 @@ class Handler(BaseHTTPRequestHandler):
                     self._send_json({"error": err}, 400)
                 else:
                     self._send_json({"ok": True, "testimonial": rec})
+        elif PILOT.handle_post(self, path):  # programme pilote : POST /api/pilot/apply (public), .../applications/delete (operateur)
+            pass
         elif path == "/api/demo-request":
             length = int(self.headers.get("Content-Length", 0))
             if length > 20000:

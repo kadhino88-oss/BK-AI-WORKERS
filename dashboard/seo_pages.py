@@ -138,11 +138,15 @@ def _header():
     )
 
 
+# Programme pilote (dashboard/pilot_program.py) : lien de pied de page.
+PILOT_FOOTER_LINK = '<a href="/pilote.html">Programme pilote</a>'
+
+
 def _footer():
     links = "".join(f'<a href="{href}">{label}</a>' for href, label in NAV_LINKS + FOOTER_TRUST_LINKS)
     return (
         "<footer>"
-        f"<nav>{links}</nav>"
+        f"<nav>{links}{PILOT_FOOTER_LINK}</nav>"
         "© 2026 BK-ENTREPRISE — BK-AI-WORKERS"
         "</footer>"
     )

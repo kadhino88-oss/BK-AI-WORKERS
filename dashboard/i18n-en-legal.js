@@ -24,6 +24,7 @@ window.BK_EN = Object.assign(window.BK_EN || {}, {
   "Oui, depuis la page Facturation — changement de plan, recharge de crédits et annulation sont accessibles à tout moment, sans engagement minimum.":
     "Yes, from the Billing page — plan changes, credit top-ups and cancellation are available at any time, with no minimum commitment.",
   "Informations légales": "Legal information", "CGV": "Terms of Sale", "Mentions légales": "Legal notice", "Confidentialité": "Privacy", "Cookies": "Cookies",
+  "Programme pilote": "Pilot programme",
   "Conditions générales de vente": "Terms of Sale", "Dernière mise à jour : 21 septembre 2026": "Last updated: 21 September 2026",
   "1. Éditeur et champ d'application": "1. Publisher and scope",
   "Les présentes conditions générales de vente (CGV) régissent l'accès et l'utilisation de la plateforme BK-AI-WORKERS, éditée par":
