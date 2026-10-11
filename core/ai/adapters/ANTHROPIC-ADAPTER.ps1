@@ -529,7 +529,7 @@ try {
             New-Item -ItemType Directory -Force -Path $DestDir | Out-Null
 
             Invoke-WebRequest -Uri "https://api.anthropic.com/v1/files/$FileId/content" `
-                -Headers $AuthHdr -TimeoutSec 240 -OutFile $DestPath
+                -Headers $AuthHdr -TimeoutSec 240 -OutFile $DestPath | Out-Null
 
             # Taille reelle (la metadonnee peut manquer) puis suppression de la copie chez Anthropic : les fichiers du client
             # ne doivent pas rester stockes la-bas (ils y persistent jusqu'a un DELETE, partages par tout le compte API).
