@@ -89,7 +89,10 @@
         "bug",
         "maintenance site",
         "performance technique",
-        "core web vitals technique"
+        "core web vitals",
+        "crawl",
+        "sitemap",
+        "indexation"
       ]
     },
     "seoya": {
@@ -105,9 +108,6 @@
         "backlink",
         "netlinking",
         "serp",
-        "indexation",
-        "crawl",
-        "sitemap",
         "search console",
         "positionnement",
         "seo local",
@@ -116,7 +116,6 @@
         "maillage interne",
         "donnees structurees",
         "concurrence seo",
-        "core web vitals seo",
         "trafic organique"
       ]
     },
@@ -193,6 +192,7 @@
         "offboarding",
         "embauche",
         "offre d'emploi",
+        "contrat de travail",
         "ats",
         "matching",
         "gap analysis",
