@@ -234,6 +234,32 @@ function Test-ReadOnlyOperation {
     return ($Operation -like "READ_*" -or $Operation -like "SEARCH_*")
 }
 
+# Auto-approve ("Laisser mes Workers agir seuls") ne vaut QUE pour les vrais brouillons : rien ne part chez un tiers.
+# Attention aux noms trompeurs : CREATE_DRAFT_POST PUBLIE sur LinkedIn/Facebook/X/TikTok/Instagram, et DRAFT_MESSAGE
+# ENVOIE vraiment sur Teams/WhatsApp (revue 2026-10-11). BK_AUTOAPPROVE_DRAFTS_ONLY=0 restaure l'ancien comportement.
+$AutoApproveSafeOps = @("gmail|DRAFT_MESSAGE", "outlook_mail|DRAFT_MESSAGE", "wordpress|CREATE_DRAFT", "wordpress|UPDATE_DRAFT", "zendesk|DRAFT_REPLY", "intercom|DRAFT_REPLY")
+
+function Get-CodeExecFileIds {
+    # file_id des fichiers produits par l'execution de code dans UNE reponse de l'API.
+    param($Resp)
+    $Ids = @()
+    if ($null -eq $Resp -or $null -eq $Resp.content) { return $Ids }
+    foreach ($Block in $Resp.content) {
+        if ($null -eq $Block) { continue }
+        $IsCurrent = ($Block.type -eq "bash_code_execution_tool_result")
+        $IsLegacy  = ($Block.type -eq "code_execution_tool_result")
+        if (-not ($IsCurrent -or $IsLegacy)) { continue }
+        $Inner = $Block.content
+        if ($null -eq $Inner -or $null -eq $Inner.content) { continue }
+        $WantType = if ($IsCurrent) { "bash_code_execution_output" } else { "code_execution_output" }
+        foreach ($Entry in @($Inner.content)) {
+            if ($null -eq $Entry) { continue }
+            if ($Entry.type -eq $WantType -and $Entry.file_id) { $Ids += [string]$Entry.file_id }
+        }
+    }
+    return $Ids
+}
+
 $PlainKey = $null
 $ResponseText = $null; $ErrorDetail = $null; $ExitCode = 1
 $Response = $null
@@ -256,6 +282,7 @@ try {
     if (-not [string]::IsNullOrWhiteSpace($SystemPrompt)) {
         $SystemPrompt = [string]$SystemPrompt + "`n`nSi tu produis un fichier livrable (Excel, Word, PDF, CSV, image) via l'outil d'execution de code, ecris-le ou copie-le dans le repertoire `$OUTPUT_DIR de l'environnement d'execution afin qu'il soit capture et mis a disposition pour telechargement."
     }
+    $SystemBlocks = @(@{ type = "text"; text = [string]$SystemPrompt; cache_control = @{ type = "ephemeral" } })
     $ToolDef = Build-ConnectorToolDefinition -ClientId $ClientId
     $Messages = [System.Collections.ArrayList]@()
     foreach ($Turn in (Get-BKRecentConversationTurns -Root $ProjectRoot -ClientId $ClientId -WorkerId $WorkerId)) {
@@ -311,19 +338,23 @@ try {
     $Headers = $HeadersNew
     try {
         $BodyObj = [ordered]@{
-            model = $EffectiveModel; max_tokens = 64000; system = $SystemPrompt; messages = $Messages; tools = $Tools
+            model = $EffectiveModel; max_tokens = 64000; system = $SystemBlocks; messages = $Messages; tools = $Tools
         }
         $Response = Invoke-RestMethod -Uri "https://api.anthropic.com/v1/messages" -Method Post `
             -Headers $Headers -ContentType "application/json; charset=utf-8" `
             -Body ([System.Text.Encoding]::UTF8.GetBytes(($BodyObj | ConvertTo-Json -Depth 10))) -TimeoutSec 240
     }
     catch {
-        # La nouvelle version d'outil a ete refusee : repli sur la config
-        # prod connue-bonne, un seul re-essai du premier POST.
+        # Repli UNIQUEMENT si l'API refuse la version d'outil (HTTP 400 qui parle d'outil / beta). Timeout, 429, 5xx,
+        # contexte trop long... : on remonte l'erreur (sinon on paierait deux generations et ~480 s avant la boucle).
+        $FallbackStatus = 0
+        try { $FallbackStatus = [int]$_.Exception.Response.StatusCode } catch { }
+        $FallbackText = ([string]$_.ErrorDetails.Message) + " " + ([string]$_.Exception.Message)
+        if (-not ($FallbackStatus -eq 400 -and $FallbackText -match 'tool|beta|code_execution|web_fetch|web_search')) { throw }
         $Tools = $ToolsOld
         $Headers = $HeadersOld
         $BodyObj = [ordered]@{
-            model = $EffectiveModel; max_tokens = 64000; system = $SystemPrompt; messages = $Messages; tools = $Tools
+            model = $EffectiveModel; max_tokens = 64000; system = $SystemBlocks; messages = $Messages; tools = $Tools
         }
         $Response = Invoke-RestMethod -Uri "https://api.anthropic.com/v1/messages" -Method Post `
             -Headers $Headers -ContentType "application/json; charset=utf-8" `
@@ -342,6 +373,7 @@ try {
     # boucle ne s'occupe que de use_connector, le seul outil qui a besoin
     # de CE code pour s'executer.
     $ConnectorActionsList = @()
+    $AllFileIds = @(Get-CodeExecFileIds -Resp $Response)
     $MaxIterations = 8
     $Iteration = 0
     $StopLoop = $false
@@ -373,6 +405,9 @@ try {
             # bascule auto-approve, comme n'importe quel autre connecteur).
             $IsFinancialConnector = (Get-ConnectorBaseId -ConnectorId "$ConnId.controlled") -in @("stripe", "paypal", "quickbooks", "xero")
             if ($ClientId -eq "CLI-DASHBOARD" -and $IsFinancialConnector -and -not (Test-ReadOnlyOperation -Operation $Op)) {
+                $AutoApproved = $false
+            }
+            if ($AutoApproved -and $env:BK_AUTOAPPROVE_DRAFTS_ONLY -ne "0" -and -not (Test-ReadOnlyOperation -Operation $Op) -and (("$ConnId|$Op") -notin $AutoApproveSafeOps)) {
                 $AutoApproved = $false
             }
 
@@ -415,12 +450,13 @@ try {
         [void]$Messages.Add(@{ role = "user"; content = $ToolResults })
 
         $BodyObjN = [ordered]@{
-            model = $EffectiveModel; max_tokens = 64000; system = $SystemPrompt; messages = $Messages
+            model = $EffectiveModel; max_tokens = 64000; system = $SystemBlocks; messages = $Messages
             tools = $Tools
         }
         $Response = Invoke-RestMethod -Uri "https://api.anthropic.com/v1/messages" -Method Post `
             -Headers $Headers -ContentType "application/json; charset=utf-8" `
             -Body ([System.Text.Encoding]::UTF8.GetBytes(($BodyObjN | ConvertTo-Json -Depth 10))) -TimeoutSec 240
+        $AllFileIds += @(Get-CodeExecFileIds -Resp $Response)
     }
 
     $ResponseText = (@($Response.content | Where-Object { $_.type -eq "text" } | ForEach-Object { $_.text }) -join "`n").Trim()
@@ -441,24 +477,10 @@ try {
     # poursuit normalement (jamais de throw depuis ce bloc).
     $CapturedFiles = @()
     try {
-        $FileIds = @()
-        if ($null -ne $Response -and $null -ne $Response.content) {
-            foreach ($Block in $Response.content) {
-                if ($null -eq $Block) { continue }
-                $IsCurrent = ($Block.type -eq "bash_code_execution_tool_result")
-                $IsLegacy  = ($Block.type -eq "code_execution_tool_result")
-                if (-not ($IsCurrent -or $IsLegacy)) { continue }
-                $Inner = $Block.content
-                if ($null -eq $Inner -or $null -eq $Inner.content) { continue }
-                $WantType = if ($IsCurrent) { "bash_code_execution_output" } else { "code_execution_output" }
-                foreach ($Entry in @($Inner.content)) {
-                    if ($null -eq $Entry) { continue }
-                    if ($Entry.type -eq $WantType -and $Entry.file_id) {
-                        $FileIds += [string]$Entry.file_id
-                    }
-                }
-            }
-        }
+        $FileIds = @($AllFileIds | Select-Object -Unique)
+        $MaxFiles = 10; $MaxFileBytes = 25MB; $MaxTotalBytes = 60MB; $TotalBytes = 0
+        $SkippedFiles = @()
+        $AuthHdr = @{ "x-api-key" = $PlainKey; "anthropic-version" = "2023-06-01" }
 
         $Counter = 0
         foreach ($FileId in $FileIds) {
@@ -477,6 +499,14 @@ try {
                 $SizeBytes = 0
             }
             if ([string]::IsNullOrWhiteSpace($Mime)) { $Mime = "application/octet-stream" }
+
+            # Plafonds (serveur de 3,8 Go partage entre tous les clients) : un fichier trop gros ou en trop est ignore
+            # et sa copie chez Anthropic supprimee.
+            if (($Counter -gt $MaxFiles) -or ($SizeBytes -gt $MaxFileBytes) -or (($TotalBytes + $SizeBytes) -gt $MaxTotalBytes)) {
+                $SkippedFiles += $FileName
+                try { Invoke-RestMethod -Uri "https://api.anthropic.com/v1/files/$FileId" -Method Delete -Headers $AuthHdr -TimeoutSec 30 | Out-Null } catch { }
+                continue
+            }
 
             # Nom de fichier sur : on ne garde que le basename, puis on ne
             # conserve que [A-Za-z0-9._-], on borne la longueur.
@@ -499,8 +529,18 @@ try {
             New-Item -ItemType Directory -Force -Path $DestDir | Out-Null
 
             Invoke-WebRequest -Uri "https://api.anthropic.com/v1/files/$FileId/content" `
-                -Headers @{ "x-api-key" = $PlainKey; "anthropic-version" = "2023-06-01" } `
-                -TimeoutSec 240 -OutFile $DestPath
+                -Headers $AuthHdr -TimeoutSec 240 -OutFile $DestPath
+
+            # Taille reelle (la metadonnee peut manquer) puis suppression de la copie chez Anthropic : les fichiers du client
+            # ne doivent pas rester stockes la-bas (ils y persistent jusqu'a un DELETE, partages par tout le compte API).
+            $RealLen = (Get-Item -LiteralPath $DestPath).Length
+            try { Invoke-RestMethod -Uri "https://api.anthropic.com/v1/files/$FileId" -Method Delete -Headers $AuthHdr -TimeoutSec 30 | Out-Null } catch { }
+            if (($RealLen -gt $MaxFileBytes) -or (($TotalBytes + $RealLen) -gt $MaxTotalBytes)) {
+                Remove-Item -LiteralPath $DestPath -Force -ErrorAction SilentlyContinue
+                $SkippedFiles += $SafeName
+                continue
+            }
+            $TotalBytes += $RealLen
 
             $CapturedFiles += [ordered]@{
                 fileId    = $FileId
@@ -513,6 +553,9 @@ try {
     }
     catch {
         # Jamais fatal : on conserve ce qui a ete capture jusqu'ici.
+    }
+    if ($SkippedFiles.Count -gt 0) {
+        $ResponseText = ([string]$ResponseText).TrimEnd() + "`n`n(Attention : " + $SkippedFiles.Count + " fichier(s) non joint(s) car trop volumineux ou en trop grand nombre : " + (($SkippedFiles | Select-Object -First 5) -join ", ") + ".)"
     }
 
     $ExitCode = 0

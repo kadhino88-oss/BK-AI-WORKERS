@@ -2682,15 +2682,36 @@ function renderPendingActionPayload(params) {
   `;
 }
 
+// Libelles HONNETES selon ce que l'action fait vraiment (revue 2026-10-11) : un brouillon Gmail n'est pas "envoye",
+// et "CREATE_DRAFT_POST" PUBLIE sur LinkedIn/Facebook/X/TikTok/Instagram.
+function pendingActionVerbs(connectorId, operation) {
+  const c = String(connectorId || "").toLowerCase();
+  const op = String(operation || "").toUpperCase();
+  if (op === "DRAFT_REPLY" && (c === "zendesk" || c === "intercom")) {
+    return { title: "📝 Note interne préparée — pas encore ajoutée", button: "Confirmer et ajouter la note", busy: "Ajout en cours…", done: "✅ Note interne ajoutée (rien n'est envoyé au client final)." };
+  }
+  if ((op === "DRAFT_MESSAGE" && (c === "gmail" || c === "outlook_mail")) || (c === "wordpress" && op.endsWith("_DRAFT"))) {
+    return { title: "📝 Brouillon préparé — pas encore créé", button: "Confirmer et créer le brouillon", busy: "Création en cours…", done: "✅ Brouillon créé dans votre outil. Il n'est pas envoyé ni publié : vous le relisez puis vous l'envoyez vous-même." };
+  }
+  if (op === "CREATE_DRAFT_POST") {
+    return { title: "📣 Publication préparée — pas encore publiée", button: "Confirmer et publier", busy: "Publication en cours…", done: "✅ Publié, pour de vrai." };
+  }
+  if (op === "PLACE_CALL") {
+    return { title: "📞 Appel préparé — pas encore passé", button: "Confirmer et appeler", busy: "Appel en cours…", done: "✅ Appel lancé, pour de vrai." };
+  }
+  return { title: "🔓 Action réelle préparée — pas encore envoyée", button: "Confirmer et envoyer", busy: "Envoi en cours…", done: "✅ Envoyé avec succès, pour de vrai." };
+}
+
 function renderPendingActionCard(pendingAction) {
+  const verbs = pendingActionVerbs(pendingAction.connectorId, pendingAction.operation);
   const el = document.createElement("div");
   el.className = "pending-action-card";
   el.innerHTML = `
-    <div class="pending-action-title">🔓 Action réelle préparée — pas encore envoyée</div>
+    <div class="pending-action-title">${escapeHtml(verbs.title)}</div>
     <p class="pending-action-detail"><strong>${escapeHtml(pendingAction.connectorId)}</strong> — ${escapeHtml(pendingAction.operation)}${pendingAction.reason ? "<br>" + escapeHtml(pendingAction.reason) : ""}</p>
     ${renderPendingActionPayload(pendingAction.params)}
     <div class="pending-action-buttons">
-      <button type="button" class="btn btn-gold" data-action="confirm">Confirmer et envoyer</button>
+      <button type="button" class="btn btn-gold" data-action="confirm">${escapeHtml(verbs.button)}</button>
       <button type="button" class="btn btn-ghost" data-action="cancel">Annuler</button>
     </div>
     <div class="pending-action-status" hidden></div>
@@ -2698,7 +2719,7 @@ function renderPendingActionCard(pendingAction) {
   el.querySelector('[data-action="confirm"]').addEventListener("click", async (e) => {
     const confirmBtn = e.currentTarget;
     confirmBtn.disabled = true;
-    confirmBtn.textContent = "Envoi en cours…";
+    confirmBtn.textContent = verbs.busy;
     const result = await fetchJson("/api/connector-action/confirm", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -2707,14 +2728,14 @@ function renderPendingActionCard(pendingAction) {
     const statusEl = el.querySelector(".pending-action-status");
     statusEl.hidden = false;
     if (result.Status === "SUCCESS") {
-      statusEl.textContent = "✅ Envoyé avec succès, pour de vrai.";
+      statusEl.textContent = verbs.done;
       statusEl.className = "pending-action-status success";
       el.querySelector(".pending-action-buttons").hidden = true;
     } else {
       statusEl.textContent = "Erreur : " + (result.Detail || result.error || "échec de l'envoi.");
       statusEl.className = "pending-action-status error";
       confirmBtn.disabled = false;
-      confirmBtn.textContent = "Confirmer et envoyer";
+      confirmBtn.textContent = verbs.button;
     }
   });
   el.querySelector('[data-action="cancel"]').addEventListener("click", async () => {
@@ -2813,12 +2834,22 @@ async function runTask(objective) {
     } else {
       const POLL_INTERVAL_MS = 2000;
       const MAX_POLL_ATTEMPTS = 330; // ~11 min
+      let pollFailures = 0;
       for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt++) {
         await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
-        const job = await fetchJson(`/api/missions/async/${started.jobId}`, {
-          method: "GET",
-          headers: { "Content-Type": "application/json" },
-        });
+        let job;
+        try {
+          job = await fetchJson(`/api/missions/async/${started.jobId}`, {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+          });
+          pollFailures = 0;
+        } catch (pollErr) {
+          // Coupure passagere (deploiement, reseau mobile, appli en arriere-plan) : la mission continue cote serveur,
+          // on reessaie au lieu d'abandonner (et de pousser le client a relancer une 2e mission payante).
+          if (++pollFailures >= 8) throw pollErr;
+          continue;
+        }
         if (job.error === "ACCOUNT_REQUIRED") {
           turn.remove();
           requireAccount(() => runTask(objective));

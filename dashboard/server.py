@@ -589,16 +589,27 @@ def _write_async_job(data):
     _write_json_atomic(_async_job_path(data["jobId"]), data, ensure_ascii=False, indent=2)
 
 
+ASYNC_JOB_MAX_RUNNING_SECONDS = 11 * 60   # submit_task a un delai de 600 s : au-dela, le job est mort
+
+
 def read_async_job(job_id):
     if not ASYNC_JOB_ID_PATTERN.match(job_id or ""):
         return None
-    return load_json(_async_job_path(job_id))
+    path = _async_job_path(job_id)
+    job = load_json(path)
+    if isinstance(job, dict) and job.get("status") == "RUNNING":
+        try:
+            if time.time() - os.path.getmtime(path) > ASYNC_JOB_MAX_RUNNING_SECONDS:
+                job = dict(job, status="ERROR", error="La mission a pris trop de temps ou a été interrompue. Relancez-la.")
+        except OSError:
+            pass
+    return job
 
 
 # Plafonds de missions en arriere-plan (petit serveur : 2 vCPU / 3,8 Go). Sans plafond, un client pouvait
 # lancer des dizaines de missions simultanees (un PowerShell + un appel modele chacune) et saturer le serveur.
 ASYNC_MAX_PER_CLIENT = int(os.environ.get("BK_ASYNC_MAX_PER_CLIENT", "2"))
-ASYNC_MAX_GLOBAL = int(os.environ.get("BK_ASYNC_MAX_GLOBAL", "4"))
+ASYNC_MAX_GLOBAL = int(os.environ.get("BK_ASYNC_MAX_GLOBAL", "6"))
 ASYNC_STALE_SECONDS = 20 * 60          # un job RUNNING plus vieux que ca a ete tue par un redemarrage
 ASYNC_KEEP_DAYS = 7
 _ASYNC_ACTIVE = {}                      # client_id -> nombre de missions en cours
@@ -627,7 +638,7 @@ def _async_release(client_id):
             _ASYNC_ACTIVE.pop(client_id, None)
 
 
-def reap_async_jobs(now=None):
+def reap_async_jobs(now=None, boot=False):
     """Au demarrage : un job RUNNING trop vieux a ete interrompu par un redemarrage -> ERROR (le client n'attend
     plus pour rien) ; les jobs termines depuis plus de ASYNC_KEEP_DAYS jours sont supprimes."""
     now = now if now is not None else time.time()
@@ -645,12 +656,24 @@ def reap_async_jobs(now=None):
                 os.remove(p)
                 continue
             job = load_json(p)
-            if isinstance(job, dict) and job.get("status") == "RUNNING" and age > ASYNC_STALE_SECONDS:
+            if isinstance(job, dict) and job.get("status") == "RUNNING" and (boot or age > ASYNC_STALE_SECONDS):
                 job.update(status="ERROR", error="Mission interrompue par un redémarrage du service. Relancez-la.",
                            finishedAtUtc=datetime.datetime.utcnow().isoformat() + "Z")
                 _write_async_job(job)
         except Exception:
             continue
+
+
+def submit_task_limited(objective, **kw):
+    """submit_task avec le MEME plafond que les missions en arriere-plan (endpoints synchrones, API publique)."""
+    cid = kw.get("client_id", "")
+    refusal = _async_acquire(cid)
+    if refusal:
+        return {"error": "TOO_MANY_RUNNING_MISSIONS", "detail": refusal}
+    try:
+        return submit_task(objective, **kw)
+    finally:
+        _async_release(cid)
 
 
 def submit_task_async(objective, worker_id="", client_id="", plan_only=False):
@@ -1585,7 +1608,9 @@ def get_ai_cost_summary(client_id=DASHBOARD_CLIENT_ID):
             input_tokens += i
             output_tokens += o
             missions += 1
-            model_used = res.get("Model") or res.get("model") or configured_model_for(res.get("Provider"))
+            model_used = res.get("Model") or res.get("model")
+            if str(model_used or "").strip().upper() in ("", "NONE"):
+                model_used = configured_model_for(res.get("Provider"))
             price = price_for_model(model_used)
             if price:
                 cost_usd += (i * price[0] + o * price[1]) / 1_000_000
@@ -2009,6 +2034,52 @@ def export_account_data(client_id):
     }
 
 
+TASK_FILES_KEEP_DAYS = 30
+
+
+def purge_old_task_files(now=None):
+    """Les fichiers generes par les Workers sont gardes TASK_FILES_KEEP_DAYS jours (puis supprimes) : disque partage."""
+    now = now if now is not None else time.time()
+    try:
+        names = os.listdir(TASK_FILES_DIR)
+    except OSError:
+        return 0
+    removed = 0
+    for name in names:
+        p = os.path.join(TASK_FILES_DIR, name)
+        try:
+            if os.path.isdir(p) and now - os.path.getmtime(p) > TASK_FILES_KEEP_DAYS * 86400:
+                shutil.rmtree(p, ignore_errors=True)
+                removed += 1
+        except OSError:
+            continue
+    return removed
+
+
+def _purge_client_mission_artifacts(client_id, task_ids):
+    """Suppression de compte : fichiers generes, jobs en arriere-plan et actions en attente du client."""
+    for tid in task_ids:
+        if TASK_ID_PATTERN.match(tid or ""):
+            shutil.rmtree(os.path.join(TASK_FILES_DIR, tid), ignore_errors=True)
+            try:
+                os.remove(_pending_action_path(tid))
+            except OSError:
+                pass
+    try:
+        for name in os.listdir(ASYNC_JOBS_DIR):
+            if not name.endswith(".json"):
+                continue
+            p = os.path.join(ASYNC_JOBS_DIR, name)
+            job = load_json(p)
+            if isinstance(job, dict) and job.get("clientId") == client_id:
+                try:
+                    os.remove(p)
+                except OSError:
+                    pass
+    except OSError:
+        pass
+
+
 @_state_locked
 def delete_account(client_id, password):
     if not CLIENT_ID_RE.match(client_id or ""):
@@ -2038,16 +2109,19 @@ def delete_account(client_id, password):
         pass
     _remove_client_apikey(client_id)
     _remove_client_webhook(client_id)
+    deleted_task_ids = []
     if os.path.isdir(TASKS_DIR):
         for fname in os.listdir(TASKS_DIR):
             if fname.startswith("TASK-") and fname.endswith(".json"):
                 p = os.path.join(TASKS_DIR, fname)
                 data = load_json(p)
                 if data and data.get("ClientId") == client_id:
+                    deleted_task_ids.append(fname[:-5])
                     try:
                         os.remove(p)
                     except OSError:
                         pass
+    _purge_client_mission_artifacts(client_id, deleted_task_ids)
     log_activity("account_deleted", clientId=client_id)
     return None
 
@@ -3082,16 +3156,17 @@ class Handler(BaseHTTPRequestHandler):
             if not os.path.isfile(fpath):
                 self._send_json({"error": "NOT_FOUND"}, 404)
                 return
-            with open(fpath, "rb") as f:
-                body = f.read()
             ctype = mimetypes.guess_type(name)[0] or "application/octet-stream"
+            size = os.path.getsize(fpath)
             self.send_response(200)
             self.send_header("Content-Type", ctype)
-            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Content-Length", str(size))
             self.send_header("Content-Disposition", 'attachment; filename="%s"' % name)
+            self.send_header("X-Content-Type-Options", "nosniff")
             self.send_header("Cache-Control", "no-cache, must-revalidate")
             self.end_headers()
-            self.wfile.write(body)
+            with open(fpath, "rb") as f:
+                shutil.copyfileobj(f, self.wfile, 64 * 1024)   # par blocs : jamais le fichier entier en memoire
         elif path.startswith("/api/missions/async/"):
             # Interrogation du statut d'une mission lancee en arriere-plan.
             # Reserve au client proprietaire du job (ou a Kader/CLI-DASHBOARD).
@@ -3606,7 +3681,7 @@ class Handler(BaseHTTPRequestHandler):
             if not objective:
                 self._send_json({"error": "OBJECTIVE_REQUIRED"}, 400)
                 return
-            result = submit_task(objective, worker_id="chloe", client_id=client_id)
+            result = submit_task_limited(objective, worker_id="chloe", client_id=client_id)
             self._send_json(attach_pending_action(result))
         elif path == "/api/chloe/task/async":
             # Variante asynchrone de /api/chloe/task : memes gardes (compte,
@@ -3678,7 +3753,7 @@ class Handler(BaseHTTPRequestHandler):
             if not objective:
                 self._send_json({"error": "OBJECTIVE_REQUIRED"}, 400)
                 return
-            result = submit_task(objective, worker_id=wid, client_id=client_id)
+            result = submit_task_limited(objective, worker_id=wid, client_id=client_id)
             self._send_json(attach_pending_action(result))
         elif path.startswith("/api/workers/") and path.endswith("/task/async"):
             # Variante asynchrone de /api/workers/<id>/task : memes gardes
@@ -3920,7 +3995,7 @@ class Handler(BaseHTTPRequestHandler):
             if worker_id and worker_id not in get_worker_ids():
                 self._send_json({"error": "UNKNOWN_WORKER"}, 404)
                 return
-            result = submit_task(objective, worker_id=worker_id or "chloe", client_id=client_id)
+            result = submit_task_limited(objective, worker_id=worker_id or "chloe", client_id=client_id)
             self._send_json(_summarize_mission_result(result))
         elif path == "/api/connectors/auto-approve/toggle":
             # Pre-autorisation globale : quand activee, les actions
@@ -4183,7 +4258,8 @@ if __name__ == "__main__":
     if REQUIRE_GATE and not gate_is_enabled():
         raise SystemExit("BK_REQUIRE_GATE=1 mais aucune porte d'acces definie (BK_GATE_HASH ou dashboard/.gate/password.hash) : demarrage refuse.")
     _load_sessions()
-    reap_async_jobs()
+    reap_async_jobs(boot=True)
+    purge_old_task_files()
     server = ThreadingHTTPServer((os.environ.get("BK_LISTEN_HOST", "127.0.0.1"), port), Handler)
     print(f"BK-AI-WORKERS dashboard sur http://{os.environ.get('BK_LISTEN_HOST', '127.0.0.1')}:{port}")
     if not gate_is_enabled():

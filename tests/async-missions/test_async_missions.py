@@ -23,6 +23,8 @@ spec = importlib.util.spec_from_file_location("bk_server", os.path.join(REPO, "d
 server = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(server)
 server.ASYNC_JOBS_DIR = os.path.join(TMP, "runtime", "async-jobs")
+server.TASK_FILES_DIR = os.path.join(TMP, "runtime", "task-files")
+server.PENDING_ACTIONS_DIR = os.path.join(TMP, "memory", "runtime")
 
 
 class AsyncMissions(unittest.TestCase):
@@ -99,6 +101,75 @@ class AsyncMissions(unittest.TestCase):
         self.assertEqual(server.read_async_job(stale["jobId"])["status"], "ERROR")
         self.assertIsNone(server.read_async_job(old["jobId"]))
         self.assertEqual(server.read_async_job(fresh["jobId"])["status"], "RUNNING")
+
+
+    def test_boot_reaper_kills_even_fresh_running_jobs(self):
+        os.makedirs(server.ASYNC_JOBS_DIR, exist_ok=True)
+        job = {"jobId": "JOB-" + "D" * 32, "status": "RUNNING", "clientId": "CLI-D"}
+        with open(server._async_job_path(job["jobId"]), "w", encoding="utf-8") as f:
+            json.dump(job, f)
+        server.reap_async_jobs(time.time(), boot=True)       # redemarrage : aucun thread de mission n'a survecu
+        got = server.read_async_job(job["jobId"])
+        self.assertEqual(got["status"], "ERROR")
+        self.assertIn("interrompue", got["error"])
+
+    def test_polling_never_shows_a_dead_job_as_running(self):
+        os.makedirs(server.ASYNC_JOBS_DIR, exist_ok=True)
+        job = {"jobId": "JOB-" + "E" * 32, "status": "RUNNING", "clientId": "CLI-E"}
+        p = server._async_job_path(job["jobId"])
+        with open(p, "w", encoding="utf-8") as f:
+            json.dump(job, f)
+        old = time.time() - (server.ASYNC_JOB_MAX_RUNNING_SECONDS + 60)
+        os.utime(p, (old, old))
+        self.assertEqual(server.read_async_job(job["jobId"])["status"], "ERROR")
+
+    def test_synchronous_entry_points_share_the_same_caps(self):
+        # 2 missions synchrones en cours pour CLI-F : la 3e (synchrone OU asynchrone) est refusee
+        results = []
+        threads = [threading.Thread(target=lambda: results.append(server.submit_task_limited("x", worker_id="chloe", client_id="CLI-F")))
+                   for _ in range(2)]
+        for th in threads:
+            th.start()
+        time.sleep(0.3)
+        third = server.submit_task_limited("x", worker_id="chloe", client_id="CLI-F")
+        self.assertEqual(third["error"], "TOO_MANY_RUNNING_MISSIONS")
+        self.assertEqual(server.submit_task_async("x", "chloe", "CLI-F")["error"], "TOO_MANY_RUNNING_MISSIONS")
+        self.gate.set()
+        for th in threads:
+            th.join(5)
+        self.assertEqual(len(results), 2)
+        self.assertEqual(server._ASYNC_ACTIVE.get("CLI-F", 0), 0)
+
+    def test_account_deletion_removes_files_jobs_and_pending_actions(self):
+        tid = "TASK-" + "A" * 32
+        os.makedirs(os.path.join(server.TASK_FILES_DIR, tid), exist_ok=True)
+        with open(os.path.join(server.TASK_FILES_DIR, tid, "bilan.xlsx"), "wb") as f:
+            f.write(b"x")
+        os.makedirs(server.PENDING_ACTIONS_DIR, exist_ok=True)
+        with open(server._pending_action_path(tid), "w", encoding="utf-8") as f:
+            f.write("{}")
+        os.makedirs(server.ASYNC_JOBS_DIR, exist_ok=True)
+        mine = {"jobId": "JOB-" + "F" * 32, "status": "DONE", "clientId": "CLI-G"}
+        other = {"jobId": "JOB-" + "9" * 32, "status": "DONE", "clientId": "CLI-OTHER"}
+        for j in (mine, other):
+            with open(server._async_job_path(j["jobId"]), "w", encoding="utf-8") as f:
+                json.dump(j, f)
+        server._purge_client_mission_artifacts("CLI-G", [tid])
+        self.assertFalse(os.path.exists(os.path.join(server.TASK_FILES_DIR, tid)))
+        self.assertFalse(os.path.exists(server._pending_action_path(tid)))
+        self.assertIsNone(server.read_async_job(mine["jobId"]))
+        self.assertIsNotNone(server.read_async_job(other["jobId"]))     # les jobs d'un autre client ne sont pas touches
+
+    def test_generated_files_are_kept_30_days_then_purged(self):
+        old_dir = os.path.join(server.TASK_FILES_DIR, "TASK-" + "B" * 32)
+        new_dir = os.path.join(server.TASK_FILES_DIR, "TASK-" + "C" * 32)
+        for d in (old_dir, new_dir):
+            os.makedirs(d, exist_ok=True)
+        now = time.time()
+        os.utime(old_dir, (now - 31 * 86400, now - 31 * 86400))
+        self.assertEqual(server.purge_old_task_files(now), 1)
+        self.assertFalse(os.path.exists(old_dir))
+        self.assertTrue(os.path.exists(new_dir))
 
 
 if __name__ == "__main__":
