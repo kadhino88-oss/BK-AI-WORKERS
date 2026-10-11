@@ -595,6 +595,64 @@ def read_async_job(job_id):
     return load_json(_async_job_path(job_id))
 
 
+# Plafonds de missions en arriere-plan (petit serveur : 2 vCPU / 3,8 Go). Sans plafond, un client pouvait
+# lancer des dizaines de missions simultanees (un PowerShell + un appel modele chacune) et saturer le serveur.
+ASYNC_MAX_PER_CLIENT = int(os.environ.get("BK_ASYNC_MAX_PER_CLIENT", "2"))
+ASYNC_MAX_GLOBAL = int(os.environ.get("BK_ASYNC_MAX_GLOBAL", "4"))
+ASYNC_STALE_SECONDS = 20 * 60          # un job RUNNING plus vieux que ca a ete tue par un redemarrage
+ASYNC_KEEP_DAYS = 7
+_ASYNC_ACTIVE = {}                      # client_id -> nombre de missions en cours
+_ASYNC_ACTIVE_LOCK = threading.Lock()
+
+
+def _async_acquire(client_id):
+    """Reserve une place. Renvoie None si OK, sinon le message (francais) du refus."""
+    with _ASYNC_ACTIVE_LOCK:
+        total = sum(_ASYNC_ACTIVE.values())
+        mine = _ASYNC_ACTIVE.get(client_id, 0)
+        if mine >= ASYNC_MAX_PER_CLIENT:
+            return f"Vous avez déjà {mine} mission(s) en cours. Attendez qu'une se termine avant d'en lancer une autre."
+        if total >= ASYNC_MAX_GLOBAL:
+            return "Le service traite beaucoup de missions en ce moment. Réessayez dans une minute."
+        _ASYNC_ACTIVE[client_id] = mine + 1
+    return None
+
+
+def _async_release(client_id):
+    with _ASYNC_ACTIVE_LOCK:
+        left = _ASYNC_ACTIVE.get(client_id, 0) - 1
+        if left > 0:
+            _ASYNC_ACTIVE[client_id] = left
+        else:
+            _ASYNC_ACTIVE.pop(client_id, None)
+
+
+def reap_async_jobs(now=None):
+    """Au demarrage : un job RUNNING trop vieux a ete interrompu par un redemarrage -> ERROR (le client n'attend
+    plus pour rien) ; les jobs termines depuis plus de ASYNC_KEEP_DAYS jours sont supprimes."""
+    now = now if now is not None else time.time()
+    try:
+        names = os.listdir(ASYNC_JOBS_DIR)
+    except OSError:
+        return
+    for name in names:
+        if not name.endswith(".json"):
+            continue
+        p = os.path.join(ASYNC_JOBS_DIR, name)
+        try:
+            age = now - os.path.getmtime(p)
+            if age > ASYNC_KEEP_DAYS * 86400:
+                os.remove(p)
+                continue
+            job = load_json(p)
+            if isinstance(job, dict) and job.get("status") == "RUNNING" and age > ASYNC_STALE_SECONDS:
+                job.update(status="ERROR", error="Mission interrompue par un redémarrage du service. Relancez-la.",
+                           finishedAtUtc=datetime.datetime.utcnow().isoformat() + "Z")
+                _write_async_job(job)
+        except Exception:
+            continue
+
+
 def submit_task_async(objective, worker_id="", client_id="", plan_only=False):
     """Lance une mission en arriere-plan, renvoie un jobId a interroger.
     Le job (runtime/async-jobs/<jobId>.json) passe de RUNNING a DONE/ERROR.
@@ -604,6 +662,9 @@ def submit_task_async(objective, worker_id="", client_id="", plan_only=False):
     submit_task garde EXACTEMENT sa signature synchrone
     (worker_hint_text, worker_id, plan_only, client_id) : on se contente de
     la lancer dans un thread demon pour debloquer la connexion HTTP."""
+    refusal = _async_acquire(client_id)
+    if refusal:
+        return {"error": "TOO_MANY_RUNNING_MISSIONS", "detail": refusal}
     job_id = "JOB-" + secrets.token_hex(16).upper()
     now = datetime.datetime.utcnow().isoformat() + "Z"
     base = {"jobId": job_id, "status": "RUNNING", "clientId": client_id,
@@ -629,9 +690,16 @@ def submit_task_async(objective, worker_id="", client_id="", plan_only=False):
                           finishedAtUtc=datetime.datetime.utcnow().isoformat() + "Z",
                           error=str(exc))
         try:
-            _write_async_job(record)
-        except Exception:
-            pass
+            # L'ecriture finale du statut ne doit jamais etre perdue (sinon le client attendrait un job
+            # "en cours" a jamais) : quelques essais, un lecteur concurrent peut verrouiller le fichier.
+            for attempt in range(6):
+                try:
+                    _write_async_job(record)
+                    break
+                except Exception:
+                    time.sleep(0.2 * (attempt + 1))
+        finally:
+            _async_release(client_id)
 
     threading.Thread(target=_run, daemon=True).start()
     return {"jobId": job_id, "status": "RUNNING"}
@@ -1791,7 +1859,9 @@ def _notify_owner_email(to, subject, html_body, text):
 
 
 PHONE_AGENT = phone_agent.PhoneAgent(ROOT, PS_CMD, notify=_notify_owner_email)
-PHONE_AGENT.warm_up()
+# warm_up() (lecture du jeton Twilio par PowerShell + purge des transcriptions) ne se lance que dans le
+# vrai serveur (bloc __main__) : dashboard/quota-check.py fait `import server` a chaque passage d'une
+# automatisation et ne doit pas declencher de PowerShell a chaque import.
 
 # Programme pilote (dashboard/pilot_program.py) : candidatures de premiers clients reels. Meme chemin d'email
 # que le standard telephonique (mailer.send_email -> SMTP dedie ou pont Gmail) ; ecriture sous _STATE_LOCK.
@@ -3563,7 +3633,7 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json({"error": "OBJECTIVE_REQUIRED"}, 400)
                 return
             res = submit_task_async(objective, worker_id="chloe", client_id=client_id)
-            self._send_json(res, 202)
+            self._send_json(res, 429 if res.get("error") else 202)
         elif path == "/api/chloe/plan":
             # Etape "Demander a Chloe" du parcours Demarrer : reservee aux
             # comptes clients (plus au mot de passe proprietaire, qui
@@ -3638,7 +3708,7 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json({"error": "OBJECTIVE_REQUIRED"}, 400)
                 return
             res = submit_task_async(objective, worker_id=wid, client_id=client_id)
-            self._send_json(res, 202)
+            self._send_json(res, 429 if res.get("error") else 202)
         elif path == "/api/connector-action/confirm":
             client_id = self._resolve_client_id()
             if not client_id:
@@ -4113,9 +4183,11 @@ if __name__ == "__main__":
     if REQUIRE_GATE and not gate_is_enabled():
         raise SystemExit("BK_REQUIRE_GATE=1 mais aucune porte d'acces definie (BK_GATE_HASH ou dashboard/.gate/password.hash) : demarrage refuse.")
     _load_sessions()
+    reap_async_jobs()
     server = ThreadingHTTPServer((os.environ.get("BK_LISTEN_HOST", "127.0.0.1"), port), Handler)
     print(f"BK-AI-WORKERS dashboard sur http://{os.environ.get('BK_LISTEN_HOST', '127.0.0.1')}:{port}")
     if not gate_is_enabled():
         print("ATTENTION : aucune porte d'acces definie (.secrets\\Set-DashboardGate.ps1) — les vues operationnelles sont ouvertes a quiconque atteint ce serveur.")
+    PHONE_AGENT.warm_up()
     TRUST.start(port, os.environ.get("BK_LISTEN_HOST", "127.0.0.1"))  # mesure de disponibilite toutes les 60 s
     server.serve_forever()
