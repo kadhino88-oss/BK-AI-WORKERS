@@ -28,6 +28,12 @@ NAV_LINKS = [
     ("/cookies.html", "Cookies"),
 ]
 
+# Pages de confiance (dashboard/trust_pages.py) : pied de page seulement, l'en-tete est deja charge.
+FOOTER_TRUST_LINKS = [
+    ("/securite.html", "Sécurité et confiance"),
+    ("/status.html", "Statut du service"),
+]
+
 import re
 
 # Palette et typo alignees sur dashboard/style.css (:root) — avant ce
@@ -133,7 +139,7 @@ def _header():
 
 
 def _footer():
-    links = "".join(f'<a href="{href}">{label}</a>' for href, label in NAV_LINKS)
+    links = "".join(f'<a href="{href}">{label}</a>' for href, label in NAV_LINKS + FOOTER_TRUST_LINKS)
     return (
         "<footer>"
         f"<nav>{links}</nav>"
@@ -150,7 +156,7 @@ def _footer():
 _HERO_RE = re.compile(r'\s*(<h1>.*?</h1>)\s*(<p class="u">.*?</p>)?', re.S)
 
 
-def _page(title, description, canonical_path, body_html):
+def _page(title, description, canonical_path, body_html, extra_scripts=""):
     hero_html = ""
     rest = body_html
     m = _HERO_RE.match(body_html)
@@ -168,6 +174,7 @@ def _page(title, description, canonical_path, body_html):
         + _footer()
         + '<script src="/particles.js" defer></script>'
         + '<script src="/i18n-en.js"></script><script src="/i18n-en-legal.js"></script><script src="/i18n.js"></script>'
+        + extra_scripts
         + "</body></html>"
     )
 
@@ -269,7 +276,7 @@ FAQ_ITEMS = [
      "C'est une règle appliquée au niveau du code, pas juste une bonne intention."),
     ("Comment les Workers se connectent-ils à mes outils (Slack, CRM, etc.) ?",
      "Chaque connexion se fait avec votre propre compte (« Se connecter avec Google », Microsoft…), et vos accès sont stockés chiffrés — jamais "
-     "vus en clair, jamais partagés entre plusieurs comptes. Rien n'est connecté par défaut : vous "
+     "réaffichés, jamais partagés entre plusieurs comptes. Rien n'est connecté par défaut : vous "
      "choisissez quels outils brancher, et quand."),
     ("Comment fonctionne la facturation ?",
      "Chaque plan inclut un quota de crédits par cycle (1 mission réellement traitée = 1 crédit consommé). "

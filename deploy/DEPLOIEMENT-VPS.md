@@ -62,6 +62,13 @@ Sauvegarde chaque nuit à 3h30, gardée 14 jours (`BK_BACKUP_KEEP`). OVH ajoute 
 sauvegarde quotidienne du VPS ; garde aussi une copie de temps en temps hors du serveur
 (`scp` vers ton PC) : les sauvegardes du même serveur ne protègent pas d'une perte du serveur.
 
+## Page de statut, sonde et incidents (2026-10-07)
+- `https://ton-domaine/status.html` et `/api/status` : mesure réelle toutes les 60 s faite par le serveur lui-même (application, fichiers d'état, joignabilité réseau du fournisseur d'IA, sans appel facturé). Les agrégats quotidiens sont dans `memory/runtime/status/` (volume `bkdata`, 90 jours). Rien n'est reconstitué avant le premier échantillon.
+- Sonde de redémarrage automatique (toutes les 5 minutes) : `( crontab -l 2>/dev/null; echo "*/5 * * * * bash $HOME/BK-AI-WORKERS/deploy/healthcheck.sh" ) | crontab -`. Elle essaie `/api/health` puis `/api/workers`.
+- Surveillance externe (recommandée, gratuite) : un moniteur « HTTP(s) » UptimeRobot sur `https://ton-domaine/api/health` (répond aussi à `HEAD`). C'est la seule façon d'être prévenu quand tout le serveur est arrêté.
+- Publier un incident : `docker compose exec app python3 /data/app/deploy/status-incident.py add --title "..." --impact minor --text "..."` (aussi `update`, `resolve`, `list`).
+- Vérifier que les deux tâches planifiées existent : `crontab -l` doit montrer `backup.sh` (3 h 30) et `healthcheck.sh` (toutes les 5 min). La page publique de sécurité dit que le dépôt ne peut pas le prouver.
+
 ## Stripe live
 - Prix live : 39 / 99 / 139 / 449 CHF/mois (+ annuels 390 / 990 / 1390 / 4490), coupon -30 % 2 mois.
 - Renseigner `BK_SECRET_STRIPE` (JSON sur une ligne, voir `.env.example`).
