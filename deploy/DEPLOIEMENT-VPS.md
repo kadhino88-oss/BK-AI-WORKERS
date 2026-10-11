@@ -15,7 +15,7 @@ est `docker-compose.yml` (app + Caddy pour le HTTPS automatique).
 
 ## 1. Le serveur (toi)
 - VPS Ubuntu 24.04 (ou 22.04), 2 à 4 vCPU, **8 Go RAM**, 80 Go de disque (ex. Infomaniak, Hostpoint, Hetzner).
-- Domaine (ex. `bk-ia-workers.com`) : enregistrement A vers l'IP du VPS.
+- Domaine (ex. `bk-ai-workers.com`) : enregistrement A vers l'IP du VPS.
 
 ## 2. Installer Docker (SSH)
 ```bash
