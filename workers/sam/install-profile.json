@@ -1,0 +1,237 @@
+{
+  "schema": "BK-INSTALL-PROFILE-V1",
+  "workerId": "sam",
+  "displayName": "Sam",
+  "tagline": "Audite votre exposition, prépare le durcissement, les sauvegardes et la réponse à incident, en posture strictement défensive.",
+  "idealFor": "PME sans service informatique qui veulent savoir où elles sont exposées, se mettre en conformité nLPD ou RGPD et savoir quoi faire le jour d'un incident.",
+  "services": [
+    {
+      "id": "audit-posture-externe",
+      "label": "Audit de posture externe : suis-je exposé ?",
+      "description": "Sam confirme d'abord que l'actif vous appartient, puis observe uniquement ce qui est lisible passivement (contenu des pages, contenu mixte, formulaires, versions visibles, informations déjà publiques). Il livre des constats prouvés avec sévérité et remédiation en configuration exacte, et marque « non observable, à vérifier » tout ce qui demande des en-têtes, un certificat ou un test actif, avec la méthode de contrôle.",
+      "skills": ["CYBERSECURITY_AUDIT", "SECURITY_AUDIT", "CONFIGURATION_AUDIT", "SECURITY_RISK_RANKING", "VULNERABILITY_TRIAGE", "THREAT_ANALYSIS"],
+      "requiredConnectors": [],
+      "optionalConnectors": ["monitoring.controlled"],
+      "connectorOperations": {
+        "monitoring.controlled": ["READ_STATUS", "SEARCH_INCIDENTS"]
+      },
+      "channels": ["web", "schedule"],
+      "suggestedFrequencyMinutes": 43200,
+      "knowledgeFields": [
+        { "key": "actif_a_auditer", "label": "Ce qu'il faut auditer", "help": "Domaine ou application qui vous appartient. Collez aussi les adresses exactes des pages à examiner.", "required": true, "example": "https://www.atelier-martin.example et la page de connexion /compte" },
+        { "key": "hebergement_et_outils", "label": "Hébergement et outils utilisés", "help": "Hébergeur, CMS, messagerie : Sam adapte les remédiations.", "required": false, "example": "Hébergement mutualisé Infomaniak, WordPress, messagerie Microsoft 365" },
+        { "key": "preuve_propriete", "label": "Confirmation que l'actif est à vous", "help": "Sam n'examine que des actifs du client.", "required": true, "example": "Je suis propriétaire du domaine atelier-martin.example" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-observation-passive", "label": "Observer passivement les pages et sources publiques", "examples": ["Lire le contenu d'une page pour repérer du contenu mixte", "Rechercher ce qui est déjà public sur votre domaine"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "redaction", "label": "Rédiger constats et remédiations", "examples": ["Rédiger chaque constat avec sa preuve, sa sévérité et le bloc de configuration à appliquer", "Produire le rapport d'audit en .docx"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 15 },
+        { "category": "scan-actif", "label": "Scanner ou tester activement une cible", "examples": ["Lancer un scan de ports", "Sonder des chemins sensibles de votre site"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null },
+        { "category": "modification-systeme", "label": "Appliquer les changements en production", "examples": ["Modifier la configuration de votre serveur", "Changer des règles de pare-feu"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Réalise un audit de posture externe de mon domaine (adresse dans ma fiche), uniquement en observation passive : constats prouvés, ce qui est non observable avec la méthode pour le vérifier, et les priorités. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Chaque constat cite une preuve réellement lue, sinon il est marqué « non observable, à vérifier »",
+          "Le rapport ne déclare jamais le système « sécurisé » mais décrit un état daté et partiel",
+          "Aucun sondage actif n'est effectué"
+        ]
+      },
+      "recommendedLevel": "approfondi"
+    },
+    {
+      "id": "durcissement-serveur-poste",
+      "label": "Plan de durcissement d'un serveur, d'un poste ou d'un compte cloud",
+      "description": "Sam identifie le système et son rôle puis déroule une checklist de durcissement alignée sur les CIS Controls : inventaire, configuration sécurisée, comptes et accès avec double authentification et moindre privilège, correctifs, journaux, sauvegardes. Chaque ligne donne la commande exacte et la façon de vérifier qu'elle est appliquée.",
+      "skills": ["SECURITY_HARDENING", "PATCH_MANAGEMENT", "PATCH_PRIORITIZATION", "FIREWALL_REVIEW", "MFA_REVIEW", "ACCESS_REVIEW", "LINUX_ADMINISTRATION", "WINDOWS_ADMINISTRATION"],
+      "requiredConnectors": [],
+      "optionalConnectors": [],
+      "channels": ["web"],
+      "knowledgeFields": [
+        { "key": "systeme_a_durcir", "label": "Le système concerné", "help": "Système d'exploitation, rôle (site web, base de données, poste) et version.", "required": true, "example": "Serveur Linux Ubuntu 24.04 qui héberge notre site WordPress" },
+        { "key": "acces_administrateurs", "label": "Qui administre ce système", "help": "Nombre de personnes et moyens de connexion.", "required": false, "example": "2 administrateurs, connexion par clé SSH" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-recherche", "label": "Vérifier la syntaxe officielle", "examples": ["Vérifier une directive dans la documentation officielle avant de la recommander"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "redaction", "label": "Rédiger la checklist et les commandes", "examples": ["Rédiger la checklist de durcissement avec les commandes et leur vérification", "Recommander un test en préproduction avant la production"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 15 },
+        { "category": "modification-systeme", "label": "Appliquer les changements sur vos systèmes", "examples": ["Exécuter les commandes de durcissement sur votre serveur", "Désactiver un compte"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Prépare la checklist de durcissement d'un serveur Linux qui héberge un site WordPress : comptes, accès SSH, double authentification, correctifs, journaux et sauvegardes, avec les commandes exactes et leur vérification. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Chaque ligne donne une commande ou une configuration réelle et la preuve de contrôle",
+          "Les changements à valider par un humain (pare-feu, rotation de clés) sont signalés",
+          "Un test en préproduction est recommandé avant la production"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    },
+    {
+      "id": "reponse-incident",
+      "label": "Réponse à incident : « j'ai été piraté »",
+      "description": "Sam vous guide sans détruire de preuves : confinement d'abord (isoler, couper les accès, préserver les journaux), horodatage de chaque action, évaluation immédiate d'une éventuelle violation de données personnelles, plan de communication et retour d'expérience. Pour un incident critique, il vous dit en tête de réponse d'appeler tout de suite votre hébergeur ou un prestataire spécialisé.",
+      "skills": ["INCIDENT_TRIAGE", "INCIDENT_CONTAINMENT", "INCIDENT_DETECTION", "INCIDENT_DOCUMENTATION", "POST_INCIDENT_REVIEW", "LOG_ANALYSIS"],
+      "requiredConnectors": [],
+      "optionalConnectors": ["monitoring.controlled"],
+      "connectorOperations": {
+        "monitoring.controlled": ["READ_STATUS", "SEARCH_INCIDENTS"]
+      },
+      "channels": ["web", "whatsapp", "phone"],
+      "knowledgeFields": [
+        { "key": "description_incident", "label": "Ce que vous observez", "help": "Ce qui s'est passé, depuis quand, quels systèmes. Collez des extraits de journaux si vous en avez.", "required": true, "example": "Des emails sont envoyés depuis notre domaine à notre insu depuis ce matin" },
+        { "key": "actifs_concernes", "label": "Systèmes et comptes concernés", "help": "Pour cadrer le confinement.", "required": true, "example": "Boîte contact@, site WordPress, compte hébergeur" },
+        { "key": "contact_hebergeur", "label": "Coordonnées de votre hébergeur ou prestataire IT", "help": "Pour savoir qui appeler en cas d'incident critique.", "required": false, "example": "Support Infomaniak, numéro dans votre espace client" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-donnees", "label": "Lire les journaux collés et l'état des moniteurs", "examples": ["Analyser les extraits de journaux fournis", "Lire les incidents récents de vos moniteurs"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 30 },
+        { "category": "redaction", "label": "Rédiger le plan et la chronologie", "examples": ["Rédiger le plan de confinement étape par étape", "Tenir la chronologie horodatée des actions"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 30 },
+        { "category": "notification-autorite", "label": "Notifier une autorité ou des clients à votre place", "examples": ["Déclarer une violation de données au préposé à la protection des données"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null },
+        { "category": "modification-systeme", "label": "Intervenir sur vos systèmes", "examples": ["Isoler un serveur", "Réinitialiser des mots de passe"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Exercice : des emails partent de mon domaine à mon insu depuis ce matin. Donne-moi le plan de confinement, l'évaluation d'une violation de données et ce que je dois faire dans l'heure, sans toucher à rien. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Le confinement vient avant l'éradication et les preuves sont préservées",
+          "L'évaluation de violation de données personnelles est faite immédiatement",
+          "Il est dit en tête de réponse s'il faut appeler l'hébergeur ou un prestataire"
+        ]
+      },
+      "recommendedLevel": "approfondi"
+    },
+    {
+      "id": "conformite-donnees-registre",
+      "label": "Conformité nLPD / RGPD : registre des traitements et plan d'écarts",
+      "description": "Sam cartographie vos traitements de données, remplit le registre (finalité, base, durée, destinataires, transferts), vérifie les obligations techniques (chiffrement, journalisation, accès, notification de violation, hébergement) et livre l'écart priorisé avec un plan d'action daté. La partie contractuelle est relue par Clara.",
+      "skills": ["COMPLIANCE_SUPPORT", "POLICY_AUDIT", "SECURITY_POLICY", "LOG_AUDIT"],
+      "requiredConnectors": [],
+      "optionalConnectors": [],
+      "channels": ["web"],
+      "knowledgeFields": [
+        { "key": "traitements_donnees", "label": "Données personnelles que vous traitez", "help": "Quelles données, dans quels outils, pour quoi faire.", "required": true, "example": "Clients dans un CRM, salariés dans un logiciel de paie, visiteurs du site via Google Analytics" },
+        { "key": "pays_des_personnes", "label": "Où habitent les personnes concernées", "help": "Détermine nLPD, RGPD ou les deux.", "required": true, "example": "Suisse romande et France voisine" },
+        { "key": "hebergement_donnees", "label": "Où sont hébergées vos données", "help": "Pays et prestataires.", "required": false, "example": "Serveurs en Suisse chez Infomaniak, CRM américain" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-recherche", "label": "Vérifier les obligations et les délais", "examples": ["Confirmer sur la source officielle le délai de notification d'une violation"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "redaction", "label": "Rédiger le registre et le plan d'actions", "examples": ["Remplir le registre des traitements dans un tableur", "Rédiger le plan d'écarts priorisé et daté"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 15 },
+        { "category": "notification-autorite", "label": "Déclarer à l'autorité", "examples": ["Déposer une déclaration auprès de l'autorité de protection des données"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Cartographie mes traitements de données (CRM, paie, statistiques du site), remplis le registre et donne le plan d'écarts priorisé pour la nLPD et le RGPD. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Chaque traitement a une finalité, une base légale, une durée et des destinataires",
+          "Les obligations citées sont confirmées sur une source officielle ou marquées « à confirmer »",
+          "Le plan d'actions est priorisé et daté"
+        ]
+      },
+      "recommendedLevel": "approfondi"
+    },
+    {
+      "id": "sauvegardes-continuite",
+      "label": "Plan de sauvegarde 3-2-1 et continuité d'activité",
+      "description": "Sam évalue vos sauvegardes actuelles, propose un plan 3-2-1 adapté (trois copies, deux supports, une hors site), construit la matrice RTO / RPO par système (temps de reprise et perte de données acceptables) et rédige la procédure de test de restauration à planifier.",
+      "skills": ["BACKUP_STRATEGY", "BACKUP_VERIFICATION", "RESTORE_TESTING", "DISASTER_RECOVERY_PLAN", "BUSINESS_CONTINUITY", "RESILIENCE_REVIEW"],
+      "requiredConnectors": [],
+      "optionalConnectors": [],
+      "channels": ["web"],
+      "knowledgeFields": [
+        { "key": "systemes_critiques", "label": "Vos systèmes critiques", "help": "Ceux dont l'arrêt bloquerait l'activité.", "required": true, "example": "Site de réservation, messagerie, logiciel de caisse, comptabilité en ligne" },
+        { "key": "sauvegardes_actuelles", "label": "Vos sauvegardes actuelles", "help": "Fréquence, lieu, qui les contrôle.", "required": false, "example": "Sauvegarde quotidienne du site chez l'hébergeur, aucune pour la messagerie" },
+        { "key": "tolerance_arret", "label": "Arrêt maximal acceptable", "help": "Combien de temps vous pouvez attendre avant de reprendre.", "required": false, "example": "Une demi-journée pour le site, une heure pour la caisse" }
+      ],
+      "autonomyRules": [
+        { "category": "analyse-calcul", "label": "Évaluer l'existant et construire la matrice", "examples": ["Repérer les systèmes sans sauvegarde hors site", "Construire la matrice de reprise par système"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "redaction", "label": "Rédiger le plan et la procédure de test", "examples": ["Rédiger le plan de sauvegarde 3-2-1", "Rédiger la procédure de test de restauration"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 15 },
+        { "category": "suppression", "label": "Supprimer ou écraser des sauvegardes", "examples": ["Supprimer d'anciennes sauvegardes"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Évalue mes sauvegardes actuelles (site sauvegardé chez l'hébergeur, rien pour la messagerie), propose un plan 3-2-1 et la matrice de reprise par système. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Les systèmes sans copie hors site sont identifiés",
+          "La matrice indique pour chaque système le temps de reprise et la perte de données acceptables",
+          "Un test de restauration est planifié"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    },
+    {
+      "id": "surveillance-disponibilite",
+      "label": "Surveillance de disponibilité et lecture des alertes",
+      "description": "Avec UptimeRobot connecté, Sam lit l'état de vos moniteurs et l'historique des incidents, repère les récurrences et rédige un bilan avec les causes probables et les actions. Il peut le refaire chaque jour. Sans connexion, il analyse les extraits de journaux que vous collez.",
+      "skills": ["UPTIME_MONITORING", "SYSTEM_MONITORING", "ALERT_MANAGEMENT", "LOG_ANALYSIS", "PERFORMANCE_MONITORING"],
+      "requiredConnectors": [],
+      "optionalConnectors": ["monitoring.controlled"],
+      "connectorOperations": {
+        "monitoring.controlled": ["READ_STATUS", "SEARCH_INCIDENTS"]
+      },
+      "channels": ["web", "schedule", "email", "whatsapp"],
+      "suggestedFrequencyMinutes": 1440,
+      "knowledgeFields": [
+        { "key": "services_a_surveiller", "label": "Les services à surveiller", "help": "Site, API, messagerie.", "required": true, "example": "Site vitrine, page de réservation, serveur de messagerie" },
+        { "key": "seuil_alerte", "label": "Ce qui doit vous alerter", "help": "Durée d'indisponibilité ou fréquence d'incidents à signaler.", "required": false, "example": "Toute coupure de plus de 5 minutes" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-donnees", "label": "Lire les moniteurs et les incidents", "examples": ["Lire l'état courant de vos moniteurs", "Rechercher les incidents de la semaine"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 30 },
+        { "category": "redaction", "label": "Rédiger le bilan de disponibilité", "examples": ["Rédiger le bilan avec causes probables et actions", "Repérer les incidents récurrents"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "modification-systeme", "label": "Redémarrer ou corriger un service", "examples": ["Redémarrer un serveur en panne"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Lis l'état de mes moniteurs s'ils sont connectés, sinon utilise les journaux collés, et fais-moi un bilan de disponibilité de la semaine avec les causes probables. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Le bilan s'appuie sur les données lues, jamais sur des suppositions",
+          "Les causes sont présentées comme des hypothèses classées",
+          "Aucun service n'est redémarré ni modifié"
+        ]
+      },
+      "recommendedLevel": "rapide"
+    },
+    {
+      "id": "politiques-acces-sensibilisation",
+      "label": "Politiques d'accès et sensibilisation de vos équipes",
+      "description": "Sam rédige votre politique de mots de passe, de double authentification et de gestion des accès, la procédure d'arrivée et de départ d'un collaborateur, et un support de sensibilisation court (hameçonnage, signalement d'un incident) adapté à votre équipe.",
+      "skills": ["SECURITY_POLICY", "SECURITY_AWARENESS", "IDENTITY_MANAGEMENT", "ACCOUNT_LIFECYCLE", "PRIVILEGE_REVIEW"],
+      "requiredConnectors": [],
+      "optionalConnectors": [],
+      "channels": ["web"],
+      "knowledgeFields": [
+        { "key": "taille_equipe", "label": "Taille et organisation de l'équipe", "help": "Nombre de personnes, télétravail, outils utilisés.", "required": true, "example": "8 personnes, deux en télétravail, Microsoft 365 et un logiciel de caisse" },
+        { "key": "outils_et_comptes", "label": "Outils et comptes à protéger", "help": "Messagerie, banque en ligne, hébergeur, réseaux sociaux.", "required": false, "example": "Microsoft 365, e-banking, compte hébergeur, page Facebook" }
+      ],
+      "autonomyRules": [
+        { "category": "redaction", "label": "Rédiger politiques, procédures et supports", "examples": ["Rédiger la politique de mots de passe et de double authentification", "Rédiger le support de sensibilisation à l'hameçonnage"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "modification-systeme", "label": "Créer ou supprimer des comptes utilisateurs", "examples": ["Créer le compte d'un nouvel employé", "Désactiver le compte d'une personne partie"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Rédige la politique de mots de passe et de double authentification de mon équipe de 8 personnes, la procédure d'arrivée et de départ d'un collaborateur et un support de sensibilisation d'une page. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "La politique est applicable avec vos outils réels",
+          "La procédure de départ couvre la fermeture des accès",
+          "Le support de sensibilisation tient sur une page"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    }
+  ],
+  "channelSupport": {
+    "email": "planned",
+    "phone": "planned",
+    "whatsapp": "planned",
+    "web": "available",
+    "schedule": "available"
+  },
+  "plannedCapabilities": [
+    "Alerte immédiate par email, WhatsApp ou téléphone quand un moniteur signale une panne",
+    "Mesure automatique des en-têtes de sécurité, du certificat et des redirections (impossible aujourd'hui : Sam signale « à vérifier »)",
+    "Dépôt de vos journaux et exports de configuration dans la conversation",
+    "Agent téléphonique pour vous guider pendant un incident (aujourd'hui réservé au compte propriétaire de la plateforme)",
+    "Connexion directe à votre hébergeur ou à votre cloud en lecture seule"
+  ],
+  "installationSteps": [
+    "Ajoutez Sam à votre équipe depuis le catalogue des Workers.",
+    "Indiquez vos actifs (domaine, hébergeur, outils) et confirmez qu'ils vous appartiennent : Sam n'examine rien d'autre.",
+    "Connectez UptimeRobot dans la page Connecteurs pour la surveillance de disponibilité (facultatif).",
+    "Gardez les réglages par défaut : Sam observe passivement et rédige, mais ne scanne pas activement et ne modifie aucun système.",
+    "Lancez le scénario d'essai « Audit de posture externe » et vérifiez que le non observable est marqué « à vérifier ».",
+    "Faites appliquer les remédiations par votre hébergeur ou votre prestataire IT après un test en préproduction.",
+    "Programmez un bilan de disponibilité quotidien si UptimeRobot est connecté."
+  ]
+}
