@@ -32,6 +32,13 @@ Add-Content -LiteralPath $env:STUB_LOG -Value $WorkerId
 
 CHLOE_DRIVER = r'''
 $ErrorActionPreference = "Stop"
+if ($env:T_FAKE_ROUTER) {
+    # Faux appel au routeur IA de Chloe (aucun reseau) : on garde la requete envoyee et on renvoie la reponse imposee par le test.
+    function Invoke-RestMethod { param($Uri, $Method, $Headers, $ContentType, $Body, $TimeoutSec)
+        [System.IO.File]::WriteAllText($env:ROUTER_LOG, [System.Text.Encoding]::UTF8.GetString($Body))
+        return [pscustomobject]@{ content = @([pscustomobject]@{ type = "text"; text = $env:T_FAKE_ROUTER }) }
+    }
+}
 $args2 = @{ Request = $env:T_REQUEST; TenantId = "T"; ClientId = "CLI-CUST-AAAAAAAA"; ProjectId = "P"; ExecutionId = "EXEC-1"; UserId = "U"; SessionId = "S"; TokenId = "K"; Token = "x" }
 if ($env:T_PLAN -eq "1") { $args2["PlanOnly"] = $true }
 $r = & (Join-Path $env:BK_ROOT "chloe/Invoke-Chloe-Orchestration.ps1") @args2
@@ -55,6 +62,7 @@ class AllowedWorkers(unittest.TestCase):
             f.write(STUB)
         self.log = os.path.join(self.root, "stub.log")
         self.out = os.path.join(self.root, "out.json")
+        self.router_log = os.path.join(self.root, "router-request.json")
 
     def env(self, **extra):
         env = {k: v for k, v in os.environ.items() if not k.startswith("BK_SECRET") and k not in ("BK_SECRETS_DIR", "BK_ALLOWED_WORKERS")}
@@ -62,11 +70,13 @@ class AllowedWorkers(unittest.TestCase):
         env.update(extra)
         return env
 
-    def chloe(self, request, allowed=None, plan=False):
-        for p in (self.log, self.out):
+    def chloe(self, request, allowed=None, plan=False, fake_router=None):
+        for p in (self.log, self.out, self.router_log):
             if os.path.exists(p):
                 os.remove(p)
         extra = {"T_REQUEST": request, "T_PLAN": "1" if plan else "0"}
+        if fake_router is not None:
+            extra.update(T_FAKE_ROUTER=fake_router, BK_SECRET_ANTHROPIC="cle-factice-pour-les-tests", ROUTER_LOG=self.router_log)
         if allowed is not None:
             extra["BK_ALLOWED_WORKERS"] = allowed
         drv = os.path.join(self.root, "driver.ps1")
@@ -132,6 +142,33 @@ class AllowedWorkers(unittest.TestCase):
         self.assertEqual(as_list(r["NotIncludedWorkers"]), ["MAYA"])
         r, _ = self.chloe(REQUEST_TWO, allowed="nora", plan=True)
         self.assertEqual(r["Status"], "WORKER_NOT_INCLUDED")
+
+    VAGUE = "Peux-tu m'aider avec mon projet de la semaine prochaine ?"      # aucun mot-cle : le routeur IA est appele
+
+    def router_request(self):
+        with open(self.router_log, encoding="utf-8") as f:
+            return json.load(f)
+
+    def test_the_ai_router_is_told_which_workers_are_hired_and_its_choice_is_filtered(self):
+        r, called = self.chloe(self.VAGUE, allowed="alex", fake_router=json.dumps({"workers": ["alex"], "direct_reply": None}))
+        self.assertEqual(called, ["ALEX"])
+        system = self.router_request()["system"]
+        self.assertIn("This client has hired ONLY these Workers: alex", system)
+        self.assertIn("never a Worker outside this list as a fallback", system)
+        r, called = self.chloe(self.VAGUE, allowed="alex", fake_router=json.dumps({"workers": ["maya"], "direct_reply": None}))
+        self.assertEqual((r["Status"], called), ("WORKER_NOT_INCLUDED", []))
+        self.assertIn("relève de Maya", r["FinalSynthesis"])
+        r, called = self.chloe(self.VAGUE, allowed="alex", fake_router=json.dumps({"workers": ["alex", "maya"], "direct_reply": None}))
+        self.assertEqual(called, ["ALEX"])
+        self.assertEqual(as_list(r["NotIncludedWorkers"]), ["MAYA"])
+        r, called = self.chloe(self.VAGUE, allowed="alex", fake_router=json.dumps({"workers": [], "direct_reply": "Bonjour, que puis-je faire pour vous ?"}))
+        self.assertEqual((r["Status"], called), ("SUCCESS", []))
+        self.assertEqual(r["FinalSynthesis"], "Bonjour, que puis-je faire pour vous ?")
+
+    def test_without_the_variable_the_router_prompt_has_no_hired_list(self):
+        r, called = self.chloe(self.VAGUE, fake_router=json.dumps({"workers": ["maya"], "direct_reply": None}))
+        self.assertEqual(called, ["MAYA"])
+        self.assertNotIn("has hired ONLY", self.router_request()["system"])
 
     def test_a_greeting_still_gets_chloes_own_answer(self):
         r, called = self.chloe("bonjour", allowed="alex")
