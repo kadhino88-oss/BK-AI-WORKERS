@@ -26,6 +26,32 @@ $ErrorActionPreference = "Stop"
 if ($PSVersionTable.PSVersion.Major -ge 7) { $PSDefaultParameterValues["ConvertFrom-Json:DateKind"] = "String" }
 $Root = if ($env:BK_ROOT) { $env:BK_ROOT } else { "C:/Users/FEUCOM/BK-AI-WORKERS" }
 
+# Offre "Worker a l'unite" (2026-10-12), SECOND verrou (le premier est dans dashboard/server.py) : BK_ALLOWED_WORKERS = Workers embauches par
+# le client, separes par des virgules ; "-" = aucun ; absente = tous les Workers. Un Worker qui n'y figure pas (ou un routage libre sans
+# Worker precis) ne demarre aucune mission : rien n'est execute, aucune trace dans runtime/tasks, donc aucun credit consomme. Chloe passe :
+# c'est son orchestration (chloe/Invoke-Chloe-Orchestration.ps1) qui n'a le droit de choisir que parmi les Workers embauches.
+$AllowedRaw = [string]$env:BK_ALLOWED_WORKERS
+if (-not [string]::IsNullOrWhiteSpace($AllowedRaw)) {
+    $AllowedList = @($AllowedRaw.ToLowerInvariant().Split(",") | ForEach-Object { $_.Trim() } | Where-Object { $_ -match '^[a-z]{2,20}$' })
+    $WantedWorker = $WorkerId.Trim().ToLowerInvariant()
+    if ($WantedWorker -ne "chloe" -and ([string]::IsNullOrWhiteSpace($WantedWorker) -or $AllowedList -notcontains $WantedWorker)) {
+        $RefusedText = "Ce Worker ne fait pas partie de vos Workers embauchés : aucune mission n'a été lancée et aucun crédit n'a été consommé. Embauchez-le, ou remplacez l'un de vos Workers, pour lui confier des missions."
+        $Refused = [ordered]@{
+            TaskId = $null
+            Request = $Request
+            Worker = $WorkerId.ToUpper()
+            Status = "WORKER_NOT_INCLUDED"
+            Authorized = $false
+            Reason = $RefusedText
+            FinalSynthesis = $RefusedText
+            ClientId = $ClientId
+            CreatedAtUtc = [DateTime]::UtcNow.ToString("o")
+        }
+        [System.IO.File]::WriteAllText($OutFile, ($Refused | ConvertTo-Json -Depth 5), [System.Text.UTF8Encoding]::new($false))
+        exit 0
+    }
+}
+
 . (Join-Path $Root "core/security/identity-auth/runtime.ps1")
 . (Join-Path $Root "core/security/session-token-security/runtime.ps1")
 . (Join-Path $Root "core/security/rbac/RBAC.ps1")

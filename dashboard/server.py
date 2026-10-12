@@ -577,7 +577,7 @@ def submit_task(worker_hint_text, worker_id="", plan_only=False, client_id="", l
         if os.path.isfile(out_file):
             with open(out_file, encoding="utf-8-sig") as f:
                 result = json.load(f)
-            if not plan_only:
+            if not plan_only and not refused_for_hiring(result):
                 dispatch_webhook_if_configured(client_id, result)
             return result
 
@@ -722,9 +722,15 @@ def submit_task_async(objective, worker_id="", client_id="", plan_only=False, le
                     result = attach_pending_action(result)
                 except Exception:
                     pass
-            record.update(status="DONE",
-                          finishedAtUtc=datetime.datetime.utcnow().isoformat() + "Z",
-                          result=result)
+            refused = refused_for_hiring(result)
+            if refused:
+                # Offre "Worker a l'unite" : le Worker choisi n'est pas embauche -> erreur claire (aucune mission lancee, aucun credit)
+                record.update(status="ERROR", error=refused, errorCode="WORKER_NOT_INCLUDED",
+                              finishedAtUtc=datetime.datetime.utcnow().isoformat() + "Z")
+            else:
+                record.update(status="DONE",
+                              finishedAtUtc=datetime.datetime.utcnow().isoformat() + "Z",
+                              result=result)
         except Exception as exc:  # noqa: BLE001
             record.update(status="ERROR",
                           finishedAtUtc=datetime.datetime.utcnow().isoformat() + "Z",
@@ -3050,6 +3056,17 @@ def automation_worker(client_id, automation_id):
     return None
 
 
+def refused_for_hiring(result):
+    """Message francais si le resultat d'une mission est un refus d'embauche (verrou de submit_task, ou Chloe dont le meilleur Worker n'est
+    pas embauche : Status WORKER_NOT_INCLUDED), sinon None. Les routes le transforment en HTTP 403 / job en erreur."""
+    if isinstance(result, dict):
+        if result.get("error") == "WORKER_NOT_INCLUDED":
+            return str(result.get("detail") or "Ce Worker ne fait pas partie de votre forfait.")
+        if result.get("Status") == "WORKER_NOT_INCLUDED":
+            return str(result.get("FinalSynthesis") or "Ce Worker ne fait pas partie de votre forfait.")
+    return None
+
+
 def installation_paused(client_id, worker_id):
     """True quand le client a mis l'installation de ce Worker en pause (interrupteur d'arret : plus aucune mission automatique)."""
     try:
@@ -4239,6 +4256,10 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json({"error": "OBJECTIVE_REQUIRED"}, 400)
                 return
             result = submit_task_limited(objective, worker_id="chloe", client_id=client_id, level=body.get("level"))
+            refused = refused_for_hiring(result)
+            if refused:
+                self._send_json({"error": "WORKER_NOT_INCLUDED", "detail": refused, "notIncludedWorkers": result.get("NotIncludedWorkers") or []}, 403)
+                return
             self._send_json(attach_pending_action(result))
         elif path == "/api/chloe/task/async":
             # Variante asynchrone de /api/chloe/task : memes gardes (compte,
@@ -4317,6 +4338,10 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json({"error": "OBJECTIVE_REQUIRED"}, 400)
                 return
             result = submit_task_limited(objective, worker_id=wid, client_id=client_id, level=body.get("level"))
+            refused = refused_for_hiring(result)
+            if refused:
+                self._send_json({"error": "WORKER_NOT_INCLUDED", "detail": refused, "workerId": wid}, 403)
+                return
             self._send_json(attach_pending_action(result))
         elif path.startswith("/api/workers/") and path.endswith("/task/async"):
             # Variante asynchrone de /api/workers/<id>/task : memes gardes
@@ -4678,6 +4703,10 @@ class Handler(BaseHTTPRequestHandler):
             if self._worker_not_included(client_id, worker_id or "chloe"):
                 return
             result = submit_task_limited(objective, worker_id=worker_id or "chloe", client_id=client_id)
+            refused = refused_for_hiring(result)
+            if refused:
+                self._send_json({"error": "WORKER_NOT_INCLUDED", "detail": refused}, 403)
+                return
             self._send_json(_summarize_mission_result(result))
         elif path == "/api/connectors/auto-approve/toggle":
             # Pre-autorisation globale : quand activee, les actions
