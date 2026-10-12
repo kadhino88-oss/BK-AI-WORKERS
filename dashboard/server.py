@@ -1474,6 +1474,7 @@ def _summarize_mission_result(result):
                     "status": r.get("Status"),
                     "answer": (r.get("Result") or {}).get("Answer"),
                     "files": (r.get("Result") or {}).get("Files"),
+                    "costCapped": bool((r.get("Result") or {}).get("CostCapped")),
                 }
                 for r in result.get("Results", []) if isinstance(r, dict)
             ],
@@ -1484,6 +1485,8 @@ def _summarize_mission_result(result):
         "status": result.get("Status"),
         "answer": (result.get("Result") or {}).get("Answer"),
         "files": (result.get("Result") or {}).get("Files"),
+        # True = mission arretee a son plafond de cout par niveau : la reponse est partielle (la note de fin le dit).
+        "costCapped": bool((result.get("Result") or {}).get("CostCapped")),
     }
 
 

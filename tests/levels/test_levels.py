@@ -169,6 +169,14 @@ class CostCeilingConfig(unittest.TestCase):
         self.assertEqual(s["callsWithoutPrice"], 1)
         self.assertEqual(s["costCappedMissions"], 1)
 
+    def test_external_callers_are_told_when_an_answer_is_partial(self):
+        one = server._summarize_mission_result({"TaskId": "T", "Worker": "NOAH", "Status": "SUCCESS", "Result": {"Answer": "a", "CostCapped": True}})
+        self.assertTrue(one["costCapped"])
+        self.assertFalse(server._summarize_mission_result({"TaskId": "T", "Result": {"Answer": "a"}})["costCapped"])
+        many = server._summarize_mission_result({"Status": "DONE", "Results": [
+            {"TaskId": "A", "Result": {"Answer": "a", "CostCapped": True}}, {"TaskId": "B", "Result": {"Answer": "b"}}]})
+        self.assertEqual([r["costCapped"] for r in many["results"]], [True, False])
+
 
 class ClientMemoryApi(unittest.TestCase):
     def setUp(self):
