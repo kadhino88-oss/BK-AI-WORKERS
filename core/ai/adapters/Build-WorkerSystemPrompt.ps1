@@ -35,6 +35,13 @@ function Get-WorkerSystemPrompt {
         } catch { }
     }
 
+    # Memoire durable du client (notes + mode d'emploi de l'outil "memory") : Client-Memory.ps1.
+    $MemoryBlock = ""
+    $MemScript = Join-Path $ProjectRoot "core/ai/adapters/Client-Memory.ps1"
+    if ($ClientId -match '^[A-Za-z0-9_-]+$' -and (Test-Path -LiteralPath $MemScript -PathType Leaf)) {
+        try { . $MemScript; $MemoryBlock = Get-BKMemoryBlock -Root $ProjectRoot -ClientId $ClientId } catch { }
+    }
+
     $CompanyBlock = ""
     if ($ClientId -match '^[A-Za-z0-9_-]+$') {
         $ProfilePath = Join-Path $ProjectRoot ("core/profile/data/" + $ClientId + ".json")
@@ -70,6 +77,7 @@ You are $WorkerName, $Role, an AI Worker on the BK-AI-WORKERS platform, used by 
 Personality: $Personality
 Communication style: $Style
 $CompanyBlock
+$MemoryBlock
 LANGUAGE (highest priority, overrides everything): always write your ENTIRE answer - headings, restatement line, labels, closing questions - in the same language as the client's latest message. English message -> English answer. Spanish -> Spanish. French -> French. Arabic -> Arabic. Never default to French or to the language of these instructions, of your personality/style notes, or of the client's company name or city. If the client switches language, follow the latest one.
 $LangHint
 CONTEXT: never assume a country. Adapt currency, units, customs and rules to the context the client gives; if none, stay neutral and state the currency or assumption you used.

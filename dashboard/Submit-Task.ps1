@@ -195,6 +195,16 @@ elseif (-not [string]::IsNullOrWhiteSpace($WorkerId)) {
 
     $WorkerResult = ($WorkerJson | Select-Object -Last 1) | ConvertFrom-Json -ErrorAction SilentlyContinue
 
+    # Niveau de la mission et son cout en credits (core/ai/LEVELS.json) : sans niveau = ancien comportement, 1 credit.
+    $MissionLevelName = [string]$env:BK_MISSION_LEVEL
+    $MissionCredits = 1
+    if ($MissionLevelName -match '^[a-z]{3,20}$') {
+        try {
+            $LvProp = (Get-Content -LiteralPath (Join-Path $Root "core/ai/LEVELS.json") -Raw -Encoding UTF8 | ConvertFrom-Json).levels.PSObject.Properties[$MissionLevelName]
+            if ($LvProp -and [int]$LvProp.Value.credits -gt 0) { $MissionCredits = [int]$LvProp.Value.credits }
+        } catch { }
+    }
+
     $Result = [ordered]@{
         TaskId = $TaskId
         Request = $Request
@@ -210,6 +220,8 @@ elseif (-not [string]::IsNullOrWhiteSpace($WorkerId)) {
         Mode = $Mode
         Result = $WorkerResult
         CreatedAtUtc = [DateTime]::UtcNow.ToString("o")
+        Level = $MissionLevelName
+        Credits = $MissionCredits
     }
 
     # Enregistre aussi une trace dans runtime/tasks/ pour que ce Worker

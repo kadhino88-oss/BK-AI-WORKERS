@@ -32,7 +32,7 @@ class AsyncMissions(unittest.TestCase):
         self.gate = threading.Event()
         self.started = []
 
-        def fake_submit(objective, worker_id="", plan_only=False, client_id=""):
+        def fake_submit(objective, worker_id="", plan_only=False, client_id="", level=None):
             self.started.append(client_id)
             self.gate.wait(10)
             return {"Status": "SUCCESS", "Result": {"Answer": "ok"}}
@@ -173,7 +173,9 @@ class AsyncMissions(unittest.TestCase):
 
 
 if __name__ == "__main__":
+    ok = False
     try:
-        unittest.main(verbosity=2, exit=False)
+        ok = unittest.main(verbosity=2, exit=False).result.wasSuccessful()
     finally:
         shutil.rmtree(TMP, ignore_errors=True)
+    sys.exit(0 if ok else 1)
