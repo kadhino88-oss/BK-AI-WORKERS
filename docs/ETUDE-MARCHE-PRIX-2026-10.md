@@ -28,16 +28,16 @@ Données complètes : `docs/pricing-study-data.json` · Calculs reproductibles :
 | **Équipe** (17 Workers + Chloé) | **99** | 990 | 900 | 34.4 % | 24 % moins cher que Limova Pro (130.29) |
 | Pro | 139 | 1 390 | 1 250 | 34.0 % | 7 % **plus cher** que Limova Pro (130.29) |
 | Scale | 449 | 4 490 | 4 000 | 33.7 % | pas de comparable direct |
-| **Pack de crédits** | 12 € les 100 / 55 les 500 | — | — | 31.5 % / 34.4 % | à peine plus cher que le crédit d'un plan |
+| **Pack de crédits** | CHF 12 les 100 / CHF 55 les 500 | — | — | 31.5 % / 34.4 % | à peine plus cher que le crédit d'un plan |
 
 **Nouvelle échelle de crédits : Rapide 1 · Équilibré 6 · Approfondi 12.** Téléphone : 1,5 crédit par minute d'appel (≈ CHF 0.17/min, contre 0.186 chez Limova).
 
-**Où nous sommes plus chers (à dire franchement) :** Équipe à 99 est **33 % plus cher** que Limova Essentiel (mais celui-ci n'a ni téléphone ni WhatsApp), et **129 % à 171 % plus cher** que Sintra/Marblism (7 à 12 assistants génériques). Pro à 139 est 7 % plus cher que Limova Pro.
+**Où nous sommes plus chers (à dire franchement) :** Équipe à 99 est **33 % plus cher** que Limova Essentiel (mais celui-ci n'a ni agent téléphone ni chatbot WhatsApp), et **129 % à 171 % plus cher** que Sintra/Marblism (7 à 12 assistants génériques). Pro à 139 est 7 % plus cher que Limova Pro.
 
 **Trois alertes**
 
 - **La phrase du site « au moins 5 % moins cher que les alternatives comparables » (`dashboard/index.html` ligne 464) n'est pas étayée** : elle est fausse face à Limova Essentiel, Sintra, Marblism et Dust. À retirer ou remplacer (phrase défendable en section 4.3).
-- **Ne pas vendre « Worker qui répond au téléphone et sur WhatsApp pour vos clients » avant que ce soit réellement en production** : le compte Twilio est encore en essai, sans numéro acheté, et l'installation par client (numéro, WhatsApp Business) n'existe pas encore.
+- **Ne pas vendre « Worker qui répond au téléphone et sur WhatsApp pour vos clients » avant que ce soit réellement en production** : d'après les notes du projet, le compte Twilio était encore en essai, sans numéro acheté (état du 06.10.2026, à re-vérifier), et l'installation par client (numéro, WhatsApp Business) n'existe pas encore (état du 12.10.2026).
 - **La recharge de crédits n'est reliée à aucun paiement** (réservée à vous). Sans cela, le pack de crédits ne peut pas se vendre.
 
 **Décisions à prendre :** voir le tableau d'une page en section 4.5.
@@ -182,7 +182,7 @@ Source : https://platform.claude.com/docs/en/about-claude/pricing (USD par milli
 | **E-mail** | pas de frais de canal (Gmail/Outlook via connecteur) : seulement le coût IA | — | — |
 | **Paiement Stripe** | Cartes suisses **2,9 % + 0,30 CHF** ; cartes étrangères **3,25 % + 0,30 CHF** ; conversion de devise **+2 %** ; Stripe Billing **0,7 %** du volume d'abonnements | https://stripe.com/ch/pricing | vérifié ; Billing 0,7 % : à confirmer sur votre compte |
 
-**Coût réel d'une minute de téléphone (agent actuel, Twilio + IA) :** `0,01 + 5 tours × (0,02 reconnaissance + 2,5 × 0,0032 voix neurale + 0,0003 IA) = 0,1515 US$ = **0.126 CHF/min** (hypothèse : 5 tours de parole par minute, réponse de 250 caractères). Fourchette : **0.076 CHF** (4 tours, voix gratuite) à **0.161 CHF** (6,5 tours, voix neurale). C'est le poste où la marge est la plus mince.
+**Coût réel d'une minute de téléphone (agent actuel, Twilio + IA) :** 0,01 + 5 tours × (0,02 reconnaissance + 2,5 × 0,0032 voix neurale + 0,0003 IA) = 0,1515 US$ = **0.126 CHF/min** (hypothèse : 5 tours de parole par minute, réponse de 250 caractères). Fourchette : **0.076 CHF** (4 tours, voix gratuite) à **0.161 CHF** (6,5 tours, voix neurale). C'est le poste où la marge est la plus mince.
 
 **Frais Stripe sur un plan à 29 CHF :** carte suisse = 29 × (2,9 % + 0,7 %) + 0,30 = **1.34 CHF** (4,6 %) ; carte étrangère avec conversion = 29 × (3,25 % + 0,7 % + 2 %) + 0,30 = **2.03 CHF** (7,0 %).
 
@@ -252,7 +252,7 @@ Avec 1/3/8, **Équilibré est sous-facturé** : la mission coûte 6,4 fois une m
 
 **Ce que ça représente en missions** (avec 1/6/12) : Solo 250 crédits = 250 missions Rapide **ou** 41 Équilibré **ou** 20 Approfondi ; Trio 500 = 500 / 83 / 41 ; Équipe 900 = 900 / 150 / 75 ; Pro 1 250 = 1 250 / 208 / 104 ; Scale 4 000 = 4 000 / 666 / 333.
 
-**Honnêteté sur la perte de volume :** en missions Équilibré, l'ancien Business (600 crédits à 3) = 200 missions → Équipe = 150 (−25 %) ; l'ancien Pro = 500 → 208 (−58 %) ; l'ancien Scale = 1 333 → 666 (−50 %). C'est le prix de la règle des 35 %. **Si vous préférez garder plus de volume**, vous pouvez assouplir la règle à 45 % au pire cas (le coût **typique** resterait autour de 13 %) : crédits max = 0,45 × prix ÷ 0,0378 = 11,9 × prix (Équipe 1 178, Pro 1 655, Scale 5 345). Je recommande de **lancer prudemment à 35 %**, puis de **relever les crédits après 30 jours de coûts réels** (le registre de coûts de la branche `ws/p1-e1-ledger` doit être fusionné pour ça).
+**Honnêteté sur la perte de volume :** en missions Équilibré, l'ancien Business (600 crédits à 3) = 200 missions → Équipe = 150 (−25 %) ; l'ancien Pro = 500 → 208 (−58 %) ; l'ancien Scale = 1 333 → 666 (−50 %). C'est le prix de la règle des 35 %. **Si vous préférez garder plus de volume**, vous pouvez assouplir la règle à 45 % au pire cas (le coût **typique** resterait autour de 13 %) : crédits max = 0,45 × prix ÷ 0,0378 = 11,9 × prix (Équipe 1 178, Pro 1 650, Scale 5 345). Je recommande de **lancer prudemment à 35 %**, puis de **relever les crédits après 30 jours de coûts réels** (le registre de coûts de la branche `ws/p1-e1-ledger` doit être fusionné pour ça).
 
 **Garde-fou indispensable :** le coût d'une mission qui va au bout de la boucle peut atteindre **4.35 CHF** (Approfondi, 20 appels, 15 recherches), soit 10 fois le cas lourd. Il faut un **plafond de coût par mission** (proposé : Équilibré 0.50 CHF, Approfondi 1.00 CHF ; Rapide n'en a pas besoin, son plafond théorique est de 0.036 CHF). Même au plafond, le coût par crédit (0.083 CHF) reste **sous** le prix d'un crédit (0.11-0.12) : jamais de perte nette.
 
@@ -291,11 +291,11 @@ Avec 1/3/8, **Équilibré est sous-facturé** : la mission coûte 6,4 fois une m
 | **Trio 59** | **Limova Essentiel (79,90 €, 8 agents, 5 utilisateurs)** | 74.41 | **−20,7 %** | **moins cher** (mais 3 Workers contre 8 agents) |
 | Trio 59 | Limova Essentiel **avec code LEGEND10** (71,91 €) | 66.97 | −11,9 % | moins cher (si le code s'applique : non vérifié) |
 | Trio annuel 49.17/mois | Limova Essentiel annuel (949,90 €/12) | 73.72 | −33,3 % | moins cher |
-| **Équipe 99** | **Limova Pro (139,90 €)**, seul plan avec téléphone + WhatsApp | 130.29 | **−24,0 %** | **moins cher** (Limova ajoute 0,20 €/min) |
+| **Équipe 99** | **Limova Pro (139,90 €)**, seul plan avec agent téléphone + chatbot WhatsApp | 130.29 | **−24,0 %** | **moins cher** (Limova ajoute 0,20 €/min) |
 | Équipe 99 | Limova Pro **avec LEGEND10** (125,91 €) | 117.26 | −15,6 % | moins cher (si code : non vérifié) |
 | Équipe annuel 990 | Limova Pro annuel (1 649,90 €) | 1 536.55 | −35,6 % | moins cher |
 | Équipe annuel 990 | Limova Pro annuel **avec LEGEND25** (1 237,43 €) | 1 152.41 | −14,1 % | moins cher (si code : non vérifié) |
-| Équipe 99 | **Limova Essentiel** (79,90 €, sans téléphone ni WhatsApp) | 74.41 | **+33,0 %** | **plus cher** (mais 17 Workers contre 8 agents) |
+| Équipe 99 | **Limova Essentiel** (79,90 €, sans agent téléphone ni chatbot WhatsApp) | 74.41 | **+33,0 %** | **plus cher** (mais 17 Workers contre 8 agents) |
 | Équipe 99 | Sintra 12 mois, prix catalogue (52 US$) | 43.22 | **+129 %** | **plus cher** (12 helpers génériques, 250 crédits, US) |
 | Équipe 99 | Marblism mensuel (44 US$) | 36.57 | **+171 %** | **plus cher** (7 employés, 50 h, téléphone US/CA/UK) |
 | Équipe 99 | Swisscom Swiss AI Assistant Essential (149 CHF) | 149 | −33,6 % | moins cher (chatbot d'équipe, pas un agent) |
@@ -304,7 +304,7 @@ Avec 1/3/8, **Équilibré est sous-facturé** : la mission coûte 6,4 fois une m
 | Téléphone ≈ 0.17 CHF/min | Phonely, dépassement Starter (0,25 US$/min) | 0.208 | −18,2 % | moins cher |
 
 **Lecture honnête pour décider :**
-- **Face à vos deux concurrents directs**, nous sommes **moins chers à chaque échelon utile** : Solo contre Delos (−38 %), Équipe contre le seul plan Limova qui a téléphone + WhatsApp (−24 %, et encore −16 % contre le prix avec code promo).
+- **Face à vos deux concurrents directs**, nous sommes **moins chers à chaque échelon utile** : Solo contre Delos (−38 %), Équipe contre le seul plan Limova qui a l'agent téléphone et le chatbot WhatsApp (−24 %, et encore −16 % contre le prix avec code promo).
 - **Nous ne sommes pas moins chers** que Limova Essentiel pour l'équipe complète (+33 %), que les paquets américains Sintra/Marblism (+129 % à +171 %), ni que Dust (+4 %), ni **Pro contre Limova Pro (+7 %)**. Si vous voulez que Pro soit aussi « moins cher que Limova » : **CHF 129 avec 1 150 crédits** (−1 % : égalité, honnêtement). Sinon, présentez Pro comme « Équipe + 39 % de volume », sans comparaison.
 - **Les volumes ne sont pas comparables** : Delos (40 000 crédits) et Limova (aucun plafond publié) ne disent pas combien de missions ils permettent. Je ne peux donc pas affirmer « plus de missions pour moins cher ».
 
@@ -326,7 +326,7 @@ Tous les Workers peuvent travailler par **e-mail, WhatsApp et téléphone** ; le
 | **WhatsApp** (client écrit, réponse dans les 24 h) | Meta gratuit en direct ; Twilio +0.004 CHF par message ; + IA | 1 crédit par conversation traitée (Rapide) |
 | **Téléphone** (entrant) | **0.076 à 0.161 CHF/min** (central 0.126) | **1,5 crédit par minute** (15 crédits = 10 minutes) ≈ 0.17 CHF/min |
 
-Règle de révision : si le coût **mesuré** dépasse **0.13 CHF/min**, passer à **2 crédits/min** (≈ 0.23 CHF/min, +24 % contre Limova : décision à prendre avec les vraies factures). Les Workers naturellement concernés par le téléphone : **Nora** (support), **Alex** (ventes), **Noah** (admin/e-mail) — proposition à valider ; les autres Workers l'utilisent peu.
+Règle de révision : si le coût **mesuré** dépasse **0.13 CHF/min**, passer à **2 crédits/min** (≈ 0.22-0.23 CHF/min, environ +20 à +25 % contre Limova : décision à prendre avec les vraies factures). Les Workers naturellement concernés par le téléphone : **Nora** (support), **Alex** (ventes), **Noah** (admin/e-mail) — proposition à valider ; les autres Workers l'utilisent peu.
 
 **Exemple chiffré (profil « réception » : 300 min d'appels + 200 conversations WhatsApp + 300 e-mails par mois = 450 + 200 + 300 = 950 crédits)** : Équipe 99 + 100 crédits (12) = **CHF 111**, ou Solo 29 + 700 crédits (7 × 12) = CHF 113. Chez Limova : Pro 139,90 € + 300 × 0,20 € = **199,90 € = CHF 186.17 HT**. Écart : **−40 %**. Notre coût estimé : 37.8 (téléphone) + 6.25 (500 conversations Rapide) + environ 5 (Stripe) + 1 (numéro) ≈ **CHF 50**, soit une marge d'environ 55 %.
 
@@ -356,7 +356,7 @@ Règle de révision : si le coût **mesuré** dépasse **0.13 CHF/min**, passer 
 | **Le dollar monte** | Coûts en US$, ventes en CHF : +10 % sur le dollar = +3,4 points sur le ratio de 34 % | Marge de sécurité de 1 à 2 points déjà prise ; révision trimestrielle |
 | **Abus de l'essai** | Plusieurs comptes pour l'essai gratuit : coût IA **borné à environ 0.57 CHF** par essai au pire (15 × 0.0378), mais **le téléphone et le WhatsApp sortant coûtent vraiment** | Pas de téléphone ni de messages sortants pendant l'essai ; vérification d'un numéro ou d'une carte avant d'activer un canal |
 | **Missions qui ne s'arrêtent pas** | Jusqu'à 4.35 CHF pour une mission Approfondi qui va au bout de la boucle | Plafond de coût par mission ; revoir `maxIterations` (20) et `webMaxUses` (15) d'Approfondi |
-| **Vendre ce qui n'existe pas encore** | Numéro Twilio non acheté (compte en essai), WhatsApp par client, déclencheurs autonomes, « installation selon compétences » non construits (note du projet du 12.10.2026) | Ne vendre le « Worker qui répond au téléphone » qu'après mise en production et test réel ; commencer par l'e-mail et les missions |
+| **Vendre ce qui n'existe pas encore** | Numéro Twilio non acheté (compte en essai au 06.10.2026, à re-vérifier), WhatsApp par client, déclencheurs autonomes, « installation selon compétences » non construits (note du projet du 12.10.2026) | Ne vendre le « Worker qui répond au téléphone » qu'après mise en production et test réel ; commencer par l'e-mail et les missions |
 | **Capacité du serveur** | 2 vCPU, une mission = un processus PowerShell de plusieurs minutes | Plafonds d'exécutions simultanées (déjà en place), passer à VPS-2 (≈ 7 CHF/mois) avant d'avoir beaucoup de clients |
 | **Allégations comparatives** | En droit suisse (loi contre la concurrence déloyale) comme français, une comparaison de prix doit être exacte et vérifiable | Chaque affirmation = chiffre + source + date ; retirer la phrase actuelle de la page d'accueil |
 | **TVA** | Le site indique l'absence de TVA sous 100 000 CHF de chiffre d'affaires ; des ventes B2C dans l'UE peuvent avoir leurs propres règles | Hors périmètre de cette étude : à faire valider par votre fiduciaire |
@@ -366,10 +366,10 @@ Règle de révision : si le coût **mesuré** dépasse **0.13 CHF/min**, passer 
 | # | Décision | Recommandation | Pourquoi (une ligne) | Alternative |
 |---|---|---|---|---|
 | 1 | Échelle des crédits | **Rapide 1 · Équilibré 6 · Approfondi 12** | 1/3/8 sous-facture Équilibré : Business 46 %, Pro 82 %, Scale 67 % au pire cas | Garder 1/3/8 : possible seulement avec des plans à ≥ 216 CHF par 1 000 crédits |
-| 2 | Crédits par offre | **250 / 500 / 900 / 1 250 / 4 000** | 32-34 % au pire cas, 13 % en usage typique | Règle à 45 % : 1 178 (Équipe) / 1 655 (Pro) / 5 345 (Scale) |
+| 2 | Crédits par offre | **250 / 500 / 900 / 1 250 / 4 000** | 32-34 % au pire cas, 13 % en usage typique | Règle à 45 % : 1 178 (Équipe) / 1 650 (Pro) / 5 345 (Scale) |
 | 3 | Worker seul | **CHF 29/mois, 290/an** | 38 % sous Delos (46.56) ; marge typique 23.93 CHF | CHF 19 / 150 crédits : −59 % vs Delos, au niveau de Marblism annuel |
 | 4 | Trio (3 Workers) | **CHF 59/mois, 590/an** | 21 % sous Limova Essentiel (74.41) | — |
-| 5 | Équipe (17 Workers + Chloé) | **CHF 99/mois, 990/an** | 24 % sous Limova Pro (130.29), le seul avec téléphone + WhatsApp | CHF 79 (≈ Limova Essentiel) avec 700 crédits |
+| 5 | Équipe (17 Workers + Chloé) | **CHF 99/mois, 990/an** | 24 % sous Limova Pro (130.29), le seul avec agent téléphone + chatbot WhatsApp | CHF 79 (≈ Limova Essentiel) avec 700 crédits |
 | 6 | Pro et Scale | **139 et 449, prix inchangés** ; Pro = « Équipe + 39 % de volume » | Pro est 7 % **plus cher** que Limova Pro | Pro à CHF 129 / 1 150 crédits (égalité) ou supprimer Pro |
 | 7 | Starter 39 | **Retirer** (remplacé par Solo/Trio) | Trois entrées de gamme (29/39/59) = confusion | Le garder avec 350 crédits |
 | 8 | Pack de crédits | **CHF 12 les 100, CHF 55 les 500** | Seulement 3-9 % au-dessus du crédit du plan ; 31-34 % au pire cas | CHF 10 les 100 (37.8 % au pire cas) |
