@@ -17,7 +17,7 @@ os.makedirs(os.path.join(TMP, "core", "ai"))
 shutil.copy2(os.path.join(REPO, "core", "ai", "LEVELS.json"), os.path.join(TMP, "core", "ai", "LEVELS.json"))
 shutil.copy2(os.path.join(REPO, "core", "ai", "AI-PRICING.json"), os.path.join(TMP, "core", "ai", "AI-PRICING.json"))
 os.environ["BK_ROOT"] = TMP
-os.environ["BK_LEVELS"] = "1"          # le fichier livre est inactif ("enabled": false) : les tests forcent l'activation
+os.environ["BK_LEVELS"] = "1"          # le fichier livre est actif depuis le 2026-10-12 ; les tests forcent quand meme l'activation (et testent BK_LEVELS=0)
 spec = importlib.util.spec_from_file_location("bk_server_levels", os.path.join(REPO, "dashboard", "server.py"))
 server = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(server)
@@ -39,10 +39,12 @@ class Levels(unittest.TestCase):
     def test_the_anonymous_trial_is_always_on_the_cheapest_level(self):
         self.assertEqual(server.normalize_level("approfondi", "CLI-TRIAL-PUBLIC"), "rapide")
 
-    def test_the_shipped_file_keeps_levels_inactive_until_pricing_is_validated(self):
+    def test_the_shipped_file_has_levels_active_since_the_scale_was_validated(self):
+        # Expectation changed on 2026-10-12: the owner validated the credit scale and the price grid, so core/ai/LEVELS.json now ships
+        # "enabled": true (it used to be false until the pricing was validated). BK_LEVELS=0 stays the kill switch (next test).
         os.environ.pop("BK_LEVELS", None)
-        self.assertEqual(server.normalize_level("approfondi", "CLI-X"), "")
-        self.assertEqual(server.public_mission_levels(), {"levels": [], "default": ""})
+        self.assertEqual(server.normalize_level("approfondi", "CLI-X"), "approfondi")
+        self.assertEqual([l["id"] for l in server.public_mission_levels()["levels"]], ["rapide", "equilibre", "approfondi"])
         os.environ["BK_LEVELS"] = "1"
         self.assertEqual(server.normalize_level("approfondi", "CLI-X"), "approfondi")
 
@@ -52,7 +54,8 @@ class Levels(unittest.TestCase):
         self.assertEqual(server.public_mission_levels(), {"levels": [], "default": ""})
 
     def test_credits_follow_the_level_and_the_public_list_matches(self):
-        self.assertEqual([server.level_credits(l) for l in ("rapide", "equilibre", "approfondi")], [1, 3, 8])
+        # Expectation changed on 2026-10-12: credit scale 1 / 6 / 12 (it was 1 / 3 / 8), see docs/PRICING.md.
+        self.assertEqual([server.level_credits(l) for l in ("rapide", "equilibre", "approfondi")], [1, 6, 12])
         pub = server.public_mission_levels()
         self.assertEqual([l["id"] for l in pub["levels"]], ["rapide", "equilibre", "approfondi"])
         self.assertEqual(pub["default"], "equilibre")
@@ -84,14 +87,16 @@ class Levels(unittest.TestCase):
         try:
             server.get_billing = fake_billing(2)
             self.assertIsNone(server.subscription_blocks_mission("CLI-C", "rapide"))               # 1 credit : ok
-            msg = server.subscription_blocks_mission("CLI-C", "approfondi")                        # 8 credits : refuse
+            msg = server.subscription_blocks_mission("CLI-C", "approfondi")                        # 12 credits : refuse
             self.assertIn("Il vous reste 2 crédit", msg)
             self.assertIn("niveau plus rapide", msg)
             server.get_billing = fake_billing(0)
             self.assertIn("quota est épuisé", server.subscription_blocks_mission("CLI-C", "rapide"))
-            server.get_billing = fake_billing(10)
+            server.get_billing = fake_billing(12)
             self.assertIsNone(server.subscription_blocks_mission("CLI-C", "approfondi"))
-            self.assertIsNone(server.subscription_blocks_mission("CLI-C"))                         # sans niveau : niveau par defaut (3)
+            self.assertIsNone(server.subscription_blocks_mission("CLI-C"))                         # sans niveau : niveau par defaut (6)
+            server.get_billing = fake_billing(5)
+            self.assertIn("Il vous reste 5 crédit", server.subscription_blocks_mission("CLI-C"))   # le niveau par defaut demande 6 credits
         finally:
             server.get_billing = orig
 

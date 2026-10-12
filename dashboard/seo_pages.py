@@ -94,6 +94,7 @@ _SHARED_STYLE = (
     ".plan-card .paud{color:var(--ink-muted);font-size:12.5px;margin-bottom:10px}"
     ".plan-card .pprice{font-size:1.6rem;font-weight:800}"
     ".plan-card .pprice span{font-size:.9rem;font-weight:400;color:var(--ink-muted)}"
+    ".plan-card .pcredits{font-size:13px;color:var(--ink-muted);margin-top:6px}"
     ".plan-card ul{padding-left:18px;margin:12px 0 0;font-size:13px;color:var(--ink-muted)}"
     "details.faq-item{border:1px solid var(--card-border);border-radius:var(--radius-sm);padding:12px 16px;margin-bottom:10px}"
     "details.faq-item summary{font-weight:700;cursor:pointer}"
@@ -216,23 +217,44 @@ def render_workers_page(workers):
     )
 
 
+# Grille des forfaits (validee par le proprietaire le 2026-10-12, docs/PRICING.md). MEME liste que PRICING_PLANS dans app.js et que PLAN_CATALOG dans
+# server.py : tests/pricing verifie qu'il n'existe jamais deux listes de prix differentes. Starter et Business (forfaits HERITES, plus vendus) n'y figurent
+# plus ; "credits" est le quota MENSUEL fixe (jamais illimite : Enterprise a un plafond fixe par contrat).
 PRICING_PLANS = [
-    {"name": "Essai", "audience": "Pour tester sans risque", "price": "0", "period": "3 jours",
-     "features": ["Crédits d'essai limités", "Missions limitées", "Quelques Workers", "Aucune carte bancaire"]},
-    {"name": "Starter", "audience": "Indépendants & petites structures", "price": "39", "annual": "390", "period": "/mois",
-     "features": ["Chloé + Workers essentiels", "Missions individuelles", "Mémoire de base", "Historique des missions", "Support standard"]},
-    {"name": "Business", "audience": "PME", "price": "99", "annual": "990", "period": "/mois", "popular": True,
-     "features": ["Tout Starter", "Équipe de Workers", "Missions multi-agents", "Automatisations", "Rapports & support prioritaire"]},
-    {"name": "Pro", "audience": "Entreprises, usage régulier", "price": "139", "annual": "1390", "period": "/mois",
-     "features": ["Tout Business", "Équipes avancées", "Missions complexes", "Quotas supérieurs", "Analytics & contrôles avancés"]},
-    {"name": "Scale", "audience": "Entreprises, volume important", "price": "449", "annual": "4490", "period": "/mois",
+    {"id": "essai", "name": "Essai", "audience": "Pour tester sans risque", "price": "0", "period": "3 jours", "credits": 15,
+     "credits_label": "crédits d'essai", "features": ["Niveau Rapide uniquement", "Essayez plusieurs Workers", "Aucune carte bancaire"]},
+    {"id": "solo", "name": "Solo", "audience": "Choisissez le Worker de votre activité", "price": "29", "annual": "290", "period": "/mois", "credits": 250,
+     "features": ["1 Worker de votre choix", "Configuré selon votre activité", "Chaque action vers l'extérieur validée par vous",
+                  "Changement de Worker possible tous les 30 jours"]},
+    {"id": "trio", "name": "Trio", "audience": "Vous choisissez 3 Workers, Chloé comprise", "price": "59", "annual": "590", "period": "/mois", "credits": 500,
+     "features": ["3 Workers de votre choix", "Chloé, l'orchestratrice, incluse", "Missions avec plusieurs Workers", "Configuré selon votre activité"]},
+    {"id": "equipe", "name": "Équipe", "audience": "PME : toute l'équipe", "price": "99", "annual": "990", "period": "/mois", "popular": True, "credits": 900,
+     "features": ["Chloé et les 17 Workers", "Missions multi-agents", "Automatisations", "Chaque action vers l'extérieur validée par vous"]},
+    {"id": "pro", "name": "Pro", "audience": "Entreprises, usage régulier", "price": "139", "annual": "1390", "period": "/mois", "credits": 1250,
+     "features": ["Tout Équipe, avec 39 % de crédits en plus", "Équipes avancées", "Missions complexes", "Analytics & contrôles avancés"]},
+    {"id": "scale", "name": "Scale", "audience": "Entreprises, volume important", "price": "449", "annual": "4490", "period": "/mois", "credits": 4000,
      "features": ["Tout Pro", "Capacité supérieure", "Équipes multiples", "Gouvernance avancée", "Accompagnement renforcé"]},
-    {"name": "Enterprise", "audience": "Grands comptes, besoins spécifiques", "price": None, "period": "Sur devis",
+    {"id": "enterprise", "name": "Enterprise", "audience": "Grands comptes, besoins spécifiques", "price": None, "period": "Sur devis", "credits": None,
+     "credits_label": "Plafond de crédits mensuel fixé par contrat",
      "features": ["Intégrations métier", "Gouvernance avancée", "Déploiement personnalisé", "Exigences contractuelles & conformité"]},
 ]
 
 
-def render_tarifs_page():
+def _credit_scale_html(levels):
+    """Bloc « combien de missions ? » de la page Tarifs, d'apres core/ai/LEVELS.json (liste publique des niveaux, vide si BK_LEVELS=0)."""
+    rows = [l for l in (levels or {}).get("levels", []) if isinstance(l.get("credits"), int) and l["credits"] > 0]
+    if not rows:
+        return ("<p>Chaque forfait inclut un quota mensuel fixe de crédits : une mission réellement traitée consomme un crédit. "
+                "Quand le quota est atteint, vous passez au forfait supérieur.</p>")
+    items = "".join(f"<li><strong>{l['label']}</strong> : {l['credits']} crédit{'s' if l['credits'] > 1 else ''} par mission</li>" for l in rows)
+    base = min(rows, key=lambda l: l["credits"])
+    example = "Exemple avec 250 crédits (Solo) : " + ", ou ".join(f"{250 // l['credits']} missions {l['label']}" for l in rows) + "."
+    return (f"<h2>Combien de missions pour mes crédits ?</h2><ul>{items}</ul><p>{example} Les missions récurrentes (automatisations) tournent au niveau "
+            f"{base['label']}.</p><p>Chaque forfait est un quota mensuel fixe, renouvelé chaque mois : il n'y a ni missions illimitées, ni recharge de crédits, "
+            "ni paiement à l'usage. Quand le quota est atteint, vous passez au forfait supérieur, qui a son propre quota.</p>")
+
+
+def render_tarifs_page(levels=None):
     cards = ""
     for p in PRICING_PLANS:
         price_html = (
@@ -240,28 +262,33 @@ def render_tarifs_page():
             if p["price"] is not None else f'<div class="pprice">{p["period"]}</div>'
         )
         annual = f'<div class="u" style="font-size:12px;">{p["annual"]} CHF/an</div>' if p.get("annual") else ""
+        if p.get("credits") is not None:
+            credits = f'<div class="pcredits"><strong>{p["credits"]}</strong> {p.get("credits_label") or "crédits par mois"}</div>'
+        else:
+            credits = f'<div class="pcredits">{p["credits_label"]}</div>'
         feats = "".join(f"<li>{f}</li>" for f in p["features"])
         cards += (
             f'<div class="plan-card{" popular" if p.get("popular") else ""}">'
             f'<div class="pname">{p["name"]}</div><div class="paud">{p["audience"]}</div>'
-            f"{price_html}{annual}<ul>{feats}</ul></div>"
+            f"{price_html}{annual}{credits}<ul>{feats}</ul></div>"
         )
     body = f"""
       <h1>Tarifs BK-AI-WORKERS</h1>
-      <p class="u">Des plans par crédits — 1 mission réellement traitée = 1 crédit consommé.</p>
-      <p>Essai gratuit de 3 jours sans carte bancaire. Changement de plan, recharge de crédits et
-      annulation possibles à tout moment depuis votre compte, sans engagement minimum. Prix en CHF (devise de facturation), hors taxes.
-      Disponible dans le monde entier.</p>
+      <p class="u">Dès 29 CHF par mois, sans engagement : un Worker de votre choix, ou toute l'équipe.</p>
+      <p>Essai gratuit de 3 jours sans carte bancaire. Changement de plan et annulation possibles à tout moment depuis votre compte,
+      sans engagement minimum. Prix en CHF (devise de facturation), hors taxes. Abonnement annuel : 2 mois offerts. Disponible dans le monde entier.</p>
       <div class="plans-grid">{cards}</div>
+      {_credit_scale_html(levels)}
+      <p>Quel Worker pour votre activité ? <a href="/workers.html">Parcourez les 17 Workers</a> : chacun indique son métier et ses compétences.</p>
       <div class="cta-row">
         <a class="btn btn-gold" href="/#nav-onboarding">Démarrer l'essai gratuit</a>
         <a class="btn btn-ghost" href="/cgv.html">Voir les CGV</a>
       </div>
     """
     return _page(
-        "Tarifs — Plans Essai, Starter, Business, Pro, Scale, Enterprise | BK-AI-WORKERS",
-        "Tarifs BK-AI-WORKERS : essai gratuit 3 jours, puis plans Starter (39 CHF), "
-        "Business (99 CHF), Pro (139 CHF), Scale (449 CHF) ou Enterprise sur devis.",
+        "Tarifs — Essai, Solo, Trio, Équipe, Pro, Scale, Enterprise | BK-AI-WORKERS",
+        "Tarifs BK-AI-WORKERS : essai gratuit 3 jours, puis Solo (29 CHF), Trio (59 CHF), Équipe (99 CHF), "
+        "Pro (139 CHF), Scale (449 CHF) ou Enterprise sur devis. Quota de crédits mensuel fixe.",
         "/tarifs.html",
         body,
     )
@@ -283,16 +310,17 @@ FAQ_ITEMS = [
      "réaffichés, jamais partagés entre plusieurs comptes. Rien n'est connecté par défaut : vous "
      "choisissez quels outils brancher, et quand."),
     ("Comment fonctionne la facturation ?",
-     "Chaque plan inclut un quota de crédits par cycle (1 mission réellement traitée = 1 crédit consommé). "
-     "La consommation est visible en temps réel, une alerte apparaît à 80% du quota, et aucune facturation "
-     "supplémentaire automatique n'a lieu si vous dépassez — une recharge reste toujours volontaire, "
-     "jamais imposée."),
+     "Chaque forfait inclut un quota mensuel fixe de crédits, renouvelé chaque mois à la date de votre "
+     "souscription. Le coût d'une mission dépend du niveau de travail choisi : Rapide 1 crédit, Équilibré 6, "
+     "Approfondi 12. Votre consommation est visible en temps réel et une alerte apparaît à 80 % du quota. "
+     "Il n'y a ni missions illimitées, ni recharge de crédits, ni paiement à l'usage : quand le quota est "
+     "atteint, vous passez au forfait supérieur, qui a son propre quota, et rien n'est facturé sans votre accord."),
     ("Où sont stockées mes données ?",
      "Les missions, l'historique et les identifiants restent sur l'infrastructure du produit — pas "
      "partagés avec des tiers en dehors des outils que vous connectez vous-même. Voir la page "
      "Confidentialité pour le détail."),
     ("Puis-je changer ou annuler mon plan à tout moment ?",
-     "Oui, depuis la page Facturation — changement de plan, recharge de crédits et annulation sont "
+     "Oui, depuis la page Facturation — changement de plan et annulation sont "
      "accessibles à tout moment, sans engagement minimum."),
 ]
 
@@ -320,7 +348,7 @@ def render_faq_page():
 def render_cgv_page():
     body = """
       <h1>Conditions générales de vente</h1>
-      <p class="u">Dernière mise à jour : 21 septembre 2026</p>
+      <p class="u">Dernière mise à jour : 12 octobre 2026</p>
       <h3>1. Éditeur et champ d'application</h3>
       <p>Les présentes conditions générales de vente (CGV) régissent l'accès et l'utilisation de la plateforme BK-AI-WORKERS, éditée par <strong>BK-ENTREPRISE</strong> (entreprise individuelle, activité entièrement en ligne), Rue Joseph-Pasquier 1, 1203 Genève, Suisse. Elles s'appliquent à tout client professionnel (entreprise, indépendant) qui souscrit un plan. Le service est destiné aux professionnels ; il n'est pas proposé aux consommateurs.</p>
       <h3>2. Description du service</h3>
@@ -328,7 +356,7 @@ def render_cgv_page():
       <h3>3. Essai gratuit</h3>
       <p>Le plan Essai est gratuit, sans carte bancaire, limité à 3 jours et à un quota de crédits. À son terme, aucun prélèvement n'a lieu : le client choisit librement de souscrire un plan payant ou d'arrêter.</p>
       <h3>4. Plans, crédits et prix</h3>
-      <p>Les plans, prix et quotas de crédits sont ceux affichés sur la page Tarifs au moment de la souscription, en francs suisses (CHF), hors taxes le cas échéant. Une mission consomme des crédits ; un crédit non utilisé à la fin de la période de facturation n'est pas reporté, sauf mention contraire sur la page Tarifs. Le client peut recharger des crédits à tout moment. BK-ENTREPRISE n'étant pas assujettie à la TVA en dessous du seuil légal suisse (CHF 100'000 de chiffre d'affaires annuel), aucune TVA n'est facturée à ce jour ; ce point sera mis à jour ici en cas d'assujettissement.</p>
+      <p>Les plans, prix et quotas de crédits sont ceux affichés sur la page Tarifs au moment de la souscription, en francs suisses (CHF), hors taxes le cas échéant. Chaque plan inclut un quota de crédits mensuel fixe, renouvelé chaque mois ; une mission consomme des crédits selon son niveau de travail (Rapide 1, Équilibré 6, Approfondi 12), et un crédit non utilisé à la fin du mois n'est pas reporté. Il n'existe ni plan illimité, ni recharge de crédits, ni facturation à l'usage : lorsque le quota est atteint, le client peut passer au plan supérieur, qui a son propre quota, sans aucun prélèvement supplémentaire automatique. Les plans Starter et Business ne sont plus proposés : ils continuent de s'appliquer, avec leurs crédits et leur prix d'origine, aux clients qui y sont déjà abonnés. BK-ENTREPRISE n'étant pas assujettie à la TVA en dessous du seuil légal suisse (CHF 100'000 de chiffre d'affaires annuel), aucune TVA n'est facturée à ce jour ; ce point sera mis à jour ici en cas d'assujettissement.</p>
       <h3>5. Paiement</h3>
       <p>Le paiement est dû d'avance, par carte bancaire via notre prestataire de paiement Stripe. BK-ENTREPRISE ne voit ni ne conserve les données de carte. En cas d'échec de paiement, l'accès aux fonctions payantes peut être suspendu jusqu'à régularisation.</p>
       <h3>6. Durée, renouvellement et résiliation</h3>
@@ -506,15 +534,17 @@ def render_facturation_page():
     body = """
       <h1>Facturation</h1>
       <p class="u">Des crédits, un usage transparent, aucun engagement forcé.</p>
-      <p>Chaque plan inclut un quota de crédits par cycle — une mission réellement traitée consomme
-      un crédit. Votre consommation est visible en temps réel depuis votre compte, une alerte apparaît
-      à 80% du quota, et aucune facturation supplémentaire automatique n'a lieu si vous dépassez :
-      une recharge reste toujours volontaire, jamais imposée.</p>
+      <p>Chaque forfait inclut un quota mensuel fixe de crédits, renouvelé chaque mois à la date de votre
+      souscription. Le coût d'une mission dépend du niveau de travail choisi (Rapide 1 crédit, Équilibré 6,
+      Approfondi 12). Votre consommation est visible en temps réel depuis votre compte et une alerte apparaît
+      à 80 % du quota. Il n'y a ni missions illimitées, ni recharge de crédits, ni paiement à l'usage :
+      quand le quota est atteint, vous passez au forfait supérieur, qui a son propre quota, et rien n'est
+      facturé sans votre accord.</p>
       <h2>Paiement</h2>
       <p>Le paiement est traité par carte bancaire via Stripe, dû d'avance. BK-ENTREPRISE ne voit ni
       ne conserve les données de carte.</p>
       <h2>Changement et résiliation</h2>
-      <p>Changement de plan, recharge de crédits et annulation sont accessibles à tout moment depuis
+      <p>Changement de plan et annulation sont accessibles à tout moment depuis
       votre compte, sans engagement minimum ni pénalité de sortie. Voir le détail complet dans les
       <a href="/cgv.html">CGV</a>.</p>
       <div class="cta-row">
@@ -524,7 +554,7 @@ def render_facturation_page():
     """
     return _page(
         "Facturation — Crédits & paiement | BK-AI-WORKERS",
-        "Comment fonctionne la facturation BK-AI-WORKERS : crédits par cycle, paiement Stripe, "
+        "Comment fonctionne la facturation BK-AI-WORKERS : quota mensuel de crédits, paiement Stripe, "
         "changement de plan et annulation à tout moment, sans engagement.",
         "/facturation.html",
         body,

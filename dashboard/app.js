@@ -796,18 +796,61 @@ async function loadAdminOverview() {
 // ---------- BILLING (plan actif + quota reel + historique — aucun
 // paiement reel n'est jamais declenche depuis cette page) ----------
 
-// CHF, en dur car PLAN_CATALOG (cote serveur) ne porte que les credits —
-// les prix eux-memes vivent dans PRICING_PLANS (page Tarifs) plus haut.
-// Doit rester coherent avec les Price ID Stripe (prices / pricesAnnual)
-// que Kader saisit lui-meme cote serveur.
-const BILLING_PLAN_PRICES = {
-  starter: { month: 39, year: 390 },
-  business: { month: 99, year: 990 },
-  pro: { month: 139, year: 1390 },
-  scale: { month: 449, year: 4490 },
-};
+// Les prix (CHF) viennent du serveur : chaque forfait de /api/billing (availablePlans) porte son priceChf, tire de PLAN_CATALOG (server.py) — il
+// n'y a plus de liste de prix en dur ici. Quota MENSUEL fixe : jamais illimite, pas de recharge ; quand il est atteint, on passe au forfait
+// suivant (data.upgrade.next). Enterprise est sur devis (plafond de credits fixe par contrat) : on nous ecrit.
+const BK_CONTACT_EMAIL = "contact@bk-entreprise.com";
 
 let billingInterval = "month";
+
+function billingDate(iso) {
+  const d = new Date(iso);
+  return isNaN(d) ? "" : d.toLocaleDateString(BK_LOCALE(), { day: "numeric", month: "long", year: "numeric" });
+}
+
+// Bouton « Passer a la formule superieure » : le forfait suivant par POST /api/billing/plan (Stripe Checkout quand Stripe est configure,
+// aucun prelevement avant le paiement sur la page Stripe) ; Enterprise / plafond contractuel : un e-mail pre-rempli.
+function startUpgrade(up) {
+  const nxt = up && up.next;
+  if (!nxt || nxt.onQuote) {
+    const subject = encodeURIComponent(nxt ? `${nxt.name} — plafond de crédits` : "Relever mon plafond de crédits");
+    window.location.href = `mailto:${(up && up.contactEmail) || BK_CONTACT_EMAIL}?subject=${subject}`;
+    return;
+  }
+  switchBillingPlan(nxt.planId, billingInterval);
+}
+
+function upgradeNextHtml(up) {
+  const nxt = up && up.next;
+  if (!nxt) return "Votre plafond de crédits est fixé par votre contrat : écrivez-nous pour le relever.";
+  if (nxt.onQuote) return `<span>Prochaine formule :</span> <strong>${escapeHtml(nxt.name)}</strong> — <span>sur devis (plafond de crédits fixé par contrat)</span>`;
+  const price = nxt.priceChf ? ` <strong>${formatPrice(nxt.priceChf.month)}</strong>/mois` : "";
+  return `<span>Prochaine formule :</span> <strong>${escapeHtml(nxt.name)}</strong> — <strong>${Number(nxt.credits).toLocaleString(BK_LOCALE())}</strong> <span>crédits par mois</span>,${price}`;
+}
+
+// Boutons affiches sous un message « quota atteint » (402 SUBSCRIPTION_REQUIRED) : le forfait suivant avec son prix, ou « nous ecrire »,
+// plus le lien vers tous les forfaits. Sans information de montee en gamme (ancien serveur) : l'ancien bouton « Voir les abonnements ».
+function subscribeCtaHtml(result) {
+  const up = result && result.upgrade;
+  if (!up) return `<button type="button" class="btn btn-gold subscribe-cta-btn" style="margin-top:10px">Voir les abonnements &rarr;</button>`;
+  const nxt = up.next;
+  const main = !nxt
+    ? `<button type="button" class="btn btn-gold subscribe-upgrade-btn">Relever mon plafond</button>`
+    : nxt.onQuote
+      ? `<button type="button" class="btn btn-gold subscribe-upgrade-btn">Passer à <strong>${escapeHtml(nxt.name)}</strong> (sur devis)</button>`
+      : `<button type="button" class="btn btn-gold subscribe-upgrade-btn">Passer à <strong>${escapeHtml(nxt.name)}</strong>${nxt.priceChf ? ` (${formatPrice(nxt.priceChf.month)}/mois)` : ""}</button>`;
+  return `<div class="subscribe-cta-row" style="margin-top:10px">${main} <button type="button" class="btn btn-ghost subscribe-cta-btn">Voir tous les forfaits</button></div>`;
+}
+
+function wireSubscribeCta(root, result, beforeNavigate) {
+  const go = () => { if (beforeNavigate) beforeNavigate(); showView("billing"); };
+  root.querySelectorAll(".subscribe-cta-btn").forEach((b) => b.addEventListener("click", go));
+  root.querySelectorAll(".subscribe-upgrade-btn").forEach((b) => b.addEventListener("click", () => {
+    const up = result && result.upgrade;
+    if (up && up.next && !up.next.onQuote) go();
+    startUpgrade(up);
+  }));
+}
 
 async function loadBilling() {
   const data = await fetchJson("/api/billing");
@@ -848,16 +891,41 @@ async function loadBilling() {
   document.getElementById("billing-plan-name").textContent = data.planName;
 
   const fill = document.getElementById("billing-usage-fill");
-  const pct = data.unlimited ? 0 : Math.min(100, data.percentUsed || 0);
+  const pct = Math.min(100, data.percentUsed || 0);
   fill.style.width = pct + "%";
   fill.classList.toggle("alert", !!data.alertThresholdReached);
 
+  // Credits utilises / inclus ce mois-ci + date de renouvellement (quota mensuel fixe ; l'essai ne se renouvelle pas).
   const line = document.getElementById("billing-usage-line");
-  line.textContent = data.unlimited
-    ? `${data.creditsUsed} missions traitées ce cycle — quota illimité (Enterprise).`
-    : `${data.creditsUsed} / ${data.creditsTotal} crédits consommés (${data.creditsRemaining} restants).`;
+  const nf = (n) => Number(n).toLocaleString(BK_LOCALE());
+  const renews = data.renewsAtUtc ? ` — renouvelé le ${billingDate(data.renewsAtUtc)}.` : " — l'essai ne se renouvelle pas.";
+  line.textContent = `${nf(data.creditsUsed)} / ${nf(data.creditsTotal)} crédits consommés (${nf(data.creditsRemaining)} restants)${renews}`;
 
   document.getElementById("billing-alert").hidden = !data.alertThresholdReached;
+
+  // Des 80 % du quota : bouton « Passer a la formule superieure » (aucune montee en gamme automatique, aucun prelevement surprise).
+  const upBox = document.getElementById("billing-upgrade");
+  if (upBox) {
+    upBox.hidden = !(data.upgradeSuggested && data.upgrade);
+    if (!upBox.hidden) {
+      document.getElementById("billing-upgrade-text").innerHTML = upgradeNextHtml(data.upgrade);
+      const upBtn = document.getElementById("billing-upgrade-btn");
+      upBtn.textContent = data.upgrade.next ? "Passer à la formule supérieure" : "Relever mon plafond";
+      upBtn.onclick = () => startUpgrade(data.upgrade);
+    }
+  }
+
+  // Forfait Solo / Trio : les Workers choisis et les emplacements restants.
+  const hireBox = document.getElementById("billing-hire");
+  if (hireBox) {
+    const h = data.hire;
+    hireBox.hidden = !(h && h.restricted);
+    if (!hireBox.hidden) {
+      const names = (h.hiredWorkers || []).map((id) => { const w = allWorkers.find((x) => x.id === id); return escapeHtml(w ? w.name : id); });
+      hireBox.innerHTML = `<span>Workers de votre forfait :</span> <strong>${names.length ? names.join(", ") : "—"}</strong>`
+        + (h.slotsLeft > 0 ? ` <span>— il vous reste</span> <strong>${h.slotsLeft}</strong> <span>emplacement(s) : ouvrez la fiche d'un Worker pour l'embaucher.</span>` : "");
+    }
+  }
 
   const cancelBtn = document.getElementById("billing-cancel-btn");
   cancelBtn.hidden = data.planId === "essai";
@@ -865,23 +933,33 @@ async function loadBilling() {
   const grid = document.getElementById("billing-plans-grid");
   grid.innerHTML = "";
   data.availablePlans.forEach((plan) => {
+    const isCurrent = plan.planId === data.planId;
     const card = document.createElement("div");
-    card.className = "billing-plan-card" + (plan.planId === data.planId ? " active" : "");
-    const creditsLabel = plan.credits === null ? "Illimité" : `${plan.credits} crédits / cycle`;
-    const prices = BILLING_PLAN_PRICES[plan.planId];
-    const priceLabel = prices
-      ? `${formatPrice(prices[billingInterval])}${billingInterval === "month" ? "/mois" : "/an"}`
+    card.className = "billing-plan-card" + (isCurrent ? " active" : "");
+    const creditsLabel = plan.onQuote
+      ? "Plafond de crédits fixé par contrat"
+      : `${nf(plan.credits)} crédits / mois`;
+    const price = plan.priceChf
+      ? `${formatPrice(plan.priceChf[billingInterval])}${billingInterval === "month" ? "/mois" : "/an"}`
+      : (plan.onQuote ? "Sur devis" : "");
+    const workers = plan.workerSlots
+      ? `<div class="billing-plan-credits">${plan.workerSlots === 1 ? "1 Worker de votre choix" : `${plan.workerSlots} Workers de votre choix, Chloé comprise`}</div>`
       : "";
+    const label = isCurrent ? "Plan actif" : (plan.onQuote ? "Nous contacter" : "Choisir");
     card.innerHTML = `
       <div class="billing-plan-name">${plan.name}</div>
-      ${priceLabel ? `<div class="billing-plan-price">${priceLabel}</div>` : ""}
+      ${price ? `<div class="billing-plan-price">${price}</div>` : ""}
       <div class="billing-plan-credits">${creditsLabel}</div>
-      <button type="button" class="btn ${plan.planId === data.planId ? "btn-ghost" : "btn-gold"}" ${plan.planId === data.planId ? "disabled" : ""}>
-        ${plan.planId === data.planId ? "Plan actif" : "Choisir"}
+      ${workers}
+      <button type="button" class="btn ${isCurrent ? "btn-ghost" : "btn-gold"}" ${isCurrent ? "disabled" : ""}>
+        ${label}
       </button>
     `;
-    if (plan.planId !== data.planId) {
-      card.querySelector("button").addEventListener("click", () => switchBillingPlan(plan.planId, billingInterval));
+    if (!isCurrent) {
+      card.querySelector("button").addEventListener("click", () => {
+        if (plan.onQuote) startUpgrade({ next: plan, contactEmail: BK_CONTACT_EMAIL });
+        else switchBillingPlan(plan.planId, billingInterval);
+      });
     }
     grid.appendChild(card);
   });
@@ -922,6 +1000,10 @@ async function switchBillingPlan(planId, interval) {
     await loadBilling();
     return;
   }
+  if (result.error === "PLAN_BY_INVOICE" || result.error === "PLAN_ON_QUOTE" || result.error === "PLAN_NOT_SOLD" || result.error === "PLAN_NOT_SELECTABLE") {
+    alert(result.detail || result.error);       // message francais du serveur : activation sur facture, sur devis, ou forfait plus propose
+    return;
+  }
   if (result.error) {
     alert("Erreur : " + (result.detail || result.error));
     return;
@@ -955,19 +1037,6 @@ async function handleStripeCheckoutReturn() {
 
 async function cancelBillingPlan() {
   await fetchJson("/api/billing/cancel", { method: "POST" });
-  await loadBilling();
-}
-
-async function rechargeBillingCredits() {
-  const input = document.getElementById("billing-recharge-amount");
-  const amount = parseInt(input.value, 10);
-  if (!amount || amount <= 0) return;
-  await fetchJson("/api/billing/recharge", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ amount }),
-  });
-  input.value = "";
   await loadBilling();
 }
 
@@ -1018,7 +1087,10 @@ function handleAutomationError(result, retryAction) {
     return true;
   }
   if (result.error === "SUBSCRIPTION_REQUIRED") {
-    showAutomationError(result.detail || "Votre quota est épuisé. Souscrivez un abonnement pour continuer.");
+    const errorEl = document.getElementById("automation-error");
+    errorEl.innerHTML = `${escapeHtml(result.detail || "Votre quota est épuisé. Souscrivez un abonnement pour continuer.")} ${subscribeCtaHtml(result)}`;
+    errorEl.hidden = false;
+    wireSubscribeCta(errorEl, result);
     return true;
   }
   if (result.error === "WORKER_NOT_INCLUDED") {
@@ -1178,9 +1250,9 @@ document.getElementById("automation-form").addEventListener("submit", async (e) 
     return;
   }
   if (result.error === "SUBSCRIPTION_REQUIRED") {
-    errorEl.innerHTML = `${escapeHtml(result.detail || "Votre quota est épuisé.")} <button type="button" class="btn btn-gold" id="automation-subscribe-cta-btn" style="margin-left:8px">Voir les abonnements &rarr;</button>`;
+    errorEl.innerHTML = `${escapeHtml(result.detail || "Votre quota est épuisé.")} ${subscribeCtaHtml(result)}`;
     errorEl.hidden = false;
-    document.getElementById("automation-subscribe-cta-btn").addEventListener("click", () => showView("billing"));
+    wireSubscribeCta(errorEl, result);
     return;
   }
   if (result.error) {
@@ -1629,71 +1701,98 @@ function openGuidedConnectForm(row, c) {
   if (first) first.focus();
 }
 
-// ---------- TARIFS (proposition — voir strategie Suisse, a valider
-// avant mise en production reelle : facturation/TVA/paiement) ----------
+// ---------- TARIFS (grille validee par le proprietaire le 2026-10-12, voir docs/PRICING.md) ----------
+//
+// MEME liste que PLAN_CATALOG (server.py) et PRICING_PLANS (seo_pages.py) : tests/pricing verifie qu'il n'existe jamais deux listes de prix
+// differentes. Chaque forfait est un quota MENSUEL FIXE de credits (jamais illimite ; Enterprise a un plafond fixe par contrat). Starter et
+// Business sont des forfaits HERITES (plus vendus) : ils n'apparaissent plus ici ni dans le choix de forfait. Aucun paquet de credits,
+// aucun forfait illimite. Rien n'est annonce qui ne soit construit : pas de telephone ni de WhatsApp pour les clients de nos clients.
 
 const PRICING_PLANS = [
   {
+    id: "essai",
     name: "Essai",
     audience: "Pour tester sans risque",
     price: "0",
     period: "3 jours",
+    credits: 15,
+    creditsLabel: "crédits d'essai",
     features: [
-      "Crédits d'essai limités",
-      "Missions limitées",
-      "Quelques Workers",
+      "Niveau Rapide uniquement",
+      "Essayez plusieurs Workers",
       "Aucune carte bancaire",
     ],
   },
   {
-    name: "Starter",
-    audience: "Indépendants & petites structures",
-    price: "39",
-    annual: "390",
+    id: "solo",
+    name: "Solo",
+    audience: "Choisissez le Worker de votre activité",
+    price: "29",
+    annual: "290",
     period: "/mois",
+    credits: 250,
+    cta: "Trouver mon Worker",
     features: [
-      "Chloé + Workers essentiels",
-      "Missions individuelles",
-      "Mémoire de base",
-      "Historique des missions",
-      "Support standard",
+      "1 Worker de votre choix",
+      "Configuré selon votre activité",
+      "Chaque action vers l'extérieur validée par vous",
+      "Changement de Worker possible tous les 30 jours",
     ],
   },
   {
-    name: "Business",
-    audience: "PME",
+    id: "trio",
+    name: "Trio",
+    audience: "Vous choisissez 3 Workers, Chloé comprise",
+    price: "59",
+    annual: "590",
+    period: "/mois",
+    credits: 500,
+    features: [
+      "3 Workers de votre choix",
+      "Chloé, l'orchestratrice, incluse",
+      "Missions avec plusieurs Workers",
+      "Configuré selon votre activité",
+    ],
+  },
+  {
+    id: "equipe",
+    name: "Équipe",
+    audience: "PME : toute l'équipe",
     price: "99",
     annual: "990",
     period: "/mois",
     popular: true,
+    credits: 900,
     features: [
-      "Tout Starter",
-      "Équipe de Workers",
+      "Chloé et les 17 Workers",
       "Missions multi-agents",
       "Automatisations",
-      "Rapports & support prioritaire",
+      "Chaque action vers l'extérieur validée par vous",
     ],
   },
   {
+    id: "pro",
     name: "Pro",
     audience: "Entreprises, usage régulier",
     price: "139",
     annual: "1390",
     period: "/mois",
+    credits: 1250,
     features: [
-      "Tout Business",
+      "Tout Équipe, avec 39 % de crédits en plus",
       "Équipes avancées",
       "Missions complexes",
-      "Quotas supérieurs",
       "Analytics & contrôles avancés",
     ],
   },
   {
+    id: "scale",
     name: "Scale",
     audience: "Entreprises, volume important",
     price: "449",
     annual: "4490",
     period: "/mois",
+    credits: 4000,
     features: [
       "Tout Pro",
       "Capacité supérieure",
@@ -1703,10 +1802,13 @@ const PRICING_PLANS = [
     ],
   },
   {
+    id: "enterprise",
     name: "Enterprise",
     audience: "Grands comptes, besoins spécifiques",
     price: null,
     period: "Sur devis",
+    credits: null,
+    creditsLabel: "Plafond de crédits mensuel fixé par contrat",
     features: [
       "Intégrations métier",
       "Gouvernance avancée",
@@ -1723,6 +1825,7 @@ function renderPricing() {
   PRICING_PLANS.forEach((plan) => {
     const card = document.createElement("div");
     card.className = "plan-card" + (plan.popular ? " is-popular" : "");
+    card.dataset.planId = plan.id;
 
     const priceHtml = plan.price === null
       ? `<div class="plan-price-row"><span class="plan-price">Sur devis</span></div>`
@@ -1732,7 +1835,13 @@ function renderPricing() {
       ? `<div class="plan-price-strike">ou ${formatPrice(plan.annual)}/an — 2 mois offerts</div>`
       : "";
 
+    // Quota de credits : un nombre fixe par mois (jamais "illimite"). Les chiffres sont dans leur propre balise : le texte autour se traduit.
+    const creditsHtml = plan.credits !== null
+      ? `<div class="plan-credits"><strong>${plan.credits.toLocaleString(BK_LOCALE())}</strong> ${plan.creditsLabel || "crédits par mois"}</div>`
+      : `<div class="plan-credits">${plan.creditsLabel}</div>`;
+
     const featuresHtml = plan.features.map((f) => `<li>${f}</li>`).join("");
+    const ctaLabel = plan.cta || (plan.price === null ? "Nous contacter" : "Discuter avec Chloé");
 
     card.innerHTML = `
       ${plan.popular ? '<div class="plan-badge">Le plus choisi</div>' : ""}
@@ -1740,14 +1849,131 @@ function renderPricing() {
       <div class="plan-audience">${plan.audience}</div>
       ${priceHtml}
       ${strikeHtml}
+      ${creditsHtml}
       <ul class="plan-features">${featuresHtml}</ul>
-      <button type="button" class="plan-cta">${plan.price === null ? "Nous contacter" : "Discuter avec Chloé"}</button>
+      <button type="button" class="plan-cta">${ctaLabel}</button>
     `;
 
-    card.querySelector(".plan-cta").addEventListener("click", openChloeFab);
+    // Solo : « Choisissez le Worker de votre activite » -> l'aide « Quel Worker pour mon activite ? » juste en dessous.
+    card.querySelector(".plan-cta").addEventListener("click", plan.id === "solo" ? scrollToActivityHelper : openChloeFab);
 
     grid.appendChild(card);
   });
+
+  renderPricingScale();
+  renderActivityHelper();
+}
+
+// Echelle de credits (core/ai/LEVELS.json via /api/mission-levels) : « combien de missions pour mes credits ? ». Si les niveaux sont coupes
+// sur le serveur (BK_LEVELS=0), la liste est vide et on affiche l'ancienne regle : une mission = un credit.
+async function renderPricingScale() {
+  const box = document.getElementById("pricing-scale");
+  if (!box) return;
+  let levels = [];
+  try { levels = ((await fetchJson("/api/mission-levels")).levels || []).filter((l) => Number(l.credits) > 0); } catch (e) { /* page statique : texte generique */ }
+  const noRecharge = "Chaque forfait est un quota mensuel fixe, renouvelé chaque mois : il n'y a ni missions illimitées, ni recharge de crédits, ni paiement à l'usage. Quand le quota est atteint, vous passez au forfait supérieur, qui a son propre quota.";
+  if (!levels.length) {
+    box.innerHTML = `<h2>Combien de missions pour mes crédits ?</h2><p>Une mission réellement traitée consomme un crédit.</p><p>${noRecharge}</p>`;
+    return;
+  }
+  const base = levels.reduce((a, b) => (b.credits < a.credits ? b : a));
+  const rows = levels.map((l) => `<li><strong>${escapeHtml(l.label)}</strong> — <span class="scale-cost">${l.credits}</span> ${l.credits > 1 ? "crédits" : "crédit"} par mission</li>`).join("");
+  box.innerHTML = `
+    <h2>Combien de missions pour mes crédits ?</h2>
+    <p>Un crédit n'est pas une mission : le coût dépend du niveau de travail que vous choisissez.</p>
+    <ul class="pricing-scale-list">${rows}</ul>
+    <p>Exemple avec <strong>250</strong> crédits (Solo) : ${levels.map((l) => `<strong>${Math.floor(250 / l.credits)}</strong> missions <em>${escapeHtml(l.label)}</em>`).join(", ou ")}.</p>
+    <p>Les missions récurrentes (automatisations) tournent toujours au niveau le plus rapide : <strong>${base.credits}</strong> ${base.credits > 1 ? "crédits" : "crédit"} chacune.</p>
+    <p>${noRecharge}</p>`;
+}
+
+// ---------- « QUEL WORKER POUR MON ACTIVITE ? » (page Tarifs) ----------
+// Donnees statiques. Chaque correspondance vient du role et des competences REELS du Worker : workers/<id>/identity/identity.json et sa fiche
+// d'installation workers/<id>/install-profile.json (idealFor, services) — rien d'invente, aucun temoignage, aucun chiffre. Le premier Worker
+// de la liste est le plus proche de l'activite ; chaque resultat ouvre la fiche du Worker (c'est la que se trouve « Embaucher » / l'installation).
+const ACTIVITY_WORKERS = [
+  { id: "boutique", label: "Boutique en ligne", workers: [
+    { id: "thomas", why: "Fiches produit, marge par canal frais inclus, mise en vente sur une marketplace" },
+    { id: "nora", why: "Répond à vos clients et trie les demandes et réclamations" },
+    { id: "maya", why: "Plan média chiffré, annonces et emails de campagne pour attirer des clients" },
+  ] },
+  { id: "commerce", label: "Restaurant ou commerce local", workers: [
+    { id: "seoya", why: "Être trouvé sur Google : articles et pages optimisés écrits en entier" },
+    { id: "emma", why: "Posts pour vos réseaux sociaux, écrits en entier, et calendrier éditorial" },
+    { id: "lea", why: "Charte graphique, logo et visuels en fichiers utilisables tout de suite" },
+  ] },
+  { id: "cabinet", label: "Cabinet ou profession libérale", workers: [
+    { id: "noah", why: "Emails prêts à envoyer, agenda, comptes-rendus de réunion" },
+    { id: "clara", why: "Contrats, NDA et CGV rédigés en entier, à faire valider par un avocat" },
+    { id: "dario", why: "Budget, trésorerie et documents préparés pour la fiduciaire" },
+  ] },
+  { id: "agence", label: "Agence ou freelance", workers: [
+    { id: "alex", why: "Prospection : prospects réels, séquences de messages, relances et préparation de rendez-vous" },
+    { id: "yanis", why: "Plan daté, répartition des rôles et suivi honnête de vos projets" },
+    { id: "noah", why: "Emails, agenda et comptes-rendus pris en charge" },
+  ] },
+  { id: "pme", label: "PME de services", workers: [
+    { id: "alex", why: "Un flux de rendez-vous qualifiés pour les services et le conseil" },
+    { id: "dario", why: "Budget, trésorerie, prix de vente et marges" },
+    { id: "sophie", why: "Annonces, tri des candidatures et entretiens structurés si vous recrutez" },
+  ] },
+  { id: "artisan", label: "Artisan", workers: [
+    { id: "alex", why: "Si vous vendez à des entreprises : prospects réels et relances" },
+    { id: "dario", why: "Prix de vente, marge et point mort" },
+    { id: "seoya", why: "Être trouvé sur Google : commerces locaux et prestataires de services" },
+  ] },
+  { id: "association", label: "Association", workers: [
+    { id: "noah", why: "Ordres du jour, comptes-rendus avec actions assignées, courriers" },
+    { id: "yanis", why: "Plan daté et suivi pour un événement ou un projet" },
+  ] },
+];
+
+function scrollToActivityHelper() {
+  const el = document.getElementById("activity-helper");
+  if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function renderActivityHelper() {
+  const chips = document.getElementById("activity-chips");
+  const result = document.getElementById("activity-result");
+  if (!chips || !result) return;
+  chips.innerHTML = "";
+  result.innerHTML = "";
+  ACTIVITY_WORKERS.forEach((a) => {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "activity-chip";
+    chip.textContent = a.label;
+    chip.setAttribute("aria-pressed", "false");
+    chip.addEventListener("click", () => {
+      chips.querySelectorAll(".activity-chip").forEach((c) => { const on = c === chip; c.classList.toggle("active", on); c.setAttribute("aria-pressed", String(on)); });
+      showActivityWorkers(a);
+    });
+    chips.appendChild(chip);
+  });
+}
+
+function showActivityWorkers(activity) {
+  const result = document.getElementById("activity-result");
+  if (!result) return;
+  const items = activity.workers.map((m, i) => {
+    const w = (typeof allWorkers !== "undefined" ? allWorkers : []).find((x) => x.id === m.id);
+    if (!w) return "";
+    return `<div class="activity-worker">
+      <img src="${escapeHtml(w.portraitUrl)}" alt="" loading="lazy">
+      <div class="activity-worker-body">
+        <div class="activity-worker-name">${escapeHtml(w.name)}${i === 0 ? ' <span class="activity-best">Le plus proche de votre activité</span>' : ""}</div>
+        <div class="activity-worker-role">${escapeHtml(w.role)}</div>
+        <div class="activity-worker-why">${escapeHtml(m.why)}</div>
+        <a href="#worker-${escapeHtml(w.id)}" class="activity-worker-link" data-worker="${escapeHtml(w.id)}">Voir la fiche de <strong>${escapeHtml(w.name)}</strong></a>
+      </div>
+    </div>`;
+  }).join("");
+  result.innerHTML = items || '<p class="activity-empty">Aucun Worker disponible pour le moment.</p>';
+  result.querySelectorAll(".activity-worker-link").forEach((link) => link.addEventListener("click", (e) => {
+    e.preventDefault();
+    openWorkerProfile(link.dataset.worker);
+  }));
 }
 
 async function bootstrap() {
@@ -2516,6 +2742,7 @@ function fillProfileCommon(w) {
 
 async function openWorkerProfile(workerId) {
   currentWorkerId = workerId;
+  loadMissionLevels();
   const w = await fetchJson(`/api/workers/${workerId}`);
   fillProfileCommon(w);
 
@@ -2526,6 +2753,7 @@ async function openWorkerProfile(workerId) {
 
 async function openChloeProfile() {
   currentWorkerId = "chloe";
+  loadMissionLevels();
   const w = await fetchJson("/api/chloe");
   fillProfileCommon(w);
   loadInstallPanel("chloe");           // Chloe ne s'installe ni ne s'embauche : le panneau se masque
@@ -2838,17 +3066,21 @@ function renderTaskFilesBlock(taskId, files) {
 // Niveau de travail (Rapide / Equilibre / Approfondi) : memorise sur l'appareil, envoye avec chaque mission.
 let missionLevels = { default: "", levels: [] };
 function currentMissionLevel() {
-  try { return localStorage.getItem("bk_mission_level") || missionLevels.default || ""; } catch (e) { return missionLevels.default || ""; }
+  let stored = "";
+  try { stored = localStorage.getItem("bk_mission_level") || ""; } catch (e) { /* stockage indisponible */ }
+  const known = (missionLevels.levels || []).some((l) => l.id === stored);
+  return known ? stored : (missionLevels.default || "");        // un niveau memorise que le forfait n'autorise plus retombe sur celui par defaut
 }
 async function loadMissionLevels() {
   const picker = document.getElementById("level-picker");
   if (!picker) return;
   try { missionLevels = await fetchJson("/api/mission-levels"); } catch (e) { return; }
   if (!missionLevels.levels || !missionLevels.levels.length) { picker.hidden = true; return; }
-  const chosen = currentMissionLevel();
+  let chosen = currentMissionLevel();
+  if (!missionLevels.levels.some((l) => l.id === chosen)) chosen = missionLevels.default;   // niveau memorise absent de la liste (essai : Rapide seulement)
   picker.innerHTML = missionLevels.levels.map((l) =>
     `<button type="button" role="radio" class="level-chip${l.id === chosen ? " active" : ""}" aria-checked="${l.id === chosen}" data-level="${escapeHtml(l.id)}" title="${escapeHtml(l.description)}">${escapeHtml(l.label)} <span class="level-cost">${l.credits} crédit${l.credits > 1 ? "s" : ""}</span></button>`
-  ).join("");
+  ).join("") + (missionLevels.locked ? '<span class="level-note">L\'essai est limité au niveau Rapide.</span>' : "");
   picker.hidden = false;
   picker.querySelectorAll(".level-chip").forEach((b) => b.addEventListener("click", () => {
     try { localStorage.setItem("bk_mission_level", b.dataset.level); } catch (e) { /* stockage indisponible : niveau par defaut */ }
@@ -3020,8 +3252,8 @@ async function runTask(objective) {
       responseEl.className = "chat-msg chat-msg-worker needs-chloe";
       responseEl.innerHTML = `<div class="status-line">Abonnement requis</div>
         <p>${escapeHtml(result.detail || "Votre quota est épuisé.")}</p>
-        <button type="button" class="btn btn-gold subscribe-cta-btn" style="margin-top:10px">Voir les abonnements &rarr;</button>`;
-      responseEl.querySelector(".subscribe-cta-btn").addEventListener("click", () => showView("billing"));
+        ${subscribeCtaHtml(result)}`;
+      wireSubscribeCta(responseEl, result);
       return;
     }
     if (result.error) {
@@ -3158,11 +3390,8 @@ async function runChloeFabTask(objective) {
       responseEl.className = "chat-msg chat-msg-worker needs-chloe";
       responseEl.innerHTML = `<div class="status-line">Abonnement requis</div>
         <p>${escapeHtml(result.detail || "Votre quota est épuisé.")}</p>
-        <button type="button" class="btn btn-gold subscribe-cta-btn" style="margin-top:10px">Voir les abonnements &rarr;</button>`;
-      responseEl.querySelector(".subscribe-cta-btn").addEventListener("click", () => {
-        closeChloeFab();
-        showView("billing");
-      });
+        ${subscribeCtaHtml(result)}`;
+      wireSubscribeCta(responseEl, result, closeChloeFab);
       return;
     }
     if (result.error === "WORKER_NOT_INCLUDED") {
@@ -4832,7 +5061,6 @@ document.getElementById("nav-admin").addEventListener("click", (e) => {
 });
 document.getElementById("admin-back-btn").addEventListener("click", () => showView("home"));
 document.getElementById("billing-cancel-btn").addEventListener("click", cancelBillingPlan);
-document.getElementById("billing-recharge-btn").addEventListener("click", rechargeBillingCredits);
 document.querySelectorAll("#billing-interval-toggle button").forEach((btn) => {
   btn.addEventListener("click", () => {
     billingInterval = btn.dataset.interval;

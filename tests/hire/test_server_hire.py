@@ -63,11 +63,15 @@ class Entitlement(Fixture):
     def test_plans(self):
         self.assertEqual((server.PLAN_CATALOG["solo"]["credits"], server.PLAN_CATALOG["solo"]["workerSlots"]), (250, 1))
         self.assertEqual((server.PLAN_CATALOG["trio"]["credits"], server.PLAN_CATALOG["trio"]["workerSlots"]), (500, 3))
-        for pid, credits in (("essai", 15), ("starter", 150), ("business", 600), ("pro", 1500), ("scale", 4000), ("enterprise", None)):
-            self.assertEqual(server.PLAN_CATALOG[pid]["credits"], credits, pid)          # aucun forfait existant n'est renomme ni modifie
+        # Expectations changed on 2026-10-12 (owner-validated price grid, docs/PRICING.md): Pro is 1250 credits (was 1500), Enterprise has a
+        # contractual cap instead of None (= unlimited), and "equipe" is new. Starter/Business keep their credits (legacy plans).
+        for pid, credits in (("essai", 15), ("starter", 150), ("business", 600), ("equipe", 900), ("pro", 1250), ("scale", 4000),
+                             ("enterprise", server.ENTERPRISE_DEFAULT_CREDITS)):
+            self.assertEqual(server.PLAN_CATALOG[pid]["credits"], credits, pid)
             self.assertNotIn("workerSlots", server.PLAN_CATALOG[pid])
-        self.assertEqual(server.INVOICE_ONLY_PLANS, {"solo", "trio"})
-        self.assertFalse(server.PAID_PLANS_WITH_CHECKOUT & server.INVOICE_ONLY_PLANS)
+        self.assertEqual(server.INVOICE_ONLY_PLANS, {"solo", "trio", "equipe"})
+        # Solo/Trio/Equipe are sold through Stripe Checkout when Stripe is configured, and stay "by invoice" when it is not.
+        self.assertTrue(server.INVOICE_ONLY_PLANS <= server.PAID_PLANS_WITH_CHECKOUT)
 
     def test_worker_block_follows_the_plan(self):
         write_billing(A, "solo", ["alex"])
@@ -210,7 +214,9 @@ class Billing(Fixture):
         write_billing(A, "solo", ["alex"])
         b = server.get_billing(A)
         self.assertEqual((b["planId"], b["planName"], b["creditsTotal"], b["workerSlots"], b["hiredWorkers"]), ("solo", "Solo", 250, 1, ["alex"]))
-        self.assertEqual([p["planId"] for p in b["availablePlans"]], ["essai", "starter", "business", "pro", "scale", "enterprise"])
+        # Expectation changed on 2026-10-12: availablePlans is now the plan picker of the pricing grid (sold plans only, no trial, no legacy
+        # plan for someone who is not on it); workerPlans is unchanged.
+        self.assertEqual([p["planId"] for p in b["availablePlans"]], ["solo", "trio", "equipe", "pro", "scale", "enterprise"])
         self.assertEqual({p["planId"] for p in b["workerPlans"]}, {"solo", "trio"})
         self.assertTrue(next(p for p in b["workerPlans"] if p["planId"] == "trio")["chloeIncluded"])
         self.assertFalse(next(p for p in b["workerPlans"] if p["planId"] == "solo")["chloeIncluded"])
@@ -220,6 +226,9 @@ class Billing(Fixture):
         write_billing(A, "solo", ["alex"])
         os.makedirs(server.TASKS_DIR, exist_ok=True)
         self.addCleanup(shutil.rmtree, server.TASKS_DIR, True)
+        real_now = server._utcnow
+        server._utcnow = lambda: datetime.datetime(2026, 10, 12, 12, 0, 0)       # le quota est mensuel : on fige la date du test
+        self.addCleanup(setattr, server, "_utcnow", real_now)
         with open(os.path.join(server.TASKS_DIR, "TASK-" + "A" * 32 + ".json"), "w", encoding="utf-8") as f:
             json.dump({"ClientId": A, "Credits": 250, "CreatedAtUtc": "2026-10-05T00:00:00Z"}, f)
         self.assertIn("quota est épuisé", server.subscription_blocks_mission(A))        # pas de missions illimitees

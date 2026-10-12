@@ -149,7 +149,7 @@ The values of "workers" must be EXACTLY identifiers from the list above (lowerca
         # Le routeur est un appel JSON-seul (300 jetons max) : on n'y ajoute PAS le guide complet de Chloe (revue 2026-10-11 :
         # il contredisait la regle "JSON uniquement" et pouvait faire echouer tout le routage). Seulement les tarifs, pour
         # qu'une question sur les plans ne soit jamais inventee ni attribuee a la mauvaise marque.
-        $SystemPrompt = $SystemPrompt + "`n`nPRIX (questions sur les plans, a repondre dans direct_reply) : plateforme BK-AI-WORKERS = plan gratuit, Starter 39, Business 99, Pro 139, Scale 449 CHF par mois. BK Entreprise est l'agence parente : devis uniquement, jamais de tarifs BK Entreprise. N'invente aucun autre chiffre.`nReply ONLY with the strict JSON object described above."
+        $SystemPrompt = $SystemPrompt + "`n`nPRIX (questions sur les plans, a repondre dans direct_reply) : plateforme BK-AI-WORKERS, en CHF par mois (annuel = 10 mois) : Essai gratuit 3 jours (15 credits) ; Solo 29 (1 Worker au choix, 250 credits) ; Trio 59 (3 Workers au choix + Chloe, 500 credits) ; Equipe 99 (tous les Workers + Chloe, 900 credits) ; Pro 139 (1250 credits) ; Scale 449 (4000 credits) ; Enterprise sur devis (plafond de credits fixe par contrat). Starter et Business ne sont plus vendus. Chaque forfait est un quota MENSUEL fixe, jamais illimite : quota atteint = forfait superieur, sans recharge ni depassement facture. BK Entreprise est l'agence parente : devis uniquement, jamais de tarifs BK Entreprise. N'invente aucun autre chiffre.`nReply ONLY with the strict JSON object described above."
 
         $BodyObj = [ordered]@{
             model      = "claude-haiku-4-5-20251001"

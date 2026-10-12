@@ -461,7 +461,7 @@
             <span class="hero-badge">💳 Sans engagement</span>
           </div>
           <h1 class="workers-title">Une équipe IA complète, pas juste un chatbot</h1>
-          <p class="hero-sub">Un chatbot seul coûte déjà l'équivalent de <span data-chf="79">CHF 79</span> à <span data-chf="149">CHF 149</span>/mois. Avec BK-AI-WORKERS, vous avez Chloé et toute une équipe de Workers spécialisés — au moins 5 % moins cher que les alternatives comparables.</p>
+          <p class="hero-sub">Dès <span data-chf="29">CHF 29</span> par mois, sans engagement : un Worker spécialisé de votre choix, ou Chloé et toute l'équipe. Chaque action vers l'extérieur reste validée par vous.</p>
         </div>
       </div>
 
@@ -471,6 +471,15 @@
       </div>
 
       <div class="pricing-grid" id="pricing-grid"></div>
+
+      <div class="pricing-scale" id="pricing-scale"></div>
+
+      <section class="activity-helper" id="activity-helper" aria-labelledby="activity-helper-title">
+        <h2 id="activity-helper-title">Quel Worker pour mon activité ?</h2>
+        <p class="activity-helper-sub">Choisissez votre activité : nous vous montrons le ou les Workers dont les compétences correspondent. Avec le forfait Solo, vous en choisissez un.</p>
+        <div class="activity-chips" id="activity-chips" role="group" aria-label="Votre activité"></div>
+        <div class="activity-result" id="activity-result" aria-live="polite"></div>
+      </section>
 
       <div class="final-cta">
         <div class="final-cta-eyebrow">Une question sur le bon plan ?</div>
@@ -489,7 +498,7 @@
 
         <div class="catalog-intro">
           <h1 class="workers-title">Facturation &amp; usage</h1>
-          <p class="hero-sub">Votre plan actif, votre consommation réelle de crédits (1 mission traitée = 1 crédit), et l'historique de votre compte.</p>
+          <p class="hero-sub">Votre plan actif, votre consommation de crédits ce mois-ci (le coût d'une mission dépend de son niveau), la date de renouvellement et l'historique de votre compte.</p>
         </div>
       </div>
 
@@ -512,11 +521,11 @@
           </div>
           <div class="billing-usage-line" id="billing-usage-line"></div>
           <div class="billing-alert" id="billing-alert" hidden>⚠️ Vous avez consommé plus de 80% de votre quota du cycle en cours.</div>
-        </div>
-
-        <div class="billing-recharge" id="billing-recharge" hidden>
-          <input type="number" id="billing-recharge-amount" min="1" step="1" placeholder="Crédits à ajouter (ex : 50)">
-          <button type="button" class="btn btn-ghost" id="billing-recharge-btn">Recharger (simulation)</button>
+          <div class="billing-upgrade" id="billing-upgrade" hidden>
+            <p id="billing-upgrade-text"></p>
+            <button type="button" class="btn btn-gold" id="billing-upgrade-btn">Passer à la formule supérieure</button>
+          </div>
+          <div class="billing-hire" id="billing-hire" hidden></div>
         </div>
 
         <div id="installed-workers-section" class="iw-installed" hidden>
@@ -634,7 +643,7 @@
         </details>
         <details class="faq-item">
           <summary>Comment fonctionne la facturation ?</summary>
-          <p>Chaque plan inclut un quota de crédits par cycle (1 mission réellement traitée = 1 crédit consommé). La consommation est visible en temps réel, une alerte apparaît à 80% du quota, et aucune facturation supplémentaire automatique n'a lieu si vous dépassez — une recharge reste toujours volontaire, jamais imposée.</p>
+          <p>Chaque forfait inclut un quota mensuel fixe de crédits, renouvelé chaque mois à la date de votre souscription. Le coût d'une mission dépend du niveau de travail choisi : Rapide 1 crédit, Équilibré 6, Approfondi 12. Votre consommation est visible en temps réel et une alerte apparaît à 80 % du quota. Il n'y a ni missions illimitées, ni recharge de crédits, ni paiement à l'usage : quand le quota est atteint, vous passez au forfait supérieur, qui a son propre quota, et rien n'est facturé sans votre accord.</p>
         </details>
         <details class="faq-item">
           <summary>Où sont stockées mes données ?</summary>
@@ -642,7 +651,7 @@
         </details>
         <details class="faq-item">
           <summary>Puis-je changer ou annuler mon plan à tout moment ?</summary>
-          <p>Oui, depuis la page Facturation — changement de plan, recharge de crédits et annulation sont accessibles à tout moment, sans engagement minimum.</p>
+          <p>Oui, depuis la page Facturation — changement de plan et annulation sont accessibles à tout moment, sans engagement minimum.</p>
         </details>
       </div>
     </section>
@@ -667,7 +676,7 @@
         <div class="legal-content">
           <article id="legal-cgv">
             <h2>Conditions générales de vente</h2>
-            <p><em>Dernière mise à jour : 21 septembre 2026</em></p>
+            <p><em>Dernière mise à jour : 12 octobre 2026</em></p>
             <h3>1. Éditeur et champ d'application</h3>
             <p>Les présentes conditions générales de vente (CGV) régissent l'accès et l'utilisation de la plateforme BK-AI-WORKERS, éditée par <strong>BK-ENTREPRISE</strong> (entreprise individuelle, activité entièrement en ligne), Rue Joseph-Pasquier 1, 1203 Genève, Suisse. Elles s'appliquent à tout client professionnel (entreprise, indépendant) qui souscrit un plan. Le service est destiné aux professionnels ; il n'est pas proposé aux consommateurs.</p>
             <h3>2. Description du service</h3>
@@ -675,7 +684,7 @@
             <h3>3. Essai gratuit</h3>
             <p>Le plan Essai est gratuit, sans carte bancaire, limité à 3 jours et à un quota de crédits. À son terme, aucun prélèvement n'a lieu : le client choisit librement de souscrire un plan payant ou d'arrêter.</p>
             <h3>4. Plans, crédits et prix</h3>
-            <p>Les plans, prix et quotas de crédits sont ceux affichés sur la page Tarifs au moment de la souscription, en francs suisses (CHF), hors taxes le cas échéant. Une mission consomme des crédits ; un crédit non utilisé à la fin de la période de facturation n'est pas reporté, sauf mention contraire sur la page Tarifs. Le client peut recharger des crédits à tout moment. BK-ENTREPRISE n'étant pas assujettie à la TVA en dessous du seuil légal suisse (CHF 100'000 de chiffre d'affaires annuel), aucune TVA n'est facturée à ce jour ; ce point sera mis à jour ici en cas d'assujettissement.</p>
+            <p>Les plans, prix et quotas de crédits sont ceux affichés sur la page Tarifs au moment de la souscription, en francs suisses (CHF), hors taxes le cas échéant. Chaque plan inclut un quota de crédits mensuel fixe, renouvelé chaque mois ; une mission consomme des crédits selon son niveau de travail (Rapide 1, Équilibré 6, Approfondi 12), et un crédit non utilisé à la fin du mois n'est pas reporté. Il n'existe ni plan illimité, ni recharge de crédits, ni facturation à l'usage : lorsque le quota est atteint, le client peut passer au plan supérieur, qui a son propre quota, sans aucun prélèvement supplémentaire automatique. Les plans Starter et Business ne sont plus proposés : ils continuent de s'appliquer, avec leurs crédits et leur prix d'origine, aux clients qui y sont déjà abonnés. BK-ENTREPRISE n'étant pas assujettie à la TVA en dessous du seuil légal suisse (CHF 100'000 de chiffre d'affaires annuel), aucune TVA n'est facturée à ce jour ; ce point sera mis à jour ici en cas d'assujettissement.</p>
             <h3>5. Paiement</h3>
             <p>Le paiement est dû d'avance, par carte bancaire via notre prestataire de paiement Stripe. BK-ENTREPRISE ne voit ni ne conserve les données de carte. En cas d'échec de paiement, l'accès aux fonctions payantes peut être suspendu jusqu'à régularisation.</p>
             <h3>6. Durée, renouvellement et résiliation</h3>

@@ -200,11 +200,14 @@ def main():
         check("facturation de la cliente Solo : forfait, credits, emplacements, Workers embauches",
               st == 200 and bill["planId"] == "solo" and bill["creditsTotal"] == 250 and bill["workerSlots"] == 1 and bill["hiredWorkers"] == ["alex"]
               and bill["hire"]["restricted"] is True and bill["hire"]["chloeIncluded"] is False, bill)
-        check("Solo/Trio ne sont pas proposes en libre-service (availablePlans) mais listes dans workerPlans",
-              "solo" not in [p["planId"] for p in bill["availablePlans"]] and "trio" not in [p["planId"] for p in bill["availablePlans"]]
+        # Expectations changed on 2026-10-12 (owner-validated price grid, docs/PRICING.md): availablePlans is now the plan picker of the grid
+        # (Solo, Trio, Equipe, Pro, Scale, Enterprise on quote; never the trial; Starter/Business only for a subscriber who is on them), and
+        # choosing Solo or Trio is still never free (see the next section). workerPlans is unchanged.
+        check("Solo/Trio sont dans le choix de forfait (availablePlans) et detailles dans workerPlans",
+              [p["planId"] for p in bill["availablePlans"]] == ["solo", "trio", "equipe", "pro", "scale", "enterprise"]
               and {p["planId"]: (p["credits"], p["workerSlots"]) for p in bill["workerPlans"]} == {"solo": (250, 1), "trio": (500, 3)}, bill["workerPlans"])
-        check("les forfaits existants sont inchanges dans availablePlans",
-              [p["planId"] for p in bill["availablePlans"]] == ["essai", "starter", "business", "pro", "scale", "enterprise"], bill["availablePlans"])
+        check("les forfaits herites (Starter, Business) ne sont plus proposes dans availablePlans",
+              "starter" not in [p["planId"] for p in bill["availablePlans"]] and "business" not in [p["planId"] for p in bill["availablePlans"]], bill["availablePlans"])
         st, bbill = bob.get("/api/billing")
         check("un client en Essai n'est pas restreint (workerSlots null, aucun Worker embauche)",
               bbill["planId"] == "essai" and bbill["workerSlots"] is None and bbill["hiredWorkers"] == [] and bbill["hire"]["restricted"] is False, bbill)
@@ -213,6 +216,12 @@ def main():
         for c, name in ((alice, "alice"), (bob, "bob")):
             for plan in ("solo", "trio"):
                 st, out = c.post("/api/billing/plan", {"planId": plan})
+                if name == "alice" and plan == "solo":
+                    # Expectation changed on 2026-10-12: alice IS on Solo already; asking for the plan she holds does nothing (no new cycle, no
+                    # Checkout, so no double subscription) instead of a 403.
+                    check("alice : redemander Solo, qu'elle a deja, est sans effet (aucun nouveau cycle)",
+                          st == 200 and out.get("planId") == "solo" and out.get("cycleStartUtc") == bill["cycleStartUtc"], (st, out))
+                    continue
                 check(f"{name} : passer en {plan} en libre-service est refuse (403 PLAN_BY_INVOICE)", st == 403 and out.get("error") == "PLAN_BY_INVOICE", (st, out))
         st, bbill2 = bob.get("/api/billing")
         check("le forfait de bob n'a pas change", bbill2["planId"] == "essai" and bbill2["creditsTotal"] == bbill["creditsTotal"], bbill2["planId"])

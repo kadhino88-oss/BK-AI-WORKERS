@@ -830,12 +830,16 @@ a:focus-visible,
 
 .pricing-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 18px;
   margin-bottom: 18px;
 }
 
-@media (max-width: 980px) {
+@media (max-width: 1180px) {
+  .pricing-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 900px) {
   .pricing-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
@@ -905,6 +909,14 @@ a:focus-visible,
   color: #8a8d96;
   margin-bottom: 14px;
 }
+
+.plan-credits {
+  font-size: 13.5px;
+  color: var(--ink-muted);
+  margin: 0 0 14px;
+}
+
+.plan-credits strong { color: var(--ink); font-size: 15px; }
 
 .plan-price-promo {
   font-size: 12px;
@@ -1511,21 +1523,22 @@ a:focus-visible,
   padding: 10px 14px;
 }
 
-.billing-recharge {
+.billing-upgrade {
+  margin-top: 12px;
   display: flex;
-  gap: 10px;
-  margin-bottom: 30px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 18px;
   flex-wrap: wrap;
+  background: var(--gold-dim);
+  border: 1px solid rgba(165, 118, 31, 0.28);
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
 }
 
-.billing-recharge input {
-  flex: 1;
-  min-width: 200px;
-  padding: 10px 14px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--card-border);
-  font-size: 14px;
-}
+.billing-upgrade p { margin: 0; font-size: 13.5px; }
+
+.billing-hire { margin-top: 12px; font-size: 13.5px; color: var(--ink-muted); }
 
 .billing-section-title {
   font-size: 18px;
@@ -3677,3 +3690,26 @@ body.iw-open { overflow: hidden; }
 }
 @media (prefers-reduced-motion: reduce) { .iw-overlay { backdrop-filter: none; } }
 /* ===== HIRE-UI END ===== */
+
+/* Page Tarifs : echelle de credits et aide « Quel Worker pour mon activite ? » */
+.pricing-scale { margin: 28px 0 8px; font-size: 14px; }
+.pricing-scale h2, .activity-helper h2 { font-size: 20px; margin: 0 0 8px; }
+.pricing-scale-list { margin: 8px 0 12px; padding-left: 20px; }
+.pricing-scale p { color: var(--ink-muted); }
+
+.activity-helper { margin: 34px 0 10px; padding: 22px 24px; background: #ffffff; border: 1px solid var(--card-border); border-radius: var(--radius); box-shadow: var(--shadow-card); }
+.activity-helper-sub { color: var(--ink-muted); font-size: 14px; margin: 0 0 14px; }
+.activity-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.activity-chip { border: 1px solid var(--card-border); background: #f2f1ec; color: var(--ink); border-radius: 999px; padding: 8px 14px; font: inherit; font-size: 13.5px; cursor: pointer; }
+.activity-chip:hover { border-color: var(--gold-light); }
+.activity-chip.active { background: var(--gold-dim); border-color: var(--gold); color: var(--gold); font-weight: 700; }
+.activity-chip:focus-visible, .activity-worker-link:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.activity-result { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+.activity-worker { display: flex; gap: 12px; align-items: flex-start; border: 1px solid var(--card-border); border-radius: var(--radius-sm); padding: 12px; }
+.activity-worker img { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; flex: 0 0 auto; }
+.activity-worker-name { font-weight: 800; }
+.activity-best { display: inline-block; margin-left: 6px; font-size: 11px; font-weight: 700; color: var(--gold); background: var(--gold-dim); border-radius: 999px; padding: 2px 8px; }
+.activity-worker-role { font-size: 12.5px; color: var(--ink-muted); margin-bottom: 4px; }
+.activity-worker-why { font-size: 13.5px; margin-bottom: 6px; }
+.activity-worker-link { font-size: 13px; color: var(--gold); font-weight: 700; }
+.level-note { font-size: 12px; color: var(--ink-muted); align-self: center; }

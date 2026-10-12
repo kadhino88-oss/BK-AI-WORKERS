@@ -41,6 +41,71 @@ function ConvertTo-StripeFormBody {
     return ($Parts -join "&")
 }
 
+function Get-StripeCheckoutFields {
+    <#
+    Champs d'une Checkout Session (fonction PURE : aucun appel reseau, testable sans Stripe — tests/pricing/test_stripe_fields.py).
+    Le prix d'un forfait vient de DEUX sources possibles :
+      - un Price ID Stripe cree par Kader (secret : prices / pricesAnnual) : s'il existe pour le forfait, il est utilise tel quel, comme
+        avant (aucun forfait deja en vente ne change de comportement) ;
+      - sinon, le MONTANT DU CATALOGUE du serveur (dashboard/server.py, PLAN_CATALOG, en centimes de franc suisse ; annuel = 10 mois) est
+        envoye en price_data : abonnement recurrent en CHF, produit nomme d'apres le forfait. C'est le cas des forfaits Solo, Trio et Equipe.
+    Un montant absent ou hors des bornes CHF 1 a CHF 100'000 est refuse (INVALID_AMOUNT) : on n'invente jamais un prix.
+    #>
+    param(
+        [Parameter(Mandatory=$true)][string]$PlanId,
+        [Parameter(Mandatory=$true)][string]$SuccessUrl,
+        [Parameter(Mandatory=$true)][string]$CancelUrl,
+        [ValidateSet("month", "year")][string]$Interval = "month",
+        [string]$ClientId = "",
+        [string]$PriceId = "",
+        [long]$AmountCents = 0,
+        [string]$PlanName = "",
+        [string]$LaunchCoupon = ""
+    )
+
+    $Fields = [ordered]@{
+        "mode"                          = "subscription"
+        "success_url"                   = $SuccessUrl
+        "cancel_url"                    = $CancelUrl
+    }
+    if (-not [string]::IsNullOrWhiteSpace($PriceId)) {
+        $Fields["line_items[0][price]"] = $PriceId
+    }
+    else {
+        if ($AmountCents -lt 100 -or $AmountCents -gt 10000000) {
+            throw "INVALID_AMOUNT"
+        }
+        $Label = if ($Interval -eq "year") { "annuel" } else { "mensuel" }
+        # Nom lisible sur la page de paiement Stripe : lettres, chiffres et ponctuation courante seulement, 60 caracteres au plus.
+        $SafeName = ($PlanName -replace '[^\p{L}\p{N} .\-]', '').Trim()
+        if ($SafeName.Length -gt 60) { $SafeName = $SafeName.Substring(0, 60) }
+        if ([string]::IsNullOrWhiteSpace($SafeName)) { $SafeName = $PlanId }
+        $Fields["line_items[0][price_data][currency]"]                     = "chf"
+        $Fields["line_items[0][price_data][unit_amount]"]                  = [string]$AmountCents
+        $Fields["line_items[0][price_data][recurring][interval]"]          = $Interval
+        $Fields["line_items[0][price_data][product_data][name]"]           = "BK-AI-WORKERS - $SafeName ($Label)"
+    }
+    $Fields["line_items[0][quantity]"]       = "1"
+    $Fields["metadata[bk_plan_id]"]          = $PlanId
+    $Fields["metadata[bk_interval]"]         = $Interval
+    if (-not [string]::IsNullOrWhiteSpace($ClientId)) {
+        $Fields["metadata[bk_client_id]"] = $ClientId
+    }
+
+    # Offre de lancement (-30% sur les 2 premiers mois) : coupon cree
+    # par Kader directement dans Stripe (pas un secret, juste un ID
+    # d'offre), applique automatiquement si BK_STRIPE_LAUNCH_COUPON
+    # est defini. Reservee au mensuel : sur un prix annuel, un coupon
+    # "2 mois" s'appliquerait a la totalite de la seule facture de
+    # l'annee (effet tres different d'une remise de lancement de 2
+    # mois) — a reconsiderer explicitement si Kader veut une offre
+    # de lancement dediee a l'annuel.
+    if ($Interval -eq "month" -and -not [string]::IsNullOrWhiteSpace($LaunchCoupon)) {
+        $Fields["discounts[0][coupon]"] = $LaunchCoupon.Trim()
+    }
+    return $Fields
+}
+
 function New-StripeCheckoutSession {
     <#
     Cree une vraie Checkout Session Stripe (mode test ou live selon la
@@ -63,7 +128,11 @@ function New-StripeCheckoutSession {
         # confirmation apres paiement sache QUEL client activer, sans
         # dependre uniquement du cookie de session encore present au
         # retour (filet de securite : la metadata Stripe fait foi).
-        [string]$ClientId = ""
+        [string]$ClientId = "",
+        # Montant du catalogue du serveur (centimes de CHF) et nom du forfait : utilises quand AUCUN Price ID n'est enregistre pour ce
+        # forfait (voir Get-StripeCheckoutFields). 0 = pas de montant fourni.
+        [long]$AmountCents = 0,
+        [string]$PlanName = ""
     )
 
     if (-not (Test-StripeConfigured)) {
@@ -73,36 +142,13 @@ function New-StripeCheckoutSession {
     try {
         $Secret = Get-StripeSecret
         $PriceId = if ($Interval -eq "year") { $Secret.pricesAnnual.$PlanId } else { $Secret.prices.$PlanId }
-        if (-not $PriceId) {
+        if (-not $PriceId -and $AmountCents -le 0) {
             $Label = if ($Interval -eq "year") { "annuel" } else { "mensuel" }
-            return [pscustomobject]@{ Status = "UNKNOWN_PLAN"; Detail = "Aucun Price ID Stripe $Label pour '$PlanId'." }
+            return [pscustomobject]@{ Status = "UNKNOWN_PLAN"; Detail = "Aucun Price ID Stripe $Label ni montant de catalogue pour '$PlanId'." }
         }
 
-        $Fields = [ordered]@{
-            "mode"                          = "subscription"
-            "success_url"                   = $SuccessUrl
-            "cancel_url"                    = $CancelUrl
-            "line_items[0][price]"          = $PriceId
-            "line_items[0][quantity]"       = "1"
-            "metadata[bk_plan_id]"          = $PlanId
-            "metadata[bk_interval]"         = $Interval
-        }
-        if (-not [string]::IsNullOrWhiteSpace($ClientId)) {
-            $Fields["metadata[bk_client_id]"] = $ClientId
-        }
-
-        # Offre de lancement (-30% sur les 2 premiers mois) : coupon cree
-        # par Kader directement dans Stripe (pas un secret, juste un ID
-        # d'offre), applique automatiquement si BK_STRIPE_LAUNCH_COUPON
-        # est defini. Reservee au mensuel : sur un prix annuel, un coupon
-        # "2 mois" s'appliquerait a la totalite de la seule facture de
-        # l'annee (effet tres different d'une remise de lancement de 2
-        # mois) — a reconsiderer explicitement si Kader veut une offre
-        # de lancement dediee a l'annuel.
-        $LaunchCoupon = $env:BK_STRIPE_LAUNCH_COUPON
-        if ($Interval -eq "month" -and -not [string]::IsNullOrWhiteSpace($LaunchCoupon)) {
-            $Fields["discounts[0][coupon]"] = $LaunchCoupon.Trim()
-        }
+        $Fields = Get-StripeCheckoutFields -PlanId $PlanId -SuccessUrl $SuccessUrl -CancelUrl $CancelUrl -Interval $Interval -ClientId $ClientId `
+            -PriceId ([string]$PriceId) -AmountCents $AmountCents -PlanName $PlanName -LaunchCoupon ([string]$env:BK_STRIPE_LAUNCH_COUPON)
 
         $Body = ConvertTo-StripeFormBody -Fields $Fields
 
