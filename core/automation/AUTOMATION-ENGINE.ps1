@@ -173,9 +173,15 @@ function Invoke-AutomationRun {
     dashboard/Submit-Task.ps1 (identite/session/token + gate d'autonomie
     + dispatch Worker ou Chloe + trace runtime/tasks/).
     #>
-    param([Parameter(Mandatory=$true)]$Automation)
+    param(
+        [Parameter(Mandatory=$true)]$Automation,
+        # Passage AUTOMATIQUE (cron ou tick) et non clic sur "Executer maintenant" : seul un passage automatique est coupe par la pause de
+        # l'installation du Worker (interrupteur d'arret, voir dashboard/installations.py) ; une mission lancee a la main reste possible.
+        [switch]$Scheduled
+    )
 
     Initialize-AutomationStore
+    $AllowedWorkersEnv = $null
 
     # -----------------------------------------------------------------
     # Garde-fou quota (correctif securite).
@@ -196,10 +202,20 @@ function Invoke-AutomationRun {
         $QuotaScript = Join-Path $Script:AutomationRoot "dashboard/quota-check.py"
         $PyCmd = if ($env:BK_PYTHON) { $env:BK_PYTHON } else { "python3" }
         if (Test-Path -LiteralPath $QuotaScript -PathType Leaf) {
-            $QuotaLine = & $PyCmd $QuotaScript $QuotaClientId 2>$null | Select-Object -Last 1
+            $QuotaMode = if ($Scheduled) { "scheduled" } else { "manual" }
+            $QuotaLine = & $PyCmd $QuotaScript $QuotaClientId ([string]$Automation.workerId) $QuotaMode 2>$null | Select-Object -Last 1
             if ($QuotaLine) {
                 $QuotaVerdict = $QuotaLine | ConvertFrom-Json
+                if (-not $QuotaVerdict.blocked -and $QuotaVerdict.PSObject.Properties.Name -contains "allowedWorkers" -and $QuotaVerdict.allowedWorkers) {
+                    # Offre "Worker a l'unite" : liste des Workers embauches, relue par Submit-Task.ps1 et Chloe (BK_ALLOWED_WORKERS).
+                    $AllowedWorkersEnv = [string]$QuotaVerdict.allowedWorkers
+                }
                 if ($QuotaVerdict.blocked) {
+                    $SkipStatus = switch ([string]$QuotaVerdict.code) {
+                        "WORKER_NOT_INCLUDED" { "worker_not_included" }
+                        "INSTALLATION_PAUSED" { "installation_paused" }
+                        default { "quota_exceeded" }
+                    }
                     # Quota epuise : on NE soumet PAS la tache. On trace le
                     # saut avec le MEME mecanisme de persistance qu'un run
                     # normal (meme forme de RunRecord + meme dossier runs/<id>/,
@@ -210,7 +226,7 @@ function Invoke-AutomationRun {
                     $SkipRecord = [ordered]@{
                         automationId = $Automation.id
                         ranAtUtc     = [DateTime]::UtcNow.ToString("o")
-                        status       = "quota_exceeded"
+                        status       = $SkipStatus
                         detail       = $QuotaVerdict.detail
                     }
                     $SkipDir = Join-Path $Script:AutomationRunsDir $Automation.id
@@ -225,7 +241,7 @@ function Invoke-AutomationRun {
                         foreach ($A in $Automations) {
                             if ($A.id -eq $Automation.id) {
                                 $A.lastRunAtUtc  = $SkipRecord.ranAtUtc
-                                $A.lastRunStatus = "quota_exceeded"
+                                $A.lastRunStatus = $SkipStatus
                                 $A.nextRunAtUtc  = [DateTime]::UtcNow.AddMinutes($A.frequencyMinutes).ToString("o")
                                 $A.runCount      = [int]$A.runCount + 1
                             }
@@ -277,6 +293,10 @@ function Invoke-AutomationRun {
     $Detail = $null
     $StdOutFile = [System.IO.Path]::GetTempFileName()
     $StdErrFile = [System.IO.Path]::GetTempFileName()
+    # Le sous-processus herite de l'environnement : on lui transmet la liste des Workers embauches (offre "Worker a l'unite"), ou on retire
+    # toute valeur heritee quand le client a acces a tous les Workers. L'ancienne valeur est restauree apres l'appel.
+    $PreviousAllowedWorkers = $env:BK_ALLOWED_WORKERS
+    if ($AllowedWorkersEnv) { $env:BK_ALLOWED_WORKERS = $AllowedWorkersEnv } else { Remove-Item Env:BK_ALLOWED_WORKERS -ErrorAction SilentlyContinue }
     try {
         $Proc = Start-Process -FilePath $PsExe -ArgumentList $ArgLine -NoNewWindow -Wait -PassThru `
             -RedirectStandardOutput $StdOutFile `
@@ -302,6 +322,7 @@ function Invoke-AutomationRun {
         $Detail = $_.Exception.Message
     }
     finally {
+        if ($null -ne $PreviousAllowedWorkers) { $env:BK_ALLOWED_WORKERS = $PreviousAllowedWorkers } else { Remove-Item Env:BK_ALLOWED_WORKERS -ErrorAction SilentlyContinue }
         if (Test-Path -LiteralPath $OutFile -PathType Leaf) { Remove-Item -LiteralPath $OutFile -Force -ErrorAction SilentlyContinue }
         Remove-Item -LiteralPath $StdOutFile -Force -ErrorAction SilentlyContinue
         Remove-Item -LiteralPath $StdErrFile -Force -ErrorAction SilentlyContinue
@@ -380,7 +401,7 @@ function Invoke-AutomationTick {
     foreach ($A in $Automations) {
         $NextRun = [DateTime]::Parse($A.nextRunAtUtc, $null, [System.Globalization.DateTimeStyles]::RoundtripKind)
         if ($NextRun -le $Now) {
-            $Result = Invoke-AutomationRun -Automation $A
+            $Result = Invoke-AutomationRun -Automation $A -Scheduled
             $Ran += [pscustomobject]@{ AutomationId = $A.id; Status = $Result.status }
         }
     }

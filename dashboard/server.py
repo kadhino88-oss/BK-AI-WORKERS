@@ -24,6 +24,7 @@ from urllib.parse import urlparse, unquote, parse_qs, urlencode
 import seo_pages
 import pwa_static
 import trust_pages
+import installations as inst
 
 # ---------------------------------------------------------------------
 # Ecritures concurrentes (2026-09-28) : le serveur traite les requetes en
@@ -530,6 +531,11 @@ def submit_task(worker_hint_text, worker_id="", plan_only=False, client_id="", l
     bannieres Write-Host des scripts imbriques)."""
     import tempfile, uuid
 
+    # Offre "Worker a l'unite" : DERNIER verrou, valable pour TOUS les points d'entree (routes, WhatsApp, essai, API publique) : un Worker
+    # non embauche ne demarre jamais de mission (donc aucun credit consomme), meme si une route l'avait oublie.
+    block = worker_block(client_id, worker_id or "-")
+    if block:
+        return block
     out_file = os.path.join(tempfile.gettempdir(), f"bkaiw-dashboard-{uuid.uuid4().hex}.json")
     try:
         cmd = [
@@ -555,6 +561,12 @@ def submit_task(worker_hint_text, worker_id="", plan_only=False, client_id="", l
             child_env["BK_MISSION_LEVEL"] = lvl
         else:
             child_env.pop("BK_MISSION_LEVEL", None)
+        # Liste des Workers embauches pour Submit-Task.ps1 / Chloe (le routeur ne peut choisir qu'eux) ; absente = tous les Workers.
+        allowed_env = allowed_workers_env(client_id)
+        if allowed_env is not None:
+            child_env["BK_ALLOWED_WORKERS"] = allowed_env
+        else:
+            child_env.pop("BK_ALLOWED_WORKERS", None)
         proc = subprocess.run(
             cmd,
             capture_output=True, timeout=600, env=child_env
@@ -2138,6 +2150,8 @@ def export_account_data(client_id):
         "companyProfile": get_company_profile(client_id),
         "billing": _billing_load(client_id),
         "missions": get_client_missions(client_id, limit=1000),
+        "installations": INSTALLS.list(client_id),
+        "hireRequests": [r for r in _read_hire_requests() if r.get("clientId") == client_id],
         "automations": all_auto,
         "connectedTools": providers,
         "whatsappLinked": bool(wa),
@@ -2178,6 +2192,13 @@ def _purge_client_mission_artifacts(client_id, task_ids):
                 pass
     shutil.rmtree(os.path.join(ROOT, "runtime", "threads", client_id), ignore_errors=True)   # memoire de conversation v2
     shutil.rmtree(os.path.join(ROOT, "runtime", "client-memory", client_id), ignore_errors=True)   # notes durables
+    INSTALLS.delete_client(client_id)                                                              # installations des Workers (fiches de connaissances)
+    try:                                                                                           # demandes d'embauche du client
+        rows = _read_hire_requests()
+        if any(r.get("clientId") == client_id for r in rows):
+            _write_hire_requests([r for r in rows if r.get("clientId") != client_id])
+    except Exception:
+        pass
     try:
         for name in os.listdir(ASYNC_JOBS_DIR):
             if not name.endswith(".json"):
@@ -2466,6 +2487,8 @@ def get_admin_overview():
             # l'afficher ici induirait Kader en erreur sur sa propre
             # limite reelle (aucune) — on le masque a la source.
             "creditsTotal": None if c["isOwner"] else billing["creditsTotal"],
+            "workerSlots": None if c["isOwner"] else billing["workerSlots"],
+            "hiredWorkers": [] if c["isOwner"] else billing["hiredWorkers"],
         })
 
     rows.sort(key=lambda r: r["totalMissions"], reverse=True)
@@ -2476,6 +2499,10 @@ def get_admin_overview():
         "totalMissionsAllClients": total_missions,
         "totalAutomationsActiveAllClients": total_automations_active,
         "clients": rows,
+        # Offre "Worker a l'unite" : demandes d'embauche en attente (a traiter avec POST /api/admin/grant-workers une fois la facture reglee).
+        "hireRequests": [dict(r, workerName=worker_display_name(r.get("workerId")),
+                              clientLabel=next((c["label"] for c in clients if c["clientId"] == r.get("clientId")), r.get("clientId")))
+                         for r in open_hire_requests()],
     }
 
 
@@ -2514,12 +2541,19 @@ PLAN_CATALOG = {
     "pro":        {"name": "Pro",        "credits": 1500},
     "scale":      {"name": "Scale",      "credits": 4000},
     "enterprise": {"name": "Enterprise", "credits": None},  # illimite, sur devis
+    # Offre "Worker a l'unite" (2026-10-12) : un forfait mensuel qui ne donne acces qu'aux Workers EMBAUCHES (workerSlots), avec son
+    # propre pot de credits ; une fois le pot epuise, on passe au forfait superieur (pas de missions illimitees). Credits provisoires
+    # (250 / 500), a ajuster apres mesure des couts reels. Activation : par le proprietaire apres facture reglee (byInvoice) tant qu'aucun
+    # prix Stripe n'est cree -> jamais de bascule libre-service gratuite vers ces forfaits. Tous les autres forfaits gardent TOUS les Workers.
+    "solo":       {"name": "Solo",       "credits": 250, "workerSlots": inst.PLAN_WORKER_SLOTS["solo"], "byInvoice": True},
+    "trio":       {"name": "Trio",       "credits": 500, "workerSlots": inst.PLAN_WORKER_SLOTS["trio"], "byInvoice": True},
 }
 
 # Plans qui passent par une vraie Checkout Session Stripe quand Stripe
 # est configure (Essai = gratuit, Enterprise = sur devis -> jamais de
 # checkout self-service pour ces deux-la).
 PAID_PLANS_WITH_CHECKOUT = {"starter", "business", "pro", "scale"}
+INVOICE_ONLY_PLANS = {pid for pid, p in PLAN_CATALOG.items() if p.get("byInvoice")}   # solo, trio : accordes par le proprietaire
 
 
 def _billing_default_state():
@@ -2596,7 +2630,13 @@ def get_billing(client_id=DASHBOARD_CLIENT_ID):
         "alertThresholdReached": percent_used is not None and percent_used >= 80,
         "unlimited": total_credits is None,
         "history": list(reversed(state.get("history", [])))[:20],
-        "availablePlans": [{"planId": pid, "name": p["name"], "credits": p["credits"]} for pid, p in PLAN_CATALOG.items()],
+        # Forfaits en libre-service (Solo/Trio sont accordes par le proprietaire apres facture : ils ont leur propre liste, workerPlans).
+        "availablePlans": [{"planId": pid, "name": p["name"], "credits": p["credits"]} for pid, p in PLAN_CATALOG.items() if not p.get("byInvoice")],
+        "workerPlans": [{"planId": pid, "name": p["name"], "credits": p["credits"], "workerSlots": p["workerSlots"],
+                         "chloeIncluded": pid in inst.PLANS_WITH_CHLOE} for pid, p in PLAN_CATALOG.items() if p.get("workerSlots")],
+        "workerSlots": inst.worker_slots(state),
+        "hiredWorkers": inst.hired_workers(state),
+        "hire": inst.hire_summary(state),
         "missionLevels": public_mission_levels(),
     }
 
@@ -2612,6 +2652,7 @@ def set_billing_plan(plan_id, via_stripe=False, stripe_subscription_id=None, cli
     state["planId"] = plan_id
     state["cycleStartUtc"] = now
     state["extraCredits"] = 0
+    inst.adapt_hired_to_plan(state)   # forfait restreint (solo/trio) : liste tronquee aux emplacements ; autre forfait : liste vidée
     # Un changement simule (ou vers Essai/Enterprise) n'a pas de vrai
     # abonnement Stripe derriere : on efface toute reference precedente
     # pour ne jamais tenter d'annuler un abonnement qui n'est plus le
@@ -2649,6 +2690,7 @@ def cancel_billing_plan(client_id=DASHBOARD_CLIENT_ID):
         state["cycleStartUtc"] = now
         state["extraCredits"] = 0
         state["stripeSubscriptionId"] = None
+        inst.adapt_hired_to_plan(state)
         state.setdefault("history", []).append({
             "dateUtc": now,
             "event": f"Abonnement annule ({old_name}) — retour au plan Essai ({label}).",
@@ -2680,6 +2722,341 @@ def subscription_blocks_mission(client_id, level=None):
         return (f"Il vous reste {remaining} crédit(s), ce niveau en demande {needed}. "
                 "Choisissez un niveau plus rapide ou souscrivez un abonnement pour continuer.")
     return "Votre quota est épuisé. Souscrivez un abonnement pour continuer à confier des missions."
+
+
+# ---------------------------------------------------------------------
+# OFFRE "WORKER A L'UNITE" (2026-10-12) : un client en forfait Solo/Trio n'accede qu'aux Workers qu'il a EMBAUCHES (liste hiredWorkers de
+# son etat de facturation, voir installations.py) et peut installer chacun selon ses competences (fiche runtime/installations/<ClientId>/).
+# Le refus est toujours le meme : HTTP 403, error WORKER_NOT_INCLUDED, message francais, AUCUN credit consomme (aucune mission n'est creee).
+# Le proprietaire (CLI-DASHBOARD) et l'essai public ne sont jamais restreints, comme pour le quota.
+# ---------------------------------------------------------------------
+INSTALLS = inst.InstallationStore(ROOT)
+HIRE_REQUESTS_PATH = os.path.join(ROOT, "core", "hire", "data", "hire-requests.json")
+HIRE_REQUEST_MESSAGE_MAX = 500
+HIRE_LIMITS = {   # action -> (maximum, fenetre en secondes) ; par client (par proprietaire pour grant)
+    "hire": (20, 3600), "hire-request": (5, 86400), "grant": (60, 3600), "install-write": (300, 3600), "install-status": (60, 3600),
+}
+HIRE_RATE = {}
+HIRE_BODY_LIMITS = {"hire": 2000, "hire-request": 3000, "grant": 5000, "install-write": 200000, "install-status": 2000}
+HIRE_NOTIFY_MAX_PER_DAY = 30
+_HIRE_NOTIFIED = {"day": "", "n": 0}
+
+
+def hire_rate_ok(action, key):
+    limit, window = HIRE_LIMITS[action]
+    with _STATE_LOCK:
+        rows = _recent(HIRE_RATE, f"{action}|{key}", window)
+        if len(rows) >= limit:
+            return False
+        HIRE_RATE[f"{action}|{key}"] = rows + [time.time()]
+    return True
+
+
+def _billing_state_readonly(client_id):
+    """Etat de facturation du client SANS le creer (contrairement a _billing_load) : pour les controles d'acces. {} si le client n'a pas
+    encore de fichier (acces normal) ; None si le fichier existe mais est illisible -> les controles REFUSENT (on n'ouvre jamais par defaut)."""
+    path = _billing_path(client_id)
+    if not os.path.isfile(path):
+        return {}
+    for _ in range(2):          # un lecteur peut tomber pile pendant un remplacement de fichier : un second essai
+        state = load_json(path, None)
+        if isinstance(state, dict):
+            return state
+        time.sleep(0.05)
+    return None
+
+
+def _is_customer_id(client_id):
+    return bool(CLIENT_ID_RE.fullmatch(client_id or ""))
+
+
+def worker_display_name(worker_id):
+    wid = str(worker_id or "").lower()
+    if not inst.WORKER_ID_RE.match(wid):
+        return "Ce Worker"
+    ident = load_json(os.path.join(worker_base_dir(wid), "identity", "identity.json"), {}) or {}
+    return str(ident.get("name") or wid.capitalize())
+
+
+def worker_block(client_id, worker_id):
+    """None si ce client peut confier une mission a ce Worker, sinon la reponse d'erreur (HTTP 403) a renvoyer telle quelle."""
+    if not _is_customer_id(client_id):
+        return None
+    state = _billing_state_readonly(client_id)
+    if state is None:
+        return {"error": "WORKER_NOT_INCLUDED", "detail": "Votre abonnement n'a pas pu être lu pour le moment. Réessayez dans un instant.",
+                "workerId": None, "hire": None}
+    if inst.worker_allowed(state, worker_id):
+        return None
+    wid = str(worker_id or "").lower()
+    return {"error": "WORKER_NOT_INCLUDED", "detail": inst.refusal_detail(state, wid, worker_display_name),
+            "workerId": wid if inst.WORKER_ID_RE.match(wid) else None, "hire": inst.hire_summary(state)}
+
+
+def allowed_workers_env(client_id):
+    """Valeur de BK_ALLOWED_WORKERS pour les scripts PowerShell : liste de Workers separes par des virgules, "-" quand aucun Worker n'est
+    autorise, None (variable absente) quand le client a acces a tous les Workers."""
+    if not _is_customer_id(client_id):
+        return None
+    state = _billing_state_readonly(client_id)
+    if state is None:
+        return "-"
+    allowed = inst.allowed_workers(state)
+    return None if allowed is None else (",".join(allowed) or "-")
+
+
+def _pause_installation(client_id, worker_id):
+    """Interrupteur d'arret : un Worker qui n'est plus embauche ne garde aucune installation active."""
+    try:
+        if INSTALLS.get(client_id, worker_id):
+            INSTALLS.set_status(client_id, worker_id, "paused")
+    except inst.InstallationError:
+        pass
+
+
+def _read_hire_requests():
+    rows = load_json(HIRE_REQUESTS_PATH, []) or []
+    return [r for r in rows if isinstance(r, dict)]
+
+
+def _write_hire_requests(rows):
+    os.makedirs(os.path.dirname(HIRE_REQUESTS_PATH), exist_ok=True)
+    _write_json_atomic(HIRE_REQUESTS_PATH, rows[-500:], ensure_ascii=False, indent=2)
+
+
+@_state_locked
+def _close_hire_requests(client_id, worker_ids, status):
+    rows = _read_hire_requests()
+    changed = False
+    for r in rows:
+        if r.get("clientId") == client_id and r.get("status") == "open" and r.get("workerId") in worker_ids:
+            r["status"] = status
+            r["closedAtUtc"] = datetime.datetime.utcnow().isoformat() + "Z"
+            changed = True
+    if changed:
+        _write_hire_requests(rows)
+
+
+def open_hire_requests(client_id=None):
+    return [r for r in _read_hire_requests() if r.get("status") == "open" and (client_id is None or r.get("clientId") == client_id)]
+
+
+def _notify_owner_hire_request(rec, account):
+    """E-mail au proprietaire (meme chemin que le programme pilote : adresse BK_PILOT_NOTIFY_EMAIL ou fiche du standard). Sans adresse
+    configuree la demande reste visible dans l'apercu proprietaire. Renvoie True si un envoi a ete lance."""
+    to = pilot_program.owner_notify_address(ROOT)
+    if not to:
+        print("[hire] demande d'embauche enregistree ; aucune adresse proprietaire configuree (BK_PILOT_NOTIFY_EMAIL)", flush=True)
+        return False
+    import html as _html
+    today = datetime.date.today().isoformat()
+    with _STATE_LOCK:
+        if _HIRE_NOTIFIED["day"] != today:
+            _HIRE_NOTIFIED.update(day=today, n=0)
+        if _HIRE_NOTIFIED["n"] >= HIRE_NOTIFY_MAX_PER_DAY:
+            print("[hire] plafond journalier d'e-mails atteint ; la demande reste dans l'apercu proprietaire", flush=True)
+            return False
+        _HIRE_NOTIFIED["n"] += 1
+    esc = lambda v: _html.escape(str(v or "—"))    # noqa: E731 - tout ce qui vient du client est echappe
+    worker = worker_display_name(rec["workerId"])
+    company = (account or {}).get("companyName") or "—"
+    subject = f"Demande d'embauche : {worker} ({company})"[:150]
+    rows = [("Référence", rec["id"]), ("Client", rec["clientId"]), ("Entreprise", company), ("E-mail", (account or {}).get("email")),
+            ("Worker demandé", worker), ("Message", rec.get("message"))]
+    html_body = mailer.brand_email("Demande d'embauche d'un Worker", "<table>" + "".join(
+        f"<tr><td><b>{esc(k)}</b></td><td>{esc(v)}</td></tr>" for k, v in rows) + "</table>"
+        "<p>Pour l'accorder après règlement de la facture : POST /api/admin/grant-workers.</p>")
+    text = "\n".join(f"{k} : {v or '—'}" for k, v in rows)
+
+    def _send():
+        try:
+            ok, err = mailer.send_email(to, subject, html_body, text, gmail_bridge=run_mailer_bridge)
+            print("[hire] e-mail au proprietaire : " + ("envoye" if ok else f"ECHEC ({err})"), flush=True)
+        except Exception as e:  # noqa: BLE001 - jamais de demande perdue a cause d'un e-mail
+            print(f"[hire] e-mail au proprietaire : ECHEC ({type(e).__name__})", flush=True)
+
+    threading.Thread(target=_send, daemon=True).start()
+    return True
+
+
+@_state_locked
+def record_hire_request(client_id, worker_id, message):
+    """Enregistre la demande d'un client pour un Worker (une seule demande ouverte par client et par Worker). (fiche, creee)."""
+    for r in open_hire_requests(client_id):
+        if r.get("workerId") == worker_id:
+            return r, False
+    rec = {"id": "HRQ-" + secrets.token_hex(4).upper(), "clientId": client_id, "workerId": worker_id,
+           "message": str(message or "").strip()[:HIRE_REQUEST_MESSAGE_MAX], "status": "open",
+           "createdAtUtc": datetime.datetime.utcnow().isoformat() + "Z"}
+    _write_hire_requests(_read_hire_requests() + [rec])
+    return rec, True
+
+
+@_state_locked
+def hire_worker(client_id, worker_id, replace_id=None):
+    """Le client choisit un Worker tant qu'il reste un emplacement ; plein : il en remplace un (un echange par 30 jours). (payload, statut)."""
+    if not _is_customer_id(client_id):
+        return {"error": "NO_RESTRICTED_PLAN", "detail": "Ce compte a accès à tous les Workers : il n'y a rien à embaucher."}, 409
+    state = _billing_load(client_id)
+    try:
+        res = inst.hire(state, worker_id, replace_id, known_ids=set(get_worker_ids()), name_of=worker_display_name)
+    except inst.HireError as e:
+        return dict(e.extra, error=e.code, detail=e.detail), e.status
+    if not res["alreadyHired"]:
+        _billing_save(state, client_id)
+        if res["replaced"]:
+            _pause_installation(client_id, res["replaced"])
+        _close_hire_requests(client_id, {res["hired"]}, "hired")
+        log_activity("hire", clientId=client_id, hired=res["hired"], replaced=res["replaced"])
+    return dict(res, ok=True, hire=inst.hire_summary(state)), 200
+
+
+@_state_locked
+def grant_workers(client_id, plan_id, workers, new_cycle=True):
+    """Proprietaire, apres facture reglee : active le forfait Solo/Trio d'un client et fixe la liste de ses Workers. (payload, statut)."""
+    if not _is_customer_id(client_id) or not any(a.get("clientId") == client_id for a in _load_accounts()):
+        return {"error": "CLIENT_NOT_FOUND", "detail": "Aucun compte client avec cet identifiant."}, 404
+    if plan_id not in inst.PLAN_WORKER_SLOTS:
+        return {"error": "INVALID_PLAN", "detail": "Forfait attendu : " + " ou ".join(sorted(inst.PLAN_WORKER_SLOTS)) + "."}, 400
+    state = _billing_load(client_id)
+    if state.get("stripeSubscriptionId"):
+        return {"error": "ACTIVE_SUBSCRIPTION", "detail": "Ce client a un abonnement Stripe actif : annulez-le avant d'attribuer un forfait sur facture."}, 409
+    old_plan, old_hired = state.get("planId"), inst.hired_workers(state)
+    plan_changed = old_plan != plan_id
+    now = datetime.datetime.utcnow().isoformat() + "Z"
+    state["planId"] = plan_id
+    if plan_changed or new_cycle:
+        state["cycleStartUtc"] = now
+        state["extraCredits"] = 0
+    old_name = PLAN_CATALOG.get(old_plan or "essai", PLAN_CATALOG["essai"])["name"]
+    state.setdefault("history", []).append({
+        "dateUtc": now, "event": f"Forfait {PLAN_CATALOG[plan_id]['name']} activé par BK Entreprise (facture réglée), ancien forfait : {old_name}."})
+    inst.adapt_hired_to_plan(state, plan_changed=plan_changed)
+    try:
+        clean = inst.grant(state, workers, known_ids=set(get_worker_ids()), name_of=worker_display_name)
+    except inst.HireError as e:
+        return dict(e.extra, error=e.code, detail=e.detail), e.status
+    _billing_save(state, client_id)
+    for removed in old_hired:
+        if removed not in clean:
+            _pause_installation(client_id, removed)
+    _close_hire_requests(client_id, set(clean), "granted")
+    log_activity("grant_workers", clientId=client_id, planId=plan_id, workers=clean)
+    plan = PLAN_CATALOG[plan_id]
+    return {"ok": True, "clientId": client_id, "planId": plan_id, "planName": plan["name"], "credits": plan["credits"],
+            "newCycle": bool(plan_changed or new_cycle), "hire": inst.hire_summary(state)}, 200
+
+
+def _connected_connector_ids(client_id, profile):
+    """Connecteurs du profil que CE client a reellement connectes (fichier d'identifiant present). None pour le proprietaire (identifiants globaux)."""
+    if not _is_customer_id(client_id):
+        return None
+    configured = get_client_configured_providers(client_id)
+    out = set()
+    for cid in inst.profile_connector_ids(profile):
+        base = cid.removesuffix(".controlled")
+        if CONNECTOR_ID_TO_CREDENTIAL_PROVIDER.get(base, base) in configured:
+            out.add(cid)
+    return out
+
+
+def _install_worker_ok(worker_id):
+    return isinstance(worker_id, str) and worker_id in get_worker_ids()
+
+
+def _installation_view(client_id, rec, profile, entitled):
+    return dict(rec, workerName=worker_display_name(rec.get("workerId")), entitled=entitled,
+                readiness=INSTALLS.readiness(rec, profile, connected=_connected_connector_ids(client_id, profile)))
+
+
+def installation_profile_payload(client_id, worker_id):
+    """GET /api/workers/<id>/install-profile : le profil du Worker + l'installation de CE client et ce qu'il manque pour l'activer."""
+    if not _install_worker_ok(worker_id):
+        return {"error": "UNKNOWN_WORKER"}, 404
+    profile = inst.load_profile(ROOT, worker_id)
+    if profile is None:
+        return {"error": "NO_INSTALL_PROFILE", "detail": "Ce Worker n'a pas encore de fiche d'installation."}, 404
+    entitled = worker_block(client_id, worker_id) is None
+    rec = INSTALLS.get(client_id, worker_id)
+    connected = _connected_connector_ids(client_id, profile)
+    status = {cid: (cid in connected if connected is not None else None) for cid in sorted(inst.profile_connector_ids(profile))}
+    return {"workerId": worker_id, "workerName": worker_display_name(worker_id), "profile": profile, "entitled": entitled,
+            "installation": rec, "readiness": INSTALLS.readiness(rec, profile, connected=connected) if rec else None,
+            "connectorStatus": status, "liveChannels": list(inst.live_channels(profile))}, 200
+
+
+def installations_payload(client_id):
+    """GET /api/installations : toutes les installations de CE client, avec ce qu'il manque pour activer chacune."""
+    items = []
+    for rec in INSTALLS.list(client_id):
+        wid = rec.get("workerId")
+        profile = inst.load_profile(ROOT, wid)
+        items.append(_installation_view(client_id, rec, profile, worker_block(client_id, wid) is None))
+    return {"installations": items}
+
+
+def save_installation(client_id, worker_id, body):
+    """POST /api/installations : enregistre un brouillon (jamais l'activation). (payload, statut)."""
+    if not _install_worker_ok(worker_id):
+        return {"error": "UNKNOWN_WORKER"}, 404
+    profile = inst.load_profile(ROOT, worker_id)
+    if profile is None:
+        return {"error": "NO_INSTALL_PROFILE", "detail": "Ce Worker n'a pas encore de fiche d'installation."}, 404
+    block = worker_block(client_id, worker_id)
+    if block:
+        return block, 403
+    try:
+        rec, warnings = INSTALLS.upsert_with_warnings(client_id, worker_id, {"services": body.get("services"), "notes": body.get("notes")})
+    except inst.InstallationError as e:
+        return {"error": "INSTALLATION_INVALID", "detail": "Certains champs sont à corriger.", "errors": e.errors}, 400
+    return {"ok": True, "installation": _installation_view(client_id, rec, profile, True), "warnings": warnings}, 200
+
+
+def set_installation_status(client_id, worker_id, status):
+    """POST /api/installations/status : activer (seulement si rien ne manque et si le Worker est embauche), mettre en pause, repasser en essai."""
+    if not _install_worker_ok(worker_id):
+        return {"error": "UNKNOWN_WORKER"}, 404
+    if status not in inst.STATUSES:
+        return {"error": "INVALID_STATUS", "detail": "Statut attendu : active, paused ou draft."}, 400
+    profile = inst.load_profile(ROOT, worker_id)
+    rec = INSTALLS.get(client_id, worker_id)
+    if rec is None:
+        return {"error": "NO_INSTALLATION", "detail": "Aucune installation pour ce Worker : enregistrez d'abord sa configuration."}, 404
+    if status == "active":
+        block = worker_block(client_id, worker_id)
+        if block:
+            return block, 403
+    try:
+        rec = INSTALLS.set_status(client_id, worker_id, status, connected=_connected_connector_ids(client_id, profile))
+    except inst.InstallationError as e:
+        return {"error": "NOT_READY", "detail": "L'installation n'est pas complète : " + " ".join(e.errors), "errors": e.errors,
+                "readiness": e.errors}, 409
+    log_activity("installation", clientId=client_id, workerId=worker_id, status=status)
+    return {"ok": True, "installation": _installation_view(client_id, rec, profile, worker_block(client_id, worker_id) is None)}, 200
+
+
+def automation_worker(client_id, automation_id):
+    """Worker d'une automatisation de CE client (None si elle n'existe pas ou appartient a un autre) : sert a verifier le droit d'acces."""
+    try:
+        with open(os.path.join(ROOT, "core", "automation", "data", "automations.json"), encoding="utf-8-sig") as f:
+            autos = json.load(f) or []
+    except Exception:
+        return None
+    if isinstance(autos, dict):
+        autos = [autos]
+    for a in autos:
+        if isinstance(a, dict) and a.get("id") == automation_id and (a.get("clientId") or DASHBOARD_CLIENT_ID) == client_id:
+            return str(a.get("workerId") or "").lower() or None
+    return None
+
+
+def installation_paused(client_id, worker_id):
+    """True quand le client a mis l'installation de ce Worker en pause (interrupteur d'arret : plus aucune mission automatique)."""
+    try:
+        rec = INSTALLS.get(client_id, str(worker_id or "").lower())
+    except Exception:
+        return False
+    return bool(rec) and rec.get("status") == "paused"
 
 
 @_state_locked
@@ -3064,6 +3441,31 @@ class Handler(BaseHTTPRequestHandler):
     def _send_account_required(self):
         self._send_json({"error": "ACCOUNT_REQUIRED"}, 401)
 
+    def _worker_not_included(self, client_id, worker_id):
+        """Offre "Worker a l'unite" : True (reponse 403 WORKER_NOT_INCLUDED deja envoyee) si ce client n'a pas embauche ce Worker."""
+        block = worker_block(client_id, worker_id)
+        if block:
+            self._send_json(block, 403)
+            return True
+        return False
+
+    def _read_json_limited(self, limit):
+        """Corps JSON d'une requete d'ecriture, avec taille maximale : renvoie le dict, ou None quand la reponse d'erreur (413) est deja envoyee."""
+        try:
+            length = int(self.headers.get("Content-Length", 0) or 0)
+        except ValueError:
+            length = -1
+        if length < 0 or length > limit:
+            self.close_connection = True
+            self._send_json({"error": "TOO_LARGE"}, 413)
+            return None
+        raw = self.rfile.read(length) if length else b"{}"
+        try:
+            body = json.loads(raw.decode("utf-8"))
+        except Exception:
+            body = {}
+        return body if isinstance(body, dict) else {}
+
     def _public_api_key(self):
         """Cle API pour /api/public/v1/* : header Authorization: Bearer
         <cle> (convention Zapier/Make "API Key" standard) ou X-Api-Key,
@@ -3186,6 +3588,28 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json({"total": len(workers), "categories": counts})
         elif path == "/api/chloe":
             self._send_json(build_worker_summary("chloe"))
+        elif path == "/api/workers/hired":
+            # Offre "Worker a l'unite" : emplacements, Workers embauches, echange possible, demandes en cours (reserve au compte connecte).
+            client_id = self._resolve_client_id()
+            if not client_id:
+                self._send_account_required()
+                return
+            state = _billing_load(client_id) if _is_customer_id(client_id) else {}
+            self._send_json({"hire": inst.hire_summary(state), "planName": PLAN_CATALOG.get(state.get("planId") or "essai", PLAN_CATALOG["essai"])["name"],
+                             "openRequests": [r.get("workerId") for r in open_hire_requests(client_id)]})
+        elif path.startswith("/api/workers/") and path.endswith("/install-profile") and len(path.strip("/").split("/")) == 4:
+            client_id = self._resolve_client_id()
+            if not client_id:
+                self._send_account_required()
+                return
+            payload, status = installation_profile_payload(client_id, path.split("/")[3])
+            self._send_json(payload, status)
+        elif path == "/api/installations":
+            client_id = self._resolve_client_id()
+            if not client_id:
+                self._send_account_required()
+                return
+            self._send_json(installations_payload(client_id))
         elif path.startswith("/api/workers/") and path.endswith("/activity"):
             wid = path.split("/")[3]
             if wid not in get_worker_ids() and wid != "chloe":
@@ -3798,6 +4222,8 @@ class Handler(BaseHTTPRequestHandler):
             if not client_id:
                 self._send_account_required()
                 return
+            if self._worker_not_included(client_id, "chloe"):
+                return
             block = subscription_blocks_mission(client_id)
             if block:
                 self._send_json({"error": "SUBSCRIPTION_REQUIRED", "detail": block}, 402)
@@ -3824,6 +4250,8 @@ class Handler(BaseHTTPRequestHandler):
             if not client_id:
                 self._send_account_required()
                 return
+            if self._worker_not_included(client_id, "chloe"):
+                return
             length = int(self.headers.get("Content-Length", 0))
             raw = self.rfile.read(length) if length else b"{}"
             try:
@@ -3849,6 +4277,8 @@ class Handler(BaseHTTPRequestHandler):
             if not client_id:
                 self._send_account_required()
                 return
+            if self._worker_not_included(client_id, "chloe"):
+                return
             length = int(self.headers.get("Content-Length", 0))
             raw = self.rfile.read(length) if length else b"{}"
             try:
@@ -3869,6 +4299,8 @@ class Handler(BaseHTTPRequestHandler):
             client_id = self._resolve_client_id()
             if not client_id:
                 self._send_account_required()
+                return
+            if self._worker_not_included(client_id, wid):
                 return
             block = subscription_blocks_mission(client_id)
             if block:
@@ -3898,6 +4330,8 @@ class Handler(BaseHTTPRequestHandler):
             client_id = self._resolve_client_id()
             if not client_id:
                 self._send_account_required()
+                return
+            if self._worker_not_included(client_id, wid):
                 return
             length = int(self.headers.get("Content-Length", 0))
             raw = self.rfile.read(length) if length else b"{}"
@@ -3944,6 +4378,102 @@ class Handler(BaseHTTPRequestHandler):
             except Exception:
                 pass
             self._send_json(result)
+        elif path == "/api/workers/hire":
+            # Offre "Worker a l'unite" : le client choisit son Worker (Solo : 1, Trio : 3). Emplacements pleins : replaceWorkerId, une fois par 30 jours.
+            client_id = self._resolve_client_id()
+            if not client_id:
+                self._send_account_required()
+                return
+            if not hire_rate_ok("hire", client_id):
+                self._send_json({"error": "RATE_LIMITED", "detail": "Trop de tentatives : réessayez dans un moment."}, 429)
+                return
+            body = self._read_json_limited(HIRE_BODY_LIMITS["hire"])
+            if body is None:
+                return
+            payload, status = hire_worker(client_id, str(body.get("workerId") or "").strip().lower(), body.get("replaceWorkerId"))
+            self._send_json(payload, status)
+        elif path.startswith("/api/workers/") and path.endswith("/hire-request") and len(path.strip("/").split("/")) == 4:
+            wid = path.split("/")[3]
+            if wid not in get_worker_ids():
+                self._send_json({"error": "UNKNOWN_WORKER"}, 404)
+                return
+            client_id = self._resolve_client_id()
+            if not client_id:
+                self._send_account_required()
+                return
+            if not _is_customer_id(client_id) or worker_block(client_id, wid) is None:
+                self._send_json({"error": "ALREADY_INCLUDED", "detail": "Ce Worker fait déjà partie de votre forfait."}, 409)
+                return
+            if not hire_rate_ok("hire-request", client_id):
+                self._send_json({"error": "RATE_LIMITED", "detail": "Vous avez déjà envoyé plusieurs demandes aujourd'hui : nous revenons vers vous."}, 429)
+                return
+            body = self._read_json_limited(HIRE_BODY_LIMITS["hire-request"])
+            if body is None:
+                return
+            rec, created = record_hire_request(client_id, wid, body.get("message"))
+            account = next((a for a in _load_accounts() if a.get("clientId") == client_id), None)
+            notified = _notify_owner_hire_request(rec, account) if created else False
+            log_activity("hire_request", clientId=client_id, workerId=wid)
+            self._send_json({"ok": True, "requestId": rec["id"], "alreadyRequested": not created, "notified": notified})
+        elif path == "/api/admin/grant-workers":
+            # Proprietaire uniquement (porte historique, jamais une session de compte client) : a appeler une fois la facture reglee.
+            if not self._gate_authenticated():
+                self._send_gate_required()
+                return
+            if not hire_rate_ok("grant", "owner"):
+                self._send_json({"error": "RATE_LIMITED"}, 429)
+                return
+            body = self._read_json_limited(HIRE_BODY_LIMITS["grant"])
+            if body is None:
+                return
+            payload, status = grant_workers(str(body.get("clientId") or "").strip(), str(body.get("planId") or "").strip().lower(),
+                                            body.get("workers"), new_cycle=body.get("newCycle") is not False)
+            self._send_json(payload, status)
+        elif path == "/api/installations":
+            client_id = self._resolve_client_id()
+            if not client_id:
+                self._send_account_required()
+                return
+            if not hire_rate_ok("install-write", client_id):
+                self._send_json({"error": "RATE_LIMITED", "detail": "Trop d'enregistrements : réessayez dans un moment."}, 429)
+                return
+            body = self._read_json_limited(HIRE_BODY_LIMITS["install-write"])
+            if body is None:
+                return
+            payload, status = save_installation(client_id, str(body.get("workerId") or "").strip().lower(), body)
+            self._send_json(payload, status)
+        elif path == "/api/installations/status":
+            client_id = self._resolve_client_id()
+            if not client_id:
+                self._send_account_required()
+                return
+            if not hire_rate_ok("install-status", client_id):
+                self._send_json({"error": "RATE_LIMITED", "detail": "Trop de changements : réessayez dans un moment."}, 429)
+                return
+            body = self._read_json_limited(HIRE_BODY_LIMITS["install-status"])
+            if body is None:
+                return
+            payload, status = set_installation_status(client_id, str(body.get("workerId") or "").strip().lower(), body.get("status"))
+            self._send_json(payload, status)
+        elif path == "/api/installations/delete":
+            client_id = self._resolve_client_id()
+            if not client_id:
+                self._send_account_required()
+                return
+            if not hire_rate_ok("install-status", client_id):
+                self._send_json({"error": "RATE_LIMITED", "detail": "Trop de changements : réessayez dans un moment."}, 429)
+                return
+            body = self._read_json_limited(HIRE_BODY_LIMITS["install-status"])
+            if body is None:
+                return
+            wid = str(body.get("workerId") or "").strip().lower()
+            if not _install_worker_ok(wid):
+                self._send_json({"error": "UNKNOWN_WORKER"}, 404)
+                return
+            deleted = INSTALLS.delete(client_id, wid)
+            if deleted:
+                log_activity("installation", clientId=client_id, workerId=wid, status="deleted")
+            self._send_json({"ok": True, "deleted": deleted})
         elif path == "/api/memory/delete":
             client_id = self._resolve_client_id()
             if not client_id:
@@ -3997,6 +4527,8 @@ class Handler(BaseHTTPRequestHandler):
             if worker_id != "chloe" and worker_id not in get_worker_ids():
                 self._send_json({"error": "UNKNOWN_WORKER"}, 404)
                 return
+            if self._worker_not_included(client_id, worker_id):
+                return
             if not objective:
                 self._send_json({"error": "OBJECTIVE_REQUIRED"}, 400)
                 return
@@ -4027,6 +4559,8 @@ class Handler(BaseHTTPRequestHandler):
                 body = {}
             enabled = bool(body.get("enabled"))
             if enabled:
+                if self._worker_not_included(client_id, automation_worker(client_id, automation_id)):
+                    return
                 block = subscription_blocks_mission(client_id)
                 if block:
                     self._send_json({"error": "SUBSCRIPTION_REQUIRED", "detail": block}, 402)
@@ -4045,11 +4579,13 @@ class Handler(BaseHTTPRequestHandler):
             if not client_id:
                 self._send_account_required()
                 return
+            automation_id = path.split("/")[3]
+            if self._worker_not_included(client_id, automation_worker(client_id, automation_id)):
+                return
             block = subscription_blocks_mission(client_id)
             if block:
                 self._send_json({"error": "SUBSCRIPTION_REQUIRED", "detail": block}, 402)
                 return
-            automation_id = path.split("/")[3]
             result = run_automation_bridge("run", automation_id=automation_id, client_id=client_id)
             self._send_json(result)
         elif path == "/api/automations/tick":
@@ -4138,6 +4674,8 @@ class Handler(BaseHTTPRequestHandler):
             worker_id = (body.get("worker") or "").strip().lower()
             if worker_id and worker_id not in get_worker_ids():
                 self._send_json({"error": "UNKNOWN_WORKER"}, 404)
+                return
+            if self._worker_not_included(client_id, worker_id or "chloe"):
                 return
             result = submit_task_limited(objective, worker_id=worker_id or "chloe", client_id=client_id)
             self._send_json(_summarize_mission_result(result))
@@ -4254,6 +4792,11 @@ class Handler(BaseHTTPRequestHandler):
                 interval = "month"
             if plan_id not in PLAN_CATALOG:
                 self._send_json({"error": "UNKNOWN_PLAN"}, 400)
+                return
+            if plan_id in INVOICE_ONLY_PLANS and client_id != DASHBOARD_CLIENT_ID:
+                # Solo/Trio : aucun paiement automatique branche -> pas de bascule libre-service (ce serait des credits gratuits).
+                self._send_json({"error": "PLAN_BY_INVOICE", "detail": "Les forfaits Solo et Trio sont activés par BK Entreprise après règlement de la facture. "
+                                 "Demandez-le depuis la fiche du Worker (« Embaucher »)."}, 403)
                 return
             if plan_id in PAID_PLANS_WITH_CHECKOUT and client_id != DASHBOARD_CLIENT_ID and not account_email_verified(client_id):
                 self._send_json({"error": "EMAIL_NOT_VERIFIED"}, 403)

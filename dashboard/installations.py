@@ -274,6 +274,21 @@ class InstallationStore:
             _atomic_write(self._path(client_id, worker_id), rec)
         return rec
 
+    def delete(self, client_id, worker_id):
+        """Supprime la fiche d'un Worker pour ce client. True si une fiche existait."""
+        with _LOCK:
+            try:
+                path = self._path(client_id, worker_id)
+            except InstallationError:
+                return False
+            if not os.path.isfile(path):
+                return False
+            try:
+                os.remove(path)
+            except OSError:
+                return False
+            return True
+
     def delete_client(self, client_id):
         try:
             import shutil
@@ -447,10 +462,11 @@ def grant(billing_state, workers, known_ids=None, now=None, name_of=None):
     return clean
 
 
-def adapt_hired_to_plan(billing_state, now=None):
+def adapt_hired_to_plan(billing_state, now=None, plan_changed=True):
     """A appeler apres un changement de forfait : hors forfait restreint la liste est vidée ; avec moins d'emplacements elle est tronquée ;
-    le délai d'échange repart de zéro (nouveau forfait)."""
-    billing_state.pop("lastWorkerSwapAtUtc", None)
+    le délai d'échange repart de zéro quand le forfait change (pas quand le meme forfait est simplement renouvelé)."""
+    if plan_changed:
+        billing_state.pop("lastWorkerSwapAtUtc", None)
     if not is_restricted(billing_state):
         billing_state["hiredWorkers"] = []
         return
