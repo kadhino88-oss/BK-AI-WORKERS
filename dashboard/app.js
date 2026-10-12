@@ -2490,7 +2490,10 @@ async function openChloeProfile() {
   await loadActivity("chloe");
 }
 
-async function loadActivity(workerId) {
+// opts.keepThread : ne reconstruit PAS le fil de discussion (seulement le panneau "Activite recente"). Utilise juste apres une
+// mission en direct : le tour qu'on vient d'afficher reste dans la page, on peut donc lui accrocher les fichiers et la carte de
+// validation (reconstruire le fil detachait ce tour : fichiers et carte "Confirmer / Annuler" n'apparaissaient plus).
+async function loadActivity(workerId, opts = {}) {
   const data = await fetchJson(`/api/workers/${workerId}/activity`);
   const el = document.getElementById("profile-activity");
   el.innerHTML = "";
@@ -2524,6 +2527,7 @@ async function loadActivity(workerId) {
   // fiche) faisait perdre toute la conversation, alors qu'elle existe
   // bien cote serveur (signale par Kader, 2026-09-24). Le fil garde
   // uniquement CE que le serveur a reellement enregistre, rien de plus.
+  if (opts.keepThread) return;
   const threadEl = document.getElementById("task-result");
   threadEl.innerHTML = "";
   if (data.activity && data.activity.length > 0) {
@@ -2540,6 +2544,8 @@ async function loadActivity(workerId) {
       `;
       const replayFiles = renderTaskFilesBlock(a.taskId, a.files);
       if (replayFiles) turn.appendChild(replayFiles);
+      // Action preparee mais pas encore validee (le fichier PENDING-ACTION existe encore) : la carte revient apres un rechargement.
+      if (a.pendingAction) turn.appendChild(renderPendingActionCard(a.pendingAction));
       threadEl.appendChild(turn);
     });
     threadEl.scrollTop = threadEl.scrollHeight;
@@ -3008,7 +3014,7 @@ async function runTask(objective) {
       const answer = result.Result && result.Result.Answer ? result.Result.Answer
         : (result.ExecutionNote || (needsChloe ? "Cette action passe par le chat avec Chloé pour vérification." : "Tâche autorisée, en attente de routage vers un Worker."));
       responseEl.innerHTML = `<div class="status-line">${escapeHtml(statusLine)}</div>${renderAnswer(answer)}`;
-      await loadActivity(currentWorkerId);
+      await loadActivity(currentWorkerId, { keepThread: true });
     }
     // Fichiers produits (telechargement) — branche Chloe (un TaskId par
     // Worker dans Results[]) ou branche directe (result.Result.TaskId).
