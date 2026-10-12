@@ -80,7 +80,7 @@ _SENSITIVE_TOKENS = [
 SENSITIVE_RE = re.compile(r"\b(" + "|".join(_SENSITIVE_TOKENS) + r")\b", re.IGNORECASE)
 # Ces categories (actions qui sortent, engagent ou modifient) ne sont jamais en mode "auto".
 SENSITIVE_CATEGORY_RE = re.compile(
-    r"^(envoi|publication|paiement|suppression|appel|engagement|ecriture|modification|signature)")
+    r"^(envoi|publication|paiement|suppression|appel|engagement|ecriture|modification|signature|contact)")
 # Un scenario d'essai doit annoncer qu'aucune action reelle n'est faite.
 SAFE_TEST_RE = re.compile(
     r"(aucune?\s+(action|envoi|publication|ecriture|écriture|appel|paiement)|"

@@ -1,0 +1,213 @@
+{
+  "schema": "BK-INSTALL-PROFILE-V1",
+  "workerId": "dario",
+  "displayName": "Dario",
+  "tagline": "Transforme vos chiffres en budget, trésorerie et prix de vente calculés et réconciliés, sans jamais toucher à votre argent.",
+  "idealFor": "Gérants de TPE et PME de Suisse ou de France sans directeur financier, qui veulent piloter leur budget, leur trésorerie et leurs marges et préparer leurs documents pour la fiduciaire.",
+  "services": [
+    {
+      "id": "budget-compte-de-resultat",
+      "label": "Budget et compte de résultat prévisionnel",
+      "description": "À partir des montants que vous collez, Dario structure produits, charges variables, marge brute, charges fixes et résultat, calcule tout par programme, vérifie que résultat égale produits moins charges et livre un tableur Excel à formules vivantes avec le point mort et une recommandation chiffrée.",
+      "skills": ["BUDGET_TRACKING", "FINANCIAL_REPORTING", "COST_ANALYSIS"],
+      "requiredConnectors": [],
+      "optionalConnectors": ["gmail.controlled", "outlook_mail.controlled"],
+      "connectorOperations": {
+        "gmail.controlled": ["DRAFT_MESSAGE"],
+        "outlook_mail.controlled": ["DRAFT_MESSAGE"]
+      },
+      "channels": ["web", "schedule"],
+      "suggestedFrequencyMinutes": 43200,
+      "knowledgeFields": [
+        { "key": "pays_et_devise", "label": "Pays et devise de votre comptabilité", "help": "Détermine la TVA, les charges sociales et la présentation des comptes.", "required": true, "example": "Suisse, francs suisses (CHF)" },
+        { "key": "chiffres_a_traiter", "label": "Vos chiffres", "help": "Collez chiffre d'affaires, charges par poste et période. Dario ne se connecte pas encore à votre comptabilité.", "required": true, "example": "CA 480 000 CHF, salaires 210 000 CHF, loyer 36 000 CHF, marketing 24 000 CHF" },
+        { "key": "objectif_marge", "label": "Objectif de marge ou de résultat", "help": "Pour comparer le budget à votre ambition.", "required": false, "example": "Marge nette de 8 %" },
+        { "key": "regime_tva", "label": "Assujettissement à la TVA", "help": "Oui ou non, et méthode (effective ou taux de la dette fiscale nette).", "required": false, "example": "Assujetti, méthode effective" }
+      ],
+      "autonomyRules": [
+        { "category": "analyse-calcul", "label": "Calculer et réconcilier le budget", "examples": ["Calculer marges, point mort et résultat avec un programme", "Contrôler que le résultat égale les produits moins les charges"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 30 },
+        { "category": "redaction", "label": "Produire le tableur et la synthèse", "examples": ["Créer le fichier .xlsx avec formules vivantes", "Rédiger la recommandation chiffrée"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "brouillon-email", "label": "Préparer le rapport en brouillon d'email", "examples": ["Déposer dans votre boîte mail un brouillon qui résume le budget, sans l'envoyer"], "risk": "low", "defaultMode": "draft", "maxAutoPerDay": null, "operations": ["gmail.controlled:DRAFT_MESSAGE", "outlook_mail.controlled:DRAFT_MESSAGE"] },
+        { "category": "ecriture-comptable", "label": "Passer une écriture ou émettre une facture", "examples": ["Enregistrer une écriture dans votre comptabilité", "Émettre une facture client"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Mon CA annuel prévu est de 480 000 CHF, salaires 210 000, loyer 36 000, marketing 24 000, achats 150 000. Construis mon compte de résultat prévisionnel avec marge brute, point mort et fichier Excel. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Résultat égale produits moins charges, vérifié dans la réponse",
+          "Le fichier .xlsx contient des formules et non des valeurs figées",
+          "Les hypothèses sont étiquetées et l'avertissement de validation par une fiduciaire figure en dernière ligne"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    },
+    {
+      "id": "plan-de-tresorerie",
+      "label": "Plan de trésorerie sur 12 mois",
+      "description": "Dario ventile mois par mois les encaissements (en tenant compte de vos délais de paiement clients) et les décaissements (salaires et charges, loyer, TVA à reverser, impôts, investissements), enchaîne les soldes, repère les mois en trésorerie négative et le point bas, et livre le tableur avec soldes glissants en formules.",
+      "skills": ["CASH_FLOW_FORECAST", "FINANCIAL_REPORTING"],
+      "requiredConnectors": [],
+      "optionalConnectors": [],
+      "channels": ["web", "schedule"],
+      "suggestedFrequencyMinutes": 43200,
+      "knowledgeFields": [
+        { "key": "solde_ouverture", "label": "Solde de trésorerie actuel", "help": "Total de vos comptes bancaires aujourd'hui.", "required": true, "example": "85 000 CHF" },
+        { "key": "encaissements_prevus", "label": "Ventes et délais de paiement clients", "help": "Chiffre d'affaires mensuel attendu et délai moyen d'encaissement.", "required": true, "example": "40 000 CHF par mois, payés à 45 jours" },
+        { "key": "decaissements_prevus", "label": "Charges et échéances importantes", "help": "Salaires, loyer, TVA, impôts, investissements, emprunts avec leurs dates.", "required": true, "example": "Salaires 17 500 CHF/mois, loyer 3 000 CHF/mois, TVA trimestrielle, achat de machine en mars" },
+        { "key": "pays_et_devise", "label": "Pays et devise", "help": "Pour la TVA et les charges sociales.", "required": false, "example": "Suisse, CHF" }
+      ],
+      "autonomyRules": [
+        { "category": "analyse-calcul", "label": "Calculer les flux et les soldes", "examples": ["Calculer le solde de fin de chaque mois", "Repérer le point bas de trésorerie"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 30 },
+        { "category": "redaction", "label": "Produire le tableur et l'alerte de besoin de financement", "examples": ["Créer le fichier .xlsx avec soldes glissants en formules", "Rédiger l'alerte sur les mois négatifs"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "paiement", "label": "Régler des fournisseurs ou verser des salaires", "examples": ["Effectuer un virement pour une facture fournisseur"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Solde actuel 85 000 CHF, ventes de 40 000 CHF par mois encaissées à 45 jours, salaires 17 500 CHF par mois, loyer 3 000 CHF, TVA trimestrielle, machine de 30 000 CHF en mars. Fais mon plan de trésorerie sur 12 mois et signale les mois négatifs. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Chaque solde de début reprend le solde de fin du mois précédent",
+          "La TVA collectée apparaît comme un décaissement futur et non comme un produit",
+          "Le point bas et les mois négatifs sont signalés explicitement"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    },
+    {
+      "id": "prix-de-vente-marge",
+      "label": "Prix de vente, marge et point mort",
+      "description": "Dario part de votre coût de revient (variable plus quote-part de charges fixes), applique la marge sur coût ou le taux de marge sur prix selon votre choix sans les confondre, donne prix HT et TTC avec le bon taux de TVA, le point mort et trois scénarios de prix.",
+      "skills": ["COST_ANALYSIS", "FINANCIAL_REPORTING"],
+      "requiredConnectors": [],
+      "optionalConnectors": [],
+      "channels": ["web"],
+      "knowledgeFields": [
+        { "key": "cout_de_revient", "label": "Coût de revient d'une unité", "help": "Matière, main d'œuvre, sous-traitance et part de frais fixes. À défaut, Dario pose une hypothèse étiquetée.", "required": true, "example": "Coût variable de 42 CHF par réparation, frais fixes de 6 000 CHF par mois" },
+        { "key": "pays_et_devise", "label": "Pays et devise", "help": "Détermine le taux de TVA appliqué.", "required": true, "example": "Suisse, CHF" },
+        { "key": "marge_souhaitee", "label": "Marge visée", "help": "Marge sur coût ou taux de marge sur prix, en précisant lequel.", "required": false, "example": "40 % de taux de marge sur prix de vente" },
+        { "key": "prix_concurrents", "label": "Prix pratiqués autour de vous", "help": "Pour situer votre prix.", "required": false, "example": "Entre 95 et 130 CHF dans ma région" }
+      ],
+      "autonomyRules": [
+        { "category": "analyse-calcul", "label": "Calculer coût, marge et point mort", "examples": ["Calculer le prix HT et TTC pour une marge donnée", "Tester trois scénarios de prix"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 30 },
+        { "category": "redaction", "label": "Rédiger la recommandation de prix", "examples": ["Recommander un prix argumenté par les chiffres"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "engagement-commercial", "label": "Modifier vos prix dans vos outils", "examples": ["Mettre à jour un tarif sur votre boutique ou votre catalogue"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Mon coût variable est de 42 CHF par réparation et mes frais fixes de 6 000 CHF par mois. Calcule le prix de vente HT et TTC pour 40 % de taux de marge sur prix, le point mort et trois scénarios de prix. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "La différence entre marge sur coût et taux de marge sur prix est respectée et expliquée",
+          "Le prix est donné HT et TTC avec le taux de TVA vérifié à sa source",
+          "Le point mort est exprimé en nombre d'unités"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    },
+    {
+      "id": "ecarts-budget-reel-kpi",
+      "label": "Écarts budget / réel et tableau de bord KPI",
+      "description": "Dario compare votre budget à vos chiffres réels poste par poste, calcule écart et écart en pourcentage avec le bon signe (favorable ou défavorable), explique les 3 à 5 écarts majeurs et calcule vos indicateurs : marge brute et nette, point mort, burn rate, runway, besoin en fonds de roulement.",
+      "skills": ["VARIANCE_ANALYSIS", "KPI_DASHBOARD_FINANCE", "BUDGET_TRACKING"],
+      "requiredConnectors": [],
+      "optionalConnectors": [],
+      "channels": ["web", "schedule"],
+      "suggestedFrequencyMinutes": 43200,
+      "knowledgeFields": [
+        { "key": "budget_de_reference", "label": "Votre budget", "help": "Collez le budget par poste pour la période.", "required": true, "example": "Marketing 2 000 CHF, achats 12 500 CHF, salaires 17 500 CHF par mois" },
+        { "key": "chiffres_reels", "label": "Vos chiffres réels", "help": "Collez les montants réels pour la même période.", "required": true, "example": "Marketing 2 900 CHF, achats 13 100 CHF, salaires 17 500 CHF" },
+        { "key": "indicateurs_suivis", "label": "Indicateurs qui comptent pour vous", "help": "Marge, trésorerie disponible, délai de paiement clients...", "required": false, "example": "Marge brute et mois de trésorerie restants" }
+      ],
+      "autonomyRules": [
+        { "category": "analyse-calcul", "label": "Calculer écarts et indicateurs", "examples": ["Calculer l'écart et l'écart en pourcentage de chaque poste", "Calculer le runway à partir du burn rate mensuel"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 30 },
+        { "category": "redaction", "label": "Expliquer les écarts et recommander", "examples": ["Rédiger les 3 à 5 écarts majeurs avec leur cause probable", "Produire le tableau de bord .xlsx"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "modification-budget", "label": "Modifier le budget dans vos outils", "examples": ["Ajuster le budget dans votre logiciel de comptabilité"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Voici mon budget et mes chiffres réels du mois (marketing 2 000 contre 2 900, achats 12 500 contre 13 100, salaires 17 500 contre 17 500). Calcule les écarts, explique les principaux et donne mes indicateurs clés. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Le signe des écarts distingue clairement favorable et défavorable",
+          "Les postes sont triés par écart absolu décroissant",
+          "Une seule recommandation nette est donnée, argumentée par les chiffres"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    },
+    {
+      "id": "paie-cout-employeur",
+      "label": "Calcul de paie et coût employeur",
+      "description": "Dario calcule le passage du brut au net et le coût réel d'un salarié pour l'employeur, en droit suisse (AVS, AI, APG, assurance chômage, prévoyance professionnelle) ou en droit français (cotisations URSSAF selon le statut), avec les taux et seuils re-vérifiés sur les sources officielles. Il prépare, il ne verse rien.",
+      "skills": [],
+      "requiredConnectors": [],
+      "optionalConnectors": [],
+      "channels": ["web"],
+      "knowledgeFields": [
+        { "key": "pays_et_devise", "label": "Pays de l'employeur", "help": "Les charges sociales diffèrent fortement entre Suisse et France.", "required": true, "example": "Suisse, canton de Vaud" },
+        { "key": "salaire_brut", "label": "Salaire brut et statut du salarié", "help": "Montant mensuel ou annuel, temps de travail, âge, statut (cadre, apprenti...).", "required": true, "example": "6 500 CHF brut par mois, 100 %, 38 ans" },
+        { "key": "caisse_prevoyance", "label": "Caisse de prévoyance (Suisse)", "help": "Les taux LPP dépendent de votre caisse. Sans eux, Dario utilise une hypothèse étiquetée.", "required": false, "example": "Taux LPP employeur 7 %" }
+      ],
+      "autonomyRules": [
+        { "category": "analyse-calcul", "label": "Calculer le brut, le net et le coût employeur", "examples": ["Calculer les cotisations salariales et patronales", "Comparer le coût employeur de deux salaires"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 30 },
+        { "category": "redaction", "label": "Préparer la fiche de calcul", "examples": ["Produire un tableau .xlsx avec les taux et leur source"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "paiement", "label": "Verser les salaires", "examples": ["Effectuer le virement des salaires du mois"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Calcule le net et le coût employeur d'un salarié à 6 500 CHF brut par mois en Suisse, canton de Vaud, avec les taux et leur source officielle. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Chaque taux cité est confirmé sur une source officielle datée ou marqué « à confirmer »",
+          "Le coût employeur est nettement supérieur au brut et le détail est montré",
+          "Le résultat est présenté comme indicatif, à valider par une fiduciaire"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    },
+    {
+      "id": "preparation-tva-comptabilite",
+      "label": "Préparation TVA et tri des dépenses pour la fiduciaire",
+      "description": "Vous collez un relevé ou une liste de dépenses. Dario classe chaque dépense par catégorie, repère les factures sans correspondance, calcule la TVA collectée et déductible avec le taux correct (Suisse ou France) et prépare le dossier de pièces pour votre fiduciaire. Rien n'est déclaré ni comptabilisé.",
+      "skills": ["EXPENSE_CATEGORIZATION", "INVOICE_RECONCILIATION", "TAX_DOCUMENT_PREPARATION", "AUDIT_PREPARATION"],
+      "requiredConnectors": [],
+      "optionalConnectors": [],
+      "channels": ["web", "schedule"],
+      "suggestedFrequencyMinutes": 43200,
+      "knowledgeFields": [
+        { "key": "pays_et_devise", "label": "Pays et devise", "help": "Pour appliquer la bonne TVA.", "required": true, "example": "Suisse, CHF" },
+        { "key": "releve_ou_depenses", "label": "Relevé ou liste de dépenses", "help": "Collez le tableau (date, libellé, montant). Il n'y a pas encore d'ajout de fichier.", "required": true, "example": "03.10 Garage Dupont 480.00 ; 05.10 Papeterie Schmid 62.40" },
+        { "key": "regime_tva", "label": "Assujettissement à la TVA", "help": "Oui ou non et méthode de décompte.", "required": false, "example": "Assujetti, décompte trimestriel" },
+        { "key": "plan_comptable", "label": "Catégories comptables utilisées", "help": "Si votre fiduciaire utilise un plan précis.", "required": false, "example": "Plan comptable PME suisse" }
+      ],
+      "autonomyRules": [
+        { "category": "analyse-calcul", "label": "Classer et rapprocher", "examples": ["Classer chaque dépense dans une catégorie", "Repérer les factures sans règlement correspondant"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 30 },
+        { "category": "redaction", "label": "Préparer le dossier pour la fiduciaire", "examples": ["Produire un tableau .xlsx de la TVA collectée et déductible", "Rédiger la liste des pièces manquantes"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "envoi-declaration", "label": "Transmettre une déclaration à l'administration", "examples": ["Déposer la déclaration de TVA auprès de l'administration fiscale"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null },
+        { "category": "ecriture-comptable", "label": "Passer les écritures en comptabilité", "examples": ["Enregistrer les écritures dans votre logiciel comptable"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Voici 10 lignes de dépenses du mois. Classe-les par catégorie, calcule la TVA déductible au taux suisse en vigueur avec la source du taux et liste les lignes qui demandent une pièce justificative. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Chaque ligne a une catégorie et un montant de TVA calculé par programme",
+          "Le taux de TVA est vérifié sur une source officielle datée",
+          "Les lignes douteuses sont listées pour la fiduciaire sans être comptabilisées"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    }
+  ],
+  "channelSupport": {
+    "email": "planned",
+    "phone": "no",
+    "whatsapp": "no",
+    "web": "available",
+    "schedule": "available"
+  },
+  "plannedCapabilities": [
+    "Connexion en lecture seule à QuickBooks, Xero, Stripe et PayPal pour reprendre vos chiffres sans les coller (non connectables par un client aujourd'hui)",
+    "Dépôt de vos relevés bancaires et fichiers Excel dans la conversation (aujourd'hui : coller les données ou un lien public)",
+    "Réception automatique de vos factures par email pour les classer et les rapprocher, avec votre validation",
+    "Rapport financier mensuel envoyé par email après votre validation"
+  ],
+  "installationSteps": [
+    "Ajoutez Dario à votre équipe depuis le catalogue des Workers.",
+    "Indiquez dans la fiche d'entreprise votre pays, votre devise, votre régime de TVA et votre plan comptable s'il y en a un.",
+    "Connectez Gmail ou Outlook dans la page Connecteurs pour recevoir les rapports en brouillon d'email (facultatif).",
+    "Gardez les réglages par défaut : Dario calcule et rédige seul, mais ne paie rien, n'émet aucune facture et ne passe aucune écriture.",
+    "Lancez le scénario d'essai « Budget » avec des chiffres d'exemple, puis téléchargez le tableur Excel et vérifiez que les formules sont visibles.",
+    "Collez vos vrais chiffres et comparez le résultat avec votre comptabilité.",
+    "Faites valider par votre fiduciaire tout document fiscal ou comptable avant de l'utiliser : Dario prépare, vous décidez."
+  ]
+}
