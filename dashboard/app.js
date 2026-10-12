@@ -3516,7 +3516,7 @@ async function iwSave(opts) {
     iwClearErrors();
     return true;
   } catch (e) {
-    iw.errors = { fields: {}, general: ["Enregistrement impossible : " + (e.message || "erreur réseau") + " Ce que vous avez saisi est conservé."], items: [] };
+    iw.errors = { fields: {}, general: ["Enregistrement impossible pour le moment (réseau ou serveur). Ce que vous avez saisi est conservé."], items: [] };
     iwSetSaveState("failed");
     if (!quiet) iwShowErrors();
     return false;

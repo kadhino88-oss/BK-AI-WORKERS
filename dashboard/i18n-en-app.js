@@ -154,6 +154,7 @@ Object.assign(window.BK_EN, {
   "Ce Worker n'a pas encore de fiche d'installation.": "This Worker has no setup sheet yet.",
   "L'enregistrement a été refusé. Corrigez ces points, votre saisie est conservée.": "Saving was refused. Fix these points, what you typed is kept.",
   "Enregistrement impossible pour le moment. Réessayez.": "Saving is not possible right now. Try again.",
+  "Enregistrement impossible pour le moment (réseau ou serveur). Ce que vous avez saisi est conservé.": "Saving is not possible right now (network or server). What you typed is kept.",
   "Choisissez d'abord au moins un service à l'étape « Services ».": "First choose at least one service in the “Services” step.",
   "Que voulez-vous confier à ce Worker ?": "What do you want to hand over to this Worker?",
   "Cochez les services dont vous avez besoin. Vous pourrez en ajouter ou en retirer plus tard.": "Tick the services you need. You can add or remove some later.",
