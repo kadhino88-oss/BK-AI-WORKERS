@@ -326,8 +326,17 @@ def main():
         first_id = out.get("requestId")
         st, out = alice.post("/api/workers/nora/hire-request", {"message": "bis"})
         check("une seule demande ouverte par client et par Worker", st == 200 and out["alreadyRequested"] is True and out["requestId"] == first_id, (st, out))
-        st, out = bob.post("/api/workers/nora/hire-request", {})
-        check("un client dont le forfait inclut deja le Worker ne peut pas le demander (409)", st == 409 and out.get("error") == "ALREADY_INCLUDED", (st, out))
+        st, out = bob.post("/api/workers/nora/hire-request", {"message": "Je voudrais souscrire Nora seule"})
+        check("un client en Essai peut demander a souscrire un Worker seul", st == 200 and out["ok"] and out["alreadyRequested"] is False, (st, out))
+        frank, f_id = signup(port, "frank@mail-test.example", "198.51.100.15")
+        frank.get("/api/billing")                      # cree le fichier de facturation du compte
+        fpath = os.path.join(app, "core", "billing", "data", f_id + ".json")
+        fstate = read_json(fpath)
+        fstate["planId"] = "starter"
+        with open(fpath, "w", encoding="utf-8") as f:
+            json.dump(fstate, f)
+        st, out = frank.post("/api/workers/nora/hire-request", {})
+        check("un forfait payant classique donne deja acces a tous les Workers : demande refusee (409)", st == 409 and out.get("error") == "ALREADY_INCLUDED", (st, out))
         st, out = alice.post("/api/workers/alex/hire-request", {})
         check("... ni son propre Worker embauche", st == 409 and out.get("error") == "ALREADY_INCLUDED", (st, out))
         st, out = alice.post("/api/workers/ghost/hire-request", {})

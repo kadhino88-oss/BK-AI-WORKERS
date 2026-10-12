@@ -29,6 +29,20 @@ function ConvertTo-BKFencedText {
     return $T
 }
 
+function Test-BKInstallationPaused {
+    # Vrai quand le client a mis l'installation de CE Worker en pause (interrupteur d'arret), ou si la fiche existe mais est illisible (dans le
+    # doute on n'agit pas seul). Faux si elle n'existe pas, est active ou en essai : l'absence d'installation ne change rien au comportement
+    # par defaut (le Worker prepare, le client valide).
+    param([string]$Root, [string]$ClientId, [string]$WorkerId)
+    if ($ClientId -notmatch '^[A-Za-z0-9_-]{1,80}$' -or $WorkerId -notmatch '^[A-Za-z0-9_-]{1,40}$') { return $false }
+    $Path = Join-Path (Join-Path (Join-Path $Root "runtime/installations") $ClientId) ($WorkerId.ToUpperInvariant() + ".json")
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return $false }
+    try {
+        $Rec = Get-Content -LiteralPath $Path -Raw -Encoding UTF8 | ConvertFrom-Json
+        return ([string]$Rec.status -eq "paused")
+    } catch { return $true }
+}
+
 function Get-BKInstallationBlock {
     param([string]$Root, [string]$ClientId, [string]$WorkerId)
     if ($ClientId -notmatch '^[A-Za-z0-9_-]{1,80}$' -or $WorkerId -notmatch '^[A-Za-z0-9_-]{1,40}$') { return "" }

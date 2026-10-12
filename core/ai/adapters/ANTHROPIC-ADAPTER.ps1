@@ -47,6 +47,7 @@ $ProjectRoot = if ($env:BK_ROOT) { $env:BK_ROOT } else { "C:/Users/FEUCOM/BK-AI-
 . (Join-Path $ProjectRoot "core/ai/adapters/Build-WorkerSystemPrompt.ps1")
 . (Join-Path $ProjectRoot "core/ai/adapters/Get-RecentConversation.ps1")
 . (Join-Path $ProjectRoot "core/ai/adapters/Client-Memory.ps1")
+. (Join-Path $ProjectRoot "core/ai/adapters/Client-Installation.ps1")
 . (Join-Path $ProjectRoot "core/integrations/Connector-Dispatch.ps1")
 
 # Modele : celui demande, sinon celui de AI-PROVIDERS.json, sinon Haiku 4.5.
@@ -436,6 +437,11 @@ try {
                 $AutoApproved = $false
             }
             if ($AutoApproved -and $env:BK_AUTOAPPROVE_DRAFTS_ONLY -ne "0" -and -not (Test-ReadOnlyOperation -Operation $Op) -and (("$ConnId|$Op") -notin $AutoApproveSafeOps)) {
+                $AutoApproved = $false
+            }
+            # Interrupteur d'arret (2026-10-12) : le client a mis l'installation de CE Worker en pause -> il n'agit plus seul, meme pour un vrai
+            # brouillon (il attend la confirmation du client). La mission lancee a la main fonctionne toujours : lectures et propositions restent possibles.
+            if ($AutoApproved -and (Test-BKInstallationPaused -Root $ProjectRoot -ClientId $ClientId -WorkerId $WorkerId)) {
                 $AutoApproved = $false
             }
 

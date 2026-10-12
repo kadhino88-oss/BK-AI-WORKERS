@@ -4426,7 +4426,10 @@ class Handler(BaseHTTPRequestHandler):
             if not client_id:
                 self._send_account_required()
                 return
-            if not _is_customer_id(client_id) or worker_block(client_id, wid) is None:
+            # Une demande a un sens pour un client en forfait Solo/Trio qui n'a pas ce Worker, ou en Essai qui voudrait le souscrire seul ;
+            # un forfait payant classique donne deja acces a tous les Workers.
+            state = _billing_state_readonly(client_id) or {} if _is_customer_id(client_id) else None
+            if state is None or not ((state.get("planId") or "essai") == "essai" or worker_block(client_id, wid)):
                 self._send_json({"error": "ALREADY_INCLUDED", "detail": "Ce Worker fait déjà partie de votre forfait."}, 409)
                 return
             if not hire_rate_ok("hire-request", client_id):
