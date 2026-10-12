@@ -4160,7 +4160,7 @@ function iwPauseSwitchEl(rec, workerName, opts) {
   label.title = "Interrupteur d'arrêt : met ce Worker en pause tout de suite";
   const active = rec.status === "active";
   const blocked = !active && rec.entitled === false;
-  label.innerHTML = `<input type="checkbox" role="switch" class="iw-pause-input"${active ? " checked" : ""}${blocked ? " disabled" : ""}><span class="switch-track"></span><span class="iw-sr">${escapeHtml(workerName)}</span><span class="switch-label iw-pause-text">${active ? "Actif" : "En pause"}</span>`;
+  label.innerHTML = `<input type="checkbox" role="switch" class="iw-pause-input"${active ? " checked" : ""}${blocked ? " disabled" : ""}><span class="switch-track"></span><span class="iw-sr">${escapeHtml(workerName)} : </span><span class="switch-label iw-pause-text">${active ? "Actif" : "En pause"}</span>`;
   const input = label.querySelector("input");
   input.addEventListener("change", async () => {
     const want = input.checked ? "active" : "paused";
