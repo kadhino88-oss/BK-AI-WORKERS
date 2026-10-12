@@ -830,14 +830,26 @@ def levels_enabled(data=None):
     return bool(data.get("enabled", False))
 
 
-def plan_level_lock(client_id):
-    """Niveau impose par le forfait du client (l'essai est verrouille sur Rapide), sinon "". Un compte client sans fichier de facturation
-    est a l'essai ; un fichier illisible aussi (le niveau le moins cher : on ne depense jamais plus par defaut)."""
+def _client_plan(client_id):
+    """Forfait (entree de PLAN_CATALOG) d'un compte client ; {} pour le proprietaire et les identifiants qui ne sont pas des comptes clients.
+    Un compte sans fichier de facturation est a l'essai ; un fichier illisible aussi (le niveau le moins cher : on ne depense jamais plus
+    par defaut)."""
     if not _is_customer_id(client_id):
-        return ""
+        return {}
     state = _billing_state_readonly(client_id)
-    plan = PLAN_CATALOG.get((state or {}).get("planId") or "essai") or PLAN_CATALOG["essai"]
-    return plan.get("levelLock") or ""
+    return PLAN_CATALOG.get((state or {}).get("planId") or "essai") or PLAN_CATALOG["essai"]
+
+
+def plan_level_lock(client_id):
+    """Niveau impose par le forfait du client (l'essai est verrouille sur Rapide), sinon ""."""
+    return _client_plan(client_id).get("levelLock") or ""
+
+
+def plan_default_level(client_id):
+    """Niveau PAR DEFAUT du forfait quand le client n'en choisit pas, sinon "" (= celui de core/ai/LEVELS.json). Forfaits HERITES (Starter,
+    Business) : Rapide, pour qu'une mission sans choix coute 1 credit comme avant l'activation des niveaux (aucun changement silencieux pour
+    un abonne existant) ; il peut toujours choisir un niveau superieur, au cout de ce niveau."""
+    return _client_plan(client_id).get("defaultLevel") or ""
 
 
 def normalize_level(value, client_id=""):
@@ -854,6 +866,9 @@ def normalize_level(value, client_id=""):
     v = str(value or "").strip().lower()
     if v in levels:
         return v
+    plan_default = plan_default_level(client_id)
+    if plan_default in levels:
+        return plan_default
     return data.get("default") if data.get("default") in levels else next(iter(levels))
 
 
@@ -872,9 +887,9 @@ def public_mission_levels(client_id=""):
         return {"levels": [], "default": ""}
     lock = plan_level_lock(client_id)
     shown = {k: v for k, v in levels.items() if not lock or k == lock} if lock in levels else levels
-    default = data.get("default")
+    default = plan_default_level(client_id) or data.get("default")
     if shown and default not in shown:
-        default = next(iter(shown))
+        default = data.get("default") if data.get("default") in shown else next(iter(shown))
     return {"default": default, "locked": bool(lock and lock in levels),
             "levels": [{"id": k, "label": v.get("label", k), "description": v.get("description", ""), "credits": level_credits(k)}
                        for k, v in shown.items()]}
@@ -2593,6 +2608,7 @@ def _billing_path(client_id):
 #   onQuote     : sur devis, jamais de bascule en libre-service (Enterprise) ;
 #   contractual : plafond fixe par le proprietaire pour CE client (billing["contractCredits"]), sinon la valeur "credits" ci-dessous ;
 #   renews      : False = pas de renouvellement mensuel (l'essai : 15 credits, une seule fois) ;
+#   defaultLevel : niveau de mission par defaut quand le client n'en choisit pas (heritage : Rapide, 1 credit comme avant les niveaux) ;
 #   trialDays, phoneMinutes, levelLock : l'essai dure 3 jours (affichage), n'inclut AUCUNE minute de telephone et reste au niveau Rapide ;
 #   workerSlots / byInvoice : offre "Worker a l'unite" (voir plus bas) ; byInvoice = tant que le paiement en ligne n'est pas configure, le
 #                 forfait est active par le proprietaire apres facture reglee -> jamais de bascule libre-service gratuite.
@@ -2613,8 +2629,8 @@ PLAN_CATALOG = {
     "scale":      {"name": "Scale", "credits": 4000, "nextPlan": "enterprise", "priceChf": {"month": 449, "year": 4490}},
     "enterprise": {"name": "Enterprise", "credits": ENTERPRISE_DEFAULT_CREDITS, "contractual": True, "onQuote": True, "nextPlan": None},
     # Forfaits HERITES : memes credits et memes prix qu'avant (aucun changement silencieux pour un abonne existant).
-    "starter":    {"name": "Starter", "credits": 150, "legacy": True, "nextPlan": "equipe", "priceChf": {"month": 39, "year": 390}},
-    "business":   {"name": "Business", "credits": 600, "legacy": True, "nextPlan": "pro", "priceChf": {"month": 99, "year": 990}},
+    "starter":    {"name": "Starter", "credits": 150, "legacy": True, "defaultLevel": "rapide", "nextPlan": "equipe", "priceChf": {"month": 39, "year": 390}},
+    "business":   {"name": "Business", "credits": 600, "legacy": True, "defaultLevel": "rapide", "nextPlan": "pro", "priceChf": {"month": 99, "year": 990}},
 }
 
 # Forfaits qui passent par une vraie Checkout Session Stripe quand Stripe est configure (Essai = gratuit, Enterprise = sur devis, forfaits

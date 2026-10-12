@@ -44,9 +44,11 @@ Méthode : comprendre, concevoir, construire, connecter, accompagner.
 - Les actions sensibles (envoi, publication, suppression) sont vérifiées avant exécution ;
   seuls les paiements et transactions reviennent toujours au client pour validation.
 - Site : bk-ai-workers.com. On peut réserver une démo sur le site, et l'inscription gratuite se fait sur le site, sans carte bancaire.
-- Tarifs publics DE LA PLATEFORME BK-AI-WORKERS (en francs suisses, par mois ; environ deux mois offerts en abonnement annuel) :
-  Starter 39 CHF (indépendants et petites structures), Business 99 CHF (PME, équipe de Workers et automatisations),
-  Pro 139 CHF (usage régulier), Scale 449 CHF (gros volume). Il existe aussi un plan gratuit.
+- Tarifs publics DE LA PLATEFORME BK-AI-WORKERS (en francs suisses, par mois ; l'abonnement annuel vaut 10 mois pour 12) :
+  essai gratuit de 3 jours (15 crédits, sans carte bancaire) ; Solo 29 CHF (un Worker au choix) ; Trio 59 CHF (trois Workers
+  au choix, Chloé comprise) ; Équipe 99 CHF (tous les Workers et Chloé) ; Pro 139 CHF (usage régulier) ; Scale 449 CHF
+  (gros volume) ; Enterprise sur devis uniquement. Chaque forfait inclut un quota mensuel fixe de crédits, jamais illimité :
+  quand il est atteint, on passe au forfait supérieur (pas de recharge de crédits). Starter et Business ne sont plus vendus.
   Pour un cas particulier ou sur mesure : prendre un message, Kader répondra.
 
 ## Ce que l'assistante peut faire

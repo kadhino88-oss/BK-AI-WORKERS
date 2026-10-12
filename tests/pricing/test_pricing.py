@@ -326,6 +326,30 @@ class Levels(Fixture):
         write_task(server, A, 14, created="2026-10-02T00:00:00Z")
         self.assertIsNone(server.subscription_blocks_mission(A, "approfondi"))
 
+    def test_legacy_plans_keep_a_one_credit_mission_unless_the_client_chooses_more(self):
+        # Aucun changement silencieux pour un abonne Starter / Business : sans choix de sa part, sa mission reste a 1 credit comme avant l'activation
+        # des niveaux ; s'il choisit lui-meme Equilibre ou Approfondi, il paie le cout de ce niveau (6 ou 12).
+        write_billing(server, A, "starter")
+        write_billing(server, B, "business")
+        write_billing(server, C, "equipe")
+        for client in (A, B):
+            self.assertEqual(server.normalize_level(None, client), "rapide")
+            self.assertEqual(server.normalize_level("n'importe quoi", client), "rapide")
+            self.assertEqual(server.normalize_level("equilibre", client), "equilibre")
+            self.assertEqual(server.normalize_level("approfondi", client), "approfondi")
+            pub = server.public_mission_levels(client)
+            self.assertEqual((pub["default"], pub["locked"], len(pub["levels"])), ("rapide", False, 3))
+        self.assertEqual(server.normalize_level(None, C), "equilibre")                    # un forfait vendu garde le niveau par defaut du fichier
+        self.assertEqual(server.public_mission_levels(C)["default"], "equilibre")
+        write_task(server, A, 149, created="2026-10-02T00:00:00Z")                        # Starter : il reste 1 credit sur 150
+        self.assertIsNone(server.subscription_blocks_mission(A))                           # une mission sans choix passe (1 credit)
+        self.assertIn("Il vous reste 1 crédit", server.subscription_blocks_mission(A, "equilibre"))
+        os.environ["BK_LEVELS"] = "0"
+        try:
+            self.assertEqual(server.normalize_level(None, A), "")                          # interrupteur d'arret : niveaux coupes pour tout le monde
+        finally:
+            os.environ.pop("BK_LEVELS", None)
+
     def test_automations_run_at_rapide_and_cost_one_credit(self):
         write_billing(server, A, "solo", cycle_start="2026-09-20T08:00:00Z", hiredWorkers=["alex"])
         write_task(server, A, 249, created="2026-10-02T00:00:00Z")           # il reste 1 credit

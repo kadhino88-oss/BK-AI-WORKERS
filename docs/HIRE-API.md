@@ -8,10 +8,12 @@ Décision du 2026-10-12 : vendre **un Worker seul** (comme Delos ou Limova) et l
 |---|---|---|---|---|
 | `solo` | 1 Worker au choix | non | 250 | 29 / mois, 290 / an |
 | `trio` | 3 Workers au choix | oui, en plus des 3 | 500 | 59 / mois, 590 / an |
-| `essai`, `starter`, `business`, `pro`, `scale`, `enterprise` | tous les Workers | oui | inchangés | inchangés |
+| `equipe` | tous les Workers | oui | 900 | 99 / mois, 990 / an |
+| `essai`, `pro`, `scale`, `enterprise` (et `starter`, `business`, forfaits hérités) | tous les Workers | oui | voir `docs/PRICING.md` | voir `docs/PRICING.md` |
 
 - Pas de missions illimitées : quand le pot de crédits est vide, `402 SUBSCRIPTION_REQUIRED` comme pour tous les forfaits, et le client passe au forfait supérieur.
-- `solo` et `trio` sont activés **par le propriétaire après facture réglée** (`POST /api/admin/grant-workers`). Tant qu'il n'existe pas de prix Stripe pour eux, `POST /api/billing/plan` répond `403 PLAN_BY_INVOICE` (pas de bascule gratuite en libre-service). Les prix de `priceChf` viennent de `docs/ETUDE-MARCHE-PRIX-2026-10.md` (branche `ws/market-study`) : ce sont des informations d'affichage, pas des prix Stripe.
+- Grille de prix et modèle de quota (quota MENSUEL fixe, jamais illimité, forfait suivant quand il est atteint) : `docs/PRICING.md`. Les crédits ci-dessus sont ceux validés par le propriétaire le 2026-10-12.
+- Quand Stripe est configuré, `POST /api/billing/plan` ouvre une vraie Checkout Session pour `solo`, `trio` et `equipe` (montant du catalogue en CHF, annuel = 10 mois) ; le forfait n'est activé qu'après le paiement vérifié côté serveur. Sans Stripe, il répond `403 PLAN_BY_INVOICE` (pas de bascule gratuite en libre-service) : le propriétaire active `solo` et `trio` après facture réglée (`POST /api/admin/grant-workers`), `equipe`, `pro`, `scale` et `enterprise` par `POST /api/admin/set-plan`.
 - Le propriétaire (`CLI-DASHBOARD`) et l'essai public ne sont jamais restreints.
 - L'état vit dans le fichier de facturation du client (`core/billing/data/<ClientId>.json`) : `planId`, `hiredWorkers` (liste), `workerSwaps`, `lastWorkerSwapAtUtc`.
 
@@ -42,7 +44,7 @@ Sans compte : `401 {"error": "ACCOUNT_REQUIRED"}`. Corps JSON ; taille maximale 
           "swaps": [], "canSwapNow": true, "lastSwapAtUtc": null, "nextSwapAtUtc": null},
  "planName": "Trio", "openRequests": ["emma"]}
 ```
-Hors forfait restreint : `restricted: false`, `workerSlots: null`, `hiredWorkers: []`. Le même objet `hire` est dans `GET /api/billing` (avec aussi `workerSlots`, `hiredWorkers`, et `workerPlans: [{planId, name, credits, workerSlots, chloeIncluded, priceChf: {month, year}}]`). `availablePlans` ne change pas (Solo et Trio n'y sont pas).
+Hors forfait restreint : `restricted: false`, `workerSlots: null`, `hiredWorkers: []`. Le même objet `hire` est dans `GET /api/billing` (avec aussi `workerSlots`, `hiredWorkers`, et `workerPlans: [{planId, name, credits, workerSlots, chloeIncluded, priceChf: {month, year}}]`). `availablePlans` est le choix de forfait de la grille de prix (Solo, Trio, Équipe, Pro, Scale, Enterprise sur devis ; jamais l'essai ; Starter et Business seulement pour le client qui y est déjà) ; `workerPlans` détaille Solo et Trio.
 
 ### `POST /api/workers/hire` (limite : 20 par heure, corps ≤ 2 Ko)
 Requête `{"workerId": "nora", "replaceWorkerId": "alex"}` (`replaceWorkerId` seulement quand tous les emplacements sont pris).
