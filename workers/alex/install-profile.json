@@ -1,0 +1,251 @@
+{
+  "schema": "BK-INSTALL-PROFILE-V1",
+  "workerId": "alex",
+  "displayName": "Alex",
+  "tagline": "Trouve vos futurs clients, écrit chaque message et prépare chaque relance : vous gardez la main sur chaque envoi.",
+  "idealFor": "TPE et PME B2B (services, conseil, logiciel, industrie, artisanat professionnel) sans commercial dédié, qui veulent un flux régulier de rendez-vous qualifiés en Suisse, en France ou en Europe.",
+  "services": [
+    {
+      "id": "prospection-sortante",
+      "label": "Prospection : liste de prospects réels et séquence prête à partir",
+      "description": "À partir de l'adresse de votre site, Alex écrit votre client idéal, source une liste d'entreprises réelles avec la raison d'acheter de chacune (lien à l'appui), puis rédige la séquence complète : 5 emails, un message LinkedIn et une trame d'appel. Tout est livré en texte final et en fichiers .xlsx / .docx ; rien n'est envoyé.",
+      "skills": ["ICP_DEFINITION", "PROSPECT_LIST_BUILDING", "PROSPECT_DISCOVERY", "OUTBOUND_PROSPECTING", "COLD_EMAIL", "EMAIL_SEQUENCE", "LINKEDIN_MESSAGING", "PERSONALIZED_OUTREACH"],
+      "requiredConnectors": [],
+      "optionalConnectors": ["hubspot.controlled", "pipedrive.controlled", "gmail.controlled", "outlook_mail.controlled"],
+      "connectorOperations": {
+        "hubspot.controlled": ["SEARCH_CONTACTS"],
+        "pipedrive.controlled": ["SEARCH_CONTACTS"],
+        "gmail.controlled": ["DRAFT_MESSAGE"],
+        "outlook_mail.controlled": ["DRAFT_MESSAGE"]
+      },
+      "channels": ["web", "schedule", "email"],
+      "suggestedFrequencyMinutes": 10080,
+      "knowledgeFields": [
+        { "key": "site_web", "label": "Adresse de votre site", "help": "Alex lit votre site pour comprendre ce que vous vendez et à qui.", "required": true, "example": "https://www.atelier-martin.example" },
+        { "key": "offre_description", "label": "Ce que vous vendez, en 3 phrases", "help": "Le problème que vous résolvez, le résultat obtenu et un prix approximatif.", "required": true, "example": "Maintenance d'ascenseurs pour copropriétés de 20 à 200 lots, contrat annuel à partir d'un forfait mensuel." },
+        { "key": "zone_geographique", "label": "Zone géographique visée", "help": "Pays, cantons, régions ou villes où vous voulez des clients.", "required": true, "example": "Suisse romande et Haute-Savoie" },
+        { "key": "decideur_cible", "label": "Qui décide chez vos clients", "help": "La fonction de la personne qui signe ou qui influence l'achat.", "required": false, "example": "Gérant d'agence immobilière ou président de syndic" },
+        { "key": "references_citables", "label": "Références que vous avez le droit de citer", "help": "Clients ou résultats vérifiables que vous acceptez de mentionner. Alex n'en cite jamais d'autres.", "required": false, "example": "Entreprise X : résultat mesuré que vous pouvez citer, avec son accord" },
+        { "key": "signature_email", "label": "Signature et lien de désinscription", "help": "Votre identité d'expéditeur et le moyen de refuser les messages, obligatoires dans chaque email commercial.", "required": false, "example": "Claire Martin, Atelier Martin SA, 021 000 00 00 - se désinscrire : atelier-martin.example/stop" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-recherche", "label": "Chercher des entreprises et lire des pages publiques", "examples": ["Rechercher des entreprises qui correspondent à votre client idéal", "Lire la page « équipe » ou « carrières » d'un prospect pour trouver un signal d'achat"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "redaction", "label": "Rédiger la séquence et préparer les fichiers", "examples": ["Rédiger les 5 emails, le message LinkedIn et la trame d'appel", "Produire la liste des prospects en .xlsx avec les niveaux de priorité"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 30 },
+        { "category": "brouillon-email", "label": "Déposer un brouillon dans votre boîte mail", "examples": ["Créer dans Gmail un brouillon d'email pour un prospect, sans l'envoyer", "Créer dans Outlook un brouillon de relance, sans l'envoyer"], "risk": "low", "defaultMode": "draft", "maxAutoPerDay": null, "operations": ["gmail.controlled:DRAFT_MESSAGE", "outlook_mail.controlled:DRAFT_MESSAGE"] },
+        { "category": "envoi-externe", "label": "Envoyer un message à un prospect", "examples": ["Envoyer un email de prospection", "Envoyer une demande de connexion LinkedIn"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Mon site est celui indiqué dans ma fiche. Trouve 5 entreprises réelles de Suisse romande qui pourraient acheter mon offre, donne pour chacune la raison d'acheter avec le lien de la source, puis écris le premier email et le message LinkedIn pour la première. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Chaque entreprise citée existe et porte un lien source, ou la mention « à confirmer »",
+          "Aucun nom de contact ni adresse email inventés : à défaut, la fonction visée est indiquée",
+          "Le premier email a un objet précis, une seule question et un moyen de désinscription",
+          "La liste est proposée en téléchargement au format .xlsx"
+        ]
+      },
+      "recommendedLevel": "approfondi"
+    },
+    {
+      "id": "qualification-lead-entrant",
+      "label": "Qualification d'un lead entrant et réponse prête",
+      "description": "Vous collez la demande reçue (formulaire, email, message). Alex recherche l'entreprise, note son adéquation (chaud, tiède, froid), préremplit la trame BANT / MEDDIC avec ce qu'il sait, rédige la réponse de qualification et propose deux créneaux de rendez-vous.",
+      "skills": ["INBOUND_LEAD_HANDLING", "LEAD_QUALIFICATION", "BANT_QUALIFICATION", "LEAD_RESEARCH", "LEAD_ENRICHMENT", "OPPORTUNITY_SCORING"],
+      "requiredConnectors": [],
+      "optionalConnectors": ["calendar.controlled", "outlook_calendar.controlled", "gmail.controlled", "outlook_mail.controlled", "hubspot.controlled"],
+      "connectorOperations": {
+        "calendar.controlled": ["READ_EVENTS"],
+        "outlook_calendar.controlled": ["READ_EVENTS"],
+        "gmail.controlled": ["DRAFT_MESSAGE"],
+        "outlook_mail.controlled": ["DRAFT_MESSAGE"],
+        "hubspot.controlled": ["SEARCH_CONTACTS"]
+      },
+      "channels": ["web", "email", "whatsapp", "phone"],
+      "knowledgeFields": [
+        { "key": "offre_description", "label": "Ce que vous vendez, en 3 phrases", "help": "Le problème que vous résolvez, le résultat obtenu et un prix approximatif.", "required": true, "example": "Maintenance d'ascenseurs pour copropriétés de 20 à 200 lots, contrat annuel à partir d'un forfait mensuel." },
+        { "key": "criteres_client_ideal", "label": "À quoi reconnaît-on un bon client", "help": "Taille, secteur, zone, budget minimum : ce qui rend un lead « chaud ».", "required": true, "example": "Copropriété de plus de 30 lots en Suisse romande, budget annuel supérieur à 3 000 CHF" },
+        { "key": "disponibilites_rdv", "label": "Vos jours et heures de rendez-vous", "help": "Pour que les deux créneaux proposés vous conviennent.", "required": false, "example": "Mardi et jeudi, 9h-12h, fuseau de Genève" },
+        { "key": "ton_et_style", "label": "Ton de vos réponses", "help": "Vouvoiement ou tutoiement, style direct ou chaleureux.", "required": false, "example": "Vouvoiement, direct et courtois" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-recherche", "label": "Rechercher l'entreprise qui vous écrit", "examples": ["Lire le site de l'entreprise entrante", "Chercher sa taille, son secteur et ses actualités publiques"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 30 },
+        { "category": "redaction", "label": "Noter le lead et rédiger la réponse", "examples": ["Attribuer chaud / tiède / froid avec la justification", "Rédiger la réponse de qualification avec deux créneaux proposés"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 30 },
+        { "category": "brouillon-email", "label": "Déposer la réponse en brouillon dans votre boîte mail", "examples": ["Créer le brouillon de réponse dans Gmail ou Outlook, sans l'envoyer"], "risk": "low", "defaultMode": "draft", "maxAutoPerDay": null, "operations": ["gmail.controlled:DRAFT_MESSAGE", "outlook_mail.controlled:DRAFT_MESSAGE"] },
+        { "category": "envoi-externe", "label": "Répondre au lead à votre place", "examples": ["Répondre directement à un lead par email, WhatsApp ou téléphone"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Voici une demande reçue : « Bonjour, nous sommes une agence immobilière de 12 personnes à Fribourg et cherchons un prestataire pour nos ascenseurs, pouvez-vous nous rappeler ? ». Qualifie ce lead, préremplis la trame BANT et écris la réponse avec deux créneaux. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Le lead reçoit une note chaud, tiède ou froid avec sa justification",
+          "Les informations manquantes sont listées comme questions à poser, sans rien inventer",
+          "La réponse propose deux créneaux et reste prête à être copiée telle quelle"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    },
+    {
+      "id": "relances-reactivation",
+      "label": "Relances et réactivation du pipeline dormant",
+      "description": "Alex repère les contacts qui n'ont pas répondu, rédige la relance qui apporte une nouvelle raison de répondre, la dernière touche « je clos votre dossier » et un angle de réactivation à 60 ou 90 jours. Avec HubSpot, il peut proposer une tâche de relance, créée seulement après votre confirmation.",
+      "skills": ["FOLLOW_UP_EMAIL", "FOLLOW_UP_STRATEGY", "NO_RESPONSE_RECOVERY", "REACTIVATION_SALES", "FOLLOW_UP_CALL"],
+      "requiredConnectors": [],
+      "optionalConnectors": ["hubspot.controlled", "pipedrive.controlled", "gmail.controlled", "outlook_mail.controlled"],
+      "connectorOperations": {
+        "hubspot.controlled": ["SEARCH_CONTACTS", "READ_DEAL", "CREATE_TASK"],
+        "pipedrive.controlled": ["SEARCH_CONTACTS", "READ_DEAL"],
+        "gmail.controlled": ["SEARCH_MESSAGES", "DRAFT_MESSAGE"],
+        "outlook_mail.controlled": ["SEARCH_MESSAGES", "DRAFT_MESSAGE"]
+      },
+      "channels": ["web", "schedule", "email"],
+      "suggestedFrequencyMinutes": 10080,
+      "knowledgeFields": [
+        { "key": "offre_description", "label": "Ce que vous vendez, en 3 phrases", "help": "Pour que chaque relance apporte un angle utile et non un simple « avez-vous vu mon message ».", "required": true, "example": "Maintenance d'ascenseurs pour copropriétés de 20 à 200 lots, contrat annuel à partir d'un forfait mensuel." },
+        { "key": "contacts_a_relancer", "label": "Contacts à relancer", "help": "Collez la liste (nom, entreprise, date du dernier échange) ou connectez votre CRM.", "required": true, "example": "Agence Dubois, Fribourg - dernier email le 12 septembre, sans réponse" },
+        { "key": "nouvelles_preuves", "label": "Nouveautés à mettre en avant", "help": "Une nouvelle référence, une offre ou un résultat récent qui justifie de revenir.", "required": false, "example": "Nouveau contrat de maintenance signé avec une résidence de 80 lots en octobre" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-crm", "label": "Lire vos contacts et opportunités", "examples": ["Rechercher les contacts sans réponse dans HubSpot ou Pipedrive", "Lire une opportunité pour connaître son étape et sa dernière date"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 50 },
+        { "category": "redaction", "label": "Rédiger les relances", "examples": ["Rédiger la relance qui apporte une nouvelle raison de répondre", "Rédiger la dernière touche de clôture du dossier"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 30 },
+        { "category": "brouillon-email", "label": "Déposer les relances en brouillon", "examples": ["Créer un brouillon de relance dans votre boîte mail, sans l'envoyer"], "risk": "low", "defaultMode": "draft", "maxAutoPerDay": null, "operations": ["gmail.controlled:DRAFT_MESSAGE", "outlook_mail.controlled:DRAFT_MESSAGE"] },
+        { "category": "ecriture-crm", "label": "Créer une tâche de relance dans HubSpot", "examples": ["Créer la tâche « relancer Agence Dubois » avec une note, après votre confirmation"], "risk": "low", "defaultMode": "ask", "maxAutoPerDay": null, "operations": ["hubspot.controlled:CREATE_TASK"] },
+        { "category": "envoi-externe", "label": "Envoyer les relances", "examples": ["Envoyer une relance par email ou message LinkedIn"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null },
+        { "category": "appel-sortant", "label": "Appeler les contacts à relancer", "examples": ["Passer un appel de relance à un prospect"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Voici 3 contacts sans réponse depuis 3 semaines, avec le dernier email envoyé à chacun. Rédige pour chacun une relance avec une nouvelle raison de répondre, puis la dernière touche de clôture. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Chaque relance apporte une raison nouvelle de répondre, jamais « avez-vous vu mon message »",
+          "La dernière touche est courte, polie et propose de rouvrir le dossier",
+          "Aucun contact n'est relancé plus de 5 ou 6 fois au total"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    },
+    {
+      "id": "prevision-pipeline",
+      "label": "Prévision de pipeline et objectif de revenu",
+      "description": "Alex calcule à rebours combien de contacts, de réponses, de rendez-vous et de ventes il faut pour atteindre votre objectif de revenu, à partir de vos vrais chiffres ou d'hypothèses clairement étiquetées. Il livre un tableur avec formules visibles et la sensibilité (que se passe-t-il si le taux de réponse monte).",
+      "skills": ["SALES_FORECAST", "CONVERSION_FORECAST", "REVENUE_PIPELINE_ANALYSIS", "FORECASTING", "SALES_PERFORMANCE_ANALYSIS"],
+      "requiredConnectors": [],
+      "optionalConnectors": ["hubspot.controlled", "pipedrive.controlled"],
+      "connectorOperations": {
+        "hubspot.controlled": ["SEARCH_CONTACTS", "READ_DEAL"],
+        "pipedrive.controlled": ["SEARCH_CONTACTS", "READ_DEAL"]
+      },
+      "channels": ["web", "schedule"],
+      "suggestedFrequencyMinutes": 43200,
+      "knowledgeFields": [
+        { "key": "objectif_revenu", "label": "Objectif de chiffre d'affaires", "help": "Montant visé et période.", "required": true, "example": "120 000 CHF de ventes nouvelles d'ici fin juin" },
+        { "key": "panier_moyen", "label": "Montant moyen d'une vente", "help": "Valeur moyenne d'un contrat ou d'une commande.", "required": true, "example": "6 000 CHF par contrat annuel" },
+        { "key": "taux_conversion", "label": "Vos taux connus", "help": "Taux de réponse, de rendez-vous et de signature si vous les avez. Sinon Alex pose des hypothèses étiquetées.", "required": false, "example": "Environ 1 rendez-vous pour 10 réponses, 1 vente pour 4 rendez-vous" },
+        { "key": "cycle_vente", "label": "Durée moyenne d'une vente", "help": "Du premier contact à la signature.", "required": false, "example": "6 à 8 semaines" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-crm", "label": "Lire vos opportunités et contacts", "examples": ["Lire les opportunités ouvertes dans HubSpot ou Pipedrive pour calibrer la prévision"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 50 },
+        { "category": "analyse-calcul", "label": "Calculer la prévision et la sensibilité", "examples": ["Calculer le nombre de contacts à sourcer pour atteindre l'objectif", "Produire le tableur avec formules visibles"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "engagement-commercial", "label": "Fixer prix, remises et objectifs à votre place", "examples": ["Décider d'une remise ou d'un tarif pour un prospect"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Je vise 120 000 CHF de ventes d'ici 6 mois, panier moyen 6 000 CHF, je ne connais pas mes taux. Calcule à rebours le nombre de contacts nécessaires avec des hypothèses étiquetées et montre l'effet d'un taux de réponse qui passe de 4 % à 7 %. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Chaque taux inventé est étiqueté « hypothèse » et jamais présenté comme un fait",
+          "Le tableur montre les formules, pas seulement les résultats",
+          "La sensibilité au taux de réponse est chiffrée"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    },
+    {
+      "id": "preparation-rendez-vous",
+      "label": "Préparation de rendez-vous de découverte et réponses aux objections",
+      "description": "Avant un rendez-vous, Alex prépare la fiche du prospect, les 6 à 8 questions de qualification adaptées à votre offre, la trame d'appel de 15 à 20 minutes et les réponses aux objections courantes (prix, déjà un prestataire, plus tard). Il peut regarder votre agenda pour situer le rendez-vous.",
+      "skills": ["DISCOVERY_CALL_PREPARATION", "DISCOVERY_QUESTIONS", "NEEDS_ANALYSIS", "OBJECTION_HANDLING", "SALES_SCRIPT", "SALES_ARGUMENTAIRE", "PROPOSAL_SUPPORT"],
+      "requiredConnectors": [],
+      "optionalConnectors": ["calendar.controlled", "outlook_calendar.controlled"],
+      "connectorOperations": {
+        "calendar.controlled": ["READ_EVENTS", "SEARCH_EVENTS", "CREATE_EVENT"],
+        "outlook_calendar.controlled": ["READ_EVENTS", "SEARCH_EVENTS", "CREATE_EVENT"]
+      },
+      "channels": ["web"],
+      "knowledgeFields": [
+        { "key": "offre_description", "label": "Ce que vous vendez, en 3 phrases", "help": "Pour adapter les questions et les arguments à votre offre.", "required": true, "example": "Maintenance d'ascenseurs pour copropriétés de 20 à 200 lots, contrat annuel à partir d'un forfait mensuel." },
+        { "key": "prospect_a_rencontrer", "label": "Le prospect à rencontrer", "help": "Nom de l'entreprise, adresse de son site et ce que vous savez déjà.", "required": true, "example": "Agence Dubois, Fribourg - elle gère 15 immeubles" },
+        { "key": "objections_frequentes", "label": "Objections que vous entendez souvent", "help": "Alex prépare une réponse honnête à chacune.", "required": false, "example": "Trop cher, nous avons déjà un prestataire" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-recherche", "label": "Préparer la fiche du prospect", "examples": ["Lire le site du prospect et ses actualités publiques", "Consulter vos événements d'agenda pour situer le rendez-vous"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 30 },
+        { "category": "redaction", "label": "Rédiger les questions, la trame d'appel et les réponses", "examples": ["Rédiger les 6 à 8 questions de qualification adaptées à l'offre", "Rédiger la trame d'appel de découverte"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 30 },
+        { "category": "ecriture-agenda", "label": "Créer un rendez-vous dans votre agenda", "examples": ["Ajouter le rendez-vous de découverte dans votre agenda Google ou Outlook"], "risk": "medium", "defaultMode": "off", "maxAutoPerDay": null, "operations": ["calendar.controlled:CREATE_EVENT", "outlook_calendar.controlled:CREATE_EVENT"] },
+        { "category": "engagement-commercial", "label": "Engager un prix ou une remise", "examples": ["Promettre un tarif ou une remise au prospect"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Prépare mon rendez-vous de découverte de jeudi avec Agence Dubois à Fribourg : fiche prospect, 7 questions de qualification, trame d'appel de 15 minutes et réponses aux objections « trop cher » et « on a déjà un prestataire ». Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Les questions sont celles à poser en rendez-vous, pas une définition de BANT",
+          "Aucune information sur le prospect n'est inventée : les inconnues sont marquées « à confirmer »",
+          "La trame d'appel tient en 15 minutes et se termine par une prochaine étape datée"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    },
+    {
+      "id": "suivi-crm-opportunites",
+      "label": "Suivi des opportunités dans votre CRM",
+      "description": "Alex lit vos contacts et opportunités HubSpot ou Pipedrive, repère les affaires qui stagnent ou sont à risque, vérifie la qualité des données et propose les prochaines actions classées par priorité. Avec HubSpot, il peut proposer une tâche (créée après votre confirmation) ; Pipedrive est en lecture seule.",
+      "skills": ["DEAL_RISK_ANALYSIS", "DEAL_TRACKING", "PIPELINE_MANAGEMENT", "STAGE_MANAGEMENT", "OPPORTUNITY_PRIORITIZATION", "CRM_DATA_CLEANING", "CRM_REPORTING"],
+      "requiredConnectors": [],
+      "requiredAnyOf": [["hubspot.controlled", "pipedrive.controlled"]],
+      "optionalConnectors": [],
+      "connectorOperations": {
+        "hubspot.controlled": ["SEARCH_CONTACTS", "READ_CONTACT", "READ_DEAL", "CREATE_TASK"],
+        "pipedrive.controlled": ["SEARCH_CONTACTS", "READ_CONTACT", "READ_DEAL"]
+      },
+      "channels": ["web", "schedule"],
+      "suggestedFrequencyMinutes": 10080,
+      "knowledgeFields": [
+        { "key": "etapes_pipeline", "label": "Les étapes de votre pipeline", "help": "Les étapes dans l'ordre, pour que le diagnostic respecte votre façon de vendre.", "required": true, "example": "Nouveau, Contacté, Rendez-vous, Proposition, Gagné, Perdu" },
+        { "key": "delai_stagnation", "label": "À partir de quand une affaire stagne", "help": "Nombre de jours sans activité au-delà duquel Alex la signale.", "required": false, "example": "15 jours" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-crm", "label": "Lire contacts et opportunités", "examples": ["Lire les opportunités ouvertes et leurs dernières dates d'activité", "Rechercher les contacts en doublon ou sans coordonnées"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 60 },
+        { "category": "analyse-calcul", "label": "Analyser et prioriser les affaires", "examples": ["Classer les affaires par risque et par montant pondéré", "Rédiger le rapport de pipeline de la semaine"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "ecriture-crm", "label": "Créer une tâche dans HubSpot", "examples": ["Créer la tâche « relancer le devis Dubois » avec une note, après votre confirmation"], "risk": "low", "defaultMode": "ask", "maxAutoPerDay": null, "operations": ["hubspot.controlled:CREATE_TASK"] },
+        { "category": "suppression", "label": "Supprimer ou fusionner des fiches", "examples": ["Supprimer des contacts en doublon", "Changer l'étape d'une affaire"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Lis mon CRM connecté, liste les 5 affaires qui stagnent depuis plus de 15 jours, explique le risque de chacune et propose la prochaine action. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Les affaires citées existent dans le CRM connecté",
+          "Chaque affaire a un risque expliqué et une prochaine action",
+          "Aucune fiche n'est créée, modifiée ou supprimée sans confirmation"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    }
+  ],
+  "channelSupport": {
+    "email": "planned",
+    "phone": "planned",
+    "whatsapp": "planned",
+    "web": "available",
+    "schedule": "available"
+  },
+  "plannedCapabilities": [
+    "Réponse automatique aux leads qui arrivent par email, avec votre validation avant tout envoi",
+    "Prise en charge des leads reçus par WhatsApp ou par téléphone sur votre propre numéro",
+    "Envoi des emails de prospection depuis votre boîte mail après votre validation (aujourd'hui vous envoyez vous-même les messages préparés)",
+    "Création automatique de contacts et d'opportunités dans votre CRM (aujourd'hui : un fichier .csv ou .xlsx à importer)",
+    "Connexion à Salesforce",
+    "Lecture du texte complet des emails Gmail (aujourd'hui la recherche renvoie la liste des messages : collez le texte dans la conversation)",
+    "Dépôt de vos fichiers (export CRM, liste de clients) directement dans la conversation"
+  ],
+  "installationSteps": [
+    "Ajoutez Alex à votre équipe depuis le catalogue des Workers.",
+    "Remplissez la fiche d'entreprise : adresse de votre site, ce que vous vendez et votre zone géographique. Les champs obligatoires suffisent pour démarrer.",
+    "Si vous avez un CRM, connectez HubSpot ou Pipedrive dans la page Connecteurs. Connectez aussi Gmail ou Outlook pour recevoir les brouillons dans votre boîte.",
+    "Gardez les réglages d'autonomie par défaut : Alex cherche, calcule et rédige seul, mais rien n'est envoyé ni écrit chez vous sans votre confirmation.",
+    "Lancez le scénario d'essai « Prospection » : vous recevez une liste sourcée et une séquence, sans aucun envoi.",
+    "Relisez le résultat, corrigez la fiche d'entreprise si besoin, puis lancez votre première vraie demande.",
+    "Programmez une automatisation hebdomadaire pour renouveler la liste de prospects ou relancer le pipeline.",
+    "Envoyez vous-même les messages préparés depuis votre messagerie, en gardant le lien de désinscription."
+  ]
+}

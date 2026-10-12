@@ -1,0 +1,214 @@
+{
+  "schema": "BK-INSTALL-PROFILE-V1",
+  "workerId": "lucas",
+  "displayName": "Lucas",
+  "tagline": "Audite votre site, vous remet les correctifs exacts à coller et surveille sa disponibilité, en disant clairement ce qu'il ne peut pas mesurer.",
+  "idealFor": "Propriétaires de sites WordPress, Webflow ou vitrines sur mesure, sans webmaster, qui veulent un site rapide, indexé et accessible, et savoir quoi demander à leur hébergeur.",
+  "services": [
+    {
+      "id": "audit-seo-technique",
+      "label": "Audit SEO technique priorisé avec correctifs prêts à coller",
+      "description": "Lucas lit le HTML réel de vos pages clés, contrôle titre, meta, H1, canonical, balises robots, données structurées et contenus mixtes, lit votre robots.txt et votre sitemap collés, puis livre un rapport priorisé impact et effort avec la balise exacte à coller pour chaque correctif. Ce qu'il ne peut pas observer (codes HTTP, redirections, vitesse mesurée) est marqué « à vérifier » avec la méthode de test.",
+      "skills": ["PERFORMANCE_AUDIT", "SEMANTIC_HTML", "WEB_ARCHITECTURE", "UX_AUDIT"],
+      "requiredConnectors": [],
+      "optionalConnectors": ["google_search_console.controlled"],
+      "connectorOperations": {
+        "google_search_console.controlled": ["READ_REPORT", "SEARCH_QUERIES"]
+      },
+      "channels": ["web", "schedule"],
+      "suggestedFrequencyMinutes": 43200,
+      "knowledgeFields": [
+        { "key": "site_web", "label": "Adresse de votre site", "help": "Collez aussi l'adresse de quelques pages clés (accueil, une page produit, un article) : Lucas ne lit que les adresses qui figurent dans la conversation.", "required": true, "example": "https://www.atelier-martin.example/ et /services/revision" },
+        { "key": "robots_et_sitemap", "label": "Votre robots.txt et votre sitemap", "help": "Collez leur adresse ou leur contenu.", "required": false, "example": "https://www.atelier-martin.example/robots.txt" },
+        { "key": "cms_utilise", "label": "Outil qui fait tourner votre site", "help": "WordPress, Webflow, Shopify, sur mesure...", "required": false, "example": "WordPress avec le thème Astra" },
+        { "key": "rapport_pagespeed", "label": "Rapport PageSpeed ou Core Web Vitals", "help": "Lucas ne peut pas mesurer la vitesse lui-même : collez le rapport de PageSpeed Insights ou de Search Console.", "required": false, "example": "LCP 3,4 s, INP 180 ms, CLS 0,08 sur mobile" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-recherche", "label": "Lire les pages et les rapports", "examples": ["Lire le HTML de l'accueil et d'une page profonde", "Lire les requêtes et pages de Search Console"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "redaction", "label": "Rédiger le rapport et les correctifs", "examples": ["Rédiger la balise canonical exacte à ajouter", "Produire le rapport d'audit .docx priorisé"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 15 },
+        { "category": "modification-serveur", "label": "Appliquer les correctifs sur votre site ou serveur", "examples": ["Modifier le robots.txt de votre site", "Mettre en place des redirections sur votre hébergement"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Audite la page d'accueil et une page de service de mon site (adresses dans ma fiche) : titre, meta, H1, canonical, données structurées, et liste ce que tu ne peux pas vérifier avec la méthode de test. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Chaque constat vient du HTML réellement lu, jamais d'une supposition",
+          "Les points non observables (codes HTTP, redirections, vitesse) sont marqués « à vérifier » avec la méthode de test",
+          "Chaque correctif est donné sous forme de balise ou de règle exacte à coller"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    },
+    {
+      "id": "core-web-vitals-performance",
+      "label": "Optimisation de la vitesse et des Core Web Vitals",
+      "description": "À partir du rapport PageSpeed ou Search Console que vous collez, Lucas identifie l'élément qui ralentit l'affichage, les scripts bloquants et les images mal dimensionnées, puis donne les correctifs exacts (formats d'image, préchargement, dimensions, cache, compression). Il ne déclare aucun gain sans nouvelle mesure de votre part.",
+      "skills": ["PAGE_SPEED", "IMAGE_OPTIMIZATION", "CACHING", "PERFORMANCE_AUDIT", "FRONTEND_DEVELOPMENT"],
+      "requiredConnectors": [],
+      "optionalConnectors": [],
+      "channels": ["web"],
+      "knowledgeFields": [
+        { "key": "site_web", "label": "Adresse de la page lente", "help": "L'adresse exacte à examiner.", "required": true, "example": "https://www.atelier-martin.example/" },
+        { "key": "rapport_pagespeed", "label": "Rapport PageSpeed ou Core Web Vitals", "help": "Collez les chiffres LCP, INP et CLS en mobile. Sans rapport, Lucas ne donne que des estimations étiquetées depuis le HTML.", "required": true, "example": "LCP 3,4 s, INP 180 ms, CLS 0,08 sur mobile" },
+        { "key": "cms_utilise", "label": "Outil qui fait tourner votre site", "help": "Les correctifs dépendent du CMS.", "required": false, "example": "WordPress avec WP Rocket" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-recherche", "label": "Lire la page et le rapport", "examples": ["Repérer les images sans dimensions dans le HTML", "Lire le rapport de vitesse que vous avez collé"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "redaction", "label": "Rédiger le plan de correctifs", "examples": ["Rédiger les attributs et balises à ajouter pour fixer le décalage de mise en page", "Classer les correctifs par gain attendu et effort"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 15 },
+        { "category": "modification-serveur", "label": "Appliquer les optimisations sur votre site", "examples": ["Installer un plugin de cache", "Modifier la configuration de votre hébergement"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Voici mon rapport PageSpeed mobile (LCP 3,4 s, INP 180 ms, CLS 0,08) pour ma page d'accueil. Dis-moi ce qui ralentit probablement l'affichage et donne les correctifs exacts classés par gain et effort. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Chaque correctif est rattaché à un indicateur (LCP, INP ou CLS)",
+          "Les estimations depuis le HTML sont étiquetées comme telles",
+          "Aucun gain n'est promis sans nouvelle mesure"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    },
+    {
+      "id": "migration-refonte-https",
+      "label": "Plan de migration, refonte ou passage en HTTPS",
+      "description": "Lucas prépare le plan qui évite de perdre votre référencement : tableau de redirections 301 ancienne vers nouvelle adresse (une par une, jamais tout vers l'accueil), mise à jour des canonical, du sitemap et du robots.txt, checklist de mise en ligne et méthode de vérification après bascule. Vous ou votre hébergeur appliquez ; il ne touche ni au DNS ni au serveur.",
+      "skills": ["WEBFLOW_MIGRATION", "WEB_ARCHITECTURE", "WEBSITE_MAINTENANCE"],
+      "requiredConnectors": [],
+      "optionalConnectors": [],
+      "channels": ["web"],
+      "knowledgeFields": [
+        { "key": "ancien_site", "label": "Adresse de l'ancien site et liste de ses pages", "help": "Collez l'adresse de son sitemap ou la liste des adresses importantes.", "required": true, "example": "https://www.atelier-martin.example/sitemap.xml" },
+        { "key": "nouveau_site", "label": "Nouvelle structure ou nouveau domaine", "help": "Adresses prévues ou principes de la nouvelle arborescence.", "required": true, "example": "Passage de /services-velos/revision à /services/revision" },
+        { "key": "date_bascule", "label": "Date de mise en ligne prévue", "help": "Pour caler les étapes.", "required": false, "example": "Le 15 novembre" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-recherche", "label": "Lire l'ancien site", "examples": ["Lire le sitemap collé et les pages principales"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "redaction", "label": "Rédiger le plan et le tableau de redirections", "examples": ["Produire le tableau 301 ancienne et nouvelle adresse en .xlsx", "Rédiger la checklist de mise en ligne"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 15 },
+        { "category": "modification-serveur", "label": "Basculer le DNS ou déployer le nouveau site", "examples": ["Changer le DNS du domaine", "Mettre le nouveau site en production"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null },
+        { "category": "paiement-hebergement", "label": "Acheter un domaine, un hébergement ou un certificat", "examples": ["Acheter un nouveau nom de domaine"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Je change la structure de mon site : /services-velos/revision devient /services/revision. Prépare le tableau des redirections 301, la checklist de mise en ligne et la méthode de vérification après bascule. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Chaque ancienne adresse a une redirection 301 vers sa page équivalente et non vers l'accueil",
+          "Aucune chaîne de plus d'un saut ni boucle n'apparaît dans le tableau",
+          "La méthode de test indique les vérifications à faire par vous ou votre hébergeur"
+        ]
+      },
+      "recommendedLevel": "approfondi"
+    },
+    {
+      "id": "accessibilite-web",
+      "label": "Contrôle d'accessibilité de base (WCAG)",
+      "description": "Lucas relève dans le HTML ce qui est vérifiable : langue de la page, textes alternatifs, hiérarchie des titres, formulaires étiquetés, ordre de tabulation, contrastes déclarés, et livre la liste des défauts avec le correctif exact. Ce qui demande un lecteur d'écran ou un test réel est signalé comme à tester.",
+      "skills": ["WCAG_REVIEW", "WEB_ACCESSIBILITY", "KEYBOARD_NAVIGATION", "SEMANTIC_HTML"],
+      "requiredConnectors": [],
+      "optionalConnectors": [],
+      "channels": ["web"],
+      "knowledgeFields": [
+        { "key": "site_web", "label": "Adresses des pages à contrôler", "help": "Quelques pages représentatives : accueil, formulaire, page produit.", "required": true, "example": "https://www.atelier-martin.example/ et /reservation" },
+        { "key": "obligation_legale", "label": "Obligation d'accessibilité qui vous concerne", "help": "Dites si vous avez une obligation légale ou contractuelle (Lucas renvoie vers Clara pour l'avis juridique).", "required": false, "example": "Aucune obligation, mais je veux un site utilisable par tous" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-recherche", "label": "Lire le HTML des pages", "examples": ["Repérer les images sans texte alternatif", "Repérer les champs de formulaire sans étiquette"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "redaction", "label": "Rédiger la liste des défauts et des correctifs", "examples": ["Rédiger le correctif exact pour chaque défaut", "Classer les défauts par impact sur les utilisateurs"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 15 },
+        { "category": "modification-site", "label": "Corriger directement votre site", "examples": ["Modifier le code de votre thème pour ajouter les textes alternatifs"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Contrôle l'accessibilité de base de ma page d'accueil et de ma page de réservation : langue, textes alternatifs, titres, formulaires, et donne le correctif exact de chaque défaut. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Les défauts cités sont présents dans le HTML lu",
+          "Ce qui exige un test réel (lecteur d'écran) est signalé comme à tester",
+          "Le correctif est donné sous forme de code exact"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    },
+    {
+      "id": "surveillance-maintenance-site",
+      "label": "Surveillance de disponibilité et dépannage de site",
+      "description": "Si vous connectez UptimeRobot, Lucas lit l'état de vos sites et l'historique des incidents, formule des hypothèses sur la cause d'une panne ou d'une lenteur (hébergeur, DNS, plugin récent, certificat expiré) et donne le correctif exact que vous ou votre hébergeur appliquez. En cas de piratage, il passe la main à Sam.",
+      "skills": ["ERROR_MONITORING", "WEBSITE_MAINTENANCE", "BACKUP_VERIFICATION", "WORDPRESS_MAINTENANCE", "WORDPRESS_SECURITY", "DEPENDENCY_UPDATES"],
+      "requiredConnectors": [],
+      "optionalConnectors": ["monitoring.controlled"],
+      "connectorOperations": {
+        "monitoring.controlled": ["READ_STATUS", "SEARCH_INCIDENTS"]
+      },
+      "channels": ["web", "schedule", "whatsapp"],
+      "suggestedFrequencyMinutes": 1440,
+      "knowledgeFields": [
+        { "key": "site_web", "label": "Adresse du site à surveiller", "help": "L'adresse principale de votre site.", "required": true, "example": "https://www.atelier-martin.example" },
+        { "key": "hebergeur_et_cms", "label": "Hébergeur et CMS", "help": "Pour cibler les causes probables d'une panne.", "required": false, "example": "Infomaniak, WordPress" },
+        { "key": "sauvegardes", "label": "Vos sauvegardes actuelles", "help": "Fréquence et lieu de stockage.", "required": false, "example": "Sauvegarde quotidienne chez l'hébergeur, conservée 14 jours" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-donnees", "label": "Lire l'état de vos moniteurs", "examples": ["Lire l'état courant des moniteurs UptimeRobot", "Rechercher les incidents des 7 derniers jours"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 30 },
+        { "category": "redaction", "label": "Rédiger le diagnostic et le correctif", "examples": ["Rédiger les hypothèses classées par probabilité", "Rédiger les étapes exactes de retour arrière d'un plugin"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "modification-serveur", "label": "Intervenir sur votre serveur ou votre CMS", "examples": ["Désactiver un plugin sur votre site", "Redémarrer le serveur"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Lis l'état de mes moniteurs s'ils sont connectés et dis-moi si mon site a eu des incidents ces 7 derniers jours, avec les causes probables et la marche à suivre pour mon hébergeur. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "L'état annoncé vient du moniteur connecté et non d'un test de page isolé",
+          "Les causes sont présentées comme des hypothèses classées",
+          "Un soupçon de piratage est renvoyé vers Sam"
+        ]
+      },
+      "recommendedLevel": "rapide"
+    },
+    {
+      "id": "brouillons-wordpress-webflow",
+      "label": "Brouillons de pages dans WordPress ou Webflow",
+      "description": "Lucas peut déposer un brouillon d'article ou de page dans votre WordPress, qui reste invisible tant que vous ne le publiez pas, et proposer la mise à jour du titre d'une page Webflow. Toute écriture attend votre confirmation, une action à la fois. Aucune publication ne part de son côté.",
+      "skills": ["LANDING_PAGE_BUILD", "CONVERSION_COPY", "CTA_OPTIMIZATION", "WORDPRESS_DEVELOPMENT", "WEBFLOW_CMS"],
+      "requiredConnectors": [],
+      "requiredAnyOf": [["wordpress.controlled", "webflow.controlled"]],
+      "optionalConnectors": [],
+      "connectorOperations": {
+        "wordpress.controlled": ["READ_POST", "CREATE_DRAFT", "UPDATE_DRAFT"],
+        "webflow.controlled": ["READ_PAGE", "UPDATE_DRAFT"]
+      },
+      "channels": ["web"],
+      "knowledgeFields": [
+        { "key": "contenu_de_la_page", "label": "Ce que la page doit contenir", "help": "Objectif, public, message et appel à l'action.", "required": true, "example": "Page de prise de rendez-vous pour la révision des vélos électriques, avec formulaire et tarifs" },
+        { "key": "site_web", "label": "Adresse de votre site", "help": "Pour reprendre votre ton et votre structure.", "required": false, "example": "https://www.atelier-martin.example" }
+      ],
+      "autonomyRules": [
+        { "category": "redaction", "label": "Rédiger la page et sa structure", "examples": ["Rédiger le texte, les titres et l'appel à l'action", "Préparer le balisage et les données structurées"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "ecriture-cms", "label": "Créer un brouillon dans WordPress", "examples": ["Créer un nouvel article en brouillon, invisible pour vos visiteurs"], "risk": "low", "defaultMode": "ask", "maxAutoPerDay": null, "operations": ["wordpress.controlled:CREATE_DRAFT"] },
+        { "category": "ecriture-cms-existant", "label": "Modifier un contenu déjà présent", "examples": ["Mettre à jour un article WordPress (il repasse en brouillon)", "Changer le titre d'une page Webflow existante"], "risk": "medium", "defaultMode": "ask", "maxAutoPerDay": null, "operations": ["wordpress.controlled:UPDATE_DRAFT", "webflow.controlled:UPDATE_DRAFT"] },
+        { "category": "publication", "label": "Publier la page", "examples": ["Mettre la page en ligne pour vos visiteurs"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Rédige une page de prise de rendez-vous pour ma révision de vélos électriques et montre-moi la carte de confirmation du brouillon WordPress que tu déposerais, sans le créer. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Le texte de la page est complet avec titres et appel à l'action",
+          "La carte de confirmation décrit exactement ce qui serait créé",
+          "Rien n'est créé tant que vous ne confirmez pas"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    }
+  ],
+  "channelSupport": {
+    "email": "no",
+    "phone": "no",
+    "whatsapp": "planned",
+    "web": "available",
+    "schedule": "available"
+  },
+  "plannedCapabilities": [
+    "Mesure automatique de la vitesse (PageSpeed, Lighthouse) et test des redirections et des codes HTTP, impossibles aujourd'hui",
+    "Alerte par WhatsApp ou téléphone quand votre site tombe",
+    "Publication d'une page dans WordPress ou Webflow après validation (aujourd'hui : brouillon seulement)",
+    "Dépôt de vos fichiers (sitemap, export de redirections) directement dans la conversation",
+    "Connexion à Google Analytics et à Shopify en écriture contrôlée"
+  ],
+  "installationSteps": [
+    "Ajoutez Lucas à votre équipe depuis le catalogue des Workers.",
+    "Indiquez l'adresse de votre site, quelques pages clés et l'outil qui le fait tourner (WordPress, Webflow...).",
+    "Connectez Google Search Console, UptimeRobot, WordPress ou Webflow dans la page Connecteurs selon ce que vous utilisez.",
+    "Gardez les réglages par défaut : Lucas lit et rédige seul, mais ne modifie ni votre serveur, ni votre DNS, ni vos pages publiées.",
+    "Lancez le scénario d'essai « Audit SEO technique » et vérifiez que les points non mesurables sont marqués « à vérifier ».",
+    "Transmettez les correctifs exacts à votre hébergeur ou appliquez-les vous-même, puis collez le nouveau rapport pour confirmer le gain.",
+    "Programmez une automatisation quotidienne de surveillance si vous avez connecté UptimeRobot."
+  ]
+}

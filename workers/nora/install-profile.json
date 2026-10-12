@@ -1,0 +1,225 @@
+{
+  "schema": "BK-INSTALL-PROFILE-V1",
+  "workerId": "nora",
+  "displayName": "Nora",
+  "tagline": "Répond à vos clients avec empathie et exactitude, trie votre file de tickets et transforme chaque cas en réponse-type réutilisable.",
+  "idealFor": "Boutiques en ligne, services et PME qui reçoivent des questions et des réclamations clients par email, chat ou messagerie et veulent des réponses justes, dans la bonne langue, sans inventer leurs règles.",
+  "services": [
+    {
+      "id": "reponse-client",
+      "label": "Réponse complète à un client, dans sa langue et le ton de votre marque",
+      "description": "Vous transférez un message ou un ticket. Nora lit votre aide en ligne, vos CGV et vos pages produit pour s'appuyer sur votre règle réelle, détecte la langue, la gravité et l'émotion du client, puis rédige la réponse entière : reformulation, solution pas à pas, porte ouverte. Elle ne devine jamais un délai, une politique ou un prix.",
+      "skills": ["TICKET_RESOLUTION", "EMAIL_SUPPORT", "MULTILINGUAL_SUPPORT", "LIVE_CHAT", "WHATSAPP_SUPPORT"],
+      "requiredConnectors": [],
+      "optionalConnectors": ["zendesk.controlled", "intercom.controlled", "gmail.controlled", "outlook_mail.controlled"],
+      "connectorOperations": {
+        "zendesk.controlled": ["READ_TICKET", "DRAFT_REPLY"],
+        "intercom.controlled": ["READ_TICKET", "DRAFT_REPLY"],
+        "gmail.controlled": ["DRAFT_MESSAGE"],
+        "outlook_mail.controlled": ["DRAFT_MESSAGE"]
+      },
+      "channels": ["web", "email", "whatsapp", "phone"],
+      "knowledgeFields": [
+        { "key": "message_client", "label": "Le message du client", "help": "Collez le message ou le ticket complet, avec le canal d'origine.", "required": true, "example": "Bonjour, ma commande n'est toujours pas arrivée depuis 10 jours, je veux être remboursé." },
+        { "key": "site_web", "label": "Adresse de votre site et de votre aide en ligne", "help": "Nora s'appuie sur vos pages d'aide, CGV et FAQ pour ne rien inventer.", "required": true, "example": "https://www.atelier-martin.example/aide" },
+        { "key": "politiques_reelles", "label": "Vos règles de service", "help": "Délais de livraison, retours, garanties, gestes commerciaux autorisés. Nora ne les devine jamais.", "required": true, "example": "Retours sous 14 jours, remboursement sous 10 jours ouvrés après réception" },
+        { "key": "ton_et_style", "label": "Ton de votre marque", "help": "Vouvoiement ou tutoiement, chaleureux ou sobre, signature.", "required": false, "example": "Vouvoiement chaleureux, signé « L'équipe Atelier Martin »" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-recherche", "label": "Lire votre aide en ligne et le ticket", "examples": ["Lire votre FAQ et vos CGV pour trouver la règle réelle", "Lire un ticket Zendesk ou Intercom"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 60 },
+        { "category": "redaction", "label": "Rédiger la réponse et la macro associée", "examples": ["Rédiger la réponse complète dans la langue du client", "Rédiger la macro réutilisable correspondante"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 100 },
+        { "category": "note-interne", "label": "Déposer la réponse en note interne du helpdesk", "examples": ["Déposer la réponse en note interne dans Zendesk, invisible du client"], "risk": "low", "defaultMode": "draft", "maxAutoPerDay": null, "operations": ["zendesk.controlled:DRAFT_REPLY", "intercom.controlled:DRAFT_REPLY"] },
+        { "category": "brouillon-email", "label": "Déposer la réponse en brouillon dans votre boîte", "examples": ["Créer le brouillon dans Gmail ou Outlook, sans l'envoyer"], "risk": "low", "defaultMode": "draft", "maxAutoPerDay": null, "operations": ["gmail.controlled:DRAFT_MESSAGE", "outlook_mail.controlled:DRAFT_MESSAGE"] },
+        { "category": "envoi-externe", "label": "Répondre directement au client", "examples": ["Envoyer la réponse au client par email, chat ou WhatsApp"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Un client écrit : « Ma commande n'est toujours pas arrivée depuis 10 jours, je veux être remboursé ». Rédige la réponse complète en t'appuyant sur ma politique de livraison, sans promettre de remboursement, et prépare la macro. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "La réponse reconnaît l'émotion avant de proposer la solution",
+          "Aucun délai, remboursement ou geste commercial n'est promis sans votre règle",
+          "La demande de remboursement est présentée comme transmise à l'équipe responsable"
+        ]
+      },
+      "recommendedLevel": "rapide"
+    },
+    {
+      "id": "triage-file-tickets",
+      "label": "Triage d'une file de tickets par gravité et ancienneté",
+      "description": "Nora résume chaque ticket en une ligne, les classe par gravité, impact client et ancienneté avec un délai de réponse cible issu de votre politique, produit le tableau de triage (propriétaire, langue, action) et rédige déjà les réponses des un ou deux tickets les plus urgents.",
+      "skills": ["TICKET_TRIAGE", "SLA_TRACKING", "ESCALATION_MANAGEMENT"],
+      "requiredConnectors": [],
+      "optionalConnectors": ["zendesk.controlled", "intercom.controlled"],
+      "connectorOperations": {
+        "zendesk.controlled": ["SEARCH_TICKETS", "READ_TICKET"],
+        "intercom.controlled": ["SEARCH_TICKETS", "READ_TICKET"]
+      },
+      "channels": ["web", "schedule"],
+      "suggestedFrequencyMinutes": 1440,
+      "knowledgeFields": [
+        { "key": "tickets_a_trier", "label": "Les tickets à trier", "help": "Collez-les, ou connectez Zendesk ou Intercom pour que Nora les cherche.", "required": true, "example": "12 tickets ouverts cette semaine, dont 3 sur des retards de livraison" },
+        { "key": "delais_cibles", "label": "Vos délais de réponse cibles", "help": "Nora n'invente jamais de SLA.", "required": false, "example": "Première réponse sous 24 heures ouvrées, sous 4 heures pour les urgents" },
+        { "key": "equipe_proprietaires", "label": "Qui traite quoi", "help": "Pour l'attribution des tickets.", "required": false, "example": "Claire pour les livraisons, Paul pour les garanties" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-helpdesk", "label": "Lire et rechercher les tickets", "examples": ["Rechercher les tickets ouverts depuis plus de 3 jours", "Lire un ticket pour résumer le problème réel"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 100 },
+        { "category": "redaction", "label": "Produire le tableau de triage et les réponses prioritaires", "examples": ["Classer les tickets par gravité, impact et ancienneté", "Rédiger la réponse des deux tickets les plus urgents"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 60 },
+        { "category": "suppression", "label": "Fermer ou supprimer des tickets", "examples": ["Clôturer un ticket dans le helpdesk"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Voici 8 tickets ouverts (collés ci-dessous). Fais le tableau de triage par gravité, impact client et ancienneté, et rédige la réponse des deux plus urgents. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Chaque ticket a une gravité, un propriétaire proposé et une action",
+          "Les délais cibles viennent de votre fiche et non d'une invention",
+          "Aucun ticket n'est fermé ni modifié dans le helpdesk"
+        ]
+      },
+      "recommendedLevel": "rapide"
+    },
+    {
+      "id": "desescalade-reclamation",
+      "label": "Réclamation et client mécontent : désescalade et dossier préparé",
+      "description": "Nora accuse réception de l'émotion avant la solution, assume la part de responsabilité de la marque sans sur-promettre, appuie sa réponse sur un fait vérifié avec une prochaine étape concrète. Pour un geste commercial, un remboursement ou un retour, elle prépare la recommandation et le dossier pour vous, avec Dario pour le chiffrage et Clara pour le cadre légal.",
+      "skills": ["ESCALATION_MANAGEMENT", "REFUND_PREPARATION", "RETURNS_PREPARATION", "WARRANTY_TRACKING", "TICKET_RESOLUTION"],
+      "requiredConnectors": [],
+      "optionalConnectors": [],
+      "channels": ["web", "email", "phone"],
+      "knowledgeFields": [
+        { "key": "message_client", "label": "La réclamation", "help": "Collez le message du client et l'historique du dossier.", "required": true, "example": "Un client menace de laisser un avis négatif après une réparation non conforme" },
+        { "key": "politiques_reelles", "label": "Vos règles de garantie et de remboursement", "help": "Ce que vous acceptez de faire, et ce que vous refusez.", "required": true, "example": "Garantie de 12 mois sur main-d'œuvre, remboursement possible après contrôle en atelier" },
+        { "key": "marge_geste_commercial", "label": "Marge de manœuvre pour un geste commercial", "help": "Indiquez vos limites : Nora ne décide jamais seule.", "required": false, "example": "Jusqu'à 10 % de remise sur la prochaine intervention, validé par moi" }
+      ],
+      "autonomyRules": [
+        { "category": "redaction", "label": "Rédiger la réponse de désescalade et la note de dossier", "examples": ["Rédiger la réponse en quatre temps : écoute, responsabilité, fait vérifié, prochaine étape", "Préparer la recommandation de geste commercial pour votre décision"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 40 },
+        { "category": "escalade", "label": "Vous alerter sur un cas sensible", "examples": ["Signaler une menace juridique ou un avis public viral"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "paiement", "label": "Rembourser ou créditer un client", "examples": ["Effectuer un remboursement", "Émettre un avoir"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null },
+        { "category": "engagement-commercial", "label": "Accorder un geste commercial", "examples": ["Promettre une remise ou une exception au client"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Un client furieux menace de laisser un avis négatif après une réparation qu'il juge non conforme. Rédige la réponse de désescalade et prépare le dossier de recommandation pour moi, sans accorder de remboursement. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "La réponse reconnaît l'émotion avant de proposer quoi que ce soit",
+          "Rien n'est accordé au client : la demande est transmise à l'équipe responsable",
+          "Le dossier indique les points juridiques et financiers à faire valider"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    },
+    {
+      "id": "base-connaissance-faq",
+      "label": "FAQ, articles d'aide et macros de réponse",
+      "description": "À partir d'un cas résolu ou d'un thème, Nora rédige l'article de base de connaissance complet (problème, cause, solution pas à pas, cas particuliers) et les macros de réponse prêtes à coller dans votre outil de support, pour que le même cas se traite plus vite la fois suivante.",
+      "skills": ["KNOWLEDGE_BASE_WRITING", "FAQ_MANAGEMENT", "MACRO_TEMPLATES"],
+      "requiredConnectors": [],
+      "optionalConnectors": [],
+      "channels": ["web", "schedule"],
+      "suggestedFrequencyMinutes": 43200,
+      "knowledgeFields": [
+        { "key": "cas_ou_theme", "label": "Le cas ou le thème à documenter", "help": "Collez un ticket résolu ou nommez le thème (retours, livraison, garantie).", "required": true, "example": "Comment faire réviser un vélo électrique sous garantie" },
+        { "key": "site_web", "label": "Adresse de votre site et de votre aide en ligne", "help": "Pour rester cohérent avec vos pages existantes.", "required": false, "example": "https://www.atelier-martin.example/aide" },
+        { "key": "politiques_reelles", "label": "Vos règles de service", "help": "Les articles reprennent exactement ces règles.", "required": false, "example": "Retours sous 14 jours, garantie de 12 mois" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-recherche", "label": "Lire votre aide existante", "examples": ["Lire vos pages d'aide pour ne pas les contredire"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 30 },
+        { "category": "redaction", "label": "Rédiger articles et macros", "examples": ["Rédiger l'article d'aide complet avec cas particuliers", "Rédiger trois macros prêtes à coller"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 60 },
+        { "category": "publication", "label": "Publier l'article dans votre centre d'aide", "examples": ["Mettre l'article en ligne dans votre base de connaissance"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Rédige l'article d'aide « Comment faire réviser un vélo électrique sous garantie » et trois macros de réponse à partir de mes règles de garantie. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "L'article suit vos règles de garantie sans en ajouter",
+          "Les trois macros sont complètes et prêtes à coller",
+          "Rien n'est publié dans votre centre d'aide"
+        ]
+      },
+      "recommendedLevel": "rapide"
+    },
+    {
+      "id": "suivi-satisfaction",
+      "label": "Suivi après résolution et analyse de la satisfaction",
+      "description": "Nora prépare le message de suivi court après un ticket résolu (« est-ce bien réglé ? »), propose un questionnaire de satisfaction, analyse les retours collés pour faire ressortir les motifs récurrents et repère les clients à risque de départ. Un retour insatisfait relance le traitement du dossier (nouvelle réponse ou désescalade).",
+      "skills": ["SATISFACTION_SURVEY", "FEEDBACK_ANALYSIS", "CHURN_SIGNAL_DETECTION"],
+      "requiredConnectors": [],
+      "optionalConnectors": ["zendesk.controlled", "intercom.controlled"],
+      "connectorOperations": {
+        "zendesk.controlled": ["SEARCH_TICKETS", "READ_TICKET"],
+        "intercom.controlled": ["SEARCH_TICKETS", "READ_TICKET"]
+      },
+      "channels": ["web", "schedule", "email"],
+      "suggestedFrequencyMinutes": 10080,
+      "knowledgeFields": [
+        { "key": "retours_clients", "label": "Retours et avis à analyser", "help": "Collez les avis, notes ou réponses au questionnaire ; ou connectez votre helpdesk.", "required": true, "example": "30 avis clients reçus en octobre avec leur note sur 5" },
+        { "key": "ton_et_style", "label": "Ton de vos messages de suivi", "help": "Vouvoiement ou tutoiement, chaleureux ou sobre.", "required": false, "example": "Vouvoiement chaleureux" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-helpdesk", "label": "Lire les retours et les tickets", "examples": ["Rechercher les tickets résolus de la semaine", "Lire les avis collés"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 60 },
+        { "category": "redaction", "label": "Rédiger l'analyse et les messages de suivi", "examples": ["Rédiger les motifs récurrents d'insatisfaction avec leur fréquence", "Rédiger le message de suivi après résolution"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 60 },
+        { "category": "envoi-externe", "label": "Envoyer le questionnaire à vos clients", "examples": ["Envoyer le questionnaire de satisfaction à une liste de clients"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Voici 20 avis clients du mois (collés ci-dessous). Fais ressortir les trois motifs récurrents, repère les clients à risque et rédige le message de suivi à leur adresser. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Chaque motif est chiffré à partir des avis fournis",
+          "Les clients à risque sont identifiés avec le signal qui les désigne",
+          "Le message de suivi est prêt à copier et rien n'est envoyé"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    },
+    {
+      "id": "note-interne-helpdesk",
+      "label": "Réponses déposées en note interne dans Zendesk ou Intercom",
+      "description": "Avec Zendesk ou Intercom connecté, Nora lit un ticket et dépose sa réponse en note interne, jamais visible du client final. Votre équipe relit puis envoie depuis l'outil. Une seule action est en attente de confirmation par mission.",
+      "skills": ["TICKET_RESOLUTION", "MACRO_TEMPLATES", "EMAIL_SUPPORT"],
+      "requiredConnectors": [],
+      "requiredAnyOf": [["zendesk.controlled", "intercom.controlled"]],
+      "optionalConnectors": [],
+      "connectorOperations": {
+        "zendesk.controlled": ["READ_TICKET", "SEARCH_TICKETS", "DRAFT_REPLY"],
+        "intercom.controlled": ["READ_TICKET", "SEARCH_TICKETS", "DRAFT_REPLY"]
+      },
+      "channels": ["web", "schedule"],
+      "suggestedFrequencyMinutes": 1440,
+      "knowledgeFields": [
+        { "key": "ticket_a_traiter", "label": "Le ticket à traiter", "help": "Numéro du ticket ou critère de recherche (par exemple « livraison non reçue »).", "required": true, "example": "Ticket 4821, livraison non reçue" },
+        { "key": "politiques_reelles", "label": "Vos règles de service", "help": "Nora s'y tient et ne promet rien d'autre.", "required": true, "example": "Livraison en 3 à 5 jours ouvrés, enquête transporteur après 7 jours" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-helpdesk", "label": "Lire les tickets", "examples": ["Lire le ticket et son historique"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 100 },
+        { "category": "note-interne", "label": "Déposer la réponse en note interne", "examples": ["Déposer la réponse préparée en note interne, invisible du client"], "risk": "low", "defaultMode": "draft", "maxAutoPerDay": null, "operations": ["zendesk.controlled:DRAFT_REPLY", "intercom.controlled:DRAFT_REPLY"] },
+        { "category": "envoi-externe", "label": "Répondre publiquement au client dans l'outil", "examples": ["Envoyer la réponse au client depuis Zendesk ou Intercom"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Lis le ticket indiqué dans mon helpdesk connecté et montre-moi la note interne que tu déposerais, avec la carte de confirmation, sans la créer. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "La note est destinée à l'équipe et n'est pas visible du client",
+          "Une carte de confirmation décrit la note avant tout dépôt",
+          "La réponse reste cohérente avec vos règles de service"
+        ]
+      },
+      "recommendedLevel": "rapide"
+    }
+  ],
+  "channelSupport": {
+    "email": "planned",
+    "phone": "planned",
+    "whatsapp": "planned",
+    "web": "available",
+    "schedule": "available"
+  },
+  "plannedCapabilities": [
+    "Réponse automatique aux emails de vos clients depuis votre boîte de support, avec validation avant envoi",
+    "Prise en charge des messages WhatsApp de vos clients sur votre propre numéro professionnel",
+    "Standard téléphonique IA pour répondre aux appels de vos clients (aujourd'hui réservé au compte propriétaire de la plateforme)",
+    "Réponse publique directe dans Zendesk ou Intercom après votre validation (aujourd'hui : note interne seulement)",
+    "Dépôt de captures d'écran et de pièces jointes dans la conversation"
+  ],
+  "installationSteps": [
+    "Ajoutez Nora à votre équipe depuis le catalogue des Workers.",
+    "Remplissez la fiche d'entreprise : adresse de votre site et de votre aide en ligne, vos règles de livraison, retours, garantie et le ton de votre marque.",
+    "Connectez Zendesk ou Intercom (notes internes) et Gmail ou Outlook (brouillons) dans la page Connecteurs si vous les utilisez.",
+    "Gardez les réglages par défaut : Nora rédige et dépose des notes ou des brouillons, mais n'envoie rien au client et n'engage aucun remboursement.",
+    "Lancez le scénario d'essai « Réponse à un client » avec un vrai message et vérifiez qu'aucune règle n'est inventée.",
+    "Relisez la réponse et envoyez-la vous-même, ou faites envoyer la note interne par votre équipe.",
+    "Programmez un tri quotidien des tickets si votre helpdesk est connecté."
+  ]
+}

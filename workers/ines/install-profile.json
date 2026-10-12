@@ -1,0 +1,203 @@
+{
+  "schema": "BK-INSTALL-PROFILE-V1",
+  "workerId": "ines",
+  "displayName": "Inès",
+  "tagline": "Analyse vos vraies données par programme, calcule chaque chiffre et vous remet un constat, des graphiques et une recommandation.",
+  "idealFor": "TPE et PME qui exportent des chiffres de leur boutique, de leur CRM, de GA4 ou de leurs publicités mais n'ont ni analyste ni temps pour en tirer des décisions.",
+  "services": [
+    {
+      "id": "analyse-de-donnees",
+      "label": "Analyse complète d'un jeu de données",
+      "description": "Vous collez un export (CSV ou tableau) ou un lien public. Inès l'inspecte réellement (colonnes, trous, doublons), le nettoie en annonçant chaque choix, calcule les faits saillants avec pandas, produit des graphiques propres et rend un rapport : constat principal, détail, recommandation reliée à un chiffre calculé, limites et niveau de confiance.",
+      "skills": ["DATA_CLEANING", "TREND_ANALYSIS", "SEGMENTATION_ANALYSIS", "DATA_STORYTELLING", "DASHBOARD_BUILDING"],
+      "requiredConnectors": [],
+      "optionalConnectors": [],
+      "channels": ["web"],
+      "knowledgeFields": [
+        { "key": "question_decision", "label": "La décision que l'analyse doit éclairer", "help": "Une phrase. Sans décision-cible, l'analyse reste un rapport sans suite.", "required": true, "example": "Dois-je continuer à vendre les accessoires à faible marge ?" },
+        { "key": "donnees_a_analyser", "label": "Vos données", "help": "Collez l'export (avec les en-têtes de colonnes) ou donnez un lien public. L'ajout de fichier n'existe pas encore.", "required": true, "example": "Export des commandes d'août à octobre avec date, produit, montant, pays" },
+        { "key": "definition_metriques", "label": "Définitions propres à votre activité", "help": "Ce que vous appelez un client actif, une commande valide, etc.", "required": false, "example": "Client actif = au moins une commande payée sur 90 jours" }
+      ],
+      "autonomyRules": [
+        { "category": "analyse-calcul", "label": "Charger, nettoyer et analyser les données", "examples": ["Compter doublons, valeurs manquantes et aberrations", "Calculer médiane, dispersion et corrélations avec pandas"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 30 },
+        { "category": "redaction", "label": "Produire graphiques et rapport", "examples": ["Créer des graphiques dont le titre énonce le constat", "Rédiger la recommandation reliée à un chiffre calculé"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "suppression", "label": "Supprimer des données à la source", "examples": ["Effacer des lignes dans votre outil d'origine"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Voici un export de 200 commandes (collé ci-dessous). Nettoie-le, annonce combien de lignes sont retenues, donne 3 faits saillants chiffrés avec un graphique et une recommandation. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Le nombre de lignes brutes, retenues et exclues se réconcilie, avec la raison de chaque exclusion",
+          "Chaque chiffre vient d'un calcul exécuté et aucune colonne inventée n'est citée",
+          "La recommandation renvoie à un chiffre précis et les limites sont indiquées"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    },
+    {
+      "id": "audit-qualite-donnees",
+      "label": "Audit qualité et nettoyage de vos données",
+      "description": "Inès contrôle un export avant que vous vous en serviez : taux de remplissage par colonne, doublons sur la clé métier, formats de dates et de montants, valeurs impossibles (âge négatif, commande à zéro) et anomalies. Elle livre le fichier nettoyé et la liste exacte de ce qui a été exclu, corrigé ou imputé.",
+      "skills": ["DATA_QUALITY_AUDIT", "DATA_CLEANING", "ANOMALY_DETECTION"],
+      "requiredConnectors": [],
+      "optionalConnectors": [],
+      "channels": ["web"],
+      "knowledgeFields": [
+        { "key": "donnees_a_analyser", "label": "Les données à contrôler", "help": "Collez l'export avec ses en-têtes, ou un lien public.", "required": true, "example": "Liste de 1 200 contacts clients exportée de votre CRM" },
+        { "key": "cle_metier", "label": "Ce qui identifie une ligne de façon unique", "help": "Email, numéro de commande, référence...", "required": false, "example": "Adresse email" },
+        { "key": "regles_metier", "label": "Valeurs impossibles dans votre métier", "help": "Pour détecter les erreurs de saisie.", "required": false, "example": "Un montant de commande ne peut pas être nul ni négatif" }
+      ],
+      "autonomyRules": [
+        { "category": "analyse-calcul", "label": "Détecter et quantifier les problèmes", "examples": ["Compter les doublons sur la clé métier", "Repérer les dates mal formatées et les valeurs aberrantes"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 30 },
+        { "category": "redaction", "label": "Livrer le fichier nettoyé et le journal des corrections", "examples": ["Produire le fichier nettoyé en .csv", "Rédiger le journal « X lignes brutes vers Y lignes retenues, raison »"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "suppression", "label": "Modifier ou supprimer les données dans votre outil", "examples": ["Fusionner des doublons directement dans votre CRM"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Contrôle la qualité de cet export de contacts (collé ci-dessous) : doublons, champs vides, formats et valeurs impossibles, puis donne le fichier nettoyé et le journal des corrections. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Chaque colonne a un taux de remplissage chiffré",
+          "Aucune ligne n'est supprimée en silence : chaque exclusion est justifiée",
+          "Le fichier nettoyé est proposé en téléchargement"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    },
+    {
+      "id": "kpi-conversion-cohortes",
+      "label": "KPI rigoureux : conversion, CAC, LTV, rétention et cohortes",
+      "description": "Pour chaque indicateur, Inès donne la formule, la période, le dénominateur exact et le chiffre calculé sur vos données : taux de conversion, coût d'acquisition, valeur vie client rapportée au CAC, rétention par cohorte mensuelle et churn. Elle sépare « on recrute » de « on fidélise ».",
+      "skills": ["KPI_DEFINITION", "COHORT_ANALYSIS", "TREND_ANALYSIS", "REPORTING_AUTOMATION"],
+      "requiredConnectors": [],
+      "optionalConnectors": [],
+      "channels": ["web"],
+      "knowledgeFields": [
+        { "key": "donnees_a_analyser", "label": "Vos données de ventes ou de clients", "help": "Export avec dates, clients et montants ; collez-le ou donnez un lien public.", "required": true, "example": "Commandes des 12 derniers mois avec identifiant client, date, montant" },
+        { "key": "depenses_acquisition", "label": "Dépenses marketing de la période", "help": "Pour calculer le coût d'acquisition.", "required": false, "example": "18 500 CHF de publicité et d'outils sur le trimestre" },
+        { "key": "marge_brute", "label": "Votre marge brute moyenne", "help": "Pour une valeur vie client en marge et non en chiffre d'affaires.", "required": false, "example": "Environ 68 %" }
+      ],
+      "autonomyRules": [
+        { "category": "analyse-calcul", "label": "Calculer les indicateurs", "examples": ["Calculer le taux de conversion avec son dénominateur", "Construire la matrice de rétention par cohorte"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 30 },
+        { "category": "redaction", "label": "Rédiger le tableau de KPI et le constat", "examples": ["Produire un tableau .xlsx avec formules et définitions", "Rédiger le levier principal identifié"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "engagement-budget", "label": "Réaffecter votre budget publicitaire", "examples": ["Augmenter ou réduire un budget de publicité"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "À partir de cet export de commandes (collé ci-dessous), calcule le taux de réachat, la rétention par cohorte mensuelle et dis où se situe la plus forte chute. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Chaque KPI affiche sa formule, sa période et son dénominateur",
+          "La matrice de cohortes est calculée sur les données fournies",
+          "L'hypothèse retenue pour toute définition manquante est étiquetée"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    },
+    {
+      "id": "test-ab-significativite",
+      "label": "Analyse d'un test A/B avec test de significativité",
+      "description": "Inès compare deux variantes avec un vrai test de proportions (z-test et chi²), calcule l'écart relatif, vérifie taille d'échantillon, durée du test (au moins un cycle hebdomadaire) et risque d'arrêt prématuré, et ne déclare un gagnant que si l'écart est significatif.",
+      "skills": ["AB_TEST_ANALYSIS", "TREND_ANALYSIS"],
+      "requiredConnectors": [],
+      "optionalConnectors": [],
+      "channels": ["web"],
+      "knowledgeFields": [
+        { "key": "resultats_variantes", "label": "Résultats des deux variantes", "help": "Visiteurs et conversions de A et de B, et les dates du test.", "required": true, "example": "A : 6 050 visiteurs, 284 commandes ; B : 6 008 visiteurs, 341 commandes ; du 1er au 21 octobre" },
+        { "key": "hypothese_testee", "label": "Ce que vous avez testé", "help": "La modification faite entre A et B.", "required": false, "example": "Bouton « Réserver » en vert au lieu de gris" }
+      ],
+      "autonomyRules": [
+        { "category": "analyse-calcul", "label": "Calculer significativité et incertitude", "examples": ["Faire un test de proportions sur les deux taux", "Calculer l'uplift relatif et son intervalle"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 30 },
+        { "category": "redaction", "label": "Rédiger le verdict", "examples": ["Rédiger la décision : variante gagnante, non concluant ou test à prolonger"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "modification-site", "label": "Mettre la variante gagnante en production", "examples": ["Remplacer la version A par la version B sur votre site"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "A : 6 050 visiteurs et 284 conversions, B : 6 008 visiteurs et 341 conversions sur 21 jours. La variante B gagne-t-elle vraiment ? Donne le test de significativité et ta recommandation. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Le verdict s'appuie sur un test statistique et non sur l'écart brut",
+          "La taille d'échantillon et la durée du test sont commentées",
+          "L'incertitude est donnée avec le résultat"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    },
+    {
+      "id": "tableau-de-bord-decisionnel",
+      "label": "Tableau de bord orienté décisions",
+      "description": "Inès conçoit un tableau de bord qui part d'une métrique nord, ses moteurs puis le détail, avec le bon graphique pour chaque donnée (courbes, barres triées, cartes de chaleur), une palette lisible en daltonisme et des titres qui énoncent le constat. Elle livre les graphiques en images et un classeur Excel.",
+      "skills": ["DASHBOARD_BUILDING", "REPORTING_AUTOMATION", "KPI_DEFINITION", "DATA_STORYTELLING"],
+      "requiredConnectors": [],
+      "optionalConnectors": [],
+      "channels": ["web"],
+      "knowledgeFields": [
+        { "key": "metrique_nord", "label": "La métrique qui compte le plus", "help": "Celle que vous regardez en premier chaque semaine.", "required": true, "example": "Chiffre d'affaires hebdomadaire de la boutique" },
+        { "key": "donnees_a_analyser", "label": "Vos données", "help": "Collez l'export ou donnez un lien public.", "required": true, "example": "Ventes par jour et par produit sur 6 mois" },
+        { "key": "public_du_tableau", "label": "Qui lira ce tableau", "help": "Vous, votre équipe, un associé : cela change le niveau de détail.", "required": false, "example": "Moi et mon associé, une fois par semaine" }
+      ],
+      "autonomyRules": [
+        { "category": "analyse-calcul", "label": "Calculer les indicateurs du tableau", "examples": ["Calculer la métrique nord et ses moteurs", "Détecter les ruptures de tendance"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 30 },
+        { "category": "redaction", "label": "Créer graphiques et classeur", "examples": ["Créer les graphiques avec axes libellés et unités", "Produire le classeur .xlsx du tableau de bord"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 }
+      ],
+      "testScenario": {
+        "objective": "Avec ces ventes quotidiennes des 6 derniers mois (collées ci-dessous), construis un tableau de bord avec une métrique nord, ses 3 moteurs et des graphiques dont les titres énoncent le constat. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "La métrique nord est en tête, suivie de ses moteurs puis du détail",
+          "Chaque graphique a des axes libellés avec unités et un titre qui énonce le constat",
+          "Le classeur .xlsx est proposé en téléchargement"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    },
+    {
+      "id": "analyse-trafic-tracking",
+      "label": "Analyse de trafic et plan de tracking GA4",
+      "description": "Inès analyse un export GA4 collé par vos soins et, si vous les avez connectés, lit vos rapports Google Search Console (requêtes et pages) et vos campagnes Meta Ads. Elle rattache chaque chiffre à une dimension et une période, et rédige un plan de tracking GA4 (événements, conversions, dimensions) à faire implémenter par Lucas ou Rayan.",
+      "skills": ["TREND_ANALYSIS", "ANOMALY_DETECTION", "SEGMENTATION_ANALYSIS", "REPORTING_AUTOMATION"],
+      "requiredConnectors": [],
+      "optionalConnectors": ["google_search_console.controlled", "meta_ads.controlled"],
+      "connectorOperations": {
+        "google_search_console.controlled": ["READ_REPORT", "SEARCH_QUERIES"],
+        "meta_ads.controlled": ["READ_CAMPAIGN", "READ_REPORT"]
+      },
+      "channels": ["web", "schedule"],
+      "suggestedFrequencyMinutes": 10080,
+      "knowledgeFields": [
+        { "key": "site_web", "label": "Adresse de votre site", "help": "Pour cibler l'analyse et, avec Search Console, la bonne propriété.", "required": true, "example": "https://www.atelier-martin.example" },
+        { "key": "export_ga4", "label": "Export GA4", "help": "Collez le rapport ou l'exploration exportés en CSV : il n'existe pas encore de connexion directe à GA4.", "required": false, "example": "Sessions et conversions par source/support sur 90 jours" },
+        { "key": "objectifs_conversion", "label": "Ce qui compte comme conversion", "help": "Achat, demande de devis, appel, inscription...", "required": false, "example": "Demande de devis envoyée depuis le formulaire" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-donnees", "label": "Lire vos rapports connectés", "examples": ["Lire les requêtes Search Console de la période", "Lire les campagnes et les résultats Meta Ads"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 30 },
+        { "category": "analyse-calcul", "label": "Analyser et rédiger le plan de tracking", "examples": ["Calculer les évolutions par source et par page", "Rédiger la liste des événements et conversions à suivre"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "modification-site", "label": "Installer les balises sur votre site", "examples": ["Poser des balises de suivi sur votre site"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Lis mes données Search Console des 28 derniers jours si elles sont connectées, sinon utilise l'export collé, et dis-moi quelles pages et requêtes progressent ou reculent avec un plan de tracking GA4 minimal. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Chaque chiffre est rattaché à une dimension et à une période nommées",
+          "Aucune donnée GA4 n'est annoncée sans export fourni",
+          "Le plan de tracking liste événements, conversions et dimensions"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    }
+  ],
+  "channelSupport": {
+    "email": "planned",
+    "phone": "no",
+    "whatsapp": "no",
+    "web": "available",
+    "schedule": "available"
+  },
+  "plannedCapabilities": [
+    "Connexion directe à Google Analytics 4 et à BigQuery (aujourd'hui : exporter puis coller les données)",
+    "Connexion à Google Ads (application à enregistrer chez Google)",
+    "Dépôt de vos fichiers Excel et CSV volumineux directement dans la conversation",
+    "Envoi automatique du rapport hebdomadaire par email après votre validation",
+    "Tableau de bord interactif mis à jour tout seul à partir de vos outils"
+  ],
+  "installationSteps": [
+    "Ajoutez Inès à votre équipe depuis le catalogue des Workers.",
+    "Indiquez l'adresse de votre site et la métrique qui compte le plus pour vous dans la fiche d'entreprise.",
+    "Connectez Google Search Console et Meta Ads dans la page Connecteurs si vous les utilisez (facultatif).",
+    "Gardez les réglages par défaut : Inès analyse et rédige seule, elle ne modifie et ne supprime jamais vos données.",
+    "Lancez le scénario d'essai « Analyse complète » avec un petit export et vérifiez que le nombre de lignes se réconcilie.",
+    "Exportez vos vraies données (CSV), collez-les dans la conversation et posez votre question de décision.",
+    "Programmez une automatisation hebdomadaire sur Search Console pour suivre vos pages et vos requêtes."
+  ]
+}

@@ -1,0 +1,212 @@
+{
+  "schema": "BK-INSTALL-PROFILE-V1",
+  "workerId": "clara",
+  "displayName": "Clara",
+  "tagline": "Rédige vos contrats, NDA et CGV en entier, avec les articles de loi vérifiés, et relit ceux que l'on vous envoie.",
+  "idealFor": "TPE et PME de Suisse ou de France qui signent des contrats sans service juridique et veulent un projet complet et sourcé à faire valider par un avocat avant signature.",
+  "services": [
+    {
+      "id": "redaction-contrat",
+      "label": "Rédaction d'un contrat complet (prestation, mandat, bail, cession)",
+      "description": "Clara fixe d'abord la juridiction (droit suisse ou français, jamais les deux mélangés), vérifie sur Fedlex ou Légifrance chaque article qu'elle cite, puis rédige l'acte en entier : parties, objet, prix, durée, résiliation, responsabilité, données, droit applicable et for, signatures. Elle livre un .docx et signale les clauses sensibles.",
+      "skills": ["CONTRACT_DRAFTING_TEMPLATE", "LEGAL_RISK_FLAGGING"],
+      "requiredConnectors": [],
+      "optionalConnectors": ["gmail.controlled", "outlook_mail.controlled"],
+      "connectorOperations": {
+        "gmail.controlled": ["DRAFT_MESSAGE"],
+        "outlook_mail.controlled": ["DRAFT_MESSAGE"]
+      },
+      "channels": ["web"],
+      "knowledgeFields": [
+        { "key": "identite_entreprise", "label": "Votre entreprise", "help": "Raison sociale, forme juridique, siège et personne qui signe.", "required": true, "example": "Atelier Martin SA, société anonyme, Lausanne, représentée par Claire Martin, administratrice" },
+        { "key": "juridiction", "label": "Droit applicable", "help": "Suisse ou France. À défaut, Clara le déduit de votre siège et de la monnaie, et le dit clairement.", "required": true, "example": "Droit suisse, for à Lausanne" },
+        { "key": "parties_contrat_type", "label": "Types de contrats que vous signez le plus", "help": "Prestation de services, bail, cession, distribution...", "required": false, "example": "Contrats de prestation de services avec des PME clientes" },
+        { "key": "conditions_habituelles", "label": "Vos conditions habituelles", "help": "Délai de paiement, durée d'engagement, plafond de responsabilité souhaité.", "required": false, "example": "Paiement à 30 jours, résiliation à 3 mois, responsabilité plafonnée au montant annuel" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-recherche", "label": "Vérifier les articles de loi", "examples": ["Confirmer un article du Code des obligations sur Fedlex", "Lire un modèle ou un lien fourni avant d'écrire"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "redaction", "label": "Rédiger le contrat et le fichier Word", "examples": ["Rédiger toutes les clauses du contrat", "Produire le .docx avec la mention « PROJET à faire relire par un avocat »"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 15 },
+        { "category": "brouillon-email", "label": "Déposer un email d'accompagnement en brouillon", "examples": ["Préparer dans votre boîte mail le brouillon d'email qui accompagne le contrat, sans l'envoyer"], "risk": "low", "defaultMode": "draft", "maxAutoPerDay": null, "operations": ["gmail.controlled:DRAFT_MESSAGE", "outlook_mail.controlled:DRAFT_MESSAGE"] },
+        { "category": "envoi-externe", "label": "Transmettre le contrat à l'autre partie", "examples": ["Envoyer le contrat à la contrepartie"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null },
+        { "category": "signature", "label": "Signer ou faire signer l'acte", "examples": ["Signer le contrat au nom de l'entreprise"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Rédige un contrat de prestation de services entre mon entreprise (siège à Lausanne) et un client PME, durée 12 mois, prix forfaitaire mensuel, droit suisse. Donne le texte complet et le fichier Word. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "La juridiction retenue est énoncée en clair avant le texte",
+          "Chaque article de loi cité est confirmé sur une source officielle ou marqué « à confirmer »",
+          "Aucune clause n'est laissée en « à insérer » et l'avertissement de relecture par un avocat figure en fin d'acte"
+        ]
+      },
+      "recommendedLevel": "approfondi"
+    },
+    {
+      "id": "nda-confidentialite",
+      "label": "NDA et accords de confidentialité (unilatéral ou bilatéral)",
+      "description": "Clara rédige un accord de confidentialité complet : définition de l'information confidentielle, exceptions, durée, retour ou destruction des documents, sanction, droit applicable. Elle précise si l'accord est unilatéral ou bilatéral et livre un .docx prêt à relire.",
+      "skills": ["NDA_MANAGEMENT", "CONTRACT_DRAFTING_TEMPLATE"],
+      "requiredConnectors": [],
+      "optionalConnectors": ["gmail.controlled", "outlook_mail.controlled"],
+      "connectorOperations": {
+        "gmail.controlled": ["DRAFT_MESSAGE"],
+        "outlook_mail.controlled": ["DRAFT_MESSAGE"]
+      },
+      "channels": ["web"],
+      "knowledgeFields": [
+        { "key": "identite_entreprise", "label": "Votre entreprise", "help": "Raison sociale, forme juridique, siège et personne qui signe.", "required": true, "example": "Atelier Martin SA, société anonyme, Lausanne, représentée par Claire Martin, administratrice" },
+        { "key": "juridiction", "label": "Droit applicable", "help": "Suisse ou France.", "required": true, "example": "Droit suisse, for à Lausanne" },
+        { "key": "duree_confidentialite", "label": "Durée de l'obligation de confidentialité", "help": "Pendant la relation et pendant combien d'années après.", "required": false, "example": "5 ans après la fin des discussions" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-recherche", "label": "Vérifier les références légales", "examples": ["Confirmer sur Fedlex ou Légifrance un article cité"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "redaction", "label": "Rédiger le NDA", "examples": ["Rédiger un NDA bilatéral complet", "Produire le .docx numéroté et le .pdf figé"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "brouillon-email", "label": "Préparer le message d'envoi en brouillon", "examples": ["Déposer le brouillon d'email d'accompagnement, sans l'envoyer"], "risk": "low", "defaultMode": "draft", "maxAutoPerDay": null, "operations": ["gmail.controlled:DRAFT_MESSAGE", "outlook_mail.controlled:DRAFT_MESSAGE"] },
+        { "category": "signature", "label": "Faire signer le NDA", "examples": ["Signer ou faire signer l'accord électroniquement"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Rédige un NDA bilatéral entre mon entreprise et un prestataire informatique pour des discussions de 3 mois, droit suisse, avec le fichier Word. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Le texte est complet : définitions, exceptions, durée, restitution des documents, droit applicable",
+          "Le caractère bilatéral est respecté dans toutes les clauses",
+          "L'avertissement de relecture par un avocat est présent"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    },
+    {
+      "id": "cgv-cgu-mentions-legales",
+      "label": "CGV, CGU, politique de confidentialité et mentions légales",
+      "description": "Clara rédige les textes légaux de votre site ou de votre boutique : conditions générales de vente (y compris vente à distance en droit français), conditions d'utilisation, politique de confidentialité et mentions légales, avec les références vérifiées et la distinction suisse ou française.",
+      "skills": ["TERMS_CONDITIONS_DRAFTING", "GDPR_CHECKLIST", "COMPLIANCE_CHECKLIST"],
+      "requiredConnectors": [],
+      "optionalConnectors": [],
+      "channels": ["web"],
+      "knowledgeFields": [
+        { "key": "identite_entreprise", "label": "Votre entreprise", "help": "Raison sociale, forme juridique, siège, numéro d'identification (IDE ou SIRET) et contact.", "required": true, "example": "Atelier Martin SA, Lausanne, contact@atelier-martin.example" },
+        { "key": "activite_site", "label": "Ce que vous vendez en ligne", "help": "Produits ou services, clients particuliers ou professionnels, modes de paiement et de livraison.", "required": true, "example": "Vente de pièces de vélo à des particuliers, paiement par carte, livraison en Suisse et en France" },
+        { "key": "juridiction", "label": "Droit applicable", "help": "Suisse, France ou les deux sur des textes séparés.", "required": true, "example": "Droit suisse pour les clients suisses, droit français pour les clients français" },
+        { "key": "outils_donnees", "label": "Outils qui collectent des données", "help": "Formulaire, newsletter, statistiques, publicité : pour la politique de confidentialité.", "required": false, "example": "Newsletter, Google Analytics, formulaire de contact" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-recherche", "label": "Vérifier la loi applicable", "examples": ["Confirmer les mentions obligatoires de la vente à distance", "Vérifier le délai de rétractation applicable"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "redaction", "label": "Rédiger les textes légaux", "examples": ["Rédiger les CGV complètes", "Rédiger la politique de confidentialité et les mentions légales"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 15 },
+        { "category": "publication", "label": "Mettre les textes en ligne sur votre site", "examples": ["Remplacer les CGV de votre site par la nouvelle version"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Rédige les CGV de ma boutique en ligne (pièces de vélo vendues à des particuliers, livraison en Suisse), avec le fichier Word et la liste des points à faire valider par un juriste. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Le droit suisse est retenu et justifié, sans mélange avec le droit français",
+          "Les références de loi sont confirmées ou marquées « à confirmer »",
+          "Les clauses sensibles sont listées avec la clause concernée"
+        ]
+      },
+      "recommendedLevel": "approfondi"
+    },
+    {
+      "id": "audit-contrat-recu",
+      "label": "Relecture et audit d'un contrat reçu",
+      "description": "Vous collez le texte d'un contrat (ou son lien public). Clara le lit en entier, identifie le droit et le type, le passe clause par clause et livre un tableau : clause, risque constaté, reformulation proposée, classé en bloquant, à négocier ou cosmétique.",
+      "skills": ["CONTRACT_REVIEW_FLAGGING", "LEGAL_RISK_FLAGGING", "COMPLIANCE_CHECKLIST"],
+      "requiredConnectors": [],
+      "optionalConnectors": [],
+      "channels": ["web"],
+      "knowledgeFields": [
+        { "key": "texte_du_contrat", "label": "Le contrat à relire", "help": "Collez le texte complet dans la conversation ou donnez un lien public (l'ajout de fichier n'existe pas encore).", "required": true, "example": "Contrat de distribution de 12 pages reçu d'un fournisseur" },
+        { "key": "position_negociation", "label": "Votre position", "help": "Ce qui est négociable et ce qui ne l'est pas pour vous.", "required": false, "example": "Je refuse l'exclusivité et un plafond de responsabilité trop bas" },
+        { "key": "juridiction", "label": "Droit applicable si vous le connaissez", "help": "Sinon Clara le déduit du texte.", "required": false, "example": "Droit suisse" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-recherche", "label": "Lire le contrat et vérifier les références", "examples": ["Lire le texte collé en entier", "Confirmer un article de loi cité dans le contrat"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "redaction", "label": "Produire le tableau de risques et les reformulations", "examples": ["Rédiger le tableau clause, risque, reformulation", "Classer les risques en bloquant, à négocier, cosmétique"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 15 },
+        { "category": "envoi-externe", "label": "Renvoyer vos contre-propositions à l'autre partie", "examples": ["Envoyer les modifications demandées à la contrepartie"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Voici un contrat de distribution (texte collé ci-dessous). Fais-en l'audit clause par clause avec un tableau clause, risque, reformulation proposée. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Chaque risque renvoie à une clause précise du texte fourni",
+          "Chaque reformulation est rédigée et non décrite",
+          "Les risques sont classés par gravité et l'avertissement avocat figure en fin de rapport"
+        ]
+      },
+      "recommendedLevel": "approfondi"
+    },
+    {
+      "id": "conformite-donnees",
+      "label": "Mise en conformité nLPD et RGPD",
+      "description": "Clara détermine si la loi suisse (nLPD), le règlement européen (RGPD) ou les deux s'appliquent, cartographie vos traitements de données (finalité, base légale, durée, sous-traitants, transferts), puis livre politique de confidentialité, registre des traitements et clause de sous-traitance, avec les délais clés vérifiés.",
+      "skills": ["GDPR_CHECKLIST", "COMPLIANCE_CHECKLIST", "DOCUMENT_RETENTION_POLICY"],
+      "requiredConnectors": [],
+      "optionalConnectors": [],
+      "channels": ["web"],
+      "knowledgeFields": [
+        { "key": "traitements_donnees", "label": "Données personnelles que vous traitez", "help": "Clients, employés, prospects : quelles données, dans quel outil, pour quoi faire.", "required": true, "example": "Noms et emails de clients dans un CRM, fiches de paie dans un logiciel de salaires" },
+        { "key": "pays_des_personnes", "label": "Où habitent les personnes concernées", "help": "Détermine le régime applicable (nLPD, RGPD ou les deux).", "required": true, "example": "Clients en Suisse romande et en France voisine" },
+        { "key": "sous_traitants", "label": "Prestataires qui accèdent à ces données", "help": "Hébergeur, outil de newsletter, comptable externe...", "required": false, "example": "Mailchimp, Infomaniak, fiduciaire externe" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-recherche", "label": "Vérifier délais et obligations", "examples": ["Confirmer le délai de notification d'une violation de données", "Lire la position officielle de l'autorité de protection des données"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "redaction", "label": "Rédiger politique, registre et clauses", "examples": ["Rédiger la politique de confidentialité", "Établir le registre des traitements dans un tableur"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 15 },
+        { "category": "notification-autorite", "label": "Déclarer une violation à l'autorité", "examples": ["Notifier une violation de données au préposé fédéral"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Mon entreprise suisse a des clients en Suisse et en France et utilise un CRM et un outil de newsletter. Dis-moi quel régime s'applique, cartographie mes traitements et rédige ma politique de confidentialité. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Le régime nLPD ou RGPD (ou les deux) est justifié",
+          "Chaque traitement a une finalité, une base légale et une durée de conservation",
+          "Les délais cités sont confirmés ou marqués « à confirmer »"
+        ]
+      },
+      "recommendedLevel": "approfondi"
+    },
+    {
+      "id": "clauses-sensibles",
+      "label": "Clauses sensibles : non-concurrence, confidentialité, propriété intellectuelle",
+      "description": "Pour une clause isolée à haut risque, Clara confirme d'abord la juridiction (les conditions de validité diffèrent fortement entre la Suisse et la France), rédige la clause complète et ajoute une note de validité : durée, étendue, contrepartie. Elle relit aussi les clauses d'un contrat de travail rédigé par Sophie.",
+      "skills": ["CONTRACT_DRAFTING_TEMPLATE", "LEGAL_RISK_FLAGGING", "CONTRACT_REVIEW_FLAGGING"],
+      "requiredConnectors": [],
+      "optionalConnectors": [],
+      "channels": ["web"],
+      "knowledgeFields": [
+        { "key": "juridiction", "label": "Droit applicable", "help": "Indispensable : une clause valable en Suisse peut être nulle en France.", "required": true, "example": "Droit suisse" },
+        { "key": "contexte_clause", "label": "Contexte de la clause", "help": "Qui est lié par la clause, pour quelle fonction et quelle durée.", "required": true, "example": "Clause de non-concurrence pour un responsable commercial, 12 mois, Suisse romande" },
+        { "key": "identite_entreprise", "label": "Votre entreprise", "help": "Raison sociale et siège.", "required": false, "example": "Atelier Martin SA, Lausanne" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-recherche", "label": "Confirmer les conditions de validité", "examples": ["Vérifier sur Fedlex ou Légifrance les règles de la clause"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "redaction", "label": "Rédiger la clause et la note de validité", "examples": ["Rédiger la clause complète", "Expliquer en 5 lignes pourquoi elle est valable ou risquée"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "engagement-juridique", "label": "Valider définitivement un acte à votre place", "examples": ["Déclarer une clause « valable » comme avis juridique définitif"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Rédige une clause de non-concurrence de 12 mois pour un responsable commercial, en droit suisse, avec une note sur sa validité et les risques. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "La juridiction est confirmée avant la rédaction",
+          "La clause est rédigée en entier avec durée, territoire et activité limités",
+          "La note de validité signale les risques et recommande la relecture par un avocat"
+        ]
+      },
+      "recommendedLevel": "approfondi"
+    }
+  ],
+  "channelSupport": {
+    "email": "planned",
+    "phone": "no",
+    "whatsapp": "no",
+    "web": "available",
+    "schedule": "available"
+  },
+  "plannedCapabilities": [
+    "Dépôt direct de vos contrats (PDF ou Word) dans la conversation pour l'audit, aujourd'hui il faut coller le texte ou un lien public",
+    "Réception d'un contrat par email, avec le rapport d'audit renvoyé en brouillon pour votre validation",
+    "Archivage automatique des actes finalisés dans votre Drive, Dropbox ou OneDrive",
+    "Signature électronique de l'acte, uniquement après votre validation explicite"
+  ],
+  "installationSteps": [
+    "Ajoutez Clara à votre équipe depuis le catalogue des Workers.",
+    "Remplissez la fiche d'entreprise : raison sociale, forme juridique, siège, personne qui signe et droit applicable (suisse ou français).",
+    "Connectez Gmail ou Outlook dans la page Connecteurs si vous voulez recevoir les emails d'accompagnement en brouillon.",
+    "Gardez les réglages par défaut : Clara rédige et vérifie seule, mais n'envoie, ne publie et ne fait signer rien.",
+    "Lancez le scénario d'essai « NDA » et contrôlez l'avertissement de relecture par un avocat et les références de loi.",
+    "Faites relire par un avocat ou un juriste tout acte avant de le signer : Clara livre un projet, pas un avis définitif.",
+    "Pour l'audit d'un contrat reçu, collez son texte dans la conversation."
+  ]
+}

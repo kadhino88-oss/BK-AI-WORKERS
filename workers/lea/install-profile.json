@@ -1,0 +1,207 @@
+{
+  "schema": "BK-INSTALL-PROFILE-V1",
+  "workerId": "lea",
+  "displayName": "Léa",
+  "tagline": "Crée votre charte graphique, vos logos et vos visuels en fichiers réels (SVG, PDF, HTML), avec contrastes vérifiés.",
+  "idealFor": "Commerces, indépendants et PME qui n'ont pas de graphiste ou dont l'identité visuelle est incohérente, et qui veulent des fichiers exploitables tout de suite.",
+  "services": [
+    {
+      "id": "charte-graphique",
+      "label": "Identité visuelle et charte graphique complète",
+      "description": "Léa lit votre site pour relever vos vraies couleurs, polices et logo, diagnostique les incohérences, cherche des références récentes de votre secteur et livre une charte exploitable : palette en codes hex avec usages et ratios de contraste vérifiés, échelle typographique chiffrée, règles d'usage du logo. Livrée en PDF ou Word.",
+      "skills": ["BRAND_GUIDELINES", "VISUAL_IDENTITY", "COLOR_SYSTEM", "TYPOGRAPHY_SYSTEM", "BRAND_STRATEGY", "BRAND_POSITIONING"],
+      "requiredConnectors": [],
+      "optionalConnectors": ["figma.controlled"],
+      "connectorOperations": {
+        "figma.controlled": ["READ_ASSET"]
+      },
+      "channels": ["web"],
+      "knowledgeFields": [
+        { "key": "site_web", "label": "Adresse de votre site", "help": "Léa y relève vos couleurs, polices et logo existants.", "required": true, "example": "https://www.atelier-martin.example" },
+        { "key": "positionnement_marque", "label": "Comment vous voulez être perçu", "help": "Trois adjectifs et ce que votre marque ne doit jamais ressembler.", "required": true, "example": "Fiable, proche, moderne ; jamais « discount » ni froid" },
+        { "key": "usages_prevus", "label": "Où l'identité sera utilisée", "help": "Site, réseaux, imprimés, véhicules, emballages.", "required": false, "example": "Site web, cartes de visite, flocage de camionnette" },
+        { "key": "elements_a_conserver", "label": "Éléments à conserver", "help": "Logo, couleur ou police que vous ne voulez pas changer.", "required": false, "example": "Le bleu actuel et le nom du logo" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-recherche", "label": "Étudier votre marque et votre secteur", "examples": ["Lire votre site et relever les couleurs réelles", "Chercher 3 références visuelles actuelles de votre secteur"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "redaction", "label": "Créer la charte et ses fichiers", "examples": ["Calculer les ratios de contraste de chaque paire de couleurs", "Produire la charte en PDF et la palette en SVG"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 15 },
+        { "category": "paiement-licence", "label": "Acheter une police, une image ou une licence", "examples": ["Acheter une police payante pour la charte"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null },
+        { "category": "publication", "label": "Remplacer votre identité en production", "examples": ["Remplacer le logo sur votre site ou vos profils"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Lis mon site, relève mes couleurs et polices actuelles, diagnostique les incohérences et propose une charte avec palette en hex, ratios de contraste et échelle typographique. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Les couleurs relevées viennent de pages réellement lues, avec leurs codes hex",
+          "Chaque paire de couleurs affiche un ratio de contraste calculé",
+          "La charte est téléchargeable en PDF"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    },
+    {
+      "id": "visuel-ponctuel",
+      "label": "Bannière, visuel de réseau social, favicon ou maquette",
+      "description": "Léa génère le visuel demandé en vrai fichier SVG ou HTML/CSS au bon format selon la destination (post carré, story, bannière, favicon), dans votre charte, avec contraste et lisibilité contrôlés aux tailles réelles. Les textes qui l'accompagnent relèvent d'Emma.",
+      "skills": ["SOCIAL_DESIGN", "AD_DESIGN", "KEY_VISUAL", "PRESENTATION_DESIGN", "VISUAL_CONCEPT"],
+      "requiredConnectors": [],
+      "optionalConnectors": [],
+      "channels": ["web"],
+      "knowledgeFields": [
+        { "key": "visuel_demande", "label": "Le visuel voulu", "help": "Usage, format, message et texte à faire figurer.", "required": true, "example": "Bannière Facebook pour l'ouverture de l'atelier d'hiver, texte « Révision batteries à prix fixe »" },
+        { "key": "site_web", "label": "Adresse de votre site", "help": "Pour reprendre votre palette et vos polices si vous n'avez pas de charte.", "required": false, "example": "https://www.atelier-martin.example" },
+        { "key": "charte_existante", "label": "Votre charte si vous en avez une", "help": "Collez vos codes de couleurs et vos polices.", "required": false, "example": "Bleu #1F4E8C, orange #F28C28, police Inter" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-recherche", "label": "Récupérer votre charte", "examples": ["Relever couleurs et polices sur votre site"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "redaction", "label": "Générer le visuel", "examples": ["Créer le visuel en SVG au format exact de la destination", "Vérifier le contraste aux tailles d'affichage réelles"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 30 },
+        { "category": "publication", "label": "Mettre le visuel en ligne", "examples": ["Poster le visuel sur vos réseaux ou l'installer sur votre site"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Crée une bannière Facebook (1200 × 630) pour l'ouverture de mon atelier d'hiver dans les couleurs de mon site, avec le texte « Révision batteries à prix fixe ». Donne le fichier et les spécifications. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Le fichier SVG ou HTML est un vrai visuel aux dimensions annoncées, pas une description",
+          "Les couleurs et polices correspondent à la charte et le contraste est contrôlé",
+          "Les spécifications (dimensions, polices, hex) sont indiquées sous le fichier"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    },
+    {
+      "id": "logo-pictogramme",
+      "label": "Logo ou pictogramme vectoriel",
+      "description": "Léa dessine un logo ou un pictogramme en SVG propre (formes simples, viewBox carré) en trois déclinaisons : couleur, monochrome noir et négatif blanc, avec zone de protection et taille minimale, testé en réduction de 16 pixels et sur fond clair comme foncé.",
+      "skills": ["LOGO_DESIGN", "VISUAL_IDENTITY", "ART_DIRECTION"],
+      "requiredConnectors": [],
+      "optionalConnectors": [],
+      "channels": ["web"],
+      "knowledgeFields": [
+        { "key": "nom_et_secteur", "label": "Nom de la marque et activité", "help": "Pour trouver un symbole juste.", "required": true, "example": "Atelier Martin, réparation de vélos électriques" },
+        { "key": "registre_visuel", "label": "Registre souhaité", "help": "Sérieux, joueur, premium, artisanal...", "required": false, "example": "Artisanal et moderne" },
+        { "key": "usages_prevus", "label": "Où le logo sera utilisé", "help": "Web, imprimé, favicon, véhicule.", "required": false, "example": "Site web, cartes de visite, autocollants" }
+      ],
+      "autonomyRules": [
+        { "category": "redaction", "label": "Dessiner le logo et ses déclinaisons", "examples": ["Produire le logo en couleur, monochrome et négatif en SVG", "Tester la lisibilité à 16 pixels"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "depot-marque", "label": "Déposer le logo comme marque", "examples": ["Déposer la marque auprès de l'institut de la propriété intellectuelle"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Dessine un logo simple pour « Atelier Martin, réparation de vélos électriques » en SVG avec trois déclinaisons (couleur, noir, blanc), la zone de protection et un test en 16 pixels. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Trois fichiers SVG sont fournis et lisibles sur fond clair et sombre",
+          "La zone de protection et la taille minimale sont indiquées",
+          "Le texte du logo n'est pas une image raster"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    },
+    {
+      "id": "systeme-de-design-ui",
+      "label": "Système de design et maquette d'interface",
+      "description": "Léa pose les tokens de design (couleurs, grille de 8 pixels, rayons, ombres, échelle typographique), documente les composants clés (bouton, champ, carte) avec leurs états et livre un aperçu HTML/CSS cohérent en thème clair et sombre, avec maquettes filaires si besoin. L'intégration dans votre site relève de Lucas.",
+      "skills": ["DESIGN_SYSTEM", "UI_DESIGN", "WIREFRAMING", "PROTOTYPING", "UX_STRATEGY"],
+      "requiredConnectors": [],
+      "optionalConnectors": ["figma.controlled"],
+      "connectorOperations": {
+        "figma.controlled": ["READ_ASSET", "SEARCH_ASSETS"]
+      },
+      "channels": ["web"],
+      "knowledgeFields": [
+        { "key": "produit_a_designer", "label": "Ce que l'interface doit permettre", "help": "Site vitrine, application, tunnel de commande...", "required": true, "example": "Page de prise de rendez-vous pour l'atelier, sur mobile d'abord" },
+        { "key": "charte_existante", "label": "Votre charte si vous en avez une", "help": "Couleurs, polices, logo.", "required": false, "example": "Bleu #1F4E8C, orange #F28C28, police Inter" },
+        { "key": "fichier_figma", "label": "Clé de votre fichier Figma", "help": "Si Figma est connecté, Léa peut lire vos maquettes existantes en lecture seule.", "required": false, "example": "Clé figma.com/file/<clé>/..." }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-recherche", "label": "Lire vos maquettes Figma", "examples": ["Lire un fichier Figma indiqué, en lecture seule"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "redaction", "label": "Créer tokens, composants et aperçu", "examples": ["Définir les tokens en CSS", "Produire l'aperçu HTML des composants avec leurs états"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "modification-site", "label": "Intégrer le design dans votre site", "examples": ["Remplacer les styles de votre site par le nouveau système"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Crée un mini système de design pour mon site (couleurs, espacements, échelle typographique, bouton, champ, carte avec leurs états) et un aperçu HTML en thème clair et sombre. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "L'aperçu HTML s'affiche correctement en thème clair et en thème sombre",
+          "Chaque composant montre repos, survol, focus et désactivé",
+          "Les valeurs d'espacement suivent une grille de 8 pixels"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    },
+    {
+      "id": "brief-creatif-moodboard",
+      "label": "Brief créatif, moodboard et concept de campagne",
+      "description": "Léa structure votre besoin en brief créatif (objectif, cible, message, contraintes, livrables), assemble un moodboard argumenté à partir de références réelles et propose un concept visuel de campagne avec ses déclinaisons, prêt à confier à un prestataire ou à produire avec elle.",
+      "skills": ["CREATIVE_BRIEF", "MOODBOARD_CREATION", "CAMPAIGN_CONCEPT", "CREATIVE_CAMPAIGN", "CREATIVE_DIRECTION", "ART_DIRECTION"],
+      "requiredConnectors": [],
+      "optionalConnectors": [],
+      "channels": ["web"],
+      "knowledgeFields": [
+        { "key": "objectif_campagne", "label": "Objectif de la campagne ou du projet", "help": "Ce que le visuel doit déclencher.", "required": true, "example": "Remplir l'atelier la première semaine de novembre" },
+        { "key": "cible_audience", "label": "Public visé", "help": "Qui doit se sentir concerné.", "required": true, "example": "Cyclistes pendulaires de 30 à 55 ans autour de Lausanne" },
+        { "key": "contraintes", "label": "Contraintes", "help": "Budget de production, délais, supports imposés.", "required": false, "example": "Supports : Instagram et affiches A3, prêt avant le 25 octobre" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-recherche", "label": "Chercher des références réelles", "examples": ["Chercher 3 à 4 directions visuelles actuelles de votre secteur avec leur source"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "redaction", "label": "Rédiger le brief et le concept", "examples": ["Rédiger le brief créatif complet", "Produire le moodboard structuré en document"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "engagement-prestataire", "label": "Commander un prestataire", "examples": ["Commander une impression ou un shooting photo"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Rédige un brief créatif et un moodboard pour une campagne d'ouverture de mon atelier d'hiver, avec trois directions visuelles sourcées et un concept de campagne décliné sur Instagram et affiches. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Chaque référence visuelle citée a une source réelle",
+          "Le brief contient objectif, cible, message, contraintes et livrables",
+          "Le concept est décliné sur au moins deux supports"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    },
+    {
+      "id": "revue-design-accessibilite",
+      "label": "Revue de design et contrôle d'accessibilité (WCAG 2.2)",
+      "description": "Léa audite un design existant (page de votre site, maquette Figma lue en lecture seule) : contrastes réels calculés, lisibilité des tailles, cohérence de la palette et de la typographie, couleur jamais seule porteuse d'information. Elle livre la liste des défauts classés par impact avec la correction proposée.",
+      "skills": ["DESIGN_REVIEW", "UX_RESEARCH", "UI_DESIGN"],
+      "requiredConnectors": [],
+      "optionalConnectors": ["figma.controlled"],
+      "connectorOperations": {
+        "figma.controlled": ["READ_ASSET", "SEARCH_ASSETS"]
+      },
+      "channels": ["web"],
+      "knowledgeFields": [
+        { "key": "page_ou_maquette", "label": "Ce qu'il faut auditer", "help": "Adresse d'une page publique ou clé d'un fichier Figma connecté.", "required": true, "example": "https://www.atelier-martin.example/reservation" },
+        { "key": "public_concerne", "label": "Qui utilise cette page", "help": "Pour prioriser (mobile, personnes âgées, malvoyants).", "required": false, "example": "Clients mobiles, dont beaucoup de plus de 55 ans" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-recherche", "label": "Lire la page ou la maquette", "examples": ["Ouvrir la page indiquée et relever couleurs et tailles", "Lire un fichier Figma en lecture seule"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "analyse-calcul", "label": "Calculer les contrastes et classer les défauts", "examples": ["Calculer le ratio de contraste de chaque paire texte et fond", "Classer les défauts par impact"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "modification-site", "label": "Corriger directement votre site", "examples": ["Modifier les couleurs de votre site pour corriger un contraste"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Audite l'accessibilité de la page d'accueil de mon site : contrastes calculés, tailles de texte et usage de la couleur, avec une correction proposée pour chaque défaut. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Chaque ratio de contraste affiché a été calculé et non estimé",
+          "Les défauts sont classés par impact avec une correction proposée",
+          "Aucune modification n'est appliquée à votre site"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    }
+  ],
+  "channelSupport": {
+    "email": "no",
+    "phone": "no",
+    "whatsapp": "no",
+    "web": "available",
+    "schedule": "available"
+  },
+  "plannedCapabilities": [
+    "Dépôt de vos logos, photos et maquettes existants directement dans la conversation",
+    "Export de fichiers vers Figma ou Canva (aujourd'hui Figma est en lecture seule et Canva n'est pas connectable)",
+    "Génération d'images photo-réalistes en plus des visuels vectoriels",
+    "Dépôt automatique des fichiers finis dans votre Drive, après votre validation"
+  ],
+  "installationSteps": [
+    "Ajoutez Léa à votre équipe depuis le catalogue des Workers.",
+    "Indiquez l'adresse de votre site, trois adjectifs pour votre marque et les éléments à conserver (logo, couleur, police).",
+    "Connectez Figma dans la page Connecteurs seulement si vous avez des maquettes à faire lire (lecture seule).",
+    "Gardez les réglages par défaut : Léa crée des fichiers dans la mission, elle ne publie rien et n'achète aucune licence.",
+    "Lancez le scénario d'essai « Charte graphique » et vérifiez les couleurs relevées sur votre site et les ratios de contraste.",
+    "Téléchargez les fichiers depuis la mission, puis mettez-les en ligne vous-même ou confiez-les à Lucas pour l'intégration."
+  ]
+}
