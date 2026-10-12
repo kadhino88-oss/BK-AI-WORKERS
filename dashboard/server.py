@@ -2065,6 +2065,7 @@ def _purge_client_mission_artifacts(client_id, task_ids):
                 os.remove(_pending_action_path(tid))
             except OSError:
                 pass
+    shutil.rmtree(os.path.join(ROOT, "runtime", "threads", client_id), ignore_errors=True)   # memoire de conversation v2
     try:
         for name in os.listdir(ASYNC_JOBS_DIR):
             if not name.endswith(".json"):

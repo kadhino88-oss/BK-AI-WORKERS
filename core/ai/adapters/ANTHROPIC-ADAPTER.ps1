@@ -583,6 +583,8 @@ if ($ExitCode -eq 0) {
         $ResultObj["connector_action"] = $ConnectorActionsList[0]
         $ResultObj["connector_actions"] = $ConnectorActionsList
     }
+    # Memoire de conversation v2 : ce tour est ajoute au fil (client, Worker) pour que le prochain message s'en souvienne.
+    Add-BKConversationTurn -Root $ProjectRoot -ClientId $ClientId -WorkerId $WorkerId -TaskId $TaskId -Request $Objective -Answer $ResponseText -Files $CapturedFiles -Actions $ConnectorActionsList
     Write-Result $ResultObj
     exit 0
 }

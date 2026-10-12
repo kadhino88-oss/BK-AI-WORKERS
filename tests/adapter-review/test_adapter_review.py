@@ -74,13 +74,28 @@ class Run:
             f.write(DRIVER)
         self.out_file = os.path.join(self.root, "_test", "out.json")
         self.log_file = os.path.join(self.root, "_test", "requests.jsonl")
-        e = dict(os.environ, BK_ROOT=self.root, OUT_FILE=self.out_file, FAKE_CASSETTE=cassette_path, FAKE_LOG=self.log_file,
-                 FAKE_KEY=FAKE_KEY, BK_SECRET_ANTHROPIC=FAKE_KEY, T_CLIENT=CLIENT, T_TASK=TASK, BK_REPLY_LANG="")
+        self.cassette_path = cassette_path
+        self.driver = driver
+        self.env = dict(os.environ, BK_ROOT=self.root, OUT_FILE=self.out_file, FAKE_CASSETTE=cassette_path, FAKE_LOG=self.log_file,
+                        FAKE_KEY=FAKE_KEY, BK_SECRET_ANTHROPIC=FAKE_KEY, T_CLIENT=CLIENT, T_TASK=TASK, BK_REPLY_LANG="")
         if files:
-            e["FAKE_FILES"] = json.dumps(files)
-        e.update(env or {})
-        self.proc = subprocess.run([PWSH, "-NoProfile", "-NonInteractive", "-File", driver], capture_output=True, text=True,
-                                   encoding="utf-8", errors="replace", env=e, timeout=300, cwd=self.root)
+            self.env["FAKE_FILES"] = json.dumps(files)
+        self.env.update(env or {})
+        self._execute()
+
+    def rerun(self, cassette, task=None):
+        """Seconde mission dans le MEME dossier (meme client, memes fils de conversation)."""
+        with open(self.cassette_path, "w", encoding="utf-8") as f:
+            json.dump({"responses": cassette}, f)
+        if os.path.isfile(self.log_file):
+            os.remove(self.log_file)
+        if task:
+            self.env["T_TASK"] = task
+        self._execute()
+
+    def _execute(self):
+        self.proc = subprocess.run([PWSH, "-NoProfile", "-NonInteractive", "-File", self.driver], capture_output=True, text=True,
+                                   encoding="utf-8", errors="replace", env=self.env, timeout=300, cwd=self.root)
         assert os.path.isfile(self.out_file), f"driver produced nothing\nSTDOUT:\n{self.proc.stdout}\nSTDERR:\n{self.proc.stderr}"
         with open(self.out_file, encoding="utf-8-sig") as f:
             out = json.load(f)
