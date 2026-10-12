@@ -1,0 +1,215 @@
+{
+  "schema": "BK-INSTALL-PROFILE-V1",
+  "workerId": "emma",
+  "displayName": "Emma",
+  "tagline": "Définit votre voix de marque, planifie vos réseaux et écrit chaque post en entier, prêt à publier.",
+  "idealFor": "Commerces, indépendants et PME qui veulent exister sur LinkedIn, Instagram, TikTok ou Facebook sans passer leurs soirées à chercher des idées et à rédiger des légendes.",
+  "services": [
+    {
+      "id": "strategie-calendrier-editorial",
+      "label": "Voix de marque, piliers de contenu et calendrier éditorial",
+      "description": "À partir de l'adresse de votre site, Emma résume votre ton de marque (avec 5 mots à utiliser et 5 à éviter), cherche ce qui marche dans votre secteur plateforme par plateforme, définit 3 à 5 piliers de contenu, construit un calendrier de 2 à 4 semaines en tableur et rédige en entier au moins 3 à 5 posts du calendrier.",
+      "skills": ["CONTENT_STRATEGY", "SOCIAL_MEDIA_STRATEGY", "EDITORIAL_CALENDAR", "CONTENT_CALENDAR", "EDITORIAL_GUIDELINES", "PLATFORM_STRATEGY", "CONTENT_PLANNING"],
+      "requiredConnectors": [],
+      "optionalConnectors": ["linkedin.controlled", "facebook.controlled", "instagram.controlled"],
+      "connectorOperations": {
+        "linkedin.controlled": ["READ_POSTS"],
+        "facebook.controlled": ["READ_POSTS"],
+        "instagram.controlled": ["READ_POSTS"]
+      },
+      "channels": ["web", "schedule"],
+      "suggestedFrequencyMinutes": 20160,
+      "knowledgeFields": [
+        { "key": "site_web", "label": "Adresse de votre site", "help": "Emma lit votre site pour comprendre votre ton, votre offre et votre cible.", "required": true, "example": "https://www.atelier-martin.example" },
+        { "key": "plateformes_visees", "label": "Réseaux à animer", "help": "LinkedIn, Instagram, TikTok, Facebook, YouTube, Pinterest, X.", "required": true, "example": "Instagram et LinkedIn" },
+        { "key": "cible_audience", "label": "À qui vous parlez", "help": "Le client type que vous voulez toucher.", "required": false, "example": "Particuliers de 30 à 55 ans qui utilisent un vélo électrique pour aller travailler" },
+        { "key": "cadence_tenable", "label": "Combien de posts vous pouvez tenir", "help": "Mieux vaut 3 posts par semaine tenus que 7 abandonnés.", "required": false, "example": "3 posts par semaine" },
+        { "key": "interdits_marque", "label": "Ce que votre marque ne dit jamais", "help": "Sujets, mots ou promesses à éviter.", "required": false, "example": "Pas de promotion agressive, pas d'humour sur les accidents" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-recherche", "label": "Étudier votre site et votre secteur", "examples": ["Lire votre site et votre page « à propos »", "Chercher les formats qui marchent chez 2 ou 3 comptes comparables"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "redaction", "label": "Rédiger la stratégie, le calendrier et les posts", "examples": ["Rédiger la voix de marque et les piliers", "Rédiger 5 posts complets avec accroche, texte, appel à l'action et hashtags", "Produire le calendrier en .xlsx"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 30 },
+        { "category": "publication", "label": "Mettre un post en ligne", "examples": ["Publier un post sur LinkedIn, Instagram ou Facebook"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Lis mon site, résume ma voix de marque, propose 4 piliers de contenu, construis un calendrier de 2 semaines pour Instagram et LinkedIn et rédige en entier 3 posts. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "La voix de marque s'appuie sur des pages réellement lues, avec 5 mots « oui » et 5 mots « non »",
+          "Chaque tendance ou hashtag affirmé a une source, sinon il est étiqueté « hypothèse »",
+          "Les 3 posts sont rédigés mot pour mot, pas décrits"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    },
+    {
+      "id": "posts-a-la-demande",
+      "label": "Posts rédigés à la demande, adaptés à chaque réseau",
+      "description": "Vous demandez « 5 posts sur tel sujet ». Emma écrit chacun en entier avec accroche, corps, appel à l'action et hashtags, avec des angles variés, adaptés au réseau demandé (script parlé pour TikTok, légende narrative pour Instagram, accroche experte pour LinkedIn) et 2 ou 3 variantes d'accroche pour le post le plus important.",
+      "skills": ["COPYWRITING", "SOCIAL_COPY", "HOOK_CREATION", "HEADLINE_WRITING", "CTA_WRITING", "LINKEDIN", "INSTAGRAM", "FACEBOOK", "TIKTOK"],
+      "requiredConnectors": [],
+      "optionalConnectors": [],
+      "channels": ["web", "whatsapp"],
+      "knowledgeFields": [
+        { "key": "sujet_des_posts", "label": "Sujet des posts", "help": "Produit, événement, conseil ou actualité à mettre en avant.", "required": true, "example": "Ouverture de notre atelier d'hiver et révision spéciale batteries" },
+        { "key": "plateforme_cible", "label": "Réseau visé", "help": "Un ou plusieurs réseaux ; Emma adapte le format.", "required": true, "example": "Instagram" },
+        { "key": "site_web", "label": "Adresse de votre site", "help": "Pour reprendre vos vrais produits et votre ton, jamais des caractéristiques inventées.", "required": false, "example": "https://www.atelier-martin.example" },
+        { "key": "avis_reels_citables", "label": "Avis clients réels que vous pouvez citer", "help": "Emma n'invente aucun témoignage et ne réutilise que ce que vous fournissez.", "required": false, "example": "Collez ici un avis réel avec l'accord du client" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-recherche", "label": "Vérifier produit et tendances", "examples": ["Lire la page produit pour reprendre les vraies caractéristiques", "Vérifier un hashtag ou une spécification de format"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "redaction", "label": "Rédiger les posts et leurs variantes", "examples": ["Rédiger 5 posts avec accroche, corps, appel à l'action et hashtags", "Proposer 3 variantes d'accroche à tester"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 40 },
+        { "category": "publication", "label": "Publier les posts", "examples": ["Publier un post sur un compte connecté"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Rédige 3 posts Instagram complets sur l'ouverture de mon atelier d'hiver, avec accroche, légende, appel à l'action, hashtags et la description du visuel attendu. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Chaque post est complet et prêt à être copié, sans « légende ici »",
+          "Les angles des 3 posts sont différents",
+          "Aucun avis client ni caractéristique produit n'est inventé"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    },
+    {
+      "id": "scripts-videos-courtes",
+      "label": "Scripts de vidéos courtes (Reels, TikTok, Shorts)",
+      "description": "Emma écrit le script complet découpé seconde par seconde : accroche des 3 premières secondes, texte parlé, texte à l'écran, plans à filmer et appel à l'action, avec la durée adaptée à chaque plateforme. Les visuels finaux relèvent de Léa.",
+      "skills": ["SHORT_FORM_VIDEO", "VIDEO_SCRIPT", "VIDEO_CONTENT_PLANNING", "YOUTUBE_SHORTS", "TIKTOK", "INSTAGRAM"],
+      "requiredConnectors": [],
+      "optionalConnectors": [],
+      "channels": ["web"],
+      "knowledgeFields": [
+        { "key": "sujet_video", "label": "Sujet de la vidéo", "help": "Ce que la vidéo doit montrer ou expliquer.", "required": true, "example": "Comment savoir si la batterie de mon vélo électrique faiblit" },
+        { "key": "plateforme_cible", "label": "Plateforme visée", "help": "Reels, TikTok, YouTube Shorts.", "required": true, "example": "TikTok et Instagram Reels" },
+        { "key": "moyens_tournage", "label": "Ce que vous pouvez filmer", "help": "Décor, personnes, matériel : le script reste réalisable avec vos moyens.", "required": false, "example": "Smartphone, dans l'atelier, une personne à l'écran" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-recherche", "label": "Vérifier formats et durées", "examples": ["Vérifier la durée recommandée d'un Reel ou d'un TikTok"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 15 },
+        { "category": "redaction", "label": "Rédiger les scripts", "examples": ["Rédiger un script TikTok de 25 secondes découpé seconde par seconde", "Décliner le même sujet en Reel et en Short"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 30 },
+        { "category": "publication", "label": "Publier la vidéo", "examples": ["Mettre une vidéo en ligne sur un compte connecté"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Écris le script d'un TikTok de 25 secondes sur les signes d'une batterie de vélo électrique qui faiblit, découpé seconde par seconde, avec texte à l'écran et appel à l'action. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "L'accroche tient dans les 3 premières secondes",
+          "Le script est découpé par séquences de secondes avec texte parlé et texte à l'écran",
+          "Les plans demandés sont réalisables avec les moyens indiqués"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    },
+    {
+      "id": "recyclage-de-contenu",
+      "label": "Un contenu long transformé en micro-contenus",
+      "description": "Vous donnez un article, un webinaire ou une page produit. Emma en extrait 5 à 10 idées, les rédige en formats courts adaptés (Reel, carrousel, citation, Story, post texte) et les répartit dans un calendrier pour étaler la diffusion sur plusieurs semaines.",
+      "skills": ["CONTENT_REPURPOSING", "CONTENT_PIPELINE", "CONTENT_SCHEDULING", "SOCIAL_COPY"],
+      "requiredConnectors": [],
+      "optionalConnectors": [],
+      "channels": ["web"],
+      "knowledgeFields": [
+        { "key": "contenu_source", "label": "Le contenu à recycler", "help": "Collez le texte ou donnez le lien public de l'article, de la page ou de la vidéo.", "required": true, "example": "https://www.atelier-martin.example/blog/entretien-batterie" },
+        { "key": "plateformes_visees", "label": "Réseaux visés", "help": "Pour choisir les formats.", "required": false, "example": "Instagram, LinkedIn, Facebook" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-recherche", "label": "Lire le contenu source", "examples": ["Ouvrir l'article ou la page produit indiqué"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 15 },
+        { "category": "redaction", "label": "Rédiger les micro-contenus", "examples": ["Rédiger 8 micro-contenus tirés d'un article", "Placer chaque contenu dans le calendrier"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 30 },
+        { "category": "publication", "label": "Mettre les contenus en ligne", "examples": ["Publier les micro-contenus aux dates prévues"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Prends cet article de mon blog (lien fourni), extrais 6 idées et rédige-les en formats courts pour Instagram, LinkedIn et Facebook avec un calendrier d'étalement sur 3 semaines. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Les idées viennent bien de la page lue et non d'ailleurs",
+          "Chaque contenu est rédigé et réécrit pour son réseau, pas copié-collé",
+          "Le calendrier répartit les contenus sur 3 semaines"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    },
+    {
+      "id": "community-management",
+      "label": "Réponses aux commentaires et messages dans votre voix",
+      "description": "Emma rédige des réponses types dans votre ton pour les commentaires, messages et avis, y compris un avis négatif non sensible (réponse empathique avec action proposée). Pour un conflit ou une crise, elle ne répond pas publiquement : elle prépare une réponse et vous alerte.",
+      "skills": ["COMMENT_MANAGEMENT", "MESSAGE_MANAGEMENT", "COMMUNITY_MANAGEMENT", "COMMUNITY_ENGAGEMENT", "REPUTATION_RESPONSE", "ESCALATION_MANAGEMENT"],
+      "requiredConnectors": [],
+      "optionalConnectors": [],
+      "channels": ["web", "whatsapp"],
+      "knowledgeFields": [
+        { "key": "ton_et_style", "label": "Ton de vos réponses", "help": "Vouvoiement ou tutoiement, chaleureux ou sobre.", "required": true, "example": "Tutoiement chaleureux sur Instagram, vouvoiement sur LinkedIn" },
+        { "key": "cas_sensibles", "label": "Sujets pour lesquels vous voulez répondre vous-même", "help": "Litiges, remboursements, santé, sécurité : Emma prépare mais n'ose pas publier.", "required": false, "example": "Toute plainte sur une réparation ou un remboursement" },
+        { "key": "faq_reponses_types", "label": "Réponses que vous donnez souvent", "help": "Horaires, prix indicatifs, délais.", "required": false, "example": "Nous sommes ouverts du mardi au samedi, de 9h à 18h" }
+      ],
+      "autonomyRules": [
+        { "category": "redaction", "label": "Rédiger les réponses types", "examples": ["Rédiger une réponse à un commentaire positif", "Rédiger une réponse empathique à un avis négatif non sensible"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 40 },
+        { "category": "publication-reponse", "label": "Répondre en ligne à votre place", "examples": ["Répondre publiquement à un commentaire", "Répondre à un message privé"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null },
+        { "category": "escalade", "label": "Vous alerter en cas de situation sensible", "examples": ["Signaler une crise ou un conflit avec une réponse préparée mais non publiée"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 }
+      ],
+      "testScenario": {
+        "objective": "Voici 3 commentaires reçus sous mon dernier post (un compliment, une question sur les prix, une plainte sur un retard). Rédige une réponse à chacun dans mon ton et dis lequel doit être traité par moi. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Les réponses respectent le ton défini dans la fiche",
+          "La plainte reçoit une réponse empathique avec une action concrète, jamais défensive",
+          "Les cas sensibles sont signalés au client plutôt que traités"
+        ]
+      },
+      "recommendedLevel": "rapide"
+    },
+    {
+      "id": "publication-reseaux-sociaux",
+      "label": "Publication d'un post sur vos comptes connectés",
+      "description": "Une fois votre compte LinkedIn, Facebook, Instagram, X ou TikTok connecté, Emma peut proposer la publication d'un post précis. Attention : cette opération publie réellement, sans état de brouillon ni date programmée ; elle part uniquement après votre confirmation explicite, une action à la fois.",
+      "skills": ["SOCIAL_PUBLISHING", "CONTENT_SCHEDULING"],
+      "requiredConnectors": [],
+      "requiredAnyOf": [["linkedin.controlled", "facebook.controlled", "instagram.controlled", "x_twitter.controlled", "tiktok.controlled"]],
+      "optionalConnectors": [],
+      "connectorOperations": {
+        "linkedin.controlled": ["CREATE_DRAFT_POST"],
+        "facebook.controlled": ["CREATE_DRAFT_POST"],
+        "instagram.controlled": ["CREATE_DRAFT_POST"],
+        "x_twitter.controlled": ["CREATE_DRAFT_POST"],
+        "tiktok.controlled": ["CREATE_DRAFT_POST"]
+      },
+      "channels": ["web"],
+      "knowledgeFields": [
+        { "key": "compte_a_utiliser", "label": "Compte sur lequel publier", "help": "Le réseau et le compte connectés. Pour Instagram, Emma a besoin de l'identifiant du compte professionnel et d'une image en ligne.", "required": true, "example": "Page Facebook de l'entreprise" },
+        { "key": "texte_du_post", "label": "Le post à publier", "help": "Un texte validé par vous, ou demandez à Emma de le rédiger d'abord.", "required": true, "example": "Notre atelier d'hiver ouvre lundi : révision batteries à prix fixe." }
+      ],
+      "autonomyRules": [
+        { "category": "redaction", "label": "Préparer le texte du post", "examples": ["Rédiger le texte final du post et le montrer avant toute publication"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "publication-compte", "label": "Publier sur votre compte connecté", "examples": ["Publier un post sur LinkedIn, Facebook, Instagram, X ou TikTok, une seule action à la fois, après votre confirmation"], "risk": "high", "defaultMode": "ask", "maxAutoPerDay": null, "operations": ["linkedin.controlled:CREATE_DRAFT_POST", "facebook.controlled:CREATE_DRAFT_POST", "instagram.controlled:CREATE_DRAFT_POST", "x_twitter.controlled:CREATE_DRAFT_POST", "tiktok.controlled:CREATE_DRAFT_POST"] }
+      ],
+      "testScenario": {
+        "objective": "Prépare le texte d'un post Facebook annonçant l'ouverture de mon atelier d'hiver et montre-moi la carte de confirmation que je recevrais, sans le publier. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Le texte du post est affiché en entier avant toute action",
+          "Une carte de confirmation décrit exactement ce qui serait publié et où",
+          "Rien n'est publié tant que vous ne confirmez pas"
+        ]
+      },
+      "recommendedLevel": "rapide"
+    }
+  ],
+  "channelSupport": {
+    "email": "no",
+    "phone": "no",
+    "whatsapp": "planned",
+    "web": "available",
+    "schedule": "available"
+  },
+  "plannedCapabilities": [
+    "Programmation des publications à une date et une heure précises (aujourd'hui une publication part tout de suite après votre confirmation)",
+    "Demande de posts directement à Emma par WhatsApp, avec les textes renvoyés au même endroit (aujourd'hui le lien WhatsApp de l'application s'adresse à Chloé, qui route vos demandes)",
+    "Lecture des statistiques de vos publications (portée, engagement) pour ajuster le calendrier",
+    "Brouillons réels dans les réseaux qui le permettent, au lieu d'une publication immédiate",
+    "Dépôt de vos photos et logos directement dans la conversation"
+  ],
+  "installationSteps": [
+    "Ajoutez Emma à votre équipe depuis le catalogue des Workers.",
+    "Indiquez l'adresse de votre site, les réseaux que vous voulez animer et le nombre de posts que vous pouvez tenir par semaine.",
+    "Connectez vos comptes (LinkedIn, Facebook, Instagram, X ou TikTok) dans la page Connecteurs uniquement si vous voulez publier depuis l'application.",
+    "Gardez les réglages par défaut : Emma écrit seule, mais rien n'est publié sans une carte de confirmation qui montre le texte exact.",
+    "Lancez le scénario d'essai « Voix de marque et calendrier » et relisez les 3 posts rédigés.",
+    "Corrigez le ton dans la fiche d'entreprise si besoin, puis demandez votre calendrier du mois.",
+    "Programmez une automatisation toutes les deux semaines pour recevoir le calendrier suivant.",
+    "Publiez les posts depuis le calendrier (copier-coller) ou confirmez la publication depuis la carte de confirmation."
+  ]
+}

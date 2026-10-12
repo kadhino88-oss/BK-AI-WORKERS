@@ -1,0 +1,215 @@
+{
+  "schema": "BK-INSTALL-PROFILE-V1",
+  "workerId": "rayan",
+  "displayName": "Rayan",
+  "tagline": "Conçoit, teste et documente vos automatisations entre outils, en s'en tenant aux opérations qui existent vraiment.",
+  "idealFor": "PME qui perdent du temps à recopier des informations entre leur boîte mail, leur CRM, leur outil de projet et leur agenda, et veulent des flux fiables et surveillés.",
+  "services": [
+    {
+      "id": "spec-automatisation",
+      "label": "Spécification d'automatisation « quand X, alors Y » testée à blanc",
+      "description": "Rayan reformule la tâche répétitive, identifie le vrai déclencheur, l'action finale, la fréquence et le volume, cartographie le flux étape par étape (outil, opération exacte, champs), l'essaie avec des données d'exemple et livre la spécification avec gestion d'erreur et idempotence. Elle sert soit à une mission récurrente dans l'application, soit à Zapier, Make ou n8n que vous mettez en place.",
+      "skills": ["WORKFLOW_AUTOMATION_DESIGN", "SCENARIO_DESIGN", "TRIGGER_ACTION_MAPPING", "AUTOMATION_TESTING"],
+      "requiredConnectors": [],
+      "optionalConnectors": [],
+      "channels": ["web"],
+      "knowledgeFields": [
+        { "key": "tache_a_automatiser", "label": "La tâche répétitive", "help": "Ce qui se passe aujourd'hui à la main, et le résultat attendu.", "required": true, "example": "Chaque nouvelle demande de devis reçue par email doit devenir une carte dans mon tableau de suivi" },
+        { "key": "outils_concernes", "label": "Outils concernés", "help": "Les outils de départ et d'arrivée.", "required": true, "example": "Gmail, monday.com et Google Agenda" },
+        { "key": "frequence_volume", "label": "Fréquence et volume", "help": "Combien de fois par jour ou par semaine, combien d'éléments.", "required": false, "example": "10 à 20 demandes par semaine" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-recherche", "label": "Vérifier le fonctionnement réel des outils", "examples": ["Lire la documentation de l'API d'un outil pour confirmer un champ ou une limite"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "redaction", "label": "Rédiger la spécification et le test à blanc", "examples": ["Rédiger le flux déclencheur, conditions, actions et erreurs", "Exécuter le code de transformation sur des données d'exemple"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 30 },
+        { "category": "ecriture-recurrente", "label": "Activer le flux dans vos outils à votre place", "examples": ["Créer le scénario dans votre compte Zapier ou Make"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Chaque demande de devis reçue par email doit devenir une carte dans mon tableau de suivi monday. Conçois le flux complet avec mapping des champs, gestion des doublons et chemin d'erreur, et teste-le avec trois emails d'exemple. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Chaque étape nomme l'outil et l'opération exacte qui existe vraiment",
+          "Le test à blanc montre l'entrée et la sortie à chaque jonction",
+          "L'idempotence est prévue pour éviter les doublons au rejeu"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    },
+    {
+      "id": "integration-outils-connectes",
+      "label": "Intégration avec vos outils connectés, lecture d'abord",
+      "description": "Rayan choisit l'opération exacte du catalogue réel de vos outils connectés (lecture et recherche s'exécutent tout de suite, toute écriture attend votre confirmation), prévoit la pagination et la limite de débit, teste d'abord en lecture sur un cas inoffensif, et livre le détail des appels à enchaîner. Ce qui n'existe pas dans le catalogue n'est jamais proposé.",
+      "skills": ["API_INTEGRATION_MAPPING", "WEBHOOK_MANAGEMENT", "TRIGGER_ACTION_MAPPING"],
+      "requiredConnectors": [],
+      "optionalConnectors": ["monday.controlled", "hubspot.controlled", "asana.controlled", "trello.controlled", "gmail.controlled", "calendar.controlled"],
+      "connectorOperations": {
+        "monday.controlled": ["READ_ITEM", "SEARCH_ITEMS", "CREATE_ITEM"],
+        "hubspot.controlled": ["SEARCH_CONTACTS", "READ_CONTACT", "READ_DEAL", "CREATE_TASK"],
+        "asana.controlled": ["READ_TASK", "SEARCH_TASKS", "CREATE_TASK"],
+        "trello.controlled": ["READ_CARD", "SEARCH_CARDS", "CREATE_CARD"],
+        "gmail.controlled": ["SEARCH_MESSAGES", "DRAFT_MESSAGE"],
+        "calendar.controlled": ["READ_EVENTS", "SEARCH_EVENTS"]
+      },
+      "channels": ["web"],
+      "knowledgeFields": [
+        { "key": "outils_concernes", "label": "Outils à relier", "help": "Les outils déjà connectés dans la page Connecteurs.", "required": true, "example": "monday.com et HubSpot" },
+        { "key": "objectif_integration", "label": "Ce que l'intégration doit permettre", "help": "Lecture, création de tâches, rapprochement de données.", "required": true, "example": "Voir dans monday les deals HubSpot gagnés cette semaine" },
+        { "key": "identifiants_utiles", "label": "Identifiants utiles", "help": "Nom du board ou du pipeline, sans mot de passe ni clé.", "required": false, "example": "Board monday « Leads 2026 »" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-outils", "label": "Lire et rechercher dans vos outils connectés", "examples": ["Rechercher les deals gagnés cette semaine dans HubSpot", "Lire les éléments d'un tableau monday"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 60 },
+        { "category": "redaction", "label": "Rédiger la séquence d'appels et le mapping", "examples": ["Rédiger la séquence d'opérations avec les champs exacts", "Produire le mapping en .xlsx"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 30 },
+        { "category": "ecriture-outil", "label": "Créer un élément dans un de vos outils", "examples": ["Créer un élément monday, une tâche Asana ou HubSpot, ou une carte Trello, après votre confirmation"], "risk": "medium", "defaultMode": "ask", "maxAutoPerDay": null, "operations": ["monday.controlled:CREATE_ITEM", "hubspot.controlled:CREATE_TASK", "asana.controlled:CREATE_TASK", "trello.controlled:CREATE_CARD"] },
+        { "category": "brouillon-email", "label": "Déposer un brouillon d'email", "examples": ["Créer un brouillon dans Gmail, sans l'envoyer"], "risk": "low", "defaultMode": "draft", "maxAutoPerDay": null, "operations": ["gmail.controlled:DRAFT_MESSAGE"] }
+      ],
+      "testScenario": {
+        "objective": "Avec mes outils connectés, lis les deals gagnés cette semaine et prépare la liste des cartes à créer dans mon tableau de suivi, sans en créer aucune. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Seules des opérations de lecture sont exécutées",
+          "Les cartes à créer sont listées avec leurs champs et attendent votre confirmation",
+          "Aucune opération absente du catalogue n'est proposée"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    },
+    {
+      "id": "synchronisation-donnees",
+      "label": "Synchronisation de données entre deux outils",
+      "description": "Rayan fixe le sens de la synchronisation, la source de vérité et la clé de correspondance, écrit le mapping complet champ par champ (type, transformation, obligatoire, valeur par défaut), traite les écarts de format (dates, téléphones, listes de valeurs), prévoit la déduplication et la règle de conflit. Livré en tableur et en spécification.",
+      "skills": ["DATA_SYNC_BETWEEN_TOOLS", "API_INTEGRATION_MAPPING", "INTEGRATION_DOCUMENTATION"],
+      "requiredConnectors": [],
+      "optionalConnectors": ["monday.controlled", "hubspot.controlled", "pipedrive.controlled"],
+      "connectorOperations": {
+        "monday.controlled": ["READ_ITEM", "SEARCH_ITEMS"],
+        "hubspot.controlled": ["SEARCH_CONTACTS", "READ_CONTACT", "READ_DEAL"],
+        "pipedrive.controlled": ["SEARCH_CONTACTS", "READ_CONTACT", "READ_DEAL"]
+      },
+      "channels": ["web"],
+      "knowledgeFields": [
+        { "key": "systeme_source", "label": "Outil source", "help": "L'outil qui fait foi pour les données.", "required": true, "example": "HubSpot" },
+        { "key": "systeme_cible", "label": "Outil cible", "help": "L'outil qui doit recevoir les données.", "required": true, "example": "monday.com" },
+        { "key": "champs_a_synchroniser", "label": "Champs concernés", "help": "Les informations à faire circuler.", "required": false, "example": "Nom de l'entreprise, email, montant du deal, étape" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-outils", "label": "Lire les enregistrements des deux outils", "examples": ["Lire un échantillon de contacts HubSpot", "Lire un échantillon d'éléments monday"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 60 },
+        { "category": "redaction", "label": "Rédiger le mapping et tester les transformations", "examples": ["Rédiger le mapping champ source vers champ cible", "Tester la conversion des téléphones au format international"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 30 },
+        { "category": "ecriture-recurrente", "label": "Lancer la synchronisation en écriture", "examples": ["Écrire les enregistrements synchronisés dans l'outil cible"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Je veux synchroniser mes deals HubSpot vers un tableau monday. Prépare le mapping champ par champ, la clé de correspondance, la règle de conflit et teste les transformations sur 5 exemples. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "La source de vérité, la clé de correspondance et la règle de conflit sont écrites",
+          "Chaque transformation est testée sur un exemple avec son résultat",
+          "Aucune écriture n'est lancée dans les outils"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    },
+    {
+      "id": "mission-recurrente",
+      "label": "Mission récurrente prête à créer dans l'application",
+      "description": "Rayan rédige l'automatisation à créer dans la section Automatisations : l'objectif précis, le Worker qui l'exécute et la fréquence adaptée au volume réel (pas « chaque minute »). Il conçoit le flux pour tolérer un passage sauté si votre quota est épuisé et prévoit comment vérifier les passages. Vous créez et activez l'automatisation.",
+      "skills": ["WORKFLOW_AUTOMATION_DESIGN", "SCENARIO_DESIGN", "AUTOMATION_ERROR_MONITORING"],
+      "requiredConnectors": [],
+      "optionalConnectors": [],
+      "channels": ["web", "schedule"],
+      "suggestedFrequencyMinutes": 1440,
+      "knowledgeFields": [
+        { "key": "tache_a_automatiser", "label": "Ce qui doit se répéter", "help": "L'objectif de la mission récurrente.", "required": true, "example": "Chaque matin, résumer les nouvelles demandes de devis de la veille" },
+        { "key": "frequence_volume", "label": "Fraîcheur nécessaire", "help": "À quel rythme l'information doit être à jour.", "required": true, "example": "Une fois par jour ouvré suffit" },
+        { "key": "notification_slack", "label": "Résumé dans Slack", "help": "Souhaitez-vous un résumé de chaque passage dans Slack ?", "required": false, "example": "Oui, dans le canal #operations" }
+      ],
+      "autonomyRules": [
+        { "category": "redaction", "label": "Rédiger l'objectif et le plan de la mission récurrente", "examples": ["Rédiger l'objectif exact de l'automatisation", "Choisir la fréquence selon le volume"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "ecriture-recurrente", "label": "Écrire dans vos outils à chaque passage", "examples": ["Créer des éléments dans votre outil à chaque exécution programmée"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Prépare l'automatisation « chaque matin, résumer les nouvelles demandes de devis de la veille » : Worker à choisir, objectif exact, fréquence adaptée et ce qui se passe si mon quota est épuisé. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "L'objectif est assez précis pour être exécuté sans question",
+          "La fréquence est justifiée par le volume et non fixée à la minute",
+          "Le comportement en cas de quota épuisé est expliqué"
+        ]
+      },
+      "recommendedLevel": "rapide"
+    },
+    {
+      "id": "code-transformation-teste",
+      "label": "Code de transformation de données, écrit et testé",
+      "description": "Pour une logique sur mesure (analyse de texte, déduplication, formats de date, numéros de téléphone internationaux, calculs), Rayan écrit le code et l'exécute réellement sur des exemples, puis vous remet le code avec ses cas de test et leurs résultats, prêt à coller dans votre outil d'automatisation.",
+      "skills": ["DATA_SYNC_BETWEEN_TOOLS", "AUTOMATION_TESTING"],
+      "requiredConnectors": [],
+      "optionalConnectors": [],
+      "channels": ["web"],
+      "knowledgeFields": [
+        { "key": "transformation_voulue", "label": "La transformation à réaliser", "help": "Données d'entrée, résultat attendu, règles.", "required": true, "example": "Convertir une liste de numéros de téléphone suisses saisis librement en format international" },
+        { "key": "exemples_donnees", "label": "Exemples de données", "help": "Collez quelques lignes réelles, sans informations sensibles.", "required": false, "example": "079 123 45 67 ; +41 21 000 00 00 ; 021/000.00.00" },
+        { "key": "outil_execution", "label": "Où le code sera utilisé", "help": "Zapier, Make, n8n, tableur, autre.", "required": false, "example": "Make" }
+      ],
+      "autonomyRules": [
+        { "category": "analyse-calcul", "label": "Écrire et exécuter le code sur des exemples", "examples": ["Exécuter le code de conversion sur vos exemples", "Tester les cas limites"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 30 },
+        { "category": "redaction", "label": "Livrer le code et ses tests", "examples": ["Livrer le code commenté avec les résultats de test"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 30 }
+      ],
+      "testScenario": {
+        "objective": "Écris et teste un code qui convertit des numéros de téléphone suisses saisis librement en format international, avec dix exemples dont des cas limites. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Le code a été exécuté et les résultats sont affichés pour chaque exemple",
+          "Les cas invalides sont signalés et non corrigés au hasard",
+          "Aucun secret ni clé n'apparaît dans le code"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    },
+    {
+      "id": "runbook-surveillance",
+      "label": "Runbook et surveillance de vos automatisations",
+      "description": "Rayan rédige pour chaque automatisation le mode d'emploi : comment l'activer, la surveiller, la couper et que faire en cas d'échec. Avec UptimeRobot connecté, il lit l'état de vos moniteurs et les incidents récents pour compléter la surveillance.",
+      "skills": ["INTEGRATION_DOCUMENTATION", "AUTOMATION_ERROR_MONITORING", "WEBHOOK_MANAGEMENT"],
+      "requiredConnectors": [],
+      "optionalConnectors": ["monitoring.controlled"],
+      "connectorOperations": {
+        "monitoring.controlled": ["READ_STATUS", "SEARCH_INCIDENTS"]
+      },
+      "channels": ["web", "schedule"],
+      "suggestedFrequencyMinutes": 10080,
+      "knowledgeFields": [
+        { "key": "automatisation_a_documenter", "label": "L'automatisation à documenter", "help": "Décrivez son rôle ou collez sa spécification.", "required": true, "example": "Le flux demandes de devis vers monday" },
+        { "key": "responsable_surveillance", "label": "Qui surveille et réagit", "help": "La personne qui reçoit l'alerte en cas d'échec.", "required": false, "example": "Claire Martin" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-donnees", "label": "Lire l'état de vos moniteurs", "examples": ["Lire l'état courant des moniteurs UptimeRobot", "Rechercher les incidents de la semaine"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 30 },
+        { "category": "redaction", "label": "Rédiger le runbook", "examples": ["Rédiger les étapes pour activer, surveiller, couper et dépanner", "Produire le document en .docx"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 }
+      ],
+      "testScenario": {
+        "objective": "Rédige le runbook de mon automatisation qui transforme les demandes de devis en cartes de suivi : activation, surveillance, coupure et conduite à tenir en cas d'échec. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Le runbook couvre activer, surveiller, couper et dépanner",
+          "Les étapes sont assez précises pour être suivies par un non-spécialiste",
+          "Aucune clé ni mot de passe n'apparaît dans le document"
+        ]
+      },
+      "recommendedLevel": "rapide"
+    }
+  ],
+  "channelSupport": {
+    "email": "planned",
+    "phone": "no",
+    "whatsapp": "no",
+    "web": "available",
+    "schedule": "available"
+  },
+  "plannedCapabilities": [
+    "Déclencheurs automatiques à l'arrivée d'un email, d'un message ou d'un appel (aujourd'hui : mission récurrente qui interroge vos outils à intervalle régulier)",
+    "Activation directe du flux dans Zapier, Make ou n8n depuis l'application",
+    "Écritures dans vos outils lors des passages programmés, avec validation groupée (aujourd'hui chaque écriture attend votre confirmation)",
+    "Dépôt de vos exports et fichiers de mapping directement dans la conversation",
+    "Connexion à Salesforce"
+  ],
+  "installationSteps": [
+    "Ajoutez Rayan à votre équipe depuis le catalogue des Workers.",
+    "Connectez dans la page Connecteurs les outils que vous voulez relier (monday, HubSpot, Asana, Trello, Gmail, agenda...).",
+    "Décrivez dans la fiche d'entreprise vos outils actuels et vos tâches répétitives les plus coûteuses.",
+    "Gardez les réglages par défaut : Rayan lit, conçoit et teste à blanc, mais toute écriture dans vos outils attend votre confirmation.",
+    "Lancez le scénario d'essai « Spécification d'automatisation » sur une tâche simple et vérifiez que chaque opération citée existe.",
+    "Créez dans la section Automatisations la mission récurrente rédigée par Rayan, avec la fréquence recommandée.",
+    "Relisez les enregistrements de passage après quelques jours et ajustez."
+  ]
+}
