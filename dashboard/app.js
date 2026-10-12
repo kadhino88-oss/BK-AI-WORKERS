@@ -3105,7 +3105,7 @@ document.getElementById("chloe-fab-form").addEventListener("submit", (e) => {
 //    appeler demandent toujours la validation du client ;
 //  - seuls les canaux reellement disponibles (liveChannels) sont presentes comme disponibles : telephone, WhatsApp et e-mail = « bientot » ;
 //  - tout texte venant du serveur ou du client passe par escapeHtml ; aucun secret n'est jamais demande ni conserve ici ;
-//  - aucun prix n'est affiche pour Solo/Trio (la page Tarifs n'en montre pas) : le tarif est confirme par BK Entreprise avant toute facture.
+//  - aucun prix n'est affiche pour Solo/Trio (la page Tarifs n'en montre pas) : la demande part chez BK Entreprise, rien n'est debite ici.
 
 // BK-PURE-BEGIN (fonctions sans acces au DOM : testees telles quelles par tests/hire-ui/test_pure_logic.js)
 const IW_MODES = [
@@ -3281,6 +3281,9 @@ const iwMemory = {};
 let onConnectorsReloaded = null;      // appele par loadConnectors() : l'assistant rafraichit alors l'etat des outils
 const IW_RETURN_KEY = "bk_install_return";
 
+// Texte d'une boite native (confirm) : le dictionnaire du navigateur ne les voit pas, on les traduit a la main.
+const iwT = (s) => (window.bkTr ? window.bkTr(s) : s);
+
 function iwNow() {
   return new Date().toLocaleTimeString(BK_LOCALE(), { hour: "2-digit", minute: "2-digit" });
 }
@@ -3358,10 +3361,12 @@ async function openInstallWizard(workerId, startStep) {
       <ol class="iw-steps" id="iw-steps" aria-label="Étapes de l'installation"></ol>
       <div class="iw-body" id="iw-body"></div>
       <footer class="iw-foot">
-        <div class="iw-savestate" id="iw-savestate" role="status" aria-live="polite"></div>
+        <div class="iw-foot-top">
+          <div class="iw-savestate" id="iw-savestate" role="status" aria-live="polite"></div>
+          <button type="button" class="btn btn-ghost iw-save-btn" id="iw-save">Enregistrer le brouillon</button>
+        </div>
         <div class="iw-foot-btns">
           <button type="button" class="btn btn-ghost" id="iw-prev">Précédent</button>
-          <button type="button" class="btn btn-ghost" id="iw-save">Enregistrer le brouillon</button>
           <button type="button" class="btn btn-gold" id="iw-next">Suivant</button>
         </div>
       </footer>
@@ -4227,10 +4232,10 @@ function iwRenderInstallPanel(panel, title, workerId, data, hired) {
   const trial = hire.planId === "essai" && !(hired.openRequests || []).includes(workerId);
   if (trial) {
     html += `<details class="iw-keep"><summary>Garder seulement ce Worker après l'essai</summary>
-      <p class="iw-note">Pendant l'essai, vous pouvez tester tous les Workers. Pour n'en garder qu'un, envoyez une demande : BK Entreprise vous confirme le tarif avant toute facture, rien n'est débité ici.</p>
+      <p class="iw-note">Pendant l'essai, vous pouvez tester tous les Workers. Pour n'en garder qu'un, envoyez une demande à BK Entreprise.</p>
       <div id="iw-request-slot"></div></details>`;
   } else if (hire.planId === "essai" && (hired.openRequests || []).includes(workerId)) {
-    html += '<p class="iw-note iw-note-ok">Votre demande pour garder ce Worker a bien été envoyée. BK Entreprise revient vers vous.</p>';
+    html += '<p class="iw-note iw-note-ok">Votre demande pour garder ce Worker a bien été transmise à BK Entreprise.</p>';
   }
   panel.innerHTML = html;
   const openBtn = panel.querySelector("#iw-open-btn");
@@ -4260,7 +4265,7 @@ function iwRenderInstallPanel(panel, title, workerId, data, hired) {
     del.className = "iw-link iw-danger";
     del.textContent = "Supprimer cette installation";
     del.addEventListener("click", async () => {
-      if (!confirm("Supprimer cette installation ? La fiche que vous avez remplie pour ce Worker sera effacée. Vous pourrez en refaire une plus tard.")) return;
+      if (!confirm(iwT("Supprimer cette installation ? La fiche que vous avez remplie pour ce Worker sera effacée. Vous pourrez en refaire une plus tard."))) return;
       del.disabled = true;
       try {
         const r = await fetchJson("/api/installations/delete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ workerId }) });
@@ -4280,7 +4285,7 @@ function iwRenderInstallPanel(panel, title, workerId, data, hired) {
 // Demande d'embauche (POST /api/workers/<id>/hire-request) : une par client et par Worker, message facultatif.
 function iwRenderRequestForm(slot, workerId, workerName, hired) {
   if ((hired.openRequests || []).includes(workerId)) {
-    slot.innerHTML = '<p class="iw-note iw-note-ok">Votre demande pour ce Worker a bien été envoyée. BK Entreprise revient vers vous.</p>';
+    slot.innerHTML = '<p class="iw-note iw-note-ok">Votre demande pour ce Worker a bien été transmise à BK Entreprise.</p>';
     return;
   }
   slot.innerHTML = `<div class="iw-field">
@@ -4289,7 +4294,7 @@ function iwRenderRequestForm(slot, workerId, workerName, hired) {
       <div class="iw-field-err" id="iw-req-e" role="alert" hidden></div>
     </div>
     <button type="button" class="btn btn-ghost" id="iw-req-btn">Envoyer la demande</button>
-    <p class="iw-note">Aucun paiement n'est demandé ici et aucun prix n'est affiché : BK Entreprise vous confirme le tarif avant toute facture.</p>`;
+    <p class="iw-note">Aucun paiement n'est demandé ici et aucun prix n'est affiché : le tarif vous est communiqué avant toute facture.</p>`;
   const btn = slot.querySelector("#iw-req-btn");
   const err = slot.querySelector("#iw-req-e");
   btn.addEventListener("click", async () => {
@@ -4309,7 +4314,7 @@ function iwRenderRequestForm(slot, workerId, workerName, hired) {
         return;
       }
       slot.innerHTML = `<p class="iw-note iw-note-ok">${r.alreadyRequested ? "Vous aviez déjà demandé ce Worker : la demande est toujours en attente." : "Demande envoyée."} <span class="iw-ref">Référence</span> <code>${escapeHtml(r.requestId || "")}</code></p>
-        <p class="iw-note">BK Entreprise vous recontacte pour confirmer le tarif. Rien n'est débité tant que vous n'avez pas réglé une facture.</p>`;
+        <p class="iw-note">Votre demande est transmise à BK Entreprise. Rien n'est débité ici : un Worker n'est ajouté à votre forfait qu'après une facture réglée.</p>`;
     } catch (e) {
       err.textContent = e.message || "Demande impossible pour le moment.";
       err.hidden = false;
@@ -4370,7 +4375,7 @@ function iwRenderHirePanel(panel, title, workerId, data, hired) {
 
   if (hire.slotsLeft > 0) {
     actions.innerHTML = `<p class="iw-note">Embaucher ce Worker utilise un de vos emplacements. Vous pourrez ensuite l'installer et lui confier des missions.</p>
-      <div class="iw-confirm" id="iw-hire-box"><button type="button" class="btn btn-gold" id="iw-hire-btn">Embaucher ce Worker</button>
+      <div class="iw-confirm" id="iw-hire-box"><button type="button" class="btn btn-gold" id="iw-hire-btn"><span>Embaucher</span> <strong>${escapeHtml(name)}</strong></button>
       <div class="iw-field-err" role="alert" hidden></div></div>`;
     const box = actions.querySelector("#iw-hire-box");
     box.querySelector("#iw-hire-btn").addEventListener("click", () => hireNow(null, box));
@@ -4378,7 +4383,7 @@ function iwRenderHirePanel(panel, title, workerId, data, hired) {
     actions.innerHTML = `<fieldset class="iw-swap"><legend>Remplacer l'un de vos Workers par celui-ci</legend>
       <p class="iw-note">Le Worker remplacé est mis en pause (son installation est conservée). Un remplacement est possible une fois tous les 30 jours.</p>
       <div class="iw-swap-list">${(hire.hiredWorkers || []).map((w, i) => `<label class="iw-mode"><input type="radio" name="iw-swap" value="${escapeHtml(w)}"${i === 0 ? " checked" : ""}><span>${escapeHtml(workerNameById(w))}</span></label>`).join("")}</div>
-      <div class="iw-confirm" id="iw-hire-box"><button type="button" class="btn btn-gold" id="iw-swap-btn">Remplacer et embaucher</button>
+      <div class="iw-confirm" id="iw-hire-box"><button type="button" class="btn btn-gold" id="iw-swap-btn"><span>Remplacer et embaucher</span> <strong>${escapeHtml(name)}</strong></button>
       <div class="iw-field-err" role="alert" hidden></div></div></fieldset>`;
     const box = actions.querySelector("#iw-hire-box");
     box.querySelector("#iw-swap-btn").addEventListener("click", () => {
@@ -4513,7 +4518,7 @@ async function loadInstalledWorkers() {
           if (when) when.textContent = iwDate(updated.updatedAtUtc);
           msg.hidden = true;
         },
-        onError: (lines) => { msg.textContent = lines.join(" ") + " Ouvrez l'installation pour terminer."; msg.hidden = false; },
+        onError: (lines) => { msg.innerHTML = `<span>${escapeHtml(lines.join(" "))}</span> <span>Ouvrez l'installation pour terminer.</span>`; msg.hidden = false; },
       }));
     }
     const open = document.createElement("button");

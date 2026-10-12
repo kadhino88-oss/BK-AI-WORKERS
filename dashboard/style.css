@@ -3007,6 +3007,9 @@ a:focus-visible,
   .topbar { gap: 8px; padding: 10px 14px; }
   .topbar-actions { gap: 6px; }
   #topbar-account-btn { padding: 8px 12px; font-size: 12.5px; }
+  /* Connecte, « Mon compte (client) » poussait le hamburger hors de l'ecran (page plus large que 375 px, assistant d'installation decale) :
+     le libelle passe sur deux lignes au lieu de deborder. */
+  #topbar-account-btn { white-space: normal; max-width: 104px; padding: 6px 12px; line-height: 1.15; text-align: center; justify-content: center; }
   .brand { font-size: 14px; gap: 6px; }
   .brand .brand-mark { width: 28px; height: 28px; font-size: 12px; }
 }
@@ -3458,6 +3461,8 @@ body.iw-open { overflow: hidden; }
 .iw-step-item.is-done .iw-step-num { background: var(--ok); border-color: var(--ok); color: #fff; }
 .iw-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 18px 22px 26px; }
 .iw-foot { flex: none; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px 14px; padding: 12px 18px; background: #fff; border-top: 1px solid var(--card-border); }
+.iw-foot-top { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 14px; min-width: 0; }
+.iw-save-btn { padding: 7px 14px; min-height: 40px; font-size: 13px; }
 .iw-savestate { font-size: 12.5px; color: var(--ink-muted); min-width: 0; }
 .iw-dirty { color: #8a4b00; font-weight: 700; }
 .iw-foot-btns { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
@@ -3570,10 +3575,11 @@ body.iw-open { overflow: hidden; }
   .iw-step-item.is-current { flex: 3 1 0; }
   .iw-body { padding: 14px 14px 22px; }
   .iw-panel textarea, .iw-box textarea, .iw-box select, .iw-grant select { font-size: 16px; }
-  .iw-foot { padding: 10px 12px; }
-  .iw-foot-btns { width: 100%; }
-  .iw-foot-btns .btn { flex: 1 1 auto; justify-content: center; white-space: normal; }
-  #iw-next { flex-basis: 100%; }
+  .iw-foot { padding: 8px 12px 10px; flex-direction: column; align-items: stretch; gap: 8px; }
+  .iw-foot-top { justify-content: space-between; flex-wrap: nowrap; }
+  .iw-save-btn { flex: 0 0 auto; }
+  .iw-foot-btns { width: 100%; flex-wrap: nowrap; }
+  .iw-foot-btns .btn { flex: 1 1 0; justify-content: center; white-space: normal; }
   .iw-card { grid-template-columns: auto minmax(0, 1fr); }
   .iw-card-actions { grid-column: 1 / -1; justify-content: space-between; }
   .iw-panel { padding: 14px; }
