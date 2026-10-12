@@ -489,9 +489,19 @@ def get_worker_activity(worker_id_upper, client_id, limit=8):
                 "createdAtUtc": data.get("CreatedAtUtc"),
                 "answer": (data.get("Result") or {}).get("Answer"),
                 "executionNote": data.get("ExecutionNote"),
+                "files": [{"filename": f.get("filename"), "sizeBytes": f.get("sizeBytes"), "mime": f.get("mime")}
+                          for f in ((data.get("Result") or {}).get("Files") or []) if isinstance(f, dict) and f.get("filename")],
             })
     records.sort(key=lambda r: r.get("createdAtUtc") or "", reverse=True)
-    return records[:limit]
+    records = records[:limit]
+    # Action preparee par le Worker et pas encore confirmee/annulee : le fichier PENDING-ACTION-<TaskId>.json existe encore. On la
+    # remonte pour que la carte "Confirmer / Annuler" revienne apres un rechargement de la page (jusqu'ici, elle n'existait que dans la
+    # reponse de la mission en direct). Memes champs et memes masquages de secrets que dans la reponse en direct.
+    for r in records:
+        pending = attach_pending_action({"TaskId": r.get("taskId")}).get("pendingAction")
+        if pending:
+            r["pendingAction"] = pending
+    return records
 
 
 
@@ -2020,6 +2030,7 @@ PHONE_AGENT = phone_agent.PhoneAgent(ROOT, PS_CMD, notify=_notify_owner_email)
 # Programme pilote (dashboard/pilot_program.py) : candidatures de premiers clients reels. Meme chemin d'email
 # que le standard telephonique (mailer.send_email -> SMTP dedie ou pont Gmail) ; ecriture sous _STATE_LOCK.
 import pilot_program
+import file_preview
 
 
 def _notify_pilot_email(to, subject, html_body, text):
@@ -2447,6 +2458,8 @@ def get_client_missions(client_id, limit=25):
                 "createdAtUtc": data.get("CreatedAtUtc"),
                 "answer": (data.get("Result") or {}).get("Answer"),
                 "executionNote": data.get("ExecutionNote"),
+                "files": [{"filename": f.get("filename"), "sizeBytes": f.get("sizeBytes"), "mime": f.get("mime")}
+                          for f in ((data.get("Result") or {}).get("Files") or []) if isinstance(f, dict) and f.get("filename")],
             })
     records.sort(key=lambda r: r.get("createdAtUtc") or "", reverse=True)
     return records[:limit]
@@ -3700,6 +3713,10 @@ class Handler(BaseHTTPRequestHandler):
             rest = path[len("/api/missions/"):]
             task_id, _, name = rest.partition("/files/")
             name = unquote(name)
+            want_preview = False
+            if name.endswith("/preview"):                      # /api/missions/<id>/files/<nom>/preview : apercu JSON
+                want_preview, name = True, name[:-len("/preview")]
+            want_inline = (parse_qs(parsed.query).get("inline") or [""])[0] == "1"
             if not TASK_ID_PATTERN.match(task_id or ""):
                 self._send_json({"error": "NOT_FOUND"}, 404)
                 return
@@ -3725,13 +3742,22 @@ class Handler(BaseHTTPRequestHandler):
             if not os.path.isfile(fpath):
                 self._send_json({"error": "NOT_FOUND"}, 404)
                 return
-            ctype = mimetypes.guess_type(name)[0] or "application/octet-stream"
+            if want_preview:
+                try:
+                    self._send_json({"ok": True, "filename": name, "preview": file_preview.build_preview(fpath, name)})
+                except file_preview.PreviewError as e:
+                    self._send_json({"ok": False, "filename": name, "error": str(e)})
+                return
+            inline_type = file_preview.inline_content_type(name) if want_inline else None
+            ctype = inline_type or mimetypes.guess_type(name)[0] or "application/octet-stream"
             size = os.path.getsize(fpath)
             self.send_response(200)
             self.send_header("Content-Type", ctype)
             self.send_header("Content-Length", str(size))
-            self.send_header("Content-Disposition", 'attachment; filename="%s"' % name)
+            self.send_header("Content-Disposition", ('inline' if inline_type else 'attachment') + '; filename="%s"' % name)
             self.send_header("X-Content-Type-Options", "nosniff")
+            if inline_type and inline_type.startswith("image/"):
+                self.send_header("Content-Security-Policy", "default-src 'none'; img-src 'self'; sandbox")
             self.send_header("Cache-Control", "no-cache, must-revalidate")
             self.end_headers()
             with open(fpath, "rb") as f:
