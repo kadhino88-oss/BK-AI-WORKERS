@@ -3959,7 +3959,7 @@ class Handler(BaseHTTPRequestHandler):
         elif path == "/facturation.html":
             self._send_html(seo_pages.render_facturation_page())
         elif path == "/tarifs.html":
-            self._send_html(seo_pages.render_tarifs_page())
+            self._send_html(seo_pages.render_tarifs_page(public_mission_levels()))
         elif path == "/faq.html":
             self._send_html(seo_pages.render_faq_page())
         elif path == "/cgv.html":
