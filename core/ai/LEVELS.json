@@ -1,0 +1,37 @@
+{
+  "_comment": "Niveaux de travail des Workers (2026-10-12), comme les niveaux d'effort de Claude : Rapide pour aller vite, Equilibre par defaut, Approfondi pour pousser le travail plus loin. Modele, effort (output_config.effort, voir platform.claude.com/docs/en/build-with-claude/effort, lu le 2026-10-12), nombre d'etapes de la boucle, recherches web par requete, delai par appel, et COUT EN CREDITS d'une mission. Les credits suivent le cout reel (Haiku 5.5 0,10/0,50 USD, Sonnet 5.5 2/10, Opus 5.5 4/20 par million de jetons, page de tarifs du 2026-10-11) : a recalibrer avec les mesures reelles (docs/COST-LEDGER.md). BK_LEVELS=0 sur le serveur = ancien comportement (un seul niveau, Haiku 4.5, 1 credit).",
+  "default": "equilibre",
+  "trial": "rapide",
+  "levels": {
+    "rapide": {
+      "label": "Rapide",
+      "description": "Réponse la plus rapide, pour les demandes simples.",
+      "model": "claude-haiku-5-5",
+      "effort": "low",
+      "maxIterations": 6,
+      "webMaxUses": 3,
+      "callTimeoutSec": 120,
+      "credits": 1
+    },
+    "equilibre": {
+      "label": "Équilibré",
+      "description": "Le bon compromis qualité / vitesse pour la plupart des missions.",
+      "model": "claude-sonnet-5-5",
+      "effort": "medium",
+      "maxIterations": 12,
+      "webMaxUses": 8,
+      "callTimeoutSec": 240,
+      "credits": 3
+    },
+    "approfondi": {
+      "label": "Approfondi",
+      "description": "Le travail le plus poussé : plus de recherches, plus d'étapes, vérifications plus longues.",
+      "model": "claude-opus-5-5",
+      "effort": "high",
+      "maxIterations": 20,
+      "webMaxUses": 15,
+      "callTimeoutSec": 420,
+      "credits": 8
+    }
+  }
+}

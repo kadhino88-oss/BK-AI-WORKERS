@@ -55,9 +55,14 @@ function Invoke-RestMethod {
     $SystemIsArray = ($Req.system -is [System.Array])
     $CacheControl = $false
     if ($SystemIsArray) { foreach ($B in $Req.system) { if ($B.cache_control.type -eq "ephemeral") { $CacheControl = $true } } }
+    $SystemText = if ($SystemIsArray) { (@($Req.system | ForEach-Object { [string]$_.text }) -join "`n") } else { [string]$Req.system }
+    $WebTool = @($Req.tools | Where-Object { $_.name -eq "web_search" }) | Select-Object -First 1
     Add-FakeLog ([ordered]@{
         kind = "messages"; index = $Index; model = [string]$Req.model; systemIsArray = $SystemIsArray; systemCacheControl = $CacheControl
         toolTypes = $ToolTypes; betaHeader = [string]$Headers["anthropic-beta"]; messageCount = @($Req.messages).Count
+        effort = [string]$Req.output_config.effort; webMaxUses = $(if ($WebTool) { [int]$WebTool.max_uses } else { 0 })
+        systemHasMemory = ($SystemText -like "*<client_memory>*"); systemText = $SystemText
+        timeoutSec = [int]$TimeoutSec
     })
     $Responses = @($Global:FakeCassette.responses)
     if ($Index -ge $Responses.Count) { throw "NO_RECORDED_RESPONSE for call #$Index" }
