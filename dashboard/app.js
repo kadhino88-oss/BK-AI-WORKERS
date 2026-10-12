@@ -3251,24 +3251,25 @@ function iwParseErrors(errors, profile) {
   const out = { fields: {}, general: [], items: [] };
   const defs = {};
   ((profile && profile.services) || []).forEach((d) => { defs[d.id] = d; });
-  const push = (key, step, svcLabel, msg) => {
+  const push = (key, step, svcLabel, msg, field) => {
     if (key) (out.fields[key] = out.fields[key] || []).push(msg);
-    out.items.push({ key, step, svc: svcLabel || "", msg });
+    out.items.push({ key, step, svc: svcLabel || "", field: field || "", msg });
   };
   (Array.isArray(errors) ? errors : [errors]).filter(Boolean).forEach((raw) => {
     const text = String(raw);
     let m = text.match(/^([a-z0-9-]+)\.([a-z0-9_-]+) : (.*)$/);
     if (m && defs[m[1]]) {
-      const isKnowledge = (defs[m[1]].knowledgeFields || []).some((f) => f.key === m[2]);
-      push(m[1] + "." + m[2], isKnowledge ? 1 : 2, defs[m[1]].label, iwFriendlyError(m[3]));
+      const kf = (defs[m[1]].knowledgeFields || []).find((f) => f.key === m[2]);
+      const rule = kf ? null : (defs[m[1]].autonomyRules || []).find((r) => r.category === m[2]);
+      push(m[1] + "." + m[2], kf ? 1 : 2, defs[m[1]].label, iwFriendlyError(m[3]), (kf && kf.label) || (rule && rule.label) || "");
       return;
     }
     m = text.match(/^notes : (.*)$/);
-    if (m) { push("notes", 1, "", iwFriendlyError(m[1])); return; }
+    if (m) { push("notes", 1, "", iwFriendlyError(m[1]), "Consignes générales"); return; }
     m = text.match(/^([a-z0-9-]+) : (.*)$/);
     if (m && defs[m[1]]) { push(m[1], 0, defs[m[1]].label, iwFriendlyError(m[2])); return; }
     out.general.push(iwFriendlyError(text));
-    out.items.push({ key: "", step: -1, svc: "", msg: iwFriendlyError(text) });
+    out.items.push({ key: "", step: -1, svc: "", field: "", msg: iwFriendlyError(text) });
   });
   return out;
 }
@@ -3431,8 +3432,9 @@ async function iwClose(opts) {
   onConnectorsReloaded = null;
   iw = null;
   if (kept) showToast("Vos modifications n'ont pas pu être enregistrées, mais elles sont conservées : rouvrez l'installation pour les corriger.", false);
-  loadInstallPanel(workerId);
   if (!billingView.hidden) loadInstalledWorkers();
+  await loadInstallPanel(workerId);
+  // Le panneau vient d'etre redessine : le clavier retrouve le bouton qui avait ouvert l'assistant.
   const target = opener && document.contains(opener) ? opener : document.getElementById("iw-open-btn");
   if (target && target.focus) target.focus();
 }
@@ -3534,7 +3536,7 @@ function iwShowErrors() {
   if (!sum) return;
   const items = iw.errors.items.length ? iw.errors.items : iw.errors.general.map((msg) => ({ key: "", step: -1, svc: "", msg }));
   sum.innerHTML = `<div class="iw-alert-title">L'enregistrement a été refusé. Corrigez ces points, votre saisie est conservée.</div>
-    <ul>${items.map((it, i) => `<li>${it.svc ? `<strong>${escapeHtml(it.svc)}</strong> ` : ""}<span>${escapeHtml(it.msg)}</span>${it.step >= 0 && it.step !== iw.step ? ` <button type="button" class="iw-link" data-goto="${it.step}">Corriger à l'étape « ${escapeHtml(IW_STEP_LABELS[it.step])} »</button>` : ""}</li>`).join("")}</ul>`;
+    <ul>${items.map((it) => `<li>${it.svc ? `<strong>${escapeHtml(it.svc)}</strong> ` : ""}${it.field ? `<em>${escapeHtml(it.field)} :</em> ` : ""}<span>${escapeHtml(it.msg)}</span>${it.step >= 0 && it.step !== iw.step ? ` <button type="button" class="iw-link" data-goto="${it.step}">Corriger à l'étape « ${escapeHtml(IW_STEP_LABELS[it.step])} »</button>` : ""}</li>`).join("")}</ul>`;
   sum.hidden = false;
   sum.querySelectorAll("[data-goto]").forEach((b) => b.addEventListener("click", () => { iw.step = Number(b.dataset.goto); iwRender(); }));
   Object.entries(iw.errors.fields).forEach(([key, msgs]) => {
@@ -3565,7 +3567,10 @@ async function iwGo(step) {
 
 async function iwFinish() {
   if (iw.dirty) { const ok = await iwSave(); if (!ok) return; }
-  showToast("Installation enregistrée. Elle reste en brouillon tant que vous ne l'activez pas.");
+  const status = iw.installation ? iw.installation.status : "draft";
+  showToast(status === "active" ? "Installation enregistrée."
+    : (status === "paused" ? "Installation enregistrée. Ce Worker reste en pause."
+      : "Installation enregistrée. Elle reste en brouillon tant que vous ne l'activez pas."));
   iwClose();
 }
 
@@ -3842,11 +3847,20 @@ function iwRenderTools(content) {
     <p class="iw-note">Vos accès sont chiffrés et jamais réaffichés. Vous pouvez déconnecter un outil à tout moment depuis la page Automatisations.</p>
     <ul class="iw-tools">${html}</ul>
     <p class="iw-hint"><button type="button" class="iw-link" id="iw-open-tools-page">Gérer tous mes outils connectés</button></p>`;
-  const openGuide = (i) => {
+  const openGuide = (i, opener) => {
     const c = iw.catalog[rows[i].cid];
-    if (c && c.connectGuide) openGuidedConnectForm(null, c);
+    if (!c || !c.connectGuide) return;
+    openGuidedConnectForm(null, c);
+    // A la fermeture de la fenetre « Connecter », le clavier retrouve sa place dans l'assistant (sinon le focus tombe sur la page).
+    const watcher = new MutationObserver(() => {
+      if (document.querySelector(".cg-overlay")) return;
+      watcher.disconnect();
+      const target = document.contains(opener) ? opener : document.getElementById("iw-title");
+      if (iw && target && (!document.activeElement || document.activeElement === document.body)) target.focus();
+    });
+    watcher.observe(document.body, { childList: true });
   };
-  content.querySelectorAll("[data-tool-guide]").forEach((b) => b.addEventListener("click", () => openGuide(Number(b.dataset.toolGuide))));
+  content.querySelectorAll("[data-tool-guide]").forEach((b) => b.addEventListener("click", () => openGuide(Number(b.dataset.toolGuide), b)));
   content.querySelectorAll("[data-tool-oauth]").forEach((b) => b.addEventListener("click", async () => {
     const c = iw.catalog[rows[Number(b.dataset.toolOauth)].cid];
     if (!c) return;
@@ -4019,6 +4033,7 @@ async function iwActivate() {
 
 async function iwChangeStatus(status) {
   if (!iw) return;
+  const before = iw.installation ? iw.installation.status : null;
   const r = await iwSetStatus(iw.workerId, status);
   if (!iw) return;
   if (r.ok) {
@@ -4027,7 +4042,9 @@ async function iwChangeStatus(status) {
     iwRenderStatusPill();
     if (status === "active") showToast("Ce Worker est actif.");
     else if (status === "paused") showToast("Ce Worker est en pause : il n'agit plus de lui-même.");
-    iwRender();
+    // Le resultat de l'essai reste affiche : on ne redessine toute l'etape que si la pause change ce qu'elle propose.
+    if ((before === "paused") !== (status === "paused")) iwRender();
+    else iwRenderActivation();
     loadInstallPanel(iw.workerId);
     if (!billingView.hidden) loadInstalledWorkers();
     return;
@@ -4223,7 +4240,11 @@ function iwRenderInstallPanel(panel, title, workerId, data, hired) {
     const err = panel.querySelector("#iw-panel-err");
     if (rec.status === "active" || rec.status === "paused") {
       actions.appendChild(iwPauseSwitchEl(Object.assign({ entitled: data.entitled }, rec), data.workerName, {
-        onChange: () => { loadInstallPanel(workerId); if (!billingView.hidden) loadInstalledWorkers(); },
+        onChange: async () => {
+          await loadInstallPanel(workerId);
+          const sw = document.querySelector("#install-panel .iw-pause-input");      // le panneau est redessine : le clavier retrouve l'interrupteur
+          if (sw) sw.focus();
+        },
         onError: (lines) => { err.textContent = lines.join(" "); err.hidden = false; },
       }));
     }
@@ -4483,7 +4504,15 @@ async function loadInstalledWorkers() {
     const msg = card.querySelector(".iw-card-msg");
     if (rec.status === "active" || rec.status === "paused") {
       actions.appendChild(iwPauseSwitchEl(rec, name, {
-        onChange: () => loadInstalledWorkers(),
+        onChange: (updated) => {
+          // Mise a jour sur place (pas de redessin) : le focus reste sur l'interrupteur.
+          const pill = card.querySelector(".iw-status-pill");
+          pill.className = "iw-status-pill is-" + updated.status;
+          pill.textContent = IW_STATUS_LABELS[updated.status] || updated.status;
+          const when = card.querySelector("time");
+          if (when) when.textContent = iwDate(updated.updatedAtUtc);
+          msg.hidden = true;
+        },
         onError: (lines) => { msg.textContent = lines.join(" ") + " Ouvrez l'installation pour terminer."; msg.hidden = false; },
       }));
     }
