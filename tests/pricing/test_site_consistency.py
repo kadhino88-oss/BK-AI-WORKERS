@@ -138,6 +138,20 @@ class PriceLists(unittest.TestCase):
         self.assertLess(len(texts["playbook"]), 6000)                      # un playbook reste court (tests/playbook-prompt borne le prompt complet)
 
 
+    def test_the_phone_assistant_of_the_owner_quotes_the_same_prices(self):
+        # dashboard/phone-agent/CLI-DASHBOARD.md est le savoir du standard : une grille differente de celle du site y serait dite au telephone
+        text = read("dashboard/phone-agent/CLI-DASHBOARD.md")
+        flat = re.sub(r"\s+", " ", text)
+        for pid in ("solo", "trio", "equipe", "pro", "scale"):
+            plan = server.PLAN_CATALOG[pid]
+            self.assertRegex(flat, re.escape(plan["name"]) + r" " + str(plan["priceChf"]["month"]) + r" CHF", pid)
+        for gone in ("Starter 39", "Business 99", "plan gratuit"):
+            self.assertNotIn(gone, flat)
+        self.assertIn("Enterprise sur devis", flat)
+        self.assertRegex(flat, r"jamais illimit")
+        self.assertNotRegex(flat, r"(?i)delos|limova|sintra|marblism")
+
+
 class NothingRetiredIsLeft(unittest.TestCase):
     SERVED = ["dashboard/index.html", "dashboard/app.js", "dashboard/seo_pages.py", "dashboard/trust_pages.py", "dashboard/pilot_program.py",
               "dashboard/pilot-form.js", "dashboard/pilot-admin.js", "dashboard/i18n.js", "dashboard/i18n-en.js", "dashboard/i18n-en-app.js",
