@@ -28,6 +28,12 @@ NAV_LINKS = [
     ("/cookies.html", "Cookies"),
 ]
 
+# Pages de confiance (dashboard/trust_pages.py) : pied de page seulement, l'en-tete est deja charge.
+FOOTER_TRUST_LINKS = [
+    ("/securite.html", "Sécurité et confiance"),
+    ("/status.html", "Statut du service"),
+]
+
 import re
 
 # Palette et typo alignees sur dashboard/style.css (:root) — avant ce
@@ -111,7 +117,7 @@ def _head(title, description, canonical_path):
         '<meta property="og:image" content="https://bk-ai-workers.com/portraits/chloe.jpg">\n'
         '<meta name="twitter:card" content="summary_large_image">\n'
         '<link rel="icon" type="image/svg+xml" href="/favicon.svg">\n'
-        '<link rel="apple-touch-icon" href="/favicon.svg">\n'
+        '<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">\n'
         '<link rel="preconnect" href="https://fonts.googleapis.com">\n'
         '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n'
         '<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap" rel="stylesheet">\n'
@@ -132,11 +138,15 @@ def _header():
     )
 
 
+# Programme pilote (dashboard/pilot_program.py) : lien de pied de page.
+PILOT_FOOTER_LINK = '<a href="/pilote.html">Programme pilote</a>'
+
+
 def _footer():
-    links = "".join(f'<a href="{href}">{label}</a>' for href, label in NAV_LINKS)
+    links = "".join(f'<a href="{href}">{label}</a>' for href, label in NAV_LINKS + FOOTER_TRUST_LINKS)
     return (
         "<footer>"
-        f"<nav>{links}</nav>"
+        f"<nav>{links}{PILOT_FOOTER_LINK}</nav>"
         "© 2026 BK-ENTREPRISE — BK-AI-WORKERS"
         "</footer>"
     )
@@ -150,7 +160,7 @@ def _footer():
 _HERO_RE = re.compile(r'\s*(<h1>.*?</h1>)\s*(<p class="u">.*?</p>)?', re.S)
 
 
-def _page(title, description, canonical_path, body_html):
+def _page(title, description, canonical_path, body_html, extra_scripts=""):
     hero_html = ""
     rest = body_html
     m = _HERO_RE.match(body_html)
@@ -168,6 +178,7 @@ def _page(title, description, canonical_path, body_html):
         + _footer()
         + '<script src="/particles.js" defer></script>'
         + '<script src="/i18n-en.js"></script><script src="/i18n-en-legal.js"></script><script src="/i18n.js"></script>'
+        + extra_scripts
         + "</body></html>"
     )
 
@@ -269,7 +280,7 @@ FAQ_ITEMS = [
      "C'est une règle appliquée au niveau du code, pas juste une bonne intention."),
     ("Comment les Workers se connectent-ils à mes outils (Slack, CRM, etc.) ?",
      "Chaque connexion se fait avec votre propre compte (« Se connecter avec Google », Microsoft…), et vos accès sont stockés chiffrés — jamais "
-     "vus en clair, jamais partagés entre plusieurs comptes. Rien n'est connecté par défaut : vous "
+     "réaffichés, jamais partagés entre plusieurs comptes. Rien n'est connecté par défaut : vous "
      "choisissez quels outils brancher, et quand."),
     ("Comment fonctionne la facturation ?",
      "Chaque plan inclut un quota de crédits par cycle (1 mission réellement traitée = 1 crédit consommé). "

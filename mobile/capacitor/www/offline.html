@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Hors connexion — BK-AI-WORKERS</title>
+<meta name="robots" content="noindex">
+<style>
+/* Ecran affiche par la coque quand https://bk-ai-workers.com est injoignable (capacitor.config.json > server.errorPath).
+   Autonome : fichier local de l'app, aucune ressource externe. Couleurs = celles du site. */
+:root{--bg:#f7f6f3;--card:#fff;--ink:#16171c;--muted:#6b6f7b;--gold:#a5761f;--gold-light:#c9973a;--line:rgba(20,20,25,.09)}
+@media (prefers-color-scheme:dark){:root{--bg:#14151a;--card:#1d1e25;--ink:#f3f2ee;--muted:#a7a9b3;--line:rgba(255,255,255,.12)}}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.55;display:flex;align-items:center;justify-content:center;padding:20px 16px}
+.card{width:100%;max-width:440px;background:var(--card);border:1px solid var(--line);border-radius:22px;padding:32px 24px 24px;text-align:center}
+.mark{width:72px;height:72px;border-radius:19px;margin:0 auto 16px;background:linear-gradient(135deg,var(--gold-light),var(--gold));color:#fff;font:700 32px/72px -apple-system,"Segoe UI",Arial,sans-serif;letter-spacing:-1px}
+h1{font-family:Georgia,"Times New Roman",serif;font-size:1.45rem;margin:0 0 10px}
+p{margin:0 0 14px;color:var(--muted);font-size:15px}
+button{min-height:46px;padding:11px 24px;border:0;border-radius:999px;background:linear-gradient(135deg,var(--gold-light),var(--gold));color:#fff;font:600 15px -apple-system,"Segoe UI",Arial,sans-serif}
+button:disabled{opacity:.6}
+.status{margin:14px 0 0;min-height:1.4em;font-size:13.5px}
+</style>
+</head>
+<body>
+<main class="card">
+  <div class="mark" role="img" aria-label="BK-AI-WORKERS">BK</div>
+  <h1 id="t">Vous êtes hors connexion</h1>
+  <p id="m">BK-AI-WORKERS a besoin d'une connexion Internet. Vérifiez votre Wi-Fi ou vos données mobiles : l'application se rouvrira d'elle-même dès que la connexion reviendra.</p>
+  <button type="button" id="retry">Réessayer maintenant</button>
+  <p class="status" id="s" role="status" aria-live="polite"></p>
+</main>
+<script>
+(function () {
+  "use strict";
+  var SITE = "https://bk-ai-workers.com";
+  var en = /^en/i.test(navigator.language || "");
+  var T = en
+    ? { t: "You are offline", m: "BK-AI-WORKERS needs an Internet connection. Check your Wi-Fi or mobile data: the app reopens by itself as soon as the connection is back.", b: "Try again now", c: "Checking…", ok: "Connection restored…" }
+    : { t: "Vous êtes hors connexion", m: document.getElementById("m").textContent, b: "Réessayer maintenant", c: "Vérification…", ok: "Connexion rétablie…" };
+  document.documentElement.lang = en ? "en" : "fr";
+  document.getElementById("t").textContent = T.t;
+  document.getElementById("m").textContent = T.m;
+  var retry = document.getElementById("retry"), status = document.getElementById("s"), busy = false;
+  retry.textContent = T.b;
+  function probe() {
+    if (busy) return;
+    busy = true; retry.disabled = true; status.textContent = T.c;
+    fetch(SITE + "/robots.txt", { cache: "no-store", mode: "no-cors" })
+      .then(function () { status.textContent = T.ok; location.replace(SITE + "/?pwa=1"); })
+      .catch(function () { busy = false; retry.disabled = false; status.textContent = ""; });
+  }
+  retry.addEventListener("click", probe);
+  window.addEventListener("online", probe);
+  setInterval(function () { if (document.visibilityState !== "hidden") probe(); }, 8000);
+})();
+</script>
+</body>
+</html>

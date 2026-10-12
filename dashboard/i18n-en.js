@@ -123,8 +123,8 @@ window.BK_EN = Object.assign(window.BK_EN || {}, {
   "Laisser mes Workers agir seuls, sans confirmation à chaque fois": "Let my Workers act on their own, without confirmation each time",
   "Une fois activé, toute action réelle préparée sur un connecteur que vous avez connecté (email, publication, tâche...) part automatiquement — vous ne verrez plus de carte à confirmer. Désactivez à tout moment.":
     "Once enabled, any real action prepared on a connector you've connected (email, post, task…) goes out automatically — you'll no longer see a card to confirm. Turn it off any time.",
-  "Connectez votre outil": "Connect your tool", "Avec votre propre compte. Vos identifiants sont chiffrés : personne, pas même nous, ne peut les lire.":
-    "With your own account. Your credentials are encrypted: no one, not even us, can read them.",
+  "Connectez votre outil": "Connect your tool", "Avec votre propre compte. Vos identifiants sont chiffrés au repos et ne sont jamais réaffichés.":
+    "With your own account. Your credentials are encrypted at rest and never displayed again.",
   "Autorisez vos Workers": "Authorise your Workers", "Un interrupteur par outil : vous décidez lesquels ils peuvent utiliser.": "One switch per tool: you decide which ones they can use.",
   "Ils préparent, vous validez": "They prepare, you approve", "Lire et chercher est automatique ; envoyer ou publier attend votre confirmation.":
     "Reading and searching is automatic; sending or publishing waits for your confirmation.",

@@ -11,6 +11,7 @@ Aucune dependance externe : http.server de la bibliotheque standard.
 import json
 import os
 import re
+import mimetypes
 import subprocess
 import datetime
 import hashlib
@@ -21,6 +22,8 @@ import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, unquote, parse_qs, urlencode
 import seo_pages
+import pwa_static
+import trust_pages
 
 # ---------------------------------------------------------------------
 # Ecritures concurrentes (2026-09-28) : le serveur traite les requetes en
@@ -78,6 +81,8 @@ DASHBOARD_DIR = os.path.join(ROOT, "dashboard")
 WORKERS_DIR = os.path.join(ROOT, "workers")
 CHLOE_DIR = os.path.join(ROOT, "chloe")
 TASKS_DIR = os.path.join(ROOT, "runtime", "tasks")
+TASK_FILES_DIR = os.path.join(ROOT, "runtime", "task-files")
+ASYNC_JOBS_DIR = os.path.join(ROOT, "runtime", "async-jobs")
 CAPABILITY_MATRIX_PATH = os.path.join(ROOT, "core", "permissions", "capability-matrix", "CAPABILITY-MATRIX.json")
 SUBMIT_SCRIPT = os.path.join(DASHBOARD_DIR, "Submit-Task.ps1")
 AUTOMATION_BRIDGE_SCRIPT = os.path.join(DASHBOARD_DIR, "Automation-Bridge.ps1")
@@ -572,6 +577,157 @@ def submit_task(worker_hint_text, worker_id="", plan_only=False, client_id=""):
             pass
 
 
+ASYNC_JOB_ID_PATTERN = re.compile(r"^JOB-[A-F0-9]{32}$")
+
+
+def _async_job_path(job_id):
+    return os.path.join(ASYNC_JOBS_DIR, f"{job_id}.json")
+
+
+def _write_async_job(data):
+    os.makedirs(ASYNC_JOBS_DIR, exist_ok=True)
+    _write_json_atomic(_async_job_path(data["jobId"]), data, ensure_ascii=False, indent=2)
+
+
+ASYNC_JOB_MAX_RUNNING_SECONDS = 11 * 60   # submit_task a un delai de 600 s : au-dela, le job est mort
+
+
+def read_async_job(job_id):
+    if not ASYNC_JOB_ID_PATTERN.match(job_id or ""):
+        return None
+    path = _async_job_path(job_id)
+    job = load_json(path)
+    if isinstance(job, dict) and job.get("status") == "RUNNING":
+        try:
+            if time.time() - os.path.getmtime(path) > ASYNC_JOB_MAX_RUNNING_SECONDS:
+                job = dict(job, status="ERROR", error="La mission a pris trop de temps ou a été interrompue. Relancez-la.")
+        except OSError:
+            pass
+    return job
+
+
+# Plafonds de missions en arriere-plan (petit serveur : 2 vCPU / 3,8 Go). Sans plafond, un client pouvait
+# lancer des dizaines de missions simultanees (un PowerShell + un appel modele chacune) et saturer le serveur.
+ASYNC_MAX_PER_CLIENT = int(os.environ.get("BK_ASYNC_MAX_PER_CLIENT", "2"))
+ASYNC_MAX_GLOBAL = int(os.environ.get("BK_ASYNC_MAX_GLOBAL", "6"))
+ASYNC_STALE_SECONDS = 20 * 60          # un job RUNNING plus vieux que ca a ete tue par un redemarrage
+ASYNC_KEEP_DAYS = 7
+_ASYNC_ACTIVE = {}                      # client_id -> nombre de missions en cours
+_ASYNC_ACTIVE_LOCK = threading.Lock()
+
+
+def _async_acquire(client_id):
+    """Reserve une place. Renvoie None si OK, sinon le message (francais) du refus."""
+    with _ASYNC_ACTIVE_LOCK:
+        total = sum(_ASYNC_ACTIVE.values())
+        mine = _ASYNC_ACTIVE.get(client_id, 0)
+        if mine >= ASYNC_MAX_PER_CLIENT:
+            return f"Vous avez déjà {mine} mission(s) en cours. Attendez qu'une se termine avant d'en lancer une autre."
+        if total >= ASYNC_MAX_GLOBAL:
+            return "Le service traite beaucoup de missions en ce moment. Réessayez dans une minute."
+        _ASYNC_ACTIVE[client_id] = mine + 1
+    return None
+
+
+def _async_release(client_id):
+    with _ASYNC_ACTIVE_LOCK:
+        left = _ASYNC_ACTIVE.get(client_id, 0) - 1
+        if left > 0:
+            _ASYNC_ACTIVE[client_id] = left
+        else:
+            _ASYNC_ACTIVE.pop(client_id, None)
+
+
+def reap_async_jobs(now=None, boot=False):
+    """Au demarrage : un job RUNNING trop vieux a ete interrompu par un redemarrage -> ERROR (le client n'attend
+    plus pour rien) ; les jobs termines depuis plus de ASYNC_KEEP_DAYS jours sont supprimes."""
+    now = now if now is not None else time.time()
+    try:
+        names = os.listdir(ASYNC_JOBS_DIR)
+    except OSError:
+        return
+    for name in names:
+        if not name.endswith(".json"):
+            continue
+        p = os.path.join(ASYNC_JOBS_DIR, name)
+        try:
+            age = now - os.path.getmtime(p)
+            if age > ASYNC_KEEP_DAYS * 86400:
+                os.remove(p)
+                continue
+            job = load_json(p)
+            if isinstance(job, dict) and job.get("status") == "RUNNING" and (boot or age > ASYNC_STALE_SECONDS):
+                job.update(status="ERROR", error="Mission interrompue par un redémarrage du service. Relancez-la.",
+                           finishedAtUtc=datetime.datetime.utcnow().isoformat() + "Z")
+                _write_async_job(job)
+        except Exception:
+            continue
+
+
+def submit_task_limited(objective, **kw):
+    """submit_task avec le MEME plafond que les missions en arriere-plan (endpoints synchrones, API publique)."""
+    cid = kw.get("client_id", "")
+    refusal = _async_acquire(cid)
+    if refusal:
+        return {"error": "TOO_MANY_RUNNING_MISSIONS", "detail": refusal}
+    try:
+        return submit_task(objective, **kw)
+    finally:
+        _async_release(cid)
+
+
+def submit_task_async(objective, worker_id="", client_id="", plan_only=False):
+    """Lance une mission en arriere-plan, renvoie un jobId a interroger.
+    Le job (runtime/async-jobs/<jobId>.json) passe de RUNNING a DONE/ERROR.
+    IMPORTANT : le job n'est PAS un TASK-*.json -> aucun double comptage de
+    credits (le pipeline ecrit son propre TASK-*.json, compte une seule fois).
+
+    submit_task garde EXACTEMENT sa signature synchrone
+    (worker_hint_text, worker_id, plan_only, client_id) : on se contente de
+    la lancer dans un thread demon pour debloquer la connexion HTTP."""
+    refusal = _async_acquire(client_id)
+    if refusal:
+        return {"error": "TOO_MANY_RUNNING_MISSIONS", "detail": refusal}
+    job_id = "JOB-" + secrets.token_hex(16).upper()
+    now = datetime.datetime.utcnow().isoformat() + "Z"
+    base = {"jobId": job_id, "status": "RUNNING", "clientId": client_id,
+            "worker": worker_id or "chloe", "objective": objective,
+            "planOnly": bool(plan_only), "createdAtUtc": now}
+    _write_async_job(base)
+
+    def _run():
+        record = dict(base)
+        try:
+            result = submit_task(objective, worker_id=worker_id,
+                                 plan_only=plan_only, client_id=client_id)
+            if not plan_only:
+                try:
+                    result = attach_pending_action(result)
+                except Exception:
+                    pass
+            record.update(status="DONE",
+                          finishedAtUtc=datetime.datetime.utcnow().isoformat() + "Z",
+                          result=result)
+        except Exception as exc:  # noqa: BLE001
+            record.update(status="ERROR",
+                          finishedAtUtc=datetime.datetime.utcnow().isoformat() + "Z",
+                          error=str(exc))
+        try:
+            # L'ecriture finale du statut ne doit jamais etre perdue (sinon le client attendrait un job
+            # "en cours" a jamais) : quelques essais, un lecteur concurrent peut verrouiller le fichier.
+            for attempt in range(6):
+                try:
+                    _write_async_job(record)
+                    break
+                except Exception:
+                    time.sleep(0.2 * (attempt + 1))
+        finally:
+            _async_release(client_id)
+
+    threading.Thread(target=_run, daemon=True).start()
+    return {"jobId": job_id, "status": "RUNNING"}
+
+
 TASK_ID_PATTERN = re.compile(r"^TASK-[A-F0-9]{32}$")
 
 
@@ -582,6 +738,45 @@ def _pending_action_path(task_id):
     if not TASK_ID_PATTERN.match(task_id or ""):
         return None
     return os.path.join(PENDING_ACTIONS_DIR, f"PENDING-ACTION-{task_id}.json")
+
+
+_SENSITIVE_PARAM_HINTS = (
+    "token", "secret", "password", "apikey", "api_key", "authorization",
+    "auth", "bearer", "key", "credential", "signature", "hash",
+)
+_PARAM_VALUE_MAX = 2000
+_MASKED = "•••masqué•••"
+
+
+def _safe_param_value(value, _depth=0):
+    """Nettoie une valeur de parametre avant de la renvoyer au client :
+    tronque les chaines trop longues. Les dicts sont parcourus sur un
+    seul niveau supplementaire (pas d'over-engineering)."""
+    if isinstance(value, str):
+        if len(value) > _PARAM_VALUE_MAX:
+            return value[:_PARAM_VALUE_MAX] + " …(tronqué)"
+        return value
+    if isinstance(value, dict) and _depth == 0:
+        return _safe_action_params(value, _depth + 1)
+    return value
+
+
+def _safe_action_params(params, _depth=0):
+    """Copie peu profonde et assainie des parametres d'une action en
+    attente : masque toute valeur dont la cle ressemble a un secret
+    (token/secret/password/cle/signature…) et tronque les chaines trop
+    longues. Ne JAMAIS renvoyer les parametres bruts : le fichier
+    PENDING-ACTION peut contenir des jetons ou identifiants."""
+    if not isinstance(params, dict):
+        return {}
+    safe = {}
+    for key, value in params.items():
+        lowered = str(key).lower()
+        if any(hint in lowered for hint in _SENSITIVE_PARAM_HINTS):
+            safe[key] = _MASKED
+        else:
+            safe[key] = _safe_param_value(value, _depth)
+    return safe
 
 
 def attach_pending_action(result):
@@ -617,12 +812,19 @@ def attach_pending_action(result):
     for task_id in candidate_ids:
         pending = load_json(_pending_action_path(task_id))
         if pending:
-            found.append({
+            entry = {
                 "taskId": pending.get("taskId"),
                 "connectorId": pending.get("connectorId"),
                 "operation": pending.get("operation"),
                 "reason": pending.get("reason"),
-            })
+            }
+            # Contenu exact qui sera envoye (destinataire, objet, corps,
+            # montant…), remonte depuis le fichier PENDING-ACTION, avec
+            # masquage des secrets et troncature des champs trop longs.
+            raw_params = pending.get("params")
+            if isinstance(raw_params, dict) and raw_params:
+                entry["params"] = _safe_action_params(raw_params)
+            found.append(entry)
     if found:
         result["pendingAction"] = found[0]
         result["pendingActions"] = found
@@ -1160,6 +1362,7 @@ def _summarize_mission_result(result):
                     "worker": r.get("Worker"),
                     "status": r.get("Status"),
                     "answer": (r.get("Result") or {}).get("Answer"),
+                    "files": (r.get("Result") or {}).get("Files"),
                 }
                 for r in result.get("Results", []) if isinstance(r, dict)
             ],
@@ -1169,6 +1372,7 @@ def _summarize_mission_result(result):
         "worker": result.get("Worker"),
         "status": result.get("Status"),
         "answer": (result.get("Result") or {}).get("Answer"),
+        "files": (result.get("Result") or {}).get("Files"),
     }
 
 
@@ -1327,11 +1531,49 @@ ESTIMATED_MINUTES_SAVED_PER_MISSION = 12
 
 
 # Tarifs publics indicatifs (USD par million de tokens : entree, sortie).
+# Tarifs API Anthropic de premiere partie + OpenAI (indicatifs, 2026).
 # Un modele absent de cette table n'a PAS de cout affiche (jamais devine).
+# La table couvre desormais les modeles "forts" (Fable/Opus/Sonnet), pas
+# seulement Haiku : basculer un Worker sur un modele fort donne ainsi un
+# cout mesure et non "sans prix".
 MODEL_PRICING_USD_PER_MTOK = {
-    "claude-haiku-4-5-20251001": (1.00, 5.00),
+    # Anthropic — famille Claude
+    "claude-fable-5-1": (10.00, 50.00),
+    "claude-fable-5": (10.00, 50.00),
+    "claude-opus-5-5": (4.00, 20.00),
+    "claude-opus-5": (5.00, 25.00),
+    "claude-opus-4-8": (5.00, 25.00),
+    "claude-opus-4-7": (5.00, 25.00),
+    "claude-opus-4-6": (5.00, 25.00),
+    "claude-sonnet-5-5": (2.00, 10.00),
+    "claude-sonnet-5": (2.00, 10.00),
+    "claude-sonnet-4-6": (3.00, 15.00),
+    "claude-haiku-5-5": (0.10, 0.50),
+    "claude-haiku-4-5": (1.00, 5.00),
+    # OpenAI
+    "gpt-4o": (2.50, 10.00),
     "gpt-4o-mini": (0.15, 0.60),
 }
+
+
+def price_for_model(model_id):
+    """Tarif (entree, sortie) pour un identifiant de modele, tolerant aux
+    suffixes de date ('claude-opus-4-8-20260101', 'claude-opus-4-5@20251101')
+    et rapproche par famille. Renvoie None si aucun tarif connu."""
+    if not model_id:
+        return None
+    m = str(model_id).strip().lower()
+    price = MODEL_PRICING_USD_PER_MTOK.get(m)
+    if price:
+        return price
+    base = re.sub(r"[-@]\d{6,8}$", "", m)
+    price = MODEL_PRICING_USD_PER_MTOK.get(base)
+    if price:
+        return price
+    for key in sorted(MODEL_PRICING_USD_PER_MTOK, key=len, reverse=True):
+        if base.startswith(key) or m.startswith(key):
+            return MODEL_PRICING_USD_PER_MTOK[key]
+    return None
 AI_PROVIDERS_PATH = os.path.join(ROOT, "core", "ai", "AI-PROVIDERS.json")
 
 
@@ -1366,7 +1608,10 @@ def get_ai_cost_summary(client_id=DASHBOARD_CLIENT_ID):
             input_tokens += i
             output_tokens += o
             missions += 1
-            price = MODEL_PRICING_USD_PER_MTOK.get(configured_model_for(res.get("Provider")))
+            model_used = res.get("Model") or res.get("model")
+            if str(model_used or "").strip().upper() in ("", "NONE"):
+                model_used = configured_model_for(res.get("Provider"))
+            price = price_for_model(model_used)
             if price:
                 cost_usd += (i * price[0] + o * price[1]) / 1_000_000
             else:
@@ -1639,7 +1884,22 @@ def _notify_owner_email(to, subject, html_body, text):
 
 
 PHONE_AGENT = phone_agent.PhoneAgent(ROOT, PS_CMD, notify=_notify_owner_email)
-PHONE_AGENT.warm_up()
+# warm_up() (lecture du jeton Twilio par PowerShell + purge des transcriptions) ne se lance que dans le
+# vrai serveur (bloc __main__) : dashboard/quota-check.py fait `import server` a chaque passage d'une
+# automatisation et ne doit pas declencher de PowerShell a chaque import.
+
+# Programme pilote (dashboard/pilot_program.py) : candidatures de premiers clients reels. Meme chemin d'email
+# que le standard telephonique (mailer.send_email -> SMTP dedie ou pont Gmail) ; ecriture sous _STATE_LOCK.
+import pilot_program
+
+
+def _notify_pilot_email(to, subject, html_body, text):
+    ok, err = mailer.send_email(to, subject, html_body, text, gmail_bridge=run_mailer_bridge)
+    print("[pilot] email au proprietaire : " + ("envoye" if ok else f"ECHEC ({err})"), flush=True)
+
+
+PILOT = pilot_program.PilotService(ROOT, PUBLIC_BASE_URL, lock=_STATE_LOCK, write_json=_write_json_atomic,
+                                   notify=_notify_pilot_email)
 
 
 def _recent(bucket, key, window):
@@ -1774,6 +2034,52 @@ def export_account_data(client_id):
     }
 
 
+TASK_FILES_KEEP_DAYS = 30
+
+
+def purge_old_task_files(now=None):
+    """Les fichiers generes par les Workers sont gardes TASK_FILES_KEEP_DAYS jours (puis supprimes) : disque partage."""
+    now = now if now is not None else time.time()
+    try:
+        names = os.listdir(TASK_FILES_DIR)
+    except OSError:
+        return 0
+    removed = 0
+    for name in names:
+        p = os.path.join(TASK_FILES_DIR, name)
+        try:
+            if os.path.isdir(p) and now - os.path.getmtime(p) > TASK_FILES_KEEP_DAYS * 86400:
+                shutil.rmtree(p, ignore_errors=True)
+                removed += 1
+        except OSError:
+            continue
+    return removed
+
+
+def _purge_client_mission_artifacts(client_id, task_ids):
+    """Suppression de compte : fichiers generes, jobs en arriere-plan et actions en attente du client."""
+    for tid in task_ids:
+        if TASK_ID_PATTERN.match(tid or ""):
+            shutil.rmtree(os.path.join(TASK_FILES_DIR, tid), ignore_errors=True)
+            try:
+                os.remove(_pending_action_path(tid))
+            except OSError:
+                pass
+    try:
+        for name in os.listdir(ASYNC_JOBS_DIR):
+            if not name.endswith(".json"):
+                continue
+            p = os.path.join(ASYNC_JOBS_DIR, name)
+            job = load_json(p)
+            if isinstance(job, dict) and job.get("clientId") == client_id:
+                try:
+                    os.remove(p)
+                except OSError:
+                    pass
+    except OSError:
+        pass
+
+
 @_state_locked
 def delete_account(client_id, password):
     if not CLIENT_ID_RE.match(client_id or ""):
@@ -1803,21 +2109,27 @@ def delete_account(client_id, password):
         pass
     _remove_client_apikey(client_id)
     _remove_client_webhook(client_id)
+    deleted_task_ids = []
     if os.path.isdir(TASKS_DIR):
         for fname in os.listdir(TASKS_DIR):
             if fname.startswith("TASK-") and fname.endswith(".json"):
                 p = os.path.join(TASKS_DIR, fname)
                 data = load_json(p)
                 if data and data.get("ClientId") == client_id:
+                    deleted_task_ids.append(fname[:-5])
                     try:
                         os.remove(p)
                     except OSError:
                         pass
+    _purge_client_mission_artifacts(client_id, deleted_task_ids)
     log_activity("account_deleted", clientId=client_id)
     return None
 
 
 SITEMAP_PATHS = ['/', '/workers.html', '/tarifs.html', '/faq.html', '/chloe.html', '/demarrer.html', '/automatisations.html', '/analytics.html', '/facturation.html', '/cgv.html', '/mentions-legales.html', '/cookies.html', '/confidentialite.html']
+# Pages de confiance + mesure de disponibilite (dashboard/trust_pages.py, status_monitor.py).
+SITEMAP_PATHS.extend(p for p in trust_pages.SITEMAP_PATHS if p not in SITEMAP_PATHS)
+TRUST = trust_pages.TrustService(ROOT, PUBLIC_BASE_URL)
 
 # ---------------------------------------------------------------------
 # Temoignages clients (2026-09-26) : AUCUN avis n'est invente. Seul le
@@ -2657,6 +2969,9 @@ class Handler(BaseHTTPRequestHandler):
             self._send_gate_required()
             return
 
+        if TRUST.handle_get(self, path):  # /securite.html /status.html /api/status /api/health /.well-known/security.txt
+            return
+
         if path == "/" or path == "/index.html":
             self._send_file(os.path.join(DASHBOARD_DIR, "index.html"), "text/html; charset=utf-8")
         elif path == "/style.css":
@@ -2669,18 +2984,10 @@ class Handler(BaseHTTPRequestHandler):
             self._send_file(os.path.join(DASHBOARD_DIR, "app.js"), "application/javascript; charset=utf-8")
         elif path == "/favicon.svg" or path == "/favicon.ico":
             self._send_file(os.path.join(DASHBOARD_DIR, "favicon.svg"), "image/svg+xml")
-        elif path == "/manifest.json":
-            self._send_file(os.path.join(DASHBOARD_DIR, "manifest.json"), "application/manifest+json; charset=utf-8")
-        elif path == "/service-worker.js":
-            # Servi a la racine (pas /dashboard/service-worker.js) : un
-            # service worker ne peut jamais controler une portee plus large
-            # que le chemin d'ou il est servi (2026-09-30, app installable).
-            self._send_file(os.path.join(DASHBOARD_DIR, "service-worker.js"), "application/javascript; charset=utf-8")
-        elif path.startswith("/icons/") and path.endswith(".png"):
-            fname = os.path.basename(path)
-            if fname in {"icon-192.png", "icon-512.png", "apple-touch-icon.png", "icon-maskable-512.png"}:
-                self._send_file(os.path.join(DASHBOARD_DIR, "icons", fname), "image/png")
-            else:
+        elif pwa_static.handles(path) or path.startswith("/icons/"):
+            # App installable (PWA) : manifest, service worker, page hors connexion, icones,
+            # page "supprimer mon compte". Types MIME et en-tetes de cache : pwa_static.py.
+            if not pwa_static.serve(self, path, DASHBOARD_DIR):
                 self._send_json({"error": "NOT_FOUND"}, 404)
         elif path.startswith("/portraits/") and path.endswith(".svg"):
             wid = path.split("/")[-1].replace(".svg", "")
@@ -2712,7 +3019,7 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(body)
         elif path == "/sitemap.xml":
-            urls = "".join(f"<url><loc>{PUBLIC_BASE_URL}{p}</loc></url>" for p in SITEMAP_PATHS)
+            urls = "".join(f"<url><loc>{PUBLIC_BASE_URL}{p}</loc></url>" for p in SITEMAP_PATHS + [q for q in pilot_program.SITEMAP_PATHS if q not in SITEMAP_PATHS])
             body = ('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
                     + urls + "</urlset>").encode("utf-8")
             self.send_response(200)
@@ -2812,6 +3119,73 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json({"error": "NOT_FOUND"}, 404)
                 return
             self._send_json(_summarize_mission_result(data))
+        elif path.startswith("/api/missions/") and "/files/" in path:
+            # Telechargement securise d'un fichier produit par un Worker
+            # (voir ANTHROPIC-ADAPTER.ps1 : capture via code execution,
+            # depose dans runtime/task-files/<TaskId>/<name>). Reserve au
+            # client proprietaire de la mission (ou a Kader/CLI-DASHBOARD).
+            client_id = self._resolve_client_id()
+            if not client_id:
+                self._send_account_required()
+                return
+            rest = path[len("/api/missions/"):]
+            task_id, _, name = rest.partition("/files/")
+            name = unquote(name)
+            if not TASK_ID_PATTERN.match(task_id or ""):
+                self._send_json({"error": "NOT_FOUND"}, 404)
+                return
+            # name doit etre un pur basename, sans separateur ni ./..
+            if not (os.path.basename(name) == name and name not in ("", ".", "..")
+                    and "/" not in name and "\\" not in name):
+                self._send_json({"error": "NOT_FOUND"}, 404)
+                return
+            rec = load_json(os.path.join(TASKS_DIR, f"{task_id}.json"))
+            if not rec:
+                self._send_json({"error": "NOT_FOUND"}, 404)
+                return
+            if rec.get("ClientId") != client_id and client_id != DASHBOARD_CLIENT_ID:
+                self._send_json({"error": "FORBIDDEN"}, 403)
+                return
+            fpath = os.path.join(TASK_FILES_DIR, task_id, name)
+            # Defense en profondeur : le chemin reel doit rester CONFINE
+            # dans le dossier de la tache (aucune remontee ../ possible).
+            task_dir_real = os.path.realpath(os.path.join(TASK_FILES_DIR, task_id))
+            if not os.path.realpath(fpath).startswith(task_dir_real + os.sep):
+                self._send_json({"error": "NOT_FOUND"}, 404)
+                return
+            if not os.path.isfile(fpath):
+                self._send_json({"error": "NOT_FOUND"}, 404)
+                return
+            ctype = mimetypes.guess_type(name)[0] or "application/octet-stream"
+            size = os.path.getsize(fpath)
+            self.send_response(200)
+            self.send_header("Content-Type", ctype)
+            self.send_header("Content-Length", str(size))
+            self.send_header("Content-Disposition", 'attachment; filename="%s"' % name)
+            self.send_header("X-Content-Type-Options", "nosniff")
+            self.send_header("Cache-Control", "no-cache, must-revalidate")
+            self.end_headers()
+            with open(fpath, "rb") as f:
+                shutil.copyfileobj(f, self.wfile, 64 * 1024)   # par blocs : jamais le fichier entier en memoire
+        elif path.startswith("/api/missions/async/"):
+            # Interrogation du statut d'une mission lancee en arriere-plan.
+            # Reserve au client proprietaire du job (ou a Kader/CLI-DASHBOARD).
+            client_id = self._resolve_client_id()
+            if not client_id:
+                self._send_account_required()
+                return
+            job_id = path.split("/")[-1]
+            if not ASYNC_JOB_ID_PATTERN.match(job_id or ""):
+                self._send_json({"error": "NOT_FOUND"}, 404)
+                return
+            job = read_async_job(job_id)
+            if job is None:
+                self._send_json({"error": "NOT_FOUND"}, 404)
+                return
+            if job.get("clientId") != client_id and client_id != DASHBOARD_CLIENT_ID:
+                self._send_json({"error": "FORBIDDEN"}, 403)
+                return
+            self._send_json(job)
         elif path == "/api/admin/overview":
             # Reserve au proprietaire : la porte historique uniquement,
             # jamais une session de compte client (meme un client tres
@@ -2916,6 +3290,8 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_account_required()
                 return
             self._send_json(whatsapp_status(client_id))
+        elif PILOT.handle_get(self, path):   # programme pilote : /pilote.html, ses scripts, GET /api/pilot/applications (operateur)
+            pass
         elif path == "/api/testimonials":
             self._send_json({"testimonials": public_testimonials()})
         elif path == "/api/admin/demo-requests":
@@ -3003,12 +3379,20 @@ class Handler(BaseHTTPRequestHandler):
         else:
             self._send_json({"error": "NOT_FOUND"}, 404)
 
+    def do_HEAD(self):
+        # Sondes de surveillance externes (HEAD) : seulement les routes de trust_pages.py, sans corps.
+        if not TRUST.handle_head(self, unquote(urlparse(self.path).path)):
+            self.send_error(501, "Unsupported method ('HEAD')")
+
     def do_POST(self):
         parsed = urlparse(self.path)
         path = unquote(parsed.path)
 
         if route_requires_gate(path) and not self._gate_authenticated():
             self._send_gate_required()
+            return
+
+        if TRUST.handle_post(self, path):  # journal d'incidents (proprietaire)
             return
 
         if path == "/api/gate/login":
@@ -3128,6 +3512,8 @@ class Handler(BaseHTTPRequestHandler):
                     self._send_json({"error": err}, 400)
                 else:
                     self._send_json({"ok": True, "testimonial": rec})
+        elif PILOT.handle_post(self, path):  # programme pilote : POST /api/pilot/apply (public), .../applications/delete (operateur)
+            pass
         elif path == "/api/demo-request":
             length = int(self.headers.get("Content-Length", 0))
             if length > 20000:
@@ -3295,8 +3681,34 @@ class Handler(BaseHTTPRequestHandler):
             if not objective:
                 self._send_json({"error": "OBJECTIVE_REQUIRED"}, 400)
                 return
-            result = submit_task(objective, worker_id="chloe", client_id=client_id)
+            result = submit_task_limited(objective, worker_id="chloe", client_id=client_id)
             self._send_json(attach_pending_action(result))
+        elif path == "/api/chloe/task/async":
+            # Variante asynchrone de /api/chloe/task : memes gardes (compte,
+            # abonnement, objectif requis) verifiees AVANT de lancer le thread
+            # (quota controle en amont, une seule fois). Renvoie un jobId (202)
+            # a interroger via GET /api/missions/async/<jobId> ; le thread
+            # demon execute submit_task identiquement a la version synchrone.
+            client_id = self._resolve_client_id()
+            if not client_id:
+                self._send_account_required()
+                return
+            block = subscription_blocks_mission(client_id)
+            if block:
+                self._send_json({"error": "SUBSCRIPTION_REQUIRED", "detail": block}, 402)
+                return
+            length = int(self.headers.get("Content-Length", 0))
+            raw = self.rfile.read(length) if length else b"{}"
+            try:
+                body = json.loads(raw.decode("utf-8"))
+            except Exception:
+                body = {}
+            objective = (body.get("objective") or "").strip()
+            if not objective:
+                self._send_json({"error": "OBJECTIVE_REQUIRED"}, 400)
+                return
+            res = submit_task_async(objective, worker_id="chloe", client_id=client_id)
+            self._send_json(res, 429 if res.get("error") else 202)
         elif path == "/api/chloe/plan":
             # Etape "Demander a Chloe" du parcours Demarrer : reservee aux
             # comptes clients (plus au mot de passe proprietaire, qui
@@ -3341,8 +3753,37 @@ class Handler(BaseHTTPRequestHandler):
             if not objective:
                 self._send_json({"error": "OBJECTIVE_REQUIRED"}, 400)
                 return
-            result = submit_task(objective, worker_id=wid, client_id=client_id)
+            result = submit_task_limited(objective, worker_id=wid, client_id=client_id)
             self._send_json(attach_pending_action(result))
+        elif path.startswith("/api/workers/") and path.endswith("/task/async"):
+            # Variante asynchrone de /api/workers/<id>/task : memes gardes
+            # (worker connu, compte, abonnement, objectif requis) verifiees
+            # AVANT de lancer le thread. Renvoie un jobId (202) a interroger
+            # via GET /api/missions/async/<jobId>.
+            wid = path.split("/")[3]
+            if wid not in get_worker_ids():
+                self._send_json({"error": "UNKNOWN_WORKER"}, 404)
+                return
+            client_id = self._resolve_client_id()
+            if not client_id:
+                self._send_account_required()
+                return
+            block = subscription_blocks_mission(client_id)
+            if block:
+                self._send_json({"error": "SUBSCRIPTION_REQUIRED", "detail": block}, 402)
+                return
+            length = int(self.headers.get("Content-Length", 0))
+            raw = self.rfile.read(length) if length else b"{}"
+            try:
+                body = json.loads(raw.decode("utf-8"))
+            except Exception:
+                body = {}
+            objective = (body.get("objective") or "").strip()
+            if not objective:
+                self._send_json({"error": "OBJECTIVE_REQUIRED"}, 400)
+                return
+            res = submit_task_async(objective, worker_id=wid, client_id=client_id)
+            self._send_json(res, 429 if res.get("error") else 202)
         elif path == "/api/connector-action/confirm":
             client_id = self._resolve_client_id()
             if not client_id:
@@ -3554,7 +3995,7 @@ class Handler(BaseHTTPRequestHandler):
             if worker_id and worker_id not in get_worker_ids():
                 self._send_json({"error": "UNKNOWN_WORKER"}, 404)
                 return
-            result = submit_task(objective, worker_id=worker_id or "chloe", client_id=client_id)
+            result = submit_task_limited(objective, worker_id=worker_id or "chloe", client_id=client_id)
             self._send_json(_summarize_mission_result(result))
         elif path == "/api/connectors/auto-approve/toggle":
             # Pre-autorisation globale : quand activee, les actions
@@ -3817,8 +4258,12 @@ if __name__ == "__main__":
     if REQUIRE_GATE and not gate_is_enabled():
         raise SystemExit("BK_REQUIRE_GATE=1 mais aucune porte d'acces definie (BK_GATE_HASH ou dashboard/.gate/password.hash) : demarrage refuse.")
     _load_sessions()
+    reap_async_jobs(boot=True)
+    purge_old_task_files()
     server = ThreadingHTTPServer((os.environ.get("BK_LISTEN_HOST", "127.0.0.1"), port), Handler)
     print(f"BK-AI-WORKERS dashboard sur http://{os.environ.get('BK_LISTEN_HOST', '127.0.0.1')}:{port}")
     if not gate_is_enabled():
         print("ATTENTION : aucune porte d'acces definie (.secrets\\Set-DashboardGate.ps1) — les vues operationnelles sont ouvertes a quiconque atteint ce serveur.")
+    PHONE_AGENT.warm_up()
+    TRUST.start(port, os.environ.get("BK_LISTEN_HOST", "127.0.0.1"))  # mesure de disponibilite toutes les 60 s
     server.serve_forever()

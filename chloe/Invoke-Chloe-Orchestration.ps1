@@ -139,6 +139,11 @@ or, when no Worker is needed:
 The values of "workers" must be EXACTLY identifiers from the list above (lowercase), never invented.$RouteLangHint
 "@
 
+        # Le routeur est un appel JSON-seul (300 jetons max) : on n'y ajoute PAS le guide complet de Chloe (revue 2026-10-11 :
+        # il contredisait la regle "JSON uniquement" et pouvait faire echouer tout le routage). Seulement les tarifs, pour
+        # qu'une question sur les plans ne soit jamais inventee ni attribuee a la mauvaise marque.
+        $SystemPrompt = $SystemPrompt + "`n`nPRIX (questions sur les plans, a repondre dans direct_reply) : plateforme BK-AI-WORKERS = plan gratuit, Starter 39, Business 99, Pro 139, Scale 449 CHF par mois. BK Entreprise est l'agence parente : devis uniquement, jamais de tarifs BK Entreprise. N'invente aucun autre chiffre.`nReply ONLY with the strict JSON object described above."
+
         $BodyObj = [ordered]@{
             model      = "claude-haiku-4-5-20251001"
             max_tokens = 300

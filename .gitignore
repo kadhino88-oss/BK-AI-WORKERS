@@ -25,3 +25,9 @@ Thumbs.db
 # Python bytecode (regenere a chaque execution, depend de la version de Python)
 __pycache__/
 *.pyc
+# Applications mobiles (docs/MOBILE-APPS.md) : cles de signature = SECRETS, jamais dans le depot
+*.keystore
+*.jks
+*.p12
+*.mobileprovision
+mobile/**/node_modules/

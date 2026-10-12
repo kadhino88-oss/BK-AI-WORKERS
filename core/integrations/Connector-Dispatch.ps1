@@ -341,10 +341,13 @@ $Script:OperationTable = @{
     }
     "monday" = @{
         AdapterType = "Rest"
+        # Requetes GraphQL PARAMETREES (variables) : les valeurs fournies par
+        # l'appelant (Id, BoardId, Name) voyagent en JSON et ne sont JAMAIS
+        # concatenees dans la requete -> plus d'injection GraphQL possible.
         Operations = @{
-            "READ_ITEM"    = { param($P) @{ Path = ""; Method = "POST"; Body = @{ query = "query { items (ids: [$($P.Id)]) { id name } }" } } }
-            "SEARCH_ITEMS" = { param($P) @{ Path = ""; Method = "POST"; Body = @{ query = "query { boards (ids: [$($P.BoardId)]) { items_page { items { id name } } } }" } } }
-            "CREATE_ITEM"  = { param($P) @{ Path = ""; Method = "POST"; Body = @{ query = "mutation { create_item (board_id: $($P.BoardId), item_name: `"$($P.Name)`") { id } }" } } }
+            "READ_ITEM"    = { param($P) @{ Path = ""; Method = "POST"; Body = @{ query = 'query ($ids: [ID!]) { items (ids: $ids) { id name } }'; variables = @{ ids = @("$($P.Id)") } } } }
+            "SEARCH_ITEMS" = { param($P) @{ Path = ""; Method = "POST"; Body = @{ query = 'query ($boardIds: [ID!]) { boards (ids: $boardIds) { items_page { items { id name } } } }'; variables = @{ boardIds = @("$($P.BoardId)") } } } }
+            "CREATE_ITEM"  = { param($P) @{ Path = ""; Method = "POST"; Body = @{ query = 'mutation ($boardId: ID!, $itemName: String!) { create_item (board_id: $boardId, item_name: $itemName) { id } }'; variables = @{ boardId = "$($P.BoardId)"; itemName = "$($P.Name)" } } } }
         }
     }
 

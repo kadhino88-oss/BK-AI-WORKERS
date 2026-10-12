@@ -12,6 +12,8 @@ import getpass
 import hashlib
 import os
 import re
+import shutil
+import subprocess
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -40,6 +42,31 @@ def set_env_var(env_path, name, value):
     os.replace(tmp, env_path)
 
 
+def looks_like_inside_container(root):
+    """Heuristique legere : sommes-nous probablement DANS le conteneur ?"""
+    return bool(os.environ.get("BK_ROOT")) or root.startswith("/data/app") or root.startswith("/opt/bk")
+
+
+def apply_new_password(root):
+    """Recree le conteneur pour que le nouveau .env soit relu. Le mot de passe n'est jamais passe a docker."""
+    has_compose = any(os.path.isfile(os.path.join(root, n)) for n in ("docker-compose.yml", "compose.yaml"))
+    docker = shutil.which("docker")
+    if not (has_compose and docker):
+        print("Sur l'HOTE, dans le dossier du projet, lance pour appliquer le nouveau mot de passe :")
+        print("    docker compose up -d --force-recreate")
+        return
+    print("Application du nouveau mot de passe (redémarrage du conteneur)…")
+    try:
+        done = subprocess.run([docker, "compose", "up", "-d", "--force-recreate"], cwd=root)
+        if done.returncode != 0:
+            raise RuntimeError(f"docker compose a quitte avec le code {done.returncode}")
+    except Exception:
+        print("Le redémarrage automatique a échoué. Dans le dossier du projet, lance manuellement :")
+        print("    docker compose up -d --force-recreate")
+        return
+    print("✅ Mot de passe appliqué. Tu peux te connecter au dashboard avec ton nouveau mot de passe.")
+
+
 def main():
     if not os.path.isfile(ENV):
         sys.exit(".env introuvable : lance d'abord  cp .env.example .env")
@@ -51,7 +78,11 @@ def main():
     if pw != pw.strip():
         sys.exit("Le mot de passe commence ou finit par un espace. Rien n'a ete modifie.")
     set_env_var(ENV, "BK_GATE_HASH", make_hash(pw))
-    print("\nEnregistre. Lance maintenant : docker compose up -d")
+    print("\nEnregistre.")
+    if looks_like_inside_container(ROOT):
+        print("Attention : ce .env n'est peut-être pas celui que Docker lit sur l'hôte.")
+        print("Relance plutôt ce script sur l'HOTE, dans le dossier du projet.")
+    apply_new_password(ROOT)
     print("Puis sur le site : bas de page > \"Acces administrateur\" > ton nouveau mot de passe.")
 
 

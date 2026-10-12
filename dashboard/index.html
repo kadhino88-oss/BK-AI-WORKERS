@@ -6,7 +6,7 @@
 <title>BK-AI-WORKERS — Une équipe d'agents IA autonomes pour votre entreprise</title>
 <meta name="description" content="Chloé et 17 Workers IA spécialisés (ventes, marketing, contenu, juridique, comptabilité, support…) exécutent vos missions 24/7, dans votre langue, avec validation avant toute action sensible. Essai gratuit.">
 <link rel="canonical" href="https://bk-ai-workers.com/">
-<meta name="theme-color" content="#14151a">
+<meta name="theme-color" content="#f7f6f3">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="BK-AI-WORKERS">
 <meta property="og:title" content="BK-AI-WORKERS — Une équipe d'agents IA autonomes pour votre entreprise">
@@ -25,7 +25,11 @@
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="manifest" href="/manifest.json">
 <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
-<link rel="apple-touch-icon" href="/favicon.svg">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="BK-AI-WORKERS">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="stylesheet" href="/pwa-install.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap" rel="stylesheet">
@@ -295,7 +299,7 @@
         <p class="auto-approve-warning">Une fois activé, toute action réelle préparée sur un connecteur que vous avez connecté (email, publication, tâche...) part automatiquement — vous ne verrez plus de carte à confirmer. Désactivez à tout moment.</p>
       </div>
       <div class="connectors-how">
-        <div class="how-mini"><b>1</b><div><strong>Connectez votre outil</strong><span>Avec votre propre compte. Vos identifiants sont chiffrés : personne, pas même nous, ne peut les lire.</span></div></div>
+        <div class="how-mini"><b>1</b><div><strong>Connectez votre outil</strong><span>Avec votre propre compte. Vos identifiants sont chiffrés au repos et ne sont jamais réaffichés.</span></div></div>
         <div class="how-mini"><b>2</b><div><strong>Autorisez vos Workers</strong><span>Un interrupteur par outil : vous décidez lesquels ils peuvent utiliser.</span></div></div>
         <div class="how-mini"><b>3</b><div><strong>Ils préparent, vous validez</strong><span>Lire et chercher est automatique ; envoyer ou publier attend votre confirmation.</span></div></div>
       </div>
@@ -585,6 +589,9 @@
       <h2 class="billing-section-title">Demandes de démo</h2>
       <div id="admin-demo-list" class="admin-activity"></div>
 
+      <h2 class="billing-section-title">Candidatures programme pilote</h2>
+      <div id="admin-pilot-list" class="admin-activity"></div>
+
       <h2 class="billing-section-title">Comptes</h2>
       <div id="admin-clients-list"></div>
     </section>
@@ -611,7 +618,7 @@
         </details>
         <details class="faq-item">
           <summary>Comment les Workers se connectent-ils à mes outils (Slack, CRM, etc.) ?</summary>
-          <p>Chaque connexion se fait avec votre propre compte (« Se connecter avec Google », Microsoft…), et vos accès sont stockés chiffrés — jamais vus en clair, jamais partagés entre plusieurs comptes. Rien n'est connecté par défaut : vous choisissez quels outils brancher, et quand.</p>
+          <p>Chaque connexion se fait avec votre propre compte (« Se connecter avec Google », Microsoft…), et vos accès sont stockés chiffrés — jamais réaffichés, jamais partagés entre plusieurs comptes. Rien n'est connecté par défaut : vous choisissez quels outils brancher, et quand.</p>
         </details>
         <details class="faq-item">
           <summary>Comment fonctionne la facturation ?</summary>
@@ -705,7 +712,7 @@
             <h3>Sous-traitants</h3>
             <p>Pour générer les réponses, le contenu de vos missions et votre profil d'entreprise sont transmis à notre fournisseur d'IA (Anthropic, États-Unis), qui n'utilise pas les données d'API pour entraîner ses modèles selon ses conditions publiées. Les paiements sont traités par Stripe. Ces transferts vers l'étranger sont encadrés par des garanties contractuelles conformes à la nLPD. Ne saisissez pas de données sensibles (santé, données bancaires complètes, mots de passe) dans vos missions.</p>
             <h3>Identifiants d'outils tiers</h3>
-            <p>Les identifiants de connexion à vos outils (Slack, CRM, etc.) sont stockés chiffrés et ne sont jamais visibles en clair, y compris par l'équipe BK-AI-WORKERS.</p>
+            <p>Les identifiants de connexion à vos outils (Slack, CRM, etc.) sont stockés chiffrés (AES-256-GCM) et ne sont jamais renvoyés à votre navigateur. Le serveur doit pouvoir les déchiffrer pour agir en votre nom : une personne ayant accès au serveur et à son environnement pourrait donc techniquement les lire. Détails et limites : page « Sécurité et confiance ».</p>
             <h3>Conservation et sécurité</h3>
             <p>Les données sont conservées pendant la durée de l'abonnement puis supprimées sur demande, sous réserve des obligations légales (comptabilité : 10 ans). L'accès aux fonctions opérationnelles est protégé par authentification et chaque action à risque est soumise à validation.</p>
             <h3>Vos droits</h3>
@@ -892,7 +899,7 @@
       <div class="footer-cta-in">
         <div>
           <div class="footer-cta-title">Prêt à confier votre première mission ?</div>
-          <div class="footer-cta-sub">Essai gratuit de 3 jours, sans carte bancaire.</div>
+          <div class="footer-cta-sub">Essai gratuit de 3 jours, sans carte bancaire. <a class="footer-pilot-link" href="/pilote.html">Programme pilote : candidater</a></div>
         </div>
         <div class="footer-cta-actions">
           <button type="button" class="btn btn-gold" id="footer-cta-start-btn">Démarrer &rarr;</button>
@@ -918,8 +925,12 @@
       </div>
       <div class="footer-col">
         <div class="footer-col-title">Ressources</div>
+        <a href="/pilote.html">Programme pilote</a>
         <a href="#" id="footer-nav-pricing">Tarifs</a>
         <a href="#" id="footer-nav-faq">FAQ</a>
+        <a href="#" id="footer-install-app" hidden>Installer l'application</a>
+        <a href="/securite.html">Sécurité et confiance</a>
+        <a href="/status.html">Statut du service</a>
       </div>
       <div class="footer-col">
         <div class="footer-col-title">Légal</div>
@@ -970,7 +981,11 @@
   <script src="/i18n-en.js"></script>
   <script src="/i18n-en-legal.js"></script>
   <script src="/i18n-en-app.js"></script>
+  <script src="/i18n-en-pwa.js"></script>
+  <script src="/i18n-en-pilot.js"></script>
   <script src="/i18n.js"></script>
   <script src="/app.js"></script>
+  <script src="/pwa-install.js"></script>
+  <script src="/pilot-admin.js"></script>
 </body>
 </html>
