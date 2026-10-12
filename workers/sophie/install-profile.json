@@ -1,0 +1,204 @@
+{
+  "schema": "BK-INSTALL-PROFILE-V1",
+  "workerId": "sophie",
+  "displayName": "Sophie",
+  "tagline": "Rédige vos annonces, trie vos candidatures sur des faits, prépare des entretiens comparables et le projet de contrat, en droit suisse ou français.",
+  "idealFor": "PME de Suisse ou de France qui recrutent sans service RH et veulent un processus structuré, comparable et non discriminatoire, avec les décisions d'embauche qui restent les leurs.",
+  "services": [
+    {
+      "id": "fiche-poste-annonce",
+      "label": "Fiche de poste et annonce prête à diffuser",
+      "description": "Sophie cadre le poste (intitulé, niveau, lieu, pays, type de contrat, taux d'occupation, fourchette), rédige la fiche de poste complète avec compétences indispensables et souhaitables, puis l'annonce diffusable à la formulation non genrée et non discriminatoire. Elle peut citer 2 ou 3 offres comparables réelles pour situer le marché.",
+      "skills": ["JOB_DESCRIPTION_WRITING", "JOB_POSTING", "REQUIREMENTS_EXTRACTION", "JOB_DESCRIPTION_ANALYSIS", "EMPLOYER_BRANDING"],
+      "requiredConnectors": [],
+      "optionalConnectors": [],
+      "channels": ["web"],
+      "knowledgeFields": [
+        { "key": "poste_a_pourvoir", "label": "Le poste à pourvoir", "help": "Intitulé, niveau, lieu, taux d'occupation, type de contrat et fourchette salariale.", "required": true, "example": "Mécanicien vélo confirmé, 100 %, CDI, Lausanne, 5 500 à 6 500 CHF brut par mois" },
+        { "key": "pays_droit_applicable", "label": "Pays du contrat", "help": "Suisse ou France : le droit du travail et les mentions légales diffèrent.", "required": true, "example": "Suisse" },
+        { "key": "presentation_entreprise", "label": "Présentation de l'entreprise", "help": "Quelques lignes pour l'accroche employeur.", "required": false, "example": "Atelier de 8 personnes spécialisé dans les vélos électriques depuis 2018" },
+        { "key": "conditions_offertes", "label": "Conditions proposées", "help": "Horaires, avantages, télétravail, formation.", "required": false, "example": "Horaires 8 h-17 h, abonnement de transports pris en charge" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-recherche", "label": "Comparer avec des offres réelles", "examples": ["Lire 2 ou 3 annonces comparables pour situer salaire et intitulés"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "redaction", "label": "Rédiger la fiche et l'annonce", "examples": ["Rédiger la fiche de poste complète", "Rédiger l'annonce avec formulation non genrée"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "publication", "label": "Diffuser l'annonce", "examples": ["Déposer l'annonce sur un site d'emploi ou votre site"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Rédige la fiche de poste et l'annonce pour un mécanicien vélo confirmé à 100 % en CDI à Lausanne, fourchette 5 500 à 6 500 CHF brut, formulation non discriminatoire. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "La fiche contient missions, compétences indispensables et souhaitables, conditions",
+          "L'annonce est entièrement non genrée et n'exclut aucun critère protégé",
+          "Les chiffres de marché cités viennent d'offres réelles ou sont étiquetés"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    },
+    {
+      "id": "tri-candidatures",
+      "label": "Tri et comparaison des candidatures sur des faits",
+      "description": "Vous collez le texte des CV (ou un lien public). Sophie structure chaque candidature (formation, expérience, compétences, langues, localisation), applique une grille pondérée sur des faits observables, jamais sur un critère protégé, et livre un tableau comparatif scoré avec analyse des écarts et points à vérifier en entretien. Chaque note renvoie à un fait.",
+      "skills": ["CV_SCREENING", "CV_PARSING", "CANDIDATE_COMPARISON", "SKILL_MATCHING", "GAP_ANALYSIS", "EXPERIENCE_MATCHING", "LANGUAGE_MATCHING", "LOCATION_MATCHING"],
+      "requiredConnectors": [],
+      "optionalConnectors": ["gmail.controlled", "outlook_mail.controlled"],
+      "connectorOperations": {
+        "gmail.controlled": ["DRAFT_MESSAGE"],
+        "outlook_mail.controlled": ["DRAFT_MESSAGE"]
+      },
+      "channels": ["web", "email"],
+      "knowledgeFields": [
+        { "key": "fiche_de_poste", "label": "La fiche de poste de référence", "help": "Collez-la ou demandez d'abord à Sophie de la rédiger.", "required": true, "example": "Mécanicien vélo confirmé, 100 %, certificat fédéral de capacité exigé, allemand apprécié" },
+        { "key": "candidatures", "label": "Les candidatures à trier", "help": "Collez le texte des CV. L'ajout de fichier n'existe pas encore. Retirez les informations inutiles à la sélection (photo, âge, état civil).", "required": true, "example": "3 CV de mécaniciens collés dans la conversation" },
+        { "key": "criteres_ponderes", "label": "Ce qui compte le plus", "help": "Les critères indispensables et leur poids.", "required": false, "example": "Expérience de 3 ans en vélos électriques (40 %), certificat fédéral (30 %), disponibilité (30 %)" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-candidatures", "label": "Lire et structurer les CV", "examples": ["Structurer formation, expérience et compétences de chaque CV collé"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 50 },
+        { "category": "analyse-calcul", "label": "Noter et comparer les candidats", "examples": ["Appliquer la grille pondérée sur des faits observables", "Produire le tableau comparatif en .xlsx"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 30 },
+        { "category": "brouillon-email", "label": "Préparer les réponses aux candidats en brouillon", "examples": ["Créer le brouillon de réponse à un candidat, sans l'envoyer"], "risk": "low", "defaultMode": "draft", "maxAutoPerDay": null, "operations": ["gmail.controlled:DRAFT_MESSAGE", "outlook_mail.controlled:DRAFT_MESSAGE"] },
+        { "category": "engagement-embauche", "label": "Décider d'écarter ou de retenir un candidat", "examples": ["Refuser définitivement un candidat", "Promettre un poste à un candidat"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null },
+        { "category": "envoi-externe", "label": "Écrire aux candidats", "examples": ["Envoyer un refus ou une invitation à un candidat"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Voici 3 CV collés pour le poste de mécanicien vélo. Applique ma grille pondérée, fais le tableau comparatif scoré avec les écarts et les points à vérifier en entretien. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Chaque note est rattachée à un fait lu dans le CV",
+          "Aucun critère protégé (âge, origine, situation familiale) n'intervient dans la notation",
+          "Le classement est une aide à la décision : la décision reste la vôtre"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    },
+    {
+      "id": "entretien-structure-scorecard",
+      "label": "Entretien structuré, scorecard et vérification de références",
+      "description": "Sophie construit une trame d'entretien identique pour tous les candidats d'un même poste : une question comportementale par compétence (méthode STAR) avec les signaux de réponse forte ou faible, une scorecard vierge à remplir, puis un compte-rendu comparatif à partir de vos notes et les questions de référence à poser.",
+      "skills": ["INTERVIEW_PREPARATION", "SCREENING_QUESTIONS", "INTERVIEW_SUMMARY", "REFERENCE_CHECK_PREP", "CANDIDATE_EXPERIENCE"],
+      "requiredConnectors": [],
+      "optionalConnectors": [],
+      "channels": ["web"],
+      "knowledgeFields": [
+        { "key": "fiche_de_poste", "label": "La fiche de poste de référence", "help": "Les compétences à évaluer en découlent.", "required": true, "example": "Mécanicien vélo confirmé, 100 %, certificat fédéral de capacité exigé" },
+        { "key": "competences_a_evaluer", "label": "Compétences à évaluer en entretien", "help": "Quatre à six compétences clés.", "required": false, "example": "Diagnostic de panne, sens du service, autonomie, rigueur" },
+        { "key": "notes_entretien", "label": "Vos notes après entretien", "help": "Pour la synthèse comparative.", "required": false, "example": "Candidat A : bon diagnostic, moins à l'aise avec le contact client" }
+      ],
+      "autonomyRules": [
+        { "category": "redaction", "label": "Rédiger la trame, la scorecard et la synthèse", "examples": ["Rédiger les questions STAR avec signaux de réponse forte et faible", "Rédiger la synthèse comparative à partir de vos notes"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 30 },
+        { "category": "envoi-externe", "label": "Inviter les candidats", "examples": ["Envoyer une invitation à un entretien"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Prépare la trame d'entretien structuré pour le poste de mécanicien vélo, avec une question STAR par compétence, les signaux de réponse forte et faible et la scorecard vierge. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Les mêmes questions sont prévues pour tous les candidats",
+          "Chaque compétence a une question comportementale et des signaux de notation",
+          "La scorecard est prête à être remplie après l'entretien"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    },
+    {
+      "id": "projet-contrat-travail",
+      "label": "Projet de contrat de travail (relecture Clara avant signature)",
+      "description": "Sophie rédige le projet complet de contrat de travail suisse ou français, avec les clauses obligatoires du pays, daté et marqué PROJET. Les règles décisives (délais de congé, période d'essai, durée du travail) sont revérifiées sur sources officielles ; Clara relit et un humain valide avant toute signature.",
+      "skills": ["CONTRACT_PREPARATION_HR", "RECRUITMENT_COMPLIANCE"],
+      "requiredConnectors": [],
+      "optionalConnectors": [],
+      "channels": ["web"],
+      "knowledgeFields": [
+        { "key": "conditions_contrat", "label": "Conditions du contrat", "help": "Poste, date d'entrée, taux, salaire, période d'essai, horaires.", "required": true, "example": "Mécanicien vélo, entrée au 1er décembre, 100 %, 6 000 CHF brut par mois, essai de 3 mois" },
+        { "key": "pays_droit_applicable", "label": "Pays du contrat", "help": "Suisse ou France.", "required": true, "example": "Suisse, canton de Vaud" },
+        { "key": "convention_collective", "label": "Convention collective applicable", "help": "Si votre branche en a une.", "required": false, "example": "Convention collective de la branche des cycles" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-recherche", "label": "Vérifier les règles du travail", "examples": ["Confirmer sur la source officielle les délais de congé et la période d'essai"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "redaction", "label": "Rédiger le projet de contrat", "examples": ["Rédiger le projet complet marqué PROJET", "Produire le .docx"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 15 },
+        { "category": "signature", "label": "Faire signer le contrat", "examples": ["Signer ou transmettre le contrat pour signature"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Rédige le projet de contrat de travail d'un mécanicien vélo à 100 % en Suisse (canton de Vaud), salaire 6 000 CHF brut, essai de 3 mois, avec les clauses obligatoires. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Le texte est complet, daté et marqué « PROJET »",
+          "Les règles de droit du travail citées sont vérifiées ou marquées « à confirmer »",
+          "La relecture par Clara et la validation humaine avant signature sont rappelées"
+        ]
+      },
+      "recommendedLevel": "approfondi"
+    },
+    {
+      "id": "onboarding-offboarding",
+      "label": "Checklists d'accueil (jour J à J+90) et de départ",
+      "description": "Sophie déroule la checklist d'accueil d'un nouveau collaborateur du jour de la signature à J+90 (matériel, accès, formation, points de suivi) et celle d'un départ, en rappelant le délai de congé légal du pays. Toute décision de licenciement reste humaine et est signalée comme telle.",
+      "skills": ["ONBOARDING_CHECKLIST", "OFFBOARDING_CHECKLIST", "HEADCOUNT_TRACKING"],
+      "requiredConnectors": [],
+      "optionalConnectors": [],
+      "channels": ["web"],
+      "knowledgeFields": [
+        { "key": "poste_a_pourvoir", "label": "Poste et date d'entrée", "help": "Pour caler le calendrier d'accueil.", "required": true, "example": "Mécanicien vélo, entrée au 1er décembre" },
+        { "key": "outils_et_acces", "label": "Outils et accès à préparer", "help": "Messagerie, caisse, outils spécifiques.", "required": false, "example": "Messagerie, logiciel de caisse, badge d'atelier" },
+        { "key": "pays_droit_applicable", "label": "Pays du contrat", "help": "Pour les délais de congé du départ.", "required": false, "example": "Suisse" }
+      ],
+      "autonomyRules": [
+        { "category": "redaction", "label": "Rédiger les checklists et le plan d'accueil", "examples": ["Rédiger la checklist d'accueil de J-7 à J+90", "Rédiger la checklist de départ avec le délai de congé légal"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "engagement-licenciement", "label": "Décider d'un départ ou d'un licenciement", "examples": ["Notifier un licenciement", "Valider la fin de contrat d'un salarié"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Prépare la checklist d'accueil d'un mécanicien vélo qui entre le 1er décembre, de J-7 à J+90, et la checklist de départ avec le délai de congé suisse à vérifier. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "La checklist d'accueil est ordonnée dans le temps avec un responsable par tâche",
+          "Le délai de congé est confirmé sur une source officielle ou marqué « à confirmer »",
+          "La décision de départ est signalée comme humaine"
+        ]
+      },
+      "recommendedLevel": "rapide"
+    },
+    {
+      "id": "conformite-recrutement",
+      "label": "Contrôle de non-discrimination et de protection des données candidats",
+      "description": "Sophie relit une annonce, une grille de sélection ou une trame d'entretien pour y repérer toute formulation ou question discriminatoire, vérifie les obligations de conservation des données de candidats (nLPD ou RGPD) et rédige la mention d'information et la durée de conservation à appliquer. Le cas contentieux est renvoyé à Clara.",
+      "skills": ["RECRUITMENT_COMPLIANCE", "DIVERSITY_REPORTING", "JOB_DESCRIPTION_ANALYSIS"],
+      "requiredConnectors": [],
+      "optionalConnectors": [],
+      "channels": ["web"],
+      "knowledgeFields": [
+        { "key": "document_a_controler", "label": "Le document à contrôler", "help": "Collez l'annonce, la grille ou les questions d'entretien.", "required": true, "example": "Notre annonce de mécanicien vélo, rédigée l'an dernier" },
+        { "key": "pays_droit_applicable", "label": "Pays concerné", "help": "Détermine nLPD ou RGPD et le droit applicable.", "required": true, "example": "Suisse" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-recherche", "label": "Vérifier les obligations", "examples": ["Confirmer la durée de conservation admise pour les dossiers de candidats"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "redaction", "label": "Rédiger les corrections et la mention d'information", "examples": ["Réécrire les formulations discriminatoires", "Rédiger la mention d'information aux candidats"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "suppression", "label": "Supprimer des dossiers de candidats", "examples": ["Effacer les dossiers expirés de vos outils"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Relis cette annonce de mécanicien vélo (collée ci-dessous) : repère tout ce qui est discriminatoire, réécris-le et rédige la mention d'information aux candidats avec la durée de conservation. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Chaque formulation problématique est citée avec sa version corrigée",
+          "La durée de conservation est confirmée sur une source officielle ou marquée « à confirmer »",
+          "Un cas contentieux serait renvoyé à Clara"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    }
+  ],
+  "channelSupport": {
+    "email": "planned",
+    "phone": "no",
+    "whatsapp": "no",
+    "web": "available",
+    "schedule": "available"
+  },
+  "plannedCapabilities": [
+    "Dépôt direct des CV (PDF ou Word) dans la conversation, aujourd'hui il faut coller le texte",
+    "Lecture des candidatures depuis votre outil de recrutement BambooHR",
+    "Réception des candidatures par email, avec tri préparé et réponses en brouillon pour votre validation",
+    "Diffusion de l'annonce sur les sites d'emploi après votre validation",
+    "Planification des entretiens dans votre agenda et envoi des invitations après votre validation"
+  ],
+  "installationSteps": [
+    "Ajoutez Sophie à votre équipe depuis le catalogue des Workers.",
+    "Indiquez dans la fiche d'entreprise votre pays, votre présentation et vos conditions habituelles (horaires, avantages).",
+    "Connectez Gmail ou Outlook dans la page Connecteurs si vous voulez recevoir les réponses aux candidats en brouillon.",
+    "Gardez les réglages par défaut : Sophie prépare, note et rédige, mais n'écrit à aucun candidat et ne décide d'aucune embauche.",
+    "Lancez le scénario d'essai « Fiche de poste et annonce » puis relisez la formulation non discriminatoire.",
+    "Collez les CV sans photo ni informations inutiles à la sélection avant de lancer le tri.",
+    "Faites relire par Clara et valider par un humain tout projet de contrat avant signature."
+  ]
+}
