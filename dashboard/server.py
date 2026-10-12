@@ -1335,6 +1335,10 @@ def run_stripe_bridge(action, **kwargs):
             cmd += ["-Interval", kwargs["interval"]]
         if kwargs.get("client_id"):
             cmd += ["-ClientId", kwargs["client_id"]]
+        if kwargs.get("amount_cents"):
+            cmd += ["-AmountCents", str(int(kwargs["amount_cents"]))]
+        if kwargs.get("plan_name"):
+            cmd += ["-PlanName", kwargs["plan_name"]]
 
         proc = subprocess.run(cmd, capture_output=True, timeout=30)
         stderr = (proc.stderr or b"").decode("utf-8", errors="replace")
@@ -2946,6 +2950,123 @@ def cancel_billing_plan(client_id=DASHBOARD_CLIENT_ID):
     return get_billing(client_id)
 
 
+def _billing_note(client_id, text):
+    """Ajoute une ligne a l'historique de facturation du client (visible dans « Historique du compte »)."""
+    with _STATE_LOCK:
+        state = _billing_load(client_id)
+        state.setdefault("history", []).append({"dateUtc": datetime.datetime.utcnow().isoformat() + "Z", "event": text})
+        _billing_save(state, client_id)
+
+
+def select_billing_plan(client_id, plan_id, interval="month"):
+    """POST /api/billing/plan : le client choisit un forfait (c'est le bouton « Passer a la formule superieure »). Renvoie (corps, statut HTTP).
+    - Essai : on n'y « bascule » pas (annuler l'abonnement y ramene) ; Enterprise : sur devis ; forfait HERITE (Starter, Business) : plus
+      vendu, sauf pour celui qui l'a deja (rien ne change pour lui) ; le forfait qu'on a deja : aucun effet (pas de nouveau cycle).
+    - Stripe configure : une vraie Checkout Session (montant du catalogue en centimes de CHF), le forfait n'est active qu'APRES le
+      paiement verifie cote serveur (/api/billing/stripe-confirm). Aucun prelevement ici.
+    - Stripe non configure : Solo, Trio et Equipe ne basculent JAMAIS gratuitement (PLAN_BY_INVOICE : le proprietaire les active apres
+      facture reglee) ; Pro et Scale gardent la simulation locale d'origine."""
+    if plan_id not in PLAN_CATALOG:
+        return {"error": "UNKNOWN_PLAN"}, 400
+    plan = PLAN_CATALOG[plan_id]
+    owner = client_id == DASHBOARD_CLIENT_ID
+    current = ((_billing_state_readonly(client_id) or {}).get("planId") or "essai") if _is_customer_id(client_id) else None
+    if not owner:
+        if plan_id == "essai":
+            return {"error": "PLAN_NOT_SELECTABLE", "detail": "On ne revient pas à l'essai en le choisissant : utilisez « Annuler l'abonnement »."}, 403
+        if plan.get("onQuote"):
+            return {"error": "PLAN_ON_QUOTE", "contactEmail": CONTACT_EMAIL,
+                    "detail": f"{plan['name']} se fait sur devis, avec un plafond de crédits mensuel fixé au contrat. Écrivez-nous à {CONTACT_EMAIL}."}, 403
+        if plan.get("legacy") and current != plan_id:
+            return {"error": "PLAN_NOT_SOLD", "detail": f"Le forfait {plan['name']} n'est plus proposé. Choisissez l'un des forfaits de la page Tarifs."}, 403
+        if current == plan_id:
+            return get_billing(client_id), 200
+    stripe_status = None
+    if plan_id in INVOICE_ONLY_PLANS and not owner:
+        stripe_status = run_stripe_bridge("status")
+        if not stripe_status.get("Configured"):
+            what = ("Les forfaits Solo et Trio sont activés par BK Entreprise après règlement de la facture. "
+                    "Demandez-le depuis la fiche du Worker (« Embaucher »).") if plan.get("workerSlots") else (
+                    f"Le forfait {plan['name']} est activé par BK Entreprise après règlement de la facture. Écrivez-nous à {CONTACT_EMAIL}.")
+            return {"error": "PLAN_BY_INVOICE", "detail": what}, 403
+    if plan_id in PAID_PLANS_WITH_CHECKOUT and client_id != DASHBOARD_CLIENT_ID and not account_email_verified(client_id):
+        return {"error": "EMAIL_NOT_VERIFIED"}, 403
+    # Forfaits payants : si Stripe est configure, vraie Checkout Session hebergee par Stripe ; Essai et Enterprise restent hors paiement.
+    if plan_id in PAID_PLANS_WITH_CHECKOUT:
+        stripe_status = stripe_status or run_stripe_bridge("status")
+        if stripe_status.get("Configured"):
+            checkout = run_stripe_bridge(
+                "create-checkout", plan_id=plan_id, plan_name=plan["name"], amount_cents=plan_price_cents(plan_id, interval) or 0,
+                success_url=PUBLIC_BASE_URL + "/?billing_checkout=success&session_id={CHECKOUT_SESSION_ID}",
+                cancel_url=PUBLIC_BASE_URL + "/?billing_checkout=cancel", interval=interval, client_id=client_id)
+            if checkout.get("Status") == "SUCCESS":
+                return {"checkoutUrl": checkout["CheckoutUrl"], "sessionId": checkout["SessionId"]}, 200
+            return {"error": "STRIPE_CHECKOUT_FAILED", "detail": checkout.get("Detail") or checkout.get("Status")}, 400
+    result = set_billing_plan(plan_id, client_id=client_id)
+    return result, 400 if "error" in result else 200
+
+
+def activate_checkout_plan(confirmation, fallback_client_id=None):
+    """POST /api/billing/stripe-confirm, une fois la session relue chez Stripe (Paid, PlanId, ClientId, SubscriptionId). Active le forfait paye.
+    Un client qui change de forfait par une NOUVELLE Checkout Session (montee en gamme) a deja un abonnement Stripe : on l'annule une fois le
+    nouveau confirme, sinon il serait facture deux fois. Renvoie (corps, statut HTTP)."""
+    if not confirmation.get("Paid") or confirmation.get("PlanId") not in PLAN_CATALOG:
+        return {"error": "PAYMENT_NOT_CONFIRMED", "detail": confirmation.get("PaymentStatus")}, 400
+    client_id = confirmation.get("ClientId") or fallback_client_id
+    if not client_id:
+        return {"error": "ACCOUNT_REQUIRED"}, 401
+    previous = (_billing_state_readonly(client_id) or {}).get("stripeSubscriptionId") if _is_customer_id(client_id) else None
+    new_sub = confirmation.get("SubscriptionId")
+    result = set_billing_plan(confirmation["PlanId"], via_stripe=True, stripe_subscription_id=new_sub, client_id=client_id)
+    if previous and new_sub and previous != new_sub and "error" not in result:
+        cancellation = run_stripe_bridge("cancel-subscription", subscription_id=previous)
+        if cancellation.get("Status") == "SUCCESS":
+            _billing_note(client_id, "Ancien abonnement Stripe annulé : le nouveau forfait le remplace (aucune double facturation).")
+        else:
+            _billing_note(client_id, "ECHEC annulation de l'ancien abonnement Stripe (" + str(cancellation.get("Detail") or cancellation.get("Status"))
+                          + ") — à annuler à la main dans le tableau de bord Stripe pour éviter une double facturation.")
+        result = get_billing(client_id)
+    return result, 400 if "error" in result else 200
+
+
+@_state_locked
+def set_client_plan(client_id, plan_id, contract_credits=None):
+    """Proprietaire, apres facture reglee ou devis signe : active un forfait SANS liste de Workers (Equipe, Pro, Scale, Enterprise ; Solo et
+    Trio passent par grant_workers). Pour Enterprise, contract_credits fixe le plafond mensuel CONTRACTUEL du client (entier de 1 a
+    ENTERPRISE_MAX_CREDITS, sinon ENTERPRISE_DEFAULT_CREDITS) : il n'existe aucun forfait illimite. Renvoie (corps, statut HTTP)."""
+    if not _is_customer_id(client_id) or not any(a.get("clientId") == client_id for a in _load_accounts()):
+        return {"error": "CLIENT_NOT_FOUND", "detail": "Aucun compte client avec cet identifiant."}, 404
+    plan = PLAN_CATALOG.get(plan_id)
+    if not plan or plan_id == "essai" or plan.get("workerSlots"):
+        return {"error": "INVALID_PLAN", "detail": "Forfait attendu : " + ", ".join(
+            pid for pid, p in PLAN_CATALOG.items() if pid != "essai" and not p.get("workerSlots")) + " (Solo et Trio : grant-workers)."}, 400
+    if contract_credits is not None:
+        if not plan.get("contractual"):
+            return {"error": "CAP_NOT_ALLOWED", "detail": "Un plafond de crédits contractuel n'existe que pour Enterprise."}, 400
+        if not isinstance(contract_credits, int) or isinstance(contract_credits, bool) or not 1 <= contract_credits <= ENTERPRISE_MAX_CREDITS:
+            return {"error": "INVALID_CAP", "detail": f"Plafond mensuel attendu : un entier de 1 à {ENTERPRISE_MAX_CREDITS}."}, 400
+    state = _billing_load(client_id)
+    if state.get("stripeSubscriptionId"):
+        return {"error": "ACTIVE_SUBSCRIPTION", "detail": "Ce client a un abonnement Stripe actif : annulez-le avant d'attribuer un forfait sur facture."}, 409
+    old_name = PLAN_CATALOG.get(state.get("planId") or "essai", PLAN_CATALOG["essai"])["name"]
+    now = datetime.datetime.utcnow().isoformat() + "Z"
+    state["planId"] = plan_id
+    state["cycleStartUtc"] = now
+    state["extraCredits"] = 0
+    if plan.get("contractual"):
+        state["contractCredits"] = contract_credits if contract_credits is not None else ENTERPRISE_DEFAULT_CREDITS
+    else:
+        state.pop("contractCredits", None)
+    inst.adapt_hired_to_plan(state)
+    cap = f", plafond contractuel de {_fr_int(state['contractCredits'])} crédits par mois" if plan.get("contractual") else ""
+    state.setdefault("history", []).append({"dateUtc": now, "event": f"Forfait {plan['name']} activé par BK Entreprise{cap}, ancien forfait : {old_name}."})
+    _billing_save(state, client_id)
+    log_activity("set_plan", clientId=client_id, planId=plan_id, contractCredits=state.get("contractCredits"))
+    billing = get_billing(client_id)
+    return {"ok": True, "clientId": client_id, "planId": plan_id, "planName": plan["name"], "credits": billing["creditsIncluded"],
+            "renewsAtUtc": billing["renewsAtUtc"]}, 200
+
+
 def subscription_blocks_mission(client_id, level=None):
     """None si le client peut lancer une vraie mission, sinon un message
     a renvoyer tel quel (credits d'essai epuises ou plan sans quota
@@ -3339,7 +3460,7 @@ def recharge_billing_credits(amount, client_id=DASHBOARD_CLIENT_ID):
     collage de cle/jeton (meme principe, meme endroit du fichier)."""
     if client_id != DASHBOARD_CLIENT_ID:
         return {"error": "RECHARGE_NOT_AVAILABLE",
-                "detail": "L'achat de crédits supplémentaires n'est pas encore relié à un vrai paiement — indisponible pour le moment."}
+                "detail": "Il n'y a pas de recharge de crédits : chaque forfait inclut un quota mensuel fixe. Quand il est atteint, passez au forfait supérieur."}
     state = _billing_load(client_id)
     now = datetime.datetime.utcnow().isoformat() + "Z"
     state["extraCredits"] = int(state.get("extraCredits") or 0) + amount
@@ -4094,7 +4215,7 @@ class Handler(BaseHTTPRequestHandler):
                 return
             self._send_json({"notes": list_client_memory(client_id)})
         elif path == "/api/mission-levels":
-            self._send_json(public_mission_levels())
+            self._send_json(public_mission_levels(self._resolve_client_id() or ""))     # un compte a l'essai ne voit que Rapide
         elif path == "/api/fx":
             self._send_json(get_fx_rates())
         elif path == "/webhooks/whatsapp":
@@ -4493,16 +4614,18 @@ class Handler(BaseHTTPRequestHandler):
                 return
             if self._worker_not_included(client_id, "chloe"):
                 return
-            block = subscription_blocks_mission(client_id)
-            if block:
-                self._send_json({"error": "SUBSCRIPTION_REQUIRED", "detail": block}, 402)
-                return
             length = int(self.headers.get("Content-Length", 0))
             raw = self.rfile.read(length) if length else b"{}"
             try:
                 body = json.loads(raw.decode("utf-8"))
             except Exception:
                 body = {}
+            # Le quota est controle AU NIVEAU DEMANDE (et non au niveau par defaut) : sinon une mission Approfondi (12 credits) passait
+            # avec le solde d'une mission Equilibre.
+            block = subscription_blocks_mission(client_id, body.get("level"))
+            if block:
+                self._send_json(subscription_required_payload(client_id, block), 402)
+                return
             objective = (body.get("objective") or "").strip()
             if not objective:
                 self._send_json({"error": "OBJECTIVE_REQUIRED"}, 400)
@@ -4533,7 +4656,7 @@ class Handler(BaseHTTPRequestHandler):
                 body = {}
             block = subscription_blocks_mission(client_id, body.get("level"))
             if block:
-                self._send_json({"error": "SUBSCRIPTION_REQUIRED", "detail": block}, 402)
+                self._send_json(subscription_required_payload(client_id, block), 402)
                 return
             objective = (body.get("objective") or "").strip()
             if not objective:
@@ -4575,16 +4698,16 @@ class Handler(BaseHTTPRequestHandler):
                 return
             if self._worker_not_included(client_id, wid):
                 return
-            block = subscription_blocks_mission(client_id)
-            if block:
-                self._send_json({"error": "SUBSCRIPTION_REQUIRED", "detail": block}, 402)
-                return
             length = int(self.headers.get("Content-Length", 0))
             raw = self.rfile.read(length) if length else b"{}"
             try:
                 body = json.loads(raw.decode("utf-8"))
             except Exception:
                 body = {}
+            block = subscription_blocks_mission(client_id, body.get("level"))      # au niveau demande (voir /api/chloe/task)
+            if block:
+                self._send_json(subscription_required_payload(client_id, block), 402)
+                return
             objective = (body.get("objective") or "").strip()
             if not objective:
                 self._send_json({"error": "OBJECTIVE_REQUIRED"}, 400)
@@ -4618,7 +4741,7 @@ class Handler(BaseHTTPRequestHandler):
                 body = {}
             block = subscription_blocks_mission(client_id, body.get("level"))
             if block:
-                self._send_json({"error": "SUBSCRIPTION_REQUIRED", "detail": block}, 402)
+                self._send_json(subscription_required_payload(client_id, block), 402)
                 return
             objective = (body.get("objective") or "").strip()
             if not objective:
@@ -4709,6 +4832,21 @@ class Handler(BaseHTTPRequestHandler):
             payload, status = grant_workers(str(body.get("clientId") or "").strip(), str(body.get("planId") or "").strip().lower(),
                                             body.get("workers"), new_cycle=body.get("newCycle") is not False)
             self._send_json(payload, status)
+        elif path == "/api/admin/set-plan":
+            # Proprietaire uniquement : active Equipe, Pro, Scale ou Enterprise (devis signe : plafond de credits MENSUEL contractuel) pour un
+            # client, une fois la facture reglee. Aucun forfait n'est illimite : Enterprise sans plafond saisi prend ENTERPRISE_DEFAULT_CREDITS.
+            if not self._gate_authenticated():
+                self._send_gate_required()
+                return
+            if not hire_rate_ok("grant", "owner"):
+                self._send_json({"error": "RATE_LIMITED"}, 429)
+                return
+            body = self._read_json_limited(HIRE_BODY_LIMITS["grant"])
+            if body is None:
+                return
+            payload, status = set_client_plan(str(body.get("clientId") or "").strip(), str(body.get("planId") or "").strip().lower(),
+                                              contract_credits=body.get("contractCredits"))
+            self._send_json(payload, status)
         elif path == "/api/installations":
             client_id = self._resolve_client_id()
             if not client_id:
@@ -4791,9 +4929,9 @@ class Handler(BaseHTTPRequestHandler):
             if not client_id:
                 self._send_account_required()
                 return
-            block = subscription_blocks_mission(client_id)
+            block = subscription_blocks_mission(client_id, automation_level(client_id))      # missions recurrentes : niveau Rapide, 1 credit
             if block:
-                self._send_json({"error": "SUBSCRIPTION_REQUIRED", "detail": block}, 402)
+                self._send_json(subscription_required_payload(client_id, block), 402)
                 return
             length = int(self.headers.get("Content-Length", 0))
             raw = self.rfile.read(length) if length else b"{}"
@@ -4841,9 +4979,9 @@ class Handler(BaseHTTPRequestHandler):
             if enabled:
                 if self._worker_not_included(client_id, automation_worker(client_id, automation_id)):
                     return
-                block = subscription_blocks_mission(client_id)
+                block = subscription_blocks_mission(client_id, automation_level(client_id))      # missions recurrentes : niveau Rapide, 1 credit
                 if block:
-                    self._send_json({"error": "SUBSCRIPTION_REQUIRED", "detail": block}, 402)
+                    self._send_json(subscription_required_payload(client_id, block), 402)
                     return
             result = run_automation_bridge("toggle", automation_id=automation_id, enabled=enabled, client_id=client_id)
             self._send_json({"automations": result} if isinstance(result, list) else result)
@@ -4862,9 +5000,9 @@ class Handler(BaseHTTPRequestHandler):
             automation_id = path.split("/")[3]
             if self._worker_not_included(client_id, automation_worker(client_id, automation_id)):
                 return
-            block = subscription_blocks_mission(client_id)
+            block = subscription_blocks_mission(client_id, automation_level(client_id))      # missions recurrentes : niveau Rapide, 1 credit
             if block:
-                self._send_json({"error": "SUBSCRIPTION_REQUIRED", "detail": block}, 402)
+                self._send_json(subscription_required_payload(client_id, block), 402)
                 return
             result = run_automation_bridge("run", automation_id=automation_id, client_id=client_id)
             self._send_json(result)
@@ -4873,9 +5011,9 @@ class Handler(BaseHTTPRequestHandler):
             if not client_id:
                 self._send_account_required()
                 return
-            block = subscription_blocks_mission(client_id)
+            block = subscription_blocks_mission(client_id, automation_level(client_id))      # missions recurrentes : niveau Rapide, 1 credit
             if block:
-                self._send_json({"error": "SUBSCRIPTION_REQUIRED", "detail": block}, 402)
+                self._send_json(subscription_required_payload(client_id, block), 402)
                 return
             result = run_automation_bridge("tick", client_id=client_id)
             self._send_json({"ran": result} if isinstance(result, list) else result)
@@ -4939,7 +5077,7 @@ class Handler(BaseHTTPRequestHandler):
                 return
             block = subscription_blocks_mission(client_id)
             if block:
-                self._send_json({"error": "SUBSCRIPTION_REQUIRED", "detail": block}, 402)
+                self._send_json(subscription_required_payload(client_id, block), 402)
                 return
             length = int(self.headers.get("Content-Length", 0))
             raw = self.rfile.read(length) if length else b"{}"
@@ -5074,45 +5212,8 @@ class Handler(BaseHTTPRequestHandler):
             interval = (body.get("interval") or "month").strip().lower()
             if interval not in ("month", "year"):
                 interval = "month"
-            if plan_id not in PLAN_CATALOG:
-                self._send_json({"error": "UNKNOWN_PLAN"}, 400)
-                return
-            if plan_id in INVOICE_ONLY_PLANS and client_id != DASHBOARD_CLIENT_ID:
-                # Solo/Trio : aucun paiement automatique branche -> pas de bascule libre-service (ce serait des credits gratuits).
-                self._send_json({"error": "PLAN_BY_INVOICE", "detail": "Les forfaits Solo et Trio sont activés par BK Entreprise après règlement de la facture. "
-                                 "Demandez-le depuis la fiche du Worker (« Embaucher »)."}, 403)
-                return
-            if plan_id in PAID_PLANS_WITH_CHECKOUT and client_id != DASHBOARD_CLIENT_ID and not account_email_verified(client_id):
-                self._send_json({"error": "EMAIL_NOT_VERIFIED"}, 403)
-                return
-
-            # Plans payants : si Stripe est configure, on passe par une
-            # vraie Checkout Session hebergee par Stripe (le plan local
-            # n'est active qu'APRES confirmation du paiement, voir
-            # /api/billing/stripe-confirm) plutot que de basculer le
-            # plan instantanement. Essai (gratuit) et Enterprise (sur
-            # devis) restent toujours en bascule directe.
-            if plan_id in PAID_PLANS_WITH_CHECKOUT:
-                stripe_status = run_stripe_bridge("status")
-                if stripe_status.get("Configured"):
-                    success_url = PUBLIC_BASE_URL + "/?billing_checkout=success&session_id={CHECKOUT_SESSION_ID}"
-                    cancel_url = PUBLIC_BASE_URL + "/?billing_checkout=cancel"
-                    checkout = run_stripe_bridge(
-                        "create-checkout", plan_id=plan_id,
-                        success_url=success_url, cancel_url=cancel_url,
-                        interval=interval, client_id=client_id,
-                    )
-                    if checkout.get("Status") == "SUCCESS":
-                        self._send_json({"checkoutUrl": checkout["CheckoutUrl"], "sessionId": checkout["SessionId"]})
-                    else:
-                        self._send_json({"error": "STRIPE_CHECKOUT_FAILED", "detail": checkout.get("Detail") or checkout.get("Status")}, 400)
-                    return
-
-            result = set_billing_plan(plan_id, client_id=client_id)
-            if "error" in result:
-                self._send_json(result, 400)
-            else:
-                self._send_json(result)
+            payload, status = select_billing_plan(client_id, plan_id, interval)
+            self._send_json(payload, status)
         elif path == "/api/billing/stripe-confirm":
             length = int(self.headers.get("Content-Length", 0))
             raw = self.rfile.read(length) if length else b"{}"
@@ -5128,22 +5229,10 @@ class Handler(BaseHTTPRequestHandler):
             if confirmation.get("Status") != "SUCCESS":
                 self._send_json({"error": "STRIPE_CONFIRM_FAILED", "detail": confirmation.get("Detail") or confirmation.get("Status")}, 400)
                 return
-            if not confirmation.get("Paid") or confirmation.get("PlanId") not in PLAN_CATALOG:
-                self._send_json({"error": "PAYMENT_NOT_CONFIRMED", "detail": confirmation.get("PaymentStatus")}, 400)
-                return
-            # Le ClientId qui a paye vient des metadata Stripe (fiable, pose
-            # a la creation de la session) — le cookie de session encore
-            # present sert seulement de repli pour d'anciennes sessions
-            # creees avant ce champ.
-            client_id = confirmation.get("ClientId") or self._resolve_client_id()
-            if not client_id:
-                self._send_account_required()
-                return
-            self._send_json(set_billing_plan(
-                confirmation["PlanId"], via_stripe=True,
-                stripe_subscription_id=confirmation.get("SubscriptionId"),
-                client_id=client_id,
-            ))
+            # Le ClientId qui a paye vient des metadata Stripe (fiable, pose a la creation de la session) — le cookie de session encore
+            # present sert seulement de repli pour d'anciennes sessions creees avant ce champ.
+            payload, status = activate_checkout_plan(confirmation, self._resolve_client_id())
+            self._send_json(payload, status)
         elif path == "/api/profile":
             client_id = self._resolve_client_id()
             if not client_id:

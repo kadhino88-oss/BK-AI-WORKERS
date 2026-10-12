@@ -20,6 +20,9 @@
 #                                 plus aucune mission automatique ; "Executer maintenant" (manuel) reste possible.
 # Quand la mission est autorisee, "allowedWorkers" vaut la liste des Workers embauches separee par des virgules (variable
 # BK_ALLOWED_WORKERS a transmettre a Submit-Task.ps1), "-" pour aucun, ou null pour "tous".
+# Les automatisations (missions recurrentes) tournent TOUJOURS au niveau Rapide, 1 credit (server.automation_level) : le quota est controle a
+# ce niveau-la, et "level" (« rapide », ou « » quand les niveaux sont coupes par BK_LEVELS=0) est a transmettre a Submit-Task.ps1 via
+# BK_MISSION_LEVEL pour que la mission tourne reellement a ce niveau et soit comptee 1 credit.
 # En cas d'erreur inattendue : {"blocked": false, "error": "..."} — le quota est
 # indicatif (aucun PSP branche), donc on ne bloque JAMAIS une automatisation
 # a cause d'un bug du verificateur : on laisse passer et on trace.
@@ -44,7 +47,8 @@ def main():
         if block:
             print(json.dumps({"blocked": True, "code": "WORKER_NOT_INCLUDED", "detail": block["detail"]}, ensure_ascii=False))
             return 0
-        msg = server.subscription_blocks_mission(client_id)
+        level = server.automation_level(client_id)
+        msg = server.subscription_blocks_mission(client_id, level)
         if msg:
             print(json.dumps({"blocked": True, "code": "QUOTA_EXCEEDED", "detail": msg}, ensure_ascii=False))
             return 0
@@ -52,7 +56,7 @@ def main():
             print(json.dumps({"blocked": True, "code": "INSTALLATION_PAUSED",
                               "detail": "L'installation de ce Worker est en pause : aucune mission automatique tant que vous ne la reprenez pas."}, ensure_ascii=False))
             return 0
-        print(json.dumps({"blocked": False, "allowedWorkers": server.allowed_workers_env(client_id)}))
+        print(json.dumps({"blocked": False, "allowedWorkers": server.allowed_workers_env(client_id), "level": level}))
     except Exception as exc:  # noqa: BLE001
         print(json.dumps({"blocked": False, "error": repr(exc)}))
     return 0

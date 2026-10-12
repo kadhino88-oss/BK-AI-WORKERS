@@ -182,6 +182,10 @@ function Invoke-AutomationRun {
 
     Initialize-AutomationStore
     $AllowedWorkersEnv = $null
+    # Niveau de travail des automatisations (core/ai/LEVELS.json) : TOUJOURS Rapide, 1 credit, pour que le quota mensuel du client reste
+    # parlant (une mission recurrente ne doit jamais couter 6 ou 12 credits). Vide = niveaux coupes (BK_LEVELS=0) ou verificateur absent :
+    # ancien comportement (modele leger, 1 credit). La valeur vient de dashboard/quota-check.py (server.automation_level).
+    $MissionLevelEnv = $null
 
     # -----------------------------------------------------------------
     # Garde-fou quota (correctif securite).
@@ -209,6 +213,9 @@ function Invoke-AutomationRun {
                 if (-not $QuotaVerdict.blocked -and $QuotaVerdict.PSObject.Properties.Name -contains "allowedWorkers" -and $QuotaVerdict.allowedWorkers) {
                     # Offre "Worker a l'unite" : liste des Workers embauches, relue par Submit-Task.ps1 et Chloe (BK_ALLOWED_WORKERS).
                     $AllowedWorkersEnv = [string]$QuotaVerdict.allowedWorkers
+                }
+                if (-not $QuotaVerdict.blocked -and $QuotaVerdict.PSObject.Properties.Name -contains "level" -and $QuotaVerdict.level) {
+                    $MissionLevelEnv = [string]$QuotaVerdict.level
                 }
                 if ($QuotaVerdict.blocked) {
                     $SkipStatus = switch ([string]$QuotaVerdict.code) {
@@ -297,6 +304,10 @@ function Invoke-AutomationRun {
     # toute valeur heritee quand le client a acces a tous les Workers. L'ancienne valeur est restauree apres l'appel.
     $PreviousAllowedWorkers = $env:BK_ALLOWED_WORKERS
     if ($AllowedWorkersEnv) { $env:BK_ALLOWED_WORKERS = $AllowedWorkersEnv } else { Remove-Item Env:BK_ALLOWED_WORKERS -ErrorAction SilentlyContinue }
+    # Meme principe pour le niveau : la mission recurrente tourne au niveau Rapide (Submit-Task.ps1 la compte alors 1 credit), ou sans niveau
+    # (ancien comportement) ; une valeur heritee du processus appelant n'est jamais utilisee.
+    $PreviousMissionLevel = $env:BK_MISSION_LEVEL
+    if ($MissionLevelEnv -match '^[a-z]{3,20}$') { $env:BK_MISSION_LEVEL = $MissionLevelEnv } else { Remove-Item Env:BK_MISSION_LEVEL -ErrorAction SilentlyContinue }
     try {
         $Proc = Start-Process -FilePath $PsExe -ArgumentList $ArgLine -NoNewWindow -Wait -PassThru `
             -RedirectStandardOutput $StdOutFile `
@@ -323,6 +334,7 @@ function Invoke-AutomationRun {
     }
     finally {
         if ($null -ne $PreviousAllowedWorkers) { $env:BK_ALLOWED_WORKERS = $PreviousAllowedWorkers } else { Remove-Item Env:BK_ALLOWED_WORKERS -ErrorAction SilentlyContinue }
+        if ($null -ne $PreviousMissionLevel) { $env:BK_MISSION_LEVEL = $PreviousMissionLevel } else { Remove-Item Env:BK_MISSION_LEVEL -ErrorAction SilentlyContinue }
         if (Test-Path -LiteralPath $OutFile -PathType Leaf) { Remove-Item -LiteralPath $OutFile -Force -ErrorAction SilentlyContinue }
         Remove-Item -LiteralPath $StdOutFile -Force -ErrorAction SilentlyContinue
         Remove-Item -LiteralPath $StdErrFile -Force -ErrorAction SilentlyContinue

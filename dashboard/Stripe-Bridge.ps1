@@ -15,6 +15,9 @@ param(
     [string]$SubscriptionId = "",
     [ValidateSet("month", "year")][string]$Interval = "month",
     [string]$ClientId = "",
+    # Montant du catalogue du serveur (centimes de CHF) et nom du forfait, pour les forfaits sans Price ID Stripe (voir Stripe-Adapter.ps1).
+    [long]$AmountCents = 0,
+    [string]$PlanName = "",
     [Parameter(Mandatory=$true)][string]$OutFile
 )
 
@@ -37,7 +40,7 @@ $Result = switch ($Action) {
             [pscustomobject]@{ Configured = $false }
         }
     }
-    "create-checkout"     { New-StripeCheckoutSession -PlanId $PlanId -SuccessUrl $SuccessUrl -CancelUrl $CancelUrl -Interval $Interval -ClientId $ClientId }
+    "create-checkout"     { New-StripeCheckoutSession -PlanId $PlanId -SuccessUrl $SuccessUrl -CancelUrl $CancelUrl -Interval $Interval -ClientId $ClientId -AmountCents $AmountCents -PlanName $PlanName }
     "confirm"             { Get-StripeCheckoutSession -SessionId $SessionId }
     "cancel-subscription" { Remove-StripeSubscription -SubscriptionId $SubscriptionId }
 }
