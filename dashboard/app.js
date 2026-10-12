@@ -1840,7 +1840,8 @@ async function renderPricingScale() {
     <h2>Combien de missions pour mes crédits ?</h2>
     <p>Un crédit n'est pas une mission : le coût dépend du niveau de travail que vous choisissez.</p>
     <ul class="pricing-scale-list">${rows}</ul>
-    <p>Exemple avec <strong>250</strong> crédits (Solo) : <strong>${Math.floor(250 / base.credits)}</strong> missions ${escapeHtml(base.label)}, ou <strong>${Math.floor(250 / top.credits)}</strong> missions ${escapeHtml(top.label)}. Les missions récurrentes (automatisations) tournent au niveau ${escapeHtml(base.label)}.</p>
+    <p>Exemple avec <strong>250</strong> crédits (Solo) : <strong>${Math.floor(250 / base.credits)}</strong> missions <em>${escapeHtml(base.label)}</em>, ou <strong>${Math.floor(250 / top.credits)}</strong> missions <em>${escapeHtml(top.label)}</em>.</p>
+    <p>Les missions récurrentes (automatisations) tournent toujours au niveau le plus rapide : <strong>${base.credits}</strong> ${base.credits > 1 ? "crédits" : "crédit"} chacune.</p>
     <p>${noRecharge}</p>`;
 }
 
