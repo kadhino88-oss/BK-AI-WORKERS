@@ -800,13 +800,21 @@ def mission_levels():
     return data, levels
 
 
+def levels_enabled(data=None):
+    """BK_LEVELS=1 / 0 force ; sinon l'interrupteur "enabled" de core/ai/LEVELS.json (inactif par defaut)."""
+    env = os.environ.get("BK_LEVELS")
+    if env in ("0", "1"):
+        return env == "1"
+    if data is None:
+        data, _ = mission_levels()
+    return bool(data.get("enabled", False))
+
+
 def normalize_level(value, client_id=""):
     """Niveau a appliquer a une mission ("" = niveaux desactives : BK_LEVELS=0 ou fichier absent). Le client anonyme de
     l'essai public est toujours au niveau le moins cher ; une valeur inconnue retombe sur le niveau par defaut."""
-    if os.environ.get("BK_LEVELS") == "0":
-        return ""
     data, levels = mission_levels()
-    if not levels:
+    if not levels or not levels_enabled(data):
         return ""
     if client_id == "CLI-TRIAL-PUBLIC":
         return data.get("trial") if data.get("trial") in levels else next(iter(levels))
@@ -826,7 +834,7 @@ def level_credits(level):
 
 def public_mission_levels():
     data, levels = mission_levels()
-    if os.environ.get("BK_LEVELS") == "0":
+    if not levels_enabled(data):
         return {"levels": [], "default": ""}
     return {"default": data.get("default"),
             "levels": [{"id": k, "label": v.get("label", k), "description": v.get("description", ""), "credits": level_credits(k)}

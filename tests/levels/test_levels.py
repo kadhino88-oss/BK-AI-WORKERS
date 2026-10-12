@@ -16,6 +16,7 @@ TMP = tempfile.mkdtemp(prefix="bklevels-")
 os.makedirs(os.path.join(TMP, "core", "ai"))
 shutil.copy2(os.path.join(REPO, "core", "ai", "LEVELS.json"), os.path.join(TMP, "core", "ai", "LEVELS.json"))
 os.environ["BK_ROOT"] = TMP
+os.environ["BK_LEVELS"] = "1"          # le fichier livre est inactif ("enabled": false) : les tests forcent l'activation
 spec = importlib.util.spec_from_file_location("bk_server_levels", os.path.join(REPO, "dashboard", "server.py"))
 server = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(server)
@@ -26,7 +27,7 @@ server.CLIENT_MEMORY_DIR = os.path.join(TMP, "runtime", "client-memory")
 
 class Levels(unittest.TestCase):
     def tearDown(self):
-        os.environ.pop("BK_LEVELS", None)
+        os.environ["BK_LEVELS"] = "1"
 
     def test_unknown_or_missing_level_falls_back_to_the_default(self):
         for v in (None, "", "nimportequoi", "EQUILIBRE ", "../../etc"):
@@ -36,6 +37,13 @@ class Levels(unittest.TestCase):
 
     def test_the_anonymous_trial_is_always_on_the_cheapest_level(self):
         self.assertEqual(server.normalize_level("approfondi", "CLI-TRIAL-PUBLIC"), "rapide")
+
+    def test_the_shipped_file_keeps_levels_inactive_until_pricing_is_validated(self):
+        os.environ.pop("BK_LEVELS", None)
+        self.assertEqual(server.normalize_level("approfondi", "CLI-X"), "")
+        self.assertEqual(server.public_mission_levels(), {"levels": [], "default": ""})
+        os.environ["BK_LEVELS"] = "1"
+        self.assertEqual(server.normalize_level("approfondi", "CLI-X"), "approfondi")
 
     def test_levels_can_be_switched_off_on_the_server(self):
         os.environ["BK_LEVELS"] = "0"
