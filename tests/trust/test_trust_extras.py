@@ -107,6 +107,8 @@ HOSTS = {
     "api.d-id.com": "owner-tool",
     # espaces de noms et exemples
     "json-schema.org": NO_CALL, "www.sitemaps.org": NO_CALL, "schema.org": NO_CALL, "www.MonSite.com": NO_CALL,
+    # exemple de champ de fiche d'installation (workers/alex/install-profile.json) : texte d'aide, jamais appele
+    "www.atelier-martin.example": NO_CALL,
 }
 SCAN_DIRS = ("dashboard", "core", "workers", "chloe", "orchestrator")
 SCAN_EXT = (".py", ".ps1", ".js", ".html", ".json")

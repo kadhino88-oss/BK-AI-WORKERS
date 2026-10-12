@@ -39,3 +39,9 @@ Le serveur jetable démarre sur une copie : après une modification de `dashboar
 - Aucun point d'entrée pour fermer une demande d'embauche sans attribuer : la liste du propriétaire ne se vide que par une attribution.
 - Les profils d'installation sont en français ; en anglais, seul le cadre de l'interface est traduit.
 - Pas de prix Stripe pour Solo/Trio : facturation manuelle, attribution par le propriétaire.
+- Barre du haut (antérieure à cette offre, non modifiée) : connecté, elle demande environ 1520 px de large ; en dessous (et au-dessus de 720 px, où le menu devient un hamburger), « Se déconnecter » dépasse à droite de l'écran. Vu à 1280 px dans le navigateur intégré.
+- L'essai à blanc lance une vraie mission : sur le serveur jetable (sans modèle) il n'a été vérifié qu'avec une réponse simulée de la route de mission, pas avec un vrai Worker.
+
+## Vérifié dans le navigateur (serveur jetable local, comptes de test)
+
+Assistant complet pour Alex (services, fiche, rejet d'une clé API saisie avec message français sous le champ et saisie conservée, autonomie sans « Autonome » pour l'envoi externe, outils avec ouverture du formulaire de connexion HubSpot existant, activation, pause depuis la fiche et depuis Facturation) ; clavier (Entrée pour ouvrir, focus gardé dans la fenêtre, Échap ferme et rend le focus) ; 375 px (pas de défilement horizontal à aucune étape, fenêtre plein écran) ; compte Solo (remplacement d'un Worker, demande d'embauche, refus 403 avec « Embaucher »/« Voir mon forfait ») ; anglais ; échappement du message client côté propriétaire (rendu avec des données de test, sans connexion propriétaire).
