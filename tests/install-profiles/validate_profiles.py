@@ -476,6 +476,11 @@ def validate_profile(wid, catalog, providers, dispatch):
     except Exception as e:
         err(wid, f"JSON illisible : {e}")
         return
+    check_profile_data(wid, prof, raw, catalog, providers, dispatch)
+
+
+def check_profile_data(wid, prof, raw, catalog, providers, dispatch):
+    """Controle un profil deja charge (utilisable depuis les tests avec un dict modifie)."""
     if not isinstance(prof, dict):
         err(wid, "objet JSON attendu")
         return

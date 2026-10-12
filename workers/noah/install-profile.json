@@ -110,7 +110,7 @@
         "calendar.controlled": ["READ_EVENTS", "SEARCH_EVENTS", "CREATE_EVENT"],
         "outlook_calendar.controlled": ["READ_EVENTS", "SEARCH_EVENTS", "CREATE_EVENT"]
       },
-      "channels": ["web", "whatsapp", "email"],
+      "channels": ["web", "whatsapp", "email", "phone"],
       "knowledgeFields": [
         { "key": "demande_rendez_vous", "label": "Le rendez-vous à caler", "help": "Participants, durée, plage de dates, fuseau horaire.", "required": true, "example": "Rendez-vous d'une heure avec un fournisseur à Zurich la semaine prochaine" },
         { "key": "disponibilites_habituelles", "label": "Vos plages habituelles", "help": "Jours et heures où vous acceptez des rendez-vous.", "required": false, "example": "Mardi à jeudi, 9 h-12 h et 14 h-17 h, fuseau de Genève" },
@@ -222,7 +222,7 @@
   ],
   "channelSupport": {
     "email": "planned",
-    "phone": "no",
+    "phone": "planned",
     "whatsapp": "planned",
     "web": "available",
     "schedule": "available"
@@ -232,7 +232,8 @@
     "Lecture du texte complet des emails Gmail (aujourd'hui la recherche ne renvoie que des identifiants : collez le texte dans la conversation)",
     "Envoi réel d'un email depuis votre boîte après votre confirmation (aujourd'hui seul le brouillon existe)",
     "Invitation de participants, lien visio, déplacement ou annulation d'événements (aujourd'hui seul un événement simple peut être créé)",
-    "Demandes par WhatsApp : « décale mon rendez-vous », « résume ce fil »",
+    "Demandes directes à Noah par WhatsApp : « décale mon rendez-vous », « résume ce fil » (aujourd'hui le lien WhatsApp de l'application s'adresse à Chloé, qui route vos demandes)",
+    "Prise de rendez-vous par téléphone sur votre propre numéro, avec les créneaux de votre agenda (aujourd'hui l'agent téléphonique ne sert que le compte propriétaire de la plateforme)",
     "Dépôt de pièces jointes dans la conversation"
   ],
   "installationSteps": [

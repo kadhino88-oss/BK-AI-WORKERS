@@ -197,7 +197,7 @@
   },
   "plannedCapabilities": [
     "Programmation des publications à une date et une heure précises (aujourd'hui une publication part tout de suite après votre confirmation)",
-    "Demande de posts par WhatsApp, avec les textes renvoyés au même endroit pour validation",
+    "Demande de posts directement à Emma par WhatsApp, avec les textes renvoyés au même endroit (aujourd'hui le lien WhatsApp de l'application s'adresse à Chloé, qui route vos demandes)",
     "Lecture des statistiques de vos publications (portée, engagement) pour ajuster le calendrier",
     "Brouillons réels dans les réseaux qui le permettent, au lieu d'une publication immédiate",
     "Dépôt de vos photos et logos directement dans la conversation"
