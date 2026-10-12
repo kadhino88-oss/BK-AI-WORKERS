@@ -3011,6 +3011,68 @@ a:focus-visible,
   .brand .brand-mark { width: 28px; height: 28px; font-size: 12px; }
 }
 
+/* ---------- TOPBAR ETROIT (2026-10-12) : le header debordait encore a
+   droite — scrollWidth 412 pour 375 de large, connecte a un compte client
+   ("Mon compte (client)" + EN + hamburger), et meme deconnecte sous 372 px
+   (360 px = largeur Android la plus courante). .topbar-actions et le
+   hamburger sortaient de l'ecran et toute la page defilait a l'horizontale.
+   Cause : .topbar-actions ne pouvait pas retrecir (min-width auto = somme
+   des contenus) et le bouton compte est en white-space: nowrap. Le
+   correctif tient en trois paliers, sans toucher au bureau (> 720 px) :
+     <= 520 px : le bloc d'actions peut retrecir ; connecte, le bouton
+                 compte devient une pastille icone (le libelle complet reste
+                 dans le DOM et en infobulle — voir syncAccountButtonLabel) ;
+                 deconnecte, "Se connecter" se tronque avec une ellipse en
+                 dernier recours ;
+     <= 400 px : espacements et marque un cran plus compacts ;
+     <= 359 px : le nom "BK-AI-WORKERS" est masque, la pastille "BK" reste. ---------- */
+@media (max-width: 520px) {
+  .topbar-actions { min-width: 0; }
+  .topbar-actions .lang-toggle,
+  .topbar-actions .mobile-menu-btn { flex: 0 0 auto; }
+  #topbar-account-btn { display: block; min-width: 0; text-overflow: ellipsis; }
+
+  #topbar-account-btn[data-state="client"],
+  #topbar-account-btn[data-state="owner"] {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    gap: 0;
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    font-size: 0;       /* masque le libelle sans le retirer du DOM */
+    line-height: 0;
+  }
+
+  /* Silhouette dessinee en degrades CSS (pas d'image : rien a charger, rien
+     que le CSP puisse bloquer). ::before est deja pris par le reflet dore. */
+  #topbar-account-btn[data-state="client"]::after,
+  #topbar-account-btn[data-state="owner"]::after {
+    content: "";
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
+    background:
+      radial-gradient(circle at 50% 29%, currentColor 3.3px, transparent 3.9px),
+      radial-gradient(ellipse 7.4px 6.6px at 50% 100%, currentColor 94%, transparent 100%);
+  }
+}
+
+@media (max-width: 400px) {
+  .topbar { gap: 6px; padding: 10px 12px; }
+  .topbar-actions { gap: 5px; }
+  .topbar-actions .lang-toggle { padding: 6px 9px; }
+  #topbar-account-btn { padding: 8px 10px; }
+  .brand { font-size: 13px; gap: 5px; }
+  .brand .brand-mark { width: 26px; height: 26px; font-size: 11px; }
+}
+
+@media (max-width: 359px) {
+  .brand > span { display: none; }
+}
+
 
 /* ---------- AGENTS DANS LE HERO (2026-09-25) : comparaison mesuree avec
    Delos a 1024x768 — chez eux les agents sont dans le PREMIER ecran

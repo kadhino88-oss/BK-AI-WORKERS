@@ -192,6 +192,13 @@ function syncAccountButtonLabel() {
   } else {
     btn.textContent = "Mon compte (client)";
   }
+  // Topbar etroit (style.css, "TOPBAR ETROIT") : connecte, le libelle long ne
+  // tient pas a cote du hamburger — le CSS le remplace par une pastille icone
+  // selon cet etat. Le libelle complet (mode client/proprietaire compris)
+  // reste dans le DOM et en infobulle.
+  btn.dataset.state = !accountAuthenticated ? "out" : isOperator ? "owner" : "client";
+  if (accountAuthenticated) btn.title = btn.textContent;
+  else btn.removeAttribute("title");
   if (logoutBtn) logoutBtn.hidden = !accountAuthenticated;
 }
 
