@@ -69,8 +69,10 @@ def js_strings(code):
                     ch = code[i]
                     if ch in "\"'":
                         q, i = ch, i + 1
+                        start = i
                         while i < n and code[i] != q:
                             i += 2 if code[i] == "\\" else 1
+                        out.append(("str", code[start:i]))           # litteral a l'interieur d'un ${...} : aussi un texte visible possible
                         i += 1
                     elif ch == "`":
                         i, inner = scan_template(i + 1)

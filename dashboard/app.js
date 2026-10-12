@@ -3283,6 +3283,8 @@ const IW_RETURN_KEY = "bk_install_return";
 
 // Texte d'une boite native (confirm) : le dictionnaire du navigateur ne les voit pas, on les traduit a la main.
 const iwT = (s) => (window.bkTr ? window.bkTr(s) : s);
+// Phrase avec des valeurs (nom du Worker...) : le modele est traduit, puis les {valeurs} sont inserees.
+const iwTf = (template, vars) => iwT(template).replace(/\{(\w+)\}/g, (m, k) => (vars && vars[k] !== undefined ? vars[k] : m));
 
 function iwNow() {
   return new Date().toLocaleTimeString(BK_LOCALE(), { hour: "2-digit", minute: "2-digit" });
@@ -3316,9 +3318,24 @@ function iwToolNames(list, catalog) {
 
 // ---------- ASSISTANT D'INSTALLATION ----------
 
+let iwOpening = false;
+
+// Ouverture : le serveur est interroge (profil + outils), ce qui prend un instant ; le bouton le montre et un double clic n'ouvre pas deux fenetres.
 async function openInstallWizard(workerId, startStep) {
   if (!accountAuthenticated) { requireAccount(() => openInstallWizard(workerId, startStep)); return; }
-  if (iw) return;
+  if (iw || iwOpening) return;
+  iwOpening = true;
+  const trigger = document.activeElement && document.activeElement.tagName === "BUTTON" ? document.activeElement : null;
+  if (trigger) { trigger.classList.add("is-busy"); trigger.setAttribute("aria-busy", "true"); }
+  try {
+    await iwOpenNow(workerId, startStep);
+  } finally {
+    iwOpening = false;
+    if (trigger) { trigger.classList.remove("is-busy"); trigger.removeAttribute("aria-busy"); }
+  }
+}
+
+async function iwOpenNow(workerId, startStep) {
   const opener = document.activeElement;
   let data;
   let catalog;
@@ -3454,6 +3471,7 @@ function iwSetSaveState(kind) {
     saving: '<span>Enregistrement…</span>',
     saved: `<span>Brouillon enregistré à</span> <time>${escapeHtml(iw && iw.savedAt ? iw.savedAt : iwNow())}</time>`,
     failed: '<span class="iw-dirty">Enregistrement refusé : corrigez les points signalés</span>',
+    "failed-general": '<span class="iw-dirty">Enregistrement non effectué : votre saisie est conservée</span>',
   };
   el.innerHTML = map[kind] || "";
 }
@@ -3495,13 +3513,13 @@ async function iwSave(opts) {
     }
     if (r.error === "WORKER_NOT_INCLUDED") {
       iw.errors = { fields: {}, general: [r.detail || "Ce Worker ne fait pas partie de votre forfait."], items: [{ key: "", step: -1, svc: "", msg: r.detail || "" }] };
-      iwSetSaveState("failed");
+      iwSetSaveState("failed-general");
       if (!quiet) iwShowErrors();
       return false;
     }
     if (r.error || !r.installation) {
       iw.errors = { fields: {}, general: [r.detail || "Enregistrement impossible pour le moment. Réessayez."], items: [] };
-      iwSetSaveState("failed");
+      iwSetSaveState("failed-general");
       if (!quiet) iwShowErrors();
       return false;
     }
@@ -3517,7 +3535,7 @@ async function iwSave(opts) {
     return true;
   } catch (e) {
     iw.errors = { fields: {}, general: ["Enregistrement impossible pour le moment (réseau ou serveur). Ce que vous avez saisi est conservé."], items: [] };
-    iwSetSaveState("failed");
+    iwSetSaveState("failed-general");
     if (!quiet) iwShowErrors();
     return false;
   } finally {
@@ -3540,7 +3558,7 @@ function iwShowErrors() {
   const sum = document.getElementById("iw-error-summary");
   if (!sum) return;
   const items = iw.errors.items.length ? iw.errors.items : iw.errors.general.map((msg) => ({ key: "", step: -1, svc: "", msg }));
-  sum.innerHTML = `<div class="iw-alert-title">L'enregistrement a été refusé. Corrigez ces points, votre saisie est conservée.</div>
+  sum.innerHTML = `<div class="iw-alert-title">${items.some((it) => it.key) ? "L'enregistrement a été refusé. Corrigez ces points, votre saisie est conservée." : "L'enregistrement n'a pas abouti. Votre saisie est conservée."}</div>
     <ul>${items.map((it) => `<li>${it.svc ? `<strong>${escapeHtml(it.svc)}</strong> ` : ""}${it.field ? `<em>${escapeHtml(it.field)} :</em> ` : ""}<span>${escapeHtml(it.msg)}</span>${it.step >= 0 && it.step !== iw.step ? ` <button type="button" class="iw-link" data-goto="${it.step}">Corriger à l'étape « ${escapeHtml(IW_STEP_LABELS[it.step])} »</button>` : ""}</li>`).join("")}</ul>`;
   sum.hidden = false;
   sum.querySelectorAll("[data-goto]").forEach((b) => b.addEventListener("click", () => { iw.step = Number(b.dataset.goto); iwRender(); }));
@@ -4332,7 +4350,7 @@ function iwRenderHirePanel(panel, title, workerId, data, hired) {
   const hiredNames = (hire.hiredWorkers || []).map((w) => workerNameById(w));
   const p = data.profile || {};
   let html = p.tagline ? `<p class="iw-lead">${escapeHtml(p.tagline)}</p>` : "";
-  html += `<p><strong>${escapeHtml(name)}</strong> <span>ne fait pas partie de votre forfait</span> <strong>${escapeHtml(planName)}</strong>.</p>`;
+  html += `<p><strong>${escapeHtml(name)}</strong> <span>ne fait pas partie de votre forfait</span> <strong>(${escapeHtml(planName)})</strong>.</p>`;
   if (hire.workerSlots) {
     html += `<div class="iw-state-line"><span class="iw-meta-key">Emplacements utilisés</span><strong>${(hire.hiredWorkers || []).length} / ${hire.workerSlots}</strong>
       <span class="iw-chips">${hiredNames.map((n) => `<span class="iw-chip">${escapeHtml(n)}</span>`).join("")}</span></div>`;
@@ -4363,7 +4381,8 @@ function iwRenderHirePanel(panel, title, workerId, data, hired) {
         if (r.error === "NO_SLOT_LEFT" || r.error === "SWAP_COOLDOWN") loadInstallPanel(workerId);
         return;
       }
-      showToast(r.replaced ? `${name} remplace ${workerNameById(r.replaced)} : l'installation de ${workerNameById(r.replaced)} est mise en pause.` : `${name} fait maintenant partie de votre forfait.`);
+      showToast(r.replaced ? iwTf("{name} remplace {old} : l'installation de {old} est mise en pause.", { name, old: workerNameById(r.replaced) })
+        : iwTf("{name} fait maintenant partie de votre forfait.", { name }));
       await loadInstallPanel(workerId);
       if (!billingView.hidden) loadBilling();
     } catch (e) {
@@ -4422,7 +4441,7 @@ async function iwGoHire(workerId) {
 // Refus 403 WORKER_NOT_INCLUDED d'une mission : le texte du serveur + une action « Embaucher », jamais un message technique.
 function iwRenderNotIncluded(responseEl, result, workerId, closeFab) {
   responseEl.className = "chat-msg chat-msg-worker needs-chloe";
-  responseEl.innerHTML = `<div class="status-line">Ce Worker n'est pas dans votre forfait</div>
+  responseEl.innerHTML = `<div class="status-line">Non inclus dans votre forfait</div>
     <p>${escapeHtml(result.detail || "Ce Worker ne fait pas partie de votre forfait.")}</p>
     <div class="iw-notice-actions"></div>`;
   const actions = responseEl.querySelector(".iw-notice-actions");

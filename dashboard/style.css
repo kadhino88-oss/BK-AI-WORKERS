@@ -3366,6 +3366,7 @@ input, textarea, select { border-radius: 14px; }
    Mobile d'abord : l'assistant occupe tout l'ecran sous 720 px, aucun defilement horizontal a 375 px. */
 .iw-sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 body.iw-open { overflow: hidden; }
+.is-busy { opacity: .65; cursor: progress; pointer-events: none; }
 
 /* -- textes communs -- */
 .iw-lead { margin: 0 0 10px; color: var(--ink); line-height: 1.55; max-width: 62ch; }
