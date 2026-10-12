@@ -19,6 +19,7 @@ import json
 import os
 import re
 import sys
+import unicodedata
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
@@ -160,6 +161,11 @@ def load_dispatch_ops():
     ops.setdefault("instagram", set()).add("CREATE_DRAFT_POST")
     ops.setdefault("twilio", set()).add("PLACE_CALL")
     return ops
+
+
+def fold(text):
+    """Minuscules sans accents : \"Lea\" et \"Léa\" designent le meme Worker."""
+    return "".join(c for c in unicodedata.normalize("NFKD", str(text).lower()) if not unicodedata.combining(c))
 
 
 def base_id(connector_id):
@@ -486,7 +492,7 @@ def validate_profile(wid, catalog, providers, dispatch):
     try:
         with open(os.path.join(ROOT, "workers", wid, "identity", "identity.json"), encoding="utf-8-sig") as f:
             ident = json.load(f)
-        if str(prof.get("displayName", "")).lower() != str(ident.get("name", "")).lower():
+        if fold(prof.get("displayName", "")) != fold(ident.get("name", "")):
             err(wid, f"displayName {prof.get('displayName')!r} different de l'identite {ident.get('name')!r}")
     except Exception as e:
         err(wid, f"identity.json illisible : {e}")
