@@ -1,0 +1,2106 @@
+{
+  "meta": {
+    "title": "Etude de marche et de prix BK-AI-WORKERS",
+    "date": "2026-10-12",
+    "language": "fr",
+    "branch": "ws/market-study",
+    "rules": "Aucun chiffre invente : chaque prix concurrent a une URL et une date de consultation, sinon statut 'non verifie'. Les calculs sont reproductibles avec docs/pricing-cost-model.py.",
+    "statuses": [
+      "verifie",
+      "partiel",
+      "sur devis",
+      "non verifie"
+    ],
+    "convertedWith": "1 EUR = 0,9313 CHF ; 1 USD = 0,83107 CHF (BCE, 2026-10-09)"
+  },
+  "competitors": [
+    {
+      "id": "delos",
+      "name": "Delos (Workers Delos)",
+      "category": "direct",
+      "origin": "France (Paris)",
+      "dateConsulted": "2026-10-12",
+      "status": "verifie (page rendue) avec incoherences",
+      "sourceUrls": [
+        "https://delos.so/fr/pricing",
+        "https://delos.so/fr",
+        "https://delos.so/pricing"
+      ],
+      "whatItIs": "Workers IA autonomes (15 profils : SEO, support client, design, commercial...) avec leur propre identite professionnelle (email, telephone), qui travaillent dans Slack/Teams et 3 000+ outils. Plus une suite bureautique IA (Slides, Mail, Drive...).",
+      "targetMarket": "Equipes de 1 a 50 personnes (plan Team) et grandes entreprises (Enterprise sur mesure).",
+      "pricingUnit": "par Worker et par mois, en credits ; suite bureautique par plan",
+      "plans": [
+        {
+          "name": "Team (Worker)",
+          "price": 50,
+          "currency": "EUR",
+          "period": "mois",
+          "chfEquivalent": 46.56,
+          "includes": [
+            "1 Worker specialise par role",
+            "40 000 credits",
+            "memoire long terme",
+            "Slack/Notion/HubSpot et 3 000+ outils",
+            "validation humaine"
+          ],
+          "note": "Page rendue en francais le 2026-10-12 : '50 EUR / mois, 40 000 credits, Pour les equipes de 1 a 50 personnes, ESSAI GRATUIT'. Pas de prix annuel affiche pour Team. HT/TTC non precise."
+        },
+        {
+          "name": "Enterprise",
+          "price": null,
+          "currency": "EUR",
+          "period": "sur devis",
+          "chfEquivalent": null,
+          "includes": [
+            "Workers illimites",
+            "SLA",
+            "deploiement sur votre infrastructure",
+            "SSO"
+          ]
+        },
+        {
+          "name": "Bureautique Etudiant",
+          "price": 10,
+          "currency": "EUR",
+          "period": "mois",
+          "chfEquivalent": 9.31,
+          "includes": [
+            "10 000 credits"
+          ]
+        },
+        {
+          "name": "Bureautique Explore",
+          "price": 25,
+          "currency": "EUR",
+          "period": "mois (23 EUR/mois en annuel)",
+          "chfEquivalent": 23.28,
+          "includes": [
+            "10 000 credits"
+          ]
+        },
+        {
+          "name": "Bureautique Advanced",
+          "price": 45,
+          "currency": "EUR",
+          "period": "mois (41 EUR/mois en annuel)",
+          "chfEquivalent": 41.91,
+          "includes": [
+            "20 000 credits"
+          ]
+        },
+        {
+          "name": "Bureautique Premium",
+          "price": 80,
+          "currency": "EUR",
+          "period": "mois (73 EUR/mois en annuel)",
+          "chfEquivalent": 74.5,
+          "includes": [
+            "50 000 credits"
+          ]
+        }
+      ],
+      "singleAgentPrice": {
+        "amount": 50,
+        "currency": "EUR",
+        "period": "mois",
+        "chfEquivalent": 46.56,
+        "note": "Un Worker = 50 EUR/mois (40 000 credits). Le prix pour 2 ou 3 Workers n'est pas affiche : hypothese 'x N' = non verifie."
+      },
+      "channels": {
+        "email": "oui (Workers avec leur propre email)",
+        "phone": "oui (telephone propre, 'appels traites' sur la page d'accueil)",
+        "whatsapp": "non mentionne",
+        "other": "Slack, Microsoft Teams, 3 000+ outils"
+      },
+      "freeTrial": "Oui, sans carte bancaire (page tarifs)",
+      "annualDiscount": "Team : non affiche. Bureautique : environ 8-9 % (23 vs 25, 41 vs 45, 73 vs 80 EUR)",
+      "minCommitment": "Aucun : 'ajouter ou retirer des Workers, annuler a tout moment' (page /fr)",
+      "overage": "non publie",
+      "notes": [
+        "INCOHERENCES DANS LES SOURCES DE DELOS : la balise meta de /pricing (version anglaise) dit '$30 per Worker' et le texte masque contient 'per Worker per month' sans montant ; la page rendue en francais affiche 50 EUR. Le code JavaScript du site contient aussi d'anciennes/autres grilles non affichees ('Starter gratuit / Business 490 USD', 'Solopreneur 100-500 EUR', 'New Hire 500 EUR', 'Worker Pack 2 500 EUR'). Seule la page rendue est retenue ; les autres valeurs sont a considerer comme non verifiees et ne doivent pas etre citees.",
+        "Delos publie des pages 'Workers vs Limova' et 'Workers vs Sintra' : ce sont bien les concurrents que Delos se donne.",
+        "Annonces de Delos (non verifiees, a ne pas reprendre) : plus de 10 000 Workers deployes, certifications de securite."
+      ]
+    },
+    {
+      "id": "limova",
+      "name": "Limova (Limova.ai ; editeur KAINOTOM.IA selon un resultat de recherche Capterra, non verifie)",
+      "category": "direct",
+      "origin": "France (telephone +33)",
+      "dateConsulted": "2026-10-12",
+      "status": "verifie (page rendue, lue visuellement)",
+      "sourceUrls": [
+        "https://www.limova.ai/offres",
+        "https://limova.ai/en/pricing",
+        "https://www.limova.ai/",
+        "https://www.capterra.co.uk/software/1075207/Limova-ai"
+      ],
+      "whatItIs": "8 agents IA nommes (Charly assistant general, John reseaux sociaux, Lou SEO, Elio prospection LinkedIn/telephone, Manue comptabilite, Julia juridique, Tom telephone/SAV, un agent recrutement) vendus en un seul abonnement.",
+      "targetMarket": "Entrepreneurs, freelances, TPE/PME (francophones). Mentionne aussi des plans pour 5 utilisateurs.",
+      "pricingUnit": "par abonnement 'pour 5 utilisateurs' (tous les agents inclus) + 0,20 EUR/min pour le telephone",
+      "plans": [
+        {
+          "name": "Essentiel (mensuel)",
+          "price": 79.9,
+          "currency": "EUR",
+          "period": "mois HT",
+          "chfEquivalent": 74.41,
+          "includes": [
+            "acces aux 8 agents",
+            "pour 5 utilisateurs",
+            "marketing, SEO, prospection LinkedIn, documents, API",
+            "7 jours gratuits"
+          ],
+          "note": "Pas de Charly+ ni de pack telephonie dans ce plan."
+        },
+        {
+          "name": "Essentiel (annuel)",
+          "price": 949.9,
+          "currency": "EUR",
+          "period": "an HT",
+          "chfEquivalent": 884.64,
+          "note": "= 79,16 EUR/mois, soit -0,9 % seulement vs 12 x 79,90."
+        },
+        {
+          "name": "Pro (mensuel)",
+          "price": 139.9,
+          "currency": "EUR",
+          "period": "mois HT",
+          "chfEquivalent": 130.29,
+          "includes": [
+            "tout Essentiel",
+            "agent telephone Tom a 0,20 EUR/min",
+            "gestion complete des appels, jusqu'a 10 000 appels simultanes, 140 langues",
+            "chatbot WhatsApp + site web",
+            "7 jours gratuits"
+          ]
+        },
+        {
+          "name": "Pro (annuel)",
+          "price": 1649.9,
+          "currency": "EUR",
+          "period": "an HT",
+          "chfEquivalent": 1536.55,
+          "note": "= 137,49 EUR/mois, soit -1,7 % vs 12 x 139,90."
+        },
+        {
+          "name": "Telephone Tom",
+          "price": 0.2,
+          "currency": "EUR",
+          "period": "minute d'appel (en plus du plan Pro)",
+          "chfEquivalent": 0.19
+        },
+        {
+          "name": "Business+",
+          "price": null,
+          "currency": "EUR",
+          "period": "sur demande",
+          "chfEquivalent": null,
+          "includes": [
+            "tout Pro",
+            "onboarding individualise",
+            "support premium"
+          ]
+        }
+      ],
+      "singleAgentPrice": null,
+      "channels": {
+        "email": "oui (Gmail, Outlook, comptes rendus par mail)",
+        "phone": "oui, uniquement avec le plan Pro : 0,20 EUR/min",
+        "whatsapp": "oui : chatbot WhatsApp (plan Pro) et assistant Charly pilotable par WhatsApp",
+        "other": "Google Agenda, HubSpot, Notion, Slack, Stripe, LinkedIn, reseaux sociaux"
+      },
+      "freeTrial": "7 jours gratuits (Essentiel et Pro) ; moyen de paiement non precise",
+      "annualDiscount": "Bandeau 'Offre LEGEND' : -10 % mensuel (code LEGEND10), -25 % annuel (code LEGEND25). Non precise si le code s'applique au prix affiche. Si oui : Essentiel 71,91 EUR/mois ou 712,43 EUR/an ; Pro 125,91 EUR/mois ou 1 237,43 EUR/an (calculs, non verifies).",
+      "minCommitment": "non indique (mensuel disponible)",
+      "overage": "Aucun plafond d'usage (credits/messages) publie ; seul le telephone est facture a la minute.",
+      "notes": [
+        "Prix affiches HT. Les prix sont rendus par une animation de chiffres : relus visuellement sur la page le 2026-10-12 (Mensuel 79,90 / 139,90 ; Annuel 949,90 / 1 649,90).",
+        "Limova affiche 'Note 4,9 sur 5 avec +1000 avis' et '+30 000 professionnels' : declarations de Limova, non verifiees et a ne jamais reprendre.",
+        "Limova vend un PAQUET (tous les agents d'un coup), jamais un agent seul : c'est la difference avec le modele 'Worker a l'unite'."
+      ]
+    },
+    {
+      "id": "sintra",
+      "name": "Sintra (Sintra X)",
+      "category": "indirect_bundle",
+      "origin": "non verifie",
+      "dateConsulted": "2026-10-12",
+      "status": "verifie (page officielle) ; statut des plans individuels conteste",
+      "sourceUrls": [
+        "https://sintra.ai/pricing",
+        "https://www.eesel.ai/blog/sintra-ai-pricing"
+      ],
+      "whatItIs": "12 'helpers' IA (Soshie, Cassie, Dexter, Buddy, Emmie, Gigi, Scouty, Penn, Commet, Milli, Seomi, Vizzy) vendus en un seul plan.",
+      "targetMarket": "Independants, petites entreprises (marche grand public/US).",
+      "pricingUnit": "par abonnement (12 helpers), duree 1/3/12 mois, 250 credits par mois",
+      "plans": [
+        {
+          "name": "1 mois (promo affichee)",
+          "price": 48.5,
+          "currency": "USD",
+          "period": "mois",
+          "chfEquivalent": 40.31,
+          "includes": [
+            "12 helpers",
+            "250 credits/mois"
+          ],
+          "note": "Prix barre : 97 USD ('Save 50 %')"
+        },
+        {
+          "name": "3 mois (promo affichee)",
+          "price": 23.6,
+          "currency": "USD",
+          "period": "mois",
+          "chfEquivalent": 19.61,
+          "note": "Prix barre : 59 USD ('Save 60 %') ; total facture non precise sur la page"
+        },
+        {
+          "name": "12 mois (promo affichee)",
+          "price": 15.6,
+          "currency": "USD",
+          "period": "mois",
+          "chfEquivalent": 12.96,
+          "note": "Prix barre : 52 USD ('Save 70 %') ; total facture non precise"
+        },
+        {
+          "name": "Helper individuel (liste sur la page)",
+          "price": 39,
+          "currency": "USD",
+          "period": "mois",
+          "chfEquivalent": 32.41,
+          "includes": [
+            "1 helper",
+            "250 credits"
+          ],
+          "note": "Liste a 39 USD/mois sur la page officielle ; un article tiers (eesel.ai, non verifie) dit que le centre d'aide de Sintra indique que ces plans individuels ne sont plus proposes."
+        }
+      ],
+      "singleAgentPrice": {
+        "amount": 39,
+        "currency": "USD",
+        "period": "mois",
+        "chfEquivalent": 32.41,
+        "note": "Affiche mais possiblement retire (source tierce)."
+      },
+      "channels": {
+        "email": "oui",
+        "phone": "non mentionne",
+        "whatsapp": "non mentionne",
+        "other": "chat, 15+ integrations (la page dit aussi 1000+ outils)"
+      },
+      "freeTrial": "non mentionne ; garantie remboursement 14 jours",
+      "annualDiscount": "-70 % annonce sur 12 mois (promotion)",
+      "minCommitment": "1, 3 ou 12 mois",
+      "overage": "recharges de credits possibles (prix non precise)",
+      "notes": [
+        "Les prix 'prix barres' (97/59/52 USD) sont d'apres la page ; selon un article tiers ils seraient les prix standards, les promos revenant regulierement."
+      ]
+    },
+    {
+      "id": "marblism",
+      "name": "Marblism",
+      "category": "indirect_bundle",
+      "origin": "non verifie",
+      "dateConsulted": "2026-10-12",
+      "status": "verifie (page officielle) ; contradictions de garantie sur la page",
+      "sourceUrls": [
+        "https://www.marblism.com/pricing"
+      ],
+      "whatItIs": "7 'AI Employees' (assistante executive, reseaux sociaux, generation de leads, site web, SEO, receptionniste, assistante juridique).",
+      "targetMarket": "Independants et petites entreprises.",
+      "pricingUnit": "un plan unique, 50 heures de travail IA par mois",
+      "plans": [
+        {
+          "name": "Mensuel",
+          "price": 44,
+          "currency": "USD",
+          "period": "mois",
+          "chfEquivalent": 36.57,
+          "includes": [
+            "7 employes IA",
+            "50 h de travail IA/mois",
+            "entreprises et membres illimites"
+          ],
+          "note": "Le libelle 'mensuel' n'est pas explicite sur la page ; deduit du tableau comparatif."
+        },
+        {
+          "name": "Annuel",
+          "price": 24,
+          "currency": "USD",
+          "period": "mois (equivalent, annuel)",
+          "chfEquivalent": 19.95,
+          "note": "'A partir de 24 USD/mois en annuel' (FAQ)."
+        }
+      ],
+      "singleAgentPrice": null,
+      "channels": {
+        "email": "oui",
+        "phone": "oui (receptionniste Rachel, numeros US/Canada/UK)",
+        "whatsapp": "non mentionne",
+        "other": "reseaux sociaux, site web"
+      },
+      "freeTrial": "non mentionne",
+      "annualDiscount": "environ 45 % (24 vs 44 USD)",
+      "minCommitment": "non precise",
+      "overage": "heures supplementaires achetables",
+      "notes": [
+        "La page annonce a la fois une garantie de 77 jours et de 7 jours : contradiction, non verifiee."
+      ]
+    },
+    {
+      "id": "lindy",
+      "name": "Lindy",
+      "category": "indirect_platform",
+      "origin": "non verifie",
+      "dateConsulted": "2026-10-12",
+      "status": "verifie (page officielle)",
+      "sourceUrls": [
+        "https://www.lindy.ai/pricing"
+      ],
+      "whatItIs": "Plateforme d'agents IA facturee en credits mutualises (usage detaille non lu sur la page tarifs).",
+      "targetMarket": "Equipes, PME.",
+      "pricingUnit": "par utilisateur actif + credits mutualises",
+      "plans": [
+        {
+          "name": "Free",
+          "price": 0,
+          "currency": "USD",
+          "period": "mois",
+          "chfEquivalent": 0.0,
+          "includes": [
+            "50 USD de credits, valables 7 jours",
+            "sans carte"
+          ]
+        },
+        {
+          "name": "Team (5 000 credits)",
+          "price": 49.99,
+          "currency": "USD",
+          "period": "mois",
+          "chfEquivalent": 41.55,
+          "includes": [
+            "5 000 credits/mois, par utilisateur actif",
+            "credits mutualises"
+          ],
+          "note": "Paliers : 6 000 = 59,99 ; 7 000 = 69,99 ; 8 000 = 79,99 ; 15 000 = 99,99 ; 20 000 = 149,99 ; 35 000 = 199,99 ; 45 000 = 299,99 USD ..."
+        },
+        {
+          "name": "Enterprise",
+          "price": null,
+          "currency": "USD",
+          "period": "sur devis",
+          "chfEquivalent": null
+        }
+      ],
+      "singleAgentPrice": null,
+      "channels": {
+        "email": "non precise sur la page tarifs",
+        "phone": "non precise sur la page tarifs",
+        "whatsapp": "non precise",
+        "other": "Slack (essai 7 jours par coequipier)"
+      },
+      "freeTrial": "Free : 50 USD de credits pendant 7 jours",
+      "annualDiscount": "non affiche",
+      "minCommitment": "aucun indique",
+      "overage": "recharge a 10 USD les 1 000 credits ; a court de credits les actions sont mises en pause (pas de facture surprise) ; les credits mensuels ne sont pas reportes",
+      "notes": [
+        "Cout d'une tache : 'demandes courantes' 2 a 250 credits ; 'travail approfondi' 250 a 1 000 ; 'grosses constructions' 1 000 a 2 500 credits (page officielle)."
+      ]
+    },
+    {
+      "id": "relevance-ai",
+      "name": "Relevance AI",
+      "category": "indirect_platform",
+      "origin": "non verifie",
+      "dateConsulted": "2026-10-12",
+      "status": "sur devis (aucun prix publie)",
+      "sourceUrls": [
+        "https://relevanceai.com/pricing"
+      ],
+      "whatItIs": "Plateforme d'agents / 'AI workforce' (agents d'appel et de reunion, BDR).",
+      "targetMarket": "Entreprises ('Enterprise' seul plan affiche).",
+      "pricingUnit": "sur devis",
+      "plans": [
+        {
+          "name": "Enterprise",
+          "price": null,
+          "currency": "USD",
+          "period": "sur devis",
+          "chfEquivalent": null,
+          "includes": [
+            "agents et outils illimites",
+            "2 000+ integrations",
+            "agents d'appel et de reunion",
+            "SSO, audit"
+          ]
+        }
+      ],
+      "singleAgentPrice": null,
+      "channels": {
+        "email": "non precise",
+        "phone": "oui (agents d'appel)",
+        "whatsapp": "non mentionne",
+        "other": ""
+      },
+      "freeTrial": "non publie",
+      "annualDiscount": "non publie",
+      "minCommitment": "non publie",
+      "overage": "non publie",
+      "notes": [
+        "La page lue le 2026-10-12 ne montre que le plan Enterprise avec 'Talk to sales'."
+      ]
+    },
+    {
+      "id": "artisan",
+      "name": "Artisan (Ava, AI BDR)",
+      "category": "indirect_platform",
+      "origin": "non verifie",
+      "dateConsulted": "2026-10-12",
+      "status": "sur devis (aucun prix publie)",
+      "sourceUrls": [
+        "https://www.artisan.co/pricing"
+      ],
+      "whatItIs": "Ava, un 'AI BDR' qui prospecte et prend des rendez-vous ; plans dimensionnes par volume de leads (~2 500 ou ~6 000 leads contactes par mois), boites mail et licences dialer.",
+      "targetMarket": "Equipes de vente B2B.",
+      "pricingUnit": "sur devis, par volume de leads",
+      "plans": [
+        {
+          "name": "Team (~2 500 leads/mois)",
+          "price": null,
+          "currency": "USD",
+          "period": "sur devis",
+          "chfEquivalent": null
+        },
+        {
+          "name": "Scale (~6 000 leads/mois)",
+          "price": null,
+          "currency": "USD",
+          "period": "sur devis",
+          "chfEquivalent": null
+        },
+        {
+          "name": "Enterprise",
+          "price": null,
+          "currency": "USD",
+          "period": "sur mesure",
+          "chfEquivalent": null
+        }
+      ],
+      "singleAgentPrice": null,
+      "channels": {
+        "email": "oui",
+        "phone": "dialer en option par licence",
+        "whatsapp": "non mentionne",
+        "other": "reseaux sociaux"
+      },
+      "freeTrial": "non publie",
+      "annualDiscount": "non publie",
+      "minCommitment": "non publie",
+      "overage": "non publie",
+      "notes": [
+        "'Pricing scoped on your plan' + 'Talk to sales' sur chaque plan."
+      ]
+    },
+    {
+      "id": "11x",
+      "name": "11x (Alice, Julian)",
+      "category": "indirect_platform",
+      "origin": "non verifie",
+      "dateConsulted": "2026-10-12",
+      "status": "verifie (page officielle) ; chiffre contradictoire dans la FAQ",
+      "sourceUrls": [
+        "https://11x.ai/products/alice/pricing"
+      ],
+      "whatItIs": "Alice, SDR numerique pour la prospection sortante ; Julian pour l'entrant (prix non inclus dans la page).",
+      "targetMarket": "Entreprises B2B (annuel par defaut).",
+      "pricingUnit": "par lead (pas par envoi), engagement annuel",
+      "plans": [
+        {
+          "name": "Growth",
+          "price": 3750,
+          "currency": "USD",
+          "period": "mois, facture annuellement",
+          "chfEquivalent": 3116.51,
+          "includes": [
+            "jusqu'a 5 utilisateurs",
+            "2 000 nouveaux prospects/mois",
+            "boites Gmail gerees"
+          ],
+          "note": "La FAQ de la meme page dit 'a partir de 36 000 USD par an' (= 3 000 USD/mois) : contradiction ; a confirmer avec 11x."
+        },
+        {
+          "name": "Pro",
+          "price": null,
+          "currency": "USD",
+          "period": "sur devis",
+          "chfEquivalent": null,
+          "includes": [
+            "10 utilisateurs",
+            "5 000 prospects/mois"
+          ]
+        },
+        {
+          "name": "Enterprise",
+          "price": null,
+          "currency": "USD",
+          "period": "sur devis",
+          "chfEquivalent": null
+        }
+      ],
+      "singleAgentPrice": {
+        "amount": 3750,
+        "currency": "USD",
+        "period": "mois (annuel)",
+        "chfEquivalent": 3116.51,
+        "note": "Un agent (Alice) = 3 750 USD/mois, engagement annuel."
+      },
+      "channels": {
+        "email": "oui (Gmail geres)",
+        "phone": "non precise (Julian = entrant)",
+        "whatsapp": "non mentionne",
+        "other": "105+ langues (Pro)"
+      },
+      "freeTrial": "non publie",
+      "annualDiscount": "annuel par defaut ; remises sur 2-3 ans",
+      "minCommitment": "annuel",
+      "overage": "au lead",
+      "notes": []
+    },
+    {
+      "id": "aisdr",
+      "name": "AiSDR",
+      "category": "indirect_platform",
+      "origin": "non verifie",
+      "dateConsulted": "2026-10-12",
+      "status": "verifie (page officielle)",
+      "sourceUrls": [
+        "https://www.aisdr.com/pricing"
+      ],
+      "whatItIs": "SDR IA pour la prospection (email + LinkedIn).",
+      "targetMarket": "Equipes commerciales B2B.",
+      "pricingUnit": "par volume de contacts/mois",
+      "plans": [
+        {
+          "name": "Solo",
+          "price": 250,
+          "currency": "USD",
+          "period": "mois (2 400 USD/an)",
+          "chfEquivalent": 207.77,
+          "includes": [
+            "200 contacts/mois",
+            "1 utilisateur"
+          ]
+        },
+        {
+          "name": "Explore",
+          "price": 900,
+          "currency": "USD",
+          "period": "mois (8 640 USD/an)",
+          "chfEquivalent": 747.96,
+          "includes": [
+            "800 contacts/mois",
+            "utilisateurs illimites"
+          ]
+        },
+        {
+          "name": "Scale",
+          "price": 2500,
+          "currency": "USD",
+          "period": "mois (24 000 USD/an)",
+          "chfEquivalent": 2077.67,
+          "includes": [
+            "2 500 contacts/mois"
+          ]
+        }
+      ],
+      "singleAgentPrice": {
+        "amount": 250,
+        "currency": "USD",
+        "period": "mois",
+        "chfEquivalent": 207.77,
+        "note": "Plan Solo, sans engagement."
+      },
+      "channels": {
+        "email": "oui",
+        "phone": "etapes d'appel IA avec dialer Aircall (palier non precise)",
+        "whatsapp": "non mentionne",
+        "other": "LinkedIn"
+      },
+      "freeTrial": "pas d'essai ; inscription sans carte",
+      "annualDiscount": "20 %",
+      "minCommitment": "Solo : aucun ; Explore/Scale : 1 trimestre",
+      "overage": "paiement du depassement possible ; service gere +149 USD/campagne (Explore) ou +2 500 USD/mois (Scale)",
+      "notes": []
+    },
+    {
+      "id": "cassidy",
+      "name": "Cassidy",
+      "category": "indirect_platform",
+      "origin": "non verifie",
+      "dateConsulted": "2026-10-12",
+      "status": "partiel (prix Business non publie)",
+      "sourceUrls": [
+        "https://www.cassidyai.com/pricing"
+      ],
+      "whatItIs": "Plateforme d'agents et de workflows IA pour equipes.",
+      "targetMarket": "Equipes / entreprises.",
+      "pricingUnit": "sieges + credits IA",
+      "plans": [
+        {
+          "name": "Starter",
+          "price": 0,
+          "currency": "USD",
+          "period": "gratuit",
+          "chfEquivalent": 0.0,
+          "includes": [
+            "3 sieges",
+            "10 000 credits IA/mois",
+            "5 agents, 5 workflows"
+          ]
+        },
+        {
+          "name": "Business",
+          "price": null,
+          "currency": "USD",
+          "period": "sur devis",
+          "chfEquivalent": null
+        }
+      ],
+      "singleAgentPrice": null,
+      "channels": {
+        "email": "non precise",
+        "phone": "non precise",
+        "whatsapp": "non precise",
+        "other": "Slack, Teams"
+      },
+      "freeTrial": "14 jours (FAQ)",
+      "annualDiscount": "non mentionne",
+      "minCommitment": "non publie",
+      "overage": "recharges de credits possibles",
+      "notes": []
+    },
+    {
+      "id": "dust",
+      "name": "Dust",
+      "category": "indirect_platform",
+      "origin": "non verifie (prix en EUR)",
+      "dateConsulted": "2026-10-12",
+      "status": "verifie (page officielle)",
+      "sourceUrls": [
+        "https://dust.tt/pricing"
+      ],
+      "whatItIs": "Plateforme d'agents IA personnalisables pour equipes, avec connexions aux donnees de l'entreprise.",
+      "targetMarket": "Equipes jusqu'a 100 personnes (Business) et grands comptes.",
+      "pricingUnit": "par siege et par mois + credits",
+      "plans": [
+        {
+          "name": "Free",
+          "price": 0,
+          "currency": "EUR",
+          "period": "mois",
+          "chfEquivalent": 0.0,
+          "includes": [
+            "500 credits (a vie)"
+          ]
+        },
+        {
+          "name": "Pro (annuel)",
+          "price": 24,
+          "currency": "EUR",
+          "period": "siege/mois",
+          "chfEquivalent": 22.35,
+          "includes": [
+            "8 000 credits/siege/mois"
+          ],
+          "note": "30 EUR/siege/mois en mensuel"
+        },
+        {
+          "name": "Pro (mensuel)",
+          "price": 30,
+          "currency": "EUR",
+          "period": "siege/mois",
+          "chfEquivalent": 27.94
+        },
+        {
+          "name": "Max (annuel)",
+          "price": 120,
+          "currency": "EUR",
+          "period": "siege/mois",
+          "chfEquivalent": 111.76,
+          "includes": [
+            "40 000 credits/siege/mois"
+          ],
+          "note": "150 EUR/siege/mois en mensuel"
+        },
+        {
+          "name": "Max (mensuel)",
+          "price": 150,
+          "currency": "EUR",
+          "period": "siege/mois",
+          "chfEquivalent": 139.69
+        },
+        {
+          "name": "Enterprise",
+          "price": null,
+          "currency": "EUR",
+          "period": "sur devis",
+          "chfEquivalent": null
+        }
+      ],
+      "singleAgentPrice": null,
+      "channels": {
+        "email": "non",
+        "phone": "non",
+        "whatsapp": "non",
+        "other": "chat, Slack, connecteurs"
+      },
+      "freeTrial": "plan gratuit (500 credits a vie)",
+      "annualDiscount": "20 %",
+      "minCommitment": "aucun indique",
+      "overage": "usage programmatique 0,01 USD/credit",
+      "notes": [
+        "Hors taxes."
+      ]
+    },
+    {
+      "id": "beam-ai",
+      "name": "Beam AI",
+      "category": "indirect_platform",
+      "origin": "non verifie",
+      "dateConsulted": "2026-10-12",
+      "status": "verifie (page officielle)",
+      "sourceUrls": [
+        "https://beam.ai/pricing"
+      ],
+      "whatItIs": "Agents IA pour automatiser des processus (par taches).",
+      "targetMarket": "PME a entreprises.",
+      "pricingUnit": "par taches/mois",
+      "plans": [
+        {
+          "name": "Free",
+          "price": 0,
+          "currency": "USD",
+          "period": "mois",
+          "chfEquivalent": 0.0,
+          "includes": [
+            "20 taches/mois",
+            "1 integration"
+          ]
+        },
+        {
+          "name": "Pro",
+          "price": 50,
+          "currency": "USD",
+          "period": "mois",
+          "chfEquivalent": 41.55,
+          "includes": [
+            "200 taches/mois"
+          ]
+        },
+        {
+          "name": "Scale",
+          "price": 3990,
+          "currency": "USD",
+          "period": "mois",
+          "chfEquivalent": 3315.97,
+          "includes": [
+            "haut volume",
+            "3 integrations"
+          ]
+        },
+        {
+          "name": "Custom",
+          "price": null,
+          "currency": "USD",
+          "period": "sur devis",
+          "chfEquivalent": null
+        }
+      ],
+      "singleAgentPrice": null,
+      "channels": {
+        "email": "non precise",
+        "phone": "non precise",
+        "whatsapp": "non precise",
+        "other": ""
+      },
+      "freeTrial": "plan Free",
+      "annualDiscount": "non mentionne",
+      "minCommitment": "non precise",
+      "overage": "non publie",
+      "notes": []
+    },
+    {
+      "id": "agentforce",
+      "name": "Salesforce Agentforce",
+      "category": "enterprise",
+      "origin": "non verifie",
+      "dateConsulted": "2026-10-12",
+      "status": "verifie (page officielle)",
+      "sourceUrls": [
+        "https://www.salesforce.com/agentforce/pricing/"
+      ],
+      "whatItIs": "Agents IA integres au CRM Salesforce.",
+      "targetMarket": "Entreprises equipees de Salesforce.",
+      "pricingUnit": "a la conversation, a l'action (Flex Credits) ou par utilisateur",
+      "plans": [
+        {
+          "name": "A la conversation",
+          "price": 2,
+          "currency": "USD",
+          "period": "conversation",
+          "chfEquivalent": 1.66
+        },
+        {
+          "name": "Flex Credits",
+          "price": 500,
+          "currency": "USD",
+          "period": "100 000 credits (action standard = 20 credits = 0,10 USD ; action voix = 30 credits = 0,15 USD)",
+          "chfEquivalent": 415.53
+        },
+        {
+          "name": "Licence Agentforce User",
+          "price": 5,
+          "currency": "USD",
+          "period": "utilisateur/mois (necessite des Flex Credits)",
+          "chfEquivalent": 4.16
+        },
+        {
+          "name": "Add-on Sales/Service",
+          "price": 125,
+          "currency": "USD",
+          "period": "utilisateur/mois",
+          "chfEquivalent": 103.88
+        },
+        {
+          "name": "Editions Max",
+          "price": 550,
+          "currency": "USD",
+          "period": "utilisateur/mois (a partir de)",
+          "chfEquivalent": 457.09
+        }
+      ],
+      "singleAgentPrice": null,
+      "channels": {
+        "email": "oui",
+        "phone": "oui (actions voix)",
+        "whatsapp": "non precise",
+        "other": ""
+      },
+      "freeTrial": "Salesforce Foundations a 0 USD",
+      "annualDiscount": "non applicable",
+      "minCommitment": "non precise",
+      "overage": "paiement a l'usage",
+      "notes": [
+        "Prix en EUR identiques en chiffres (2 EUR/conversation, 500 EUR/100 000 credits) selon le convertisseur de la page."
+      ]
+    },
+    {
+      "id": "copilot-studio",
+      "name": "Microsoft Copilot Studio",
+      "category": "enterprise",
+      "origin": "non verifie",
+      "dateConsulted": "2026-10-12",
+      "status": "verifie (page officielle) ; tarif au credit non publie",
+      "sourceUrls": [
+        "https://www.microsoft.com/en-us/microsoft-copilot/microsoft-copilot-studio"
+      ],
+      "whatItIs": "Constructeur d'agents IA dans l'ecosysteme Microsoft.",
+      "targetMarket": "Entreprises Microsoft 365/Azure.",
+      "pricingUnit": "packs de credits Copilot (25 000 par mois) ou paiement a l'usage",
+      "plans": [
+        {
+          "name": "Pack 25 000 credits",
+          "price": 200,
+          "currency": "USD",
+          "period": "mois",
+          "chfEquivalent": 166.21,
+          "includes": [
+            "facturation par locataire (tenant)"
+          ],
+          "note": "Soit 0,008 USD/credit (calcul). Remise jusqu'a 20 % en achat anticipe ; depassement : paiement a l'usage."
+        },
+        {
+          "name": "Paiement a l'usage",
+          "price": null,
+          "currency": "USD",
+          "period": "non publie",
+          "chfEquivalent": null
+        }
+      ],
+      "singleAgentPrice": null,
+      "channels": {
+        "email": "non precise",
+        "phone": "non precise",
+        "whatsapp": "non precise",
+        "other": "Teams, Microsoft 365"
+      },
+      "freeTrial": "credit Azure de 200 USD (offre Azure, pas Copilot Studio)",
+      "annualDiscount": "jusqu'a 20 % (achat anticipe)",
+      "minCommitment": "non precise",
+      "overage": "paiement a l'usage",
+      "notes": [
+        "Abonnement Azure obligatoire."
+      ]
+    },
+    {
+      "id": "zapier-agents",
+      "name": "Zapier (Zaps + Agents)",
+      "category": "indirect_platform",
+      "origin": "non verifie",
+      "dateConsulted": "2026-10-12",
+      "status": "partiel (prix des Agents peu clair)",
+      "sourceUrls": [
+        "https://zapier.com/pricing"
+      ],
+      "whatItIs": "Automatisations (Zaps) et Agents IA facturés en 'activites'.",
+      "targetMarket": "Tous publics.",
+      "pricingUnit": "taches par mois ; activites pour les Agents",
+      "plans": [
+        {
+          "name": "Free",
+          "price": 0,
+          "currency": "USD",
+          "period": "mois",
+          "chfEquivalent": 0.0,
+          "includes": [
+            "100 taches/mois",
+            "400 activites Agents/mois"
+          ]
+        },
+        {
+          "name": "Professional 750 taches (annuel)",
+          "price": 19.99,
+          "currency": "USD",
+          "period": "mois",
+          "chfEquivalent": 16.61,
+          "includes": [
+            "1 500 activites Agents/mois"
+          ],
+          "note": "29,99 USD en mensuel"
+        },
+        {
+          "name": "Team 2 000 taches (annuel)",
+          "price": 69,
+          "currency": "USD",
+          "period": "mois",
+          "chfEquivalent": 57.34,
+          "note": "103,50 USD en mensuel"
+        },
+        {
+          "name": "Enterprise",
+          "price": null,
+          "currency": "USD",
+          "period": "sur devis",
+          "chfEquivalent": null
+        }
+      ],
+      "singleAgentPrice": null,
+      "channels": {
+        "email": "via integrations",
+        "phone": "non",
+        "whatsapp": "non",
+        "other": ""
+      },
+      "freeTrial": "plan gratuit",
+      "annualDiscount": "33 %",
+      "minCommitment": "non",
+      "overage": "non decrit pour les Agents",
+      "notes": [
+        "Le resume lu de la page est confus sur le prix des Agents (mention 'environ 33,33 USD/mois en annuel' non retenue)."
+      ]
+    },
+    {
+      "id": "phonely",
+      "name": "Phonely (agent vocal IA)",
+      "category": "voice",
+      "origin": "non verifie",
+      "dateConsulted": "2026-10-12",
+      "status": "verifie (page officielle) ; chiffres internes contradictoires",
+      "sourceUrls": [
+        "https://www.phonely.ai/pricing"
+      ],
+      "whatItIs": "Agent telephonique IA (receptionniste) ; reference pour un 'Worker telephone' vendu seul.",
+      "targetMarket": "PME.",
+      "pricingUnit": "forfait + minutes",
+      "plans": [
+        {
+          "name": "Free",
+          "price": 0,
+          "currency": "USD",
+          "period": "mois",
+          "chfEquivalent": 0.0,
+          "includes": [
+            "100 minutes",
+            "1 numero"
+          ]
+        },
+        {
+          "name": "Starter (mensuel)",
+          "price": 50,
+          "currency": "USD",
+          "period": "mois",
+          "chfEquivalent": 41.55,
+          "includes": [
+            "200 (cartes) ou 250 (tableau) minutes",
+            "3 numeros"
+          ],
+          "note": "33 USD/mois en annuel ; depassement 0,25 USD/min (mensuel), 0,35 (annuel)"
+        },
+        {
+          "name": "Pro (mensuel)",
+          "price": 150,
+          "currency": "USD",
+          "period": "mois",
+          "chfEquivalent": 124.66,
+          "includes": [
+            "650 ou 750 minutes",
+            "5 numeros"
+          ],
+          "note": "100 USD/mois en annuel ; depassement 0,30 USD/min"
+        },
+        {
+          "name": "Enterprise",
+          "price": null,
+          "currency": "USD",
+          "period": "a partir de 0,05 USD/min",
+          "chfEquivalent": null
+        }
+      ],
+      "singleAgentPrice": {
+        "amount": 50,
+        "currency": "USD",
+        "period": "mois",
+        "chfEquivalent": 41.55,
+        "note": "Agent telephone seul."
+      },
+      "channels": {
+        "email": "non",
+        "phone": "oui",
+        "whatsapp": "non",
+        "other": "SMS IA, webchat"
+      },
+      "freeTrial": "plan Free (100 minutes)",
+      "annualDiscount": "33 %",
+      "minCommitment": "non precise",
+      "overage": "0,25 a 0,35 USD/min selon le plan",
+      "notes": []
+    },
+    {
+      "id": "swisscom-ai",
+      "name": "Swisscom - Swiss AI Assistant",
+      "category": "swiss_chat",
+      "origin": "Suisse",
+      "dateConsulted": "2026-10-12",
+      "status": "verifie (page officielle)",
+      "sourceUrls": [
+        "https://www.swisscom.ch/fr/business/pme/it-cloud/new-way-of-working/swiss-ai-assistant.html"
+      ],
+      "whatItIs": "Chatbot d'equipe hebergé en Suisse (assistants personnalises, documents, recherche, resume). Pas un agent qui repond par telephone ou WhatsApp.",
+      "targetMarket": "PME suisses (10 a 100 utilisateurs).",
+      "pricingUnit": "forfait mensuel par taille d'equipe et volume de jetons",
+      "plans": [
+        {
+          "name": "Essential",
+          "price": 149,
+          "currency": "CHF",
+          "period": "mois HT",
+          "chfEquivalent": 149.0,
+          "includes": [
+            "jusqu'a 10 utilisateurs",
+            "3 assistants/utilisateur",
+            "20 millions de jetons/mois"
+          ]
+        },
+        {
+          "name": "Professional",
+          "price": 399,
+          "currency": "CHF",
+          "period": "mois HT",
+          "chfEquivalent": 399.0,
+          "includes": [
+            "40 utilisateurs",
+            "75 millions de jetons"
+          ]
+        },
+        {
+          "name": "Premium",
+          "price": 799,
+          "currency": "CHF",
+          "period": "mois HT",
+          "chfEquivalent": 799.0,
+          "includes": [
+            "100 utilisateurs",
+            "200 millions de jetons"
+          ]
+        },
+        {
+          "name": "Custom",
+          "price": null,
+          "currency": "CHF",
+          "period": "sur devis",
+          "chfEquivalent": null
+        }
+      ],
+      "singleAgentPrice": null,
+      "channels": {
+        "email": "non precise",
+        "phone": "non",
+        "whatsapp": "non precise",
+        "other": "chat"
+      },
+      "freeTrial": "1 mois gratuit (2 assistants/utilisateur, 10 M jetons)",
+      "annualDiscount": "non",
+      "minCommitment": "aucun ; preavis 30 jours pour fin de mois",
+      "overage": "non publie",
+      "notes": [
+        "Seule offre en CHF d'un grand acteur suisse trouvee ; n'est pas un 'employe IA' mais ancre le prix percu pour l'IA en entreprise suisse."
+      ]
+    },
+    {
+      "id": "safe-swiss-cloud",
+      "name": "Safe Swiss Cloud - Private AI (PAI Chat)",
+      "category": "swiss_chat",
+      "origin": "Suisse",
+      "dateConsulted": "2026-10-12",
+      "status": "verifie (page officielle)",
+      "sourceUrls": [
+        "https://safeswisscloud.com/en/private-ai/private-ai-pricing/"
+      ],
+      "whatItIs": "Chatbot IA heberge en Suisse (SSO, choix de modeles) et API.",
+      "targetMarket": "Entreprises soucieuses de souverainete des donnees.",
+      "pricingUnit": "par utilisateur et par mois",
+      "plans": [
+        {
+          "name": "PAI Chat (a la demande)",
+          "price": 35,
+          "currency": "CHF",
+          "period": "utilisateur/mois",
+          "chfEquivalent": 35.0
+        },
+        {
+          "name": "PAI Chat (annuel)",
+          "price": 30,
+          "currency": "CHF",
+          "period": "utilisateur/mois",
+          "chfEquivalent": 30.0,
+          "includes": [
+            "250 requetes/utilisateur/jour",
+            "30 requetes/mois sur modeles avances"
+          ]
+        },
+        {
+          "name": "API (minimum)",
+          "price": 95,
+          "currency": "CHF",
+          "period": "mois (EUR 100 hors Suisse)",
+          "chfEquivalent": 95.0,
+          "note": "+ integration 250 CHF/heure"
+        }
+      ],
+      "singleAgentPrice": null,
+      "channels": {
+        "email": "non",
+        "phone": "non",
+        "whatsapp": "non",
+        "other": "chat"
+      },
+      "freeTrial": "non precise",
+      "annualDiscount": "environ 14 % (30 vs 35 CHF)",
+      "minCommitment": "non precise",
+      "overage": "non publie",
+      "notes": []
+    }
+  ],
+  "unverifiedLeads": [
+    {
+      "item": "aiaibot (Swiss Moonshot AG), chatbot heberge en Suisse 'des CHF 49 par mois'",
+      "source": "swissmadesoftware.org (resultat de recherche, non ouvert)",
+      "status": "non verifie"
+    },
+    {
+      "item": "CloudTalk : agent vocal IA des 99 EUR/mois avec 200 minutes ; JustCall 149 EUR/mois (100 min) ; Rosie AI des 49 EUR/mois ; Smith.ai 300 EUR/mois pour 30 appels",
+      "source": "https://www.cloudtalk.io/fr/blog/combien-coute-un-service-de-secretariat-telephonique-ia/ (blog d'un editeur concurrent, resume de recherche non verifie)",
+      "status": "non verifie"
+    },
+    {
+      "item": "Fourchette 'standard telephonique IA' : 50 a 200 EUR/mois, 0,15 a 0,50 EUR/min ; integration sur mesure 6 000 a 15 000 EUR HT puis 0,10 a 0,25 EUR/min",
+      "source": "cloudtalk.io et kolonell.com (blogs commerciaux)",
+      "status": "non verifie"
+    },
+    {
+      "item": "Relevance AI : anciens plans publics (Free/Pro/Team) non retrouves sur la page du 2026-10-12",
+      "source": "https://relevanceai.com/pricing",
+      "status": "non verifie"
+    },
+    {
+      "item": "Prix publics 11x 'Julian' (agent entrant)",
+      "source": "non inclus dans la page Alice",
+      "status": "non verifie"
+    },
+    {
+      "item": "Tarifs par message WhatsApp de Meta pour la Suisse ('Rest of Western Europe') et la France : tableau charge dynamiquement, non lisible automatiquement",
+      "source": "https://developers.facebook.com/docs/whatsapp/pricing#rate-cards",
+      "status": "non verifie"
+    },
+    {
+      "item": "Prix reel du contrat OVH de notre VPS (VPS-1 'a partir de 4,54 USD/mois' d'apres la page OVH, devise et TVA non precisees)",
+      "source": "https://www.ovhcloud.com/en/vps/",
+      "status": "non verifie : a confirmer avec la facture OVH"
+    },
+    {
+      "item": "Unite exacte de facturation de la reconnaissance vocale Twilio 'Gather' : la page dit '0,02 USD / use'",
+      "source": "https://www.twilio.com/en-us/voice/pricing/ch",
+      "status": "partiel : a confirmer sur une facture reelle"
+    },
+    {
+      "item": "Frais Stripe Billing 0,7 % : s'applique si les abonnements passent par Stripe Billing ; a confirmer sur le compte du proprietaire",
+      "source": "https://stripe.com/ch/pricing",
+      "status": "partiel"
+    }
+  ],
+  "marketModels": {
+    "perWorker": [
+      "Delos (50 EUR/mois par Worker, en credits)",
+      "11x (Alice 3 750 USD/mois, annuel)",
+      "Artisan (Ava, sur devis par volume de leads)",
+      "Sintra (helper individuel liste 39 USD, statut incertain)"
+    ],
+    "bundle": [
+      "Limova (8 agents, 79,90 EUR/mois pour 5 utilisateurs)",
+      "Sintra X (12 helpers)",
+      "Marblism (7 employes, 44 USD/mois)"
+    ],
+    "creditsPool": [
+      "Lindy (5 000 credits 49,99 USD)",
+      "Dust (8 000 credits/siege)",
+      "Copilot Studio (25 000 credits 200 USD)",
+      "Agentforce (Flex Credits 500 USD/100 000)",
+      "Zapier (taches/activites)",
+      "Beam (taches)"
+    ],
+    "perOutcome": [
+      "Agentforce 2 USD/conversation",
+      "11x par lead"
+    ],
+    "perMinute": [
+      "Limova Tom 0,20 EUR/min",
+      "Phonely depassement 0,25-0,35 USD/min"
+    ],
+    "summary": "Le 'Worker a l'unite' est rare : seul Delos le publie clairement a l'intention des PME. Les offres PME bon marche sont des paquets generiques (Limova, Sintra, Marblism) ; les offres par agent unique (11x, Artisan) sont chères et reservees aux equipes de vente."
+  },
+  "anthropic": {
+    "source": "https://platform.claude.com/docs/en/about-claude/pricing",
+    "dateConsulted": "2026-10-12",
+    "unit": "USD par million de jetons (MTok)",
+    "models": {
+      "claude-haiku-5-5": {
+        "level": "Rapide",
+        "input": 0.1,
+        "output": 0.5,
+        "cacheWrite5m": 0.125,
+        "cacheRead": 0.01,
+        "note": "Au-dela de 100 000 jetons de prompt : 0,50 entree / 2,50 sortie / 0,05 lecture cache (x5)."
+      },
+      "claude-sonnet-5-5": {
+        "level": "Equilibre",
+        "input": 2.0,
+        "output": 10.0,
+        "cacheWrite5m": 2.5,
+        "cacheRead": 0.1,
+        "note": "Lecture du cache = 0,05 x le prix d'entree (et non 0,10 x comme dans la note de cadrage)."
+      },
+      "claude-opus-5-5": {
+        "level": "Approfondi",
+        "input": 4.0,
+        "output": 20.0,
+        "cacheWrite5m": 5.0,
+        "cacheRead": 0.2,
+        "note": "Lecture du cache = 0,05 x le prix d'entree."
+      },
+      "claude-haiku-4-5": {
+        "level": "ancien niveau par defaut",
+        "input": 1.0,
+        "output": 5.0,
+        "cacheWrite5m": 1.25,
+        "cacheRead": 0.1
+      },
+      "claude-fable-5-1": {
+        "level": "hors catalogue",
+        "input": 10.0,
+        "output": 50.0,
+        "cacheWrite5m": 12.5,
+        "cacheRead": 0.25
+      }
+    },
+    "tools": {
+      "webSearchPer1000": 10.0,
+      "webSearchNote": "plus les jetons des resultats, comptes en entree",
+      "codeExecution": "gratuit avec web_search/web_fetch ; sinon 0,05 USD par heure-conteneur apres 1 550 heures gratuites/mois",
+      "webFetch": "pas de frais en plus des jetons",
+      "filesApi": "gratuit (selon la note de cadrage, non re-verifie sur cette page)"
+    },
+    "differencesFromBriefing": [
+      "Lecture du cache Sonnet 5.5 / Opus 5.5 = 5 % du prix d'entree (0,10 et 0,20 USD/MTok), pas 10 %.",
+      "Les prix Haiku 5.5, Sonnet 5.5, Opus 5.5 et la recherche web a 10 USD/1000 sont confirmes."
+    ]
+  },
+  "missionCost": {
+    "assumptions": {
+      "systemPromptTokens": 9000,
+      "cache": "seul le prompt systeme est mis en cache (ecriture 1,25x au premier appel, lecture ensuite) ; le reste du contexte est refacture a chaque appel",
+      "scenarios": {
+        "leger": {
+          "calls": 2,
+          "out": 1000,
+          "searches": 0,
+          "search_tok": 0,
+          "u0": 1500
+        },
+        "typique": {
+          "calls": 4,
+          "out": 2500,
+          "searches": 1,
+          "search_tok": 4000,
+          "u0": 2000
+        },
+        "lourd": {
+          "calls": 6,
+          "out": 4000,
+          "searches": 3,
+          "search_tok": 5000,
+          "u0": 3000
+        }
+      },
+      "ceilingDefinition": "boucle jusqu'a maxIterations et webMaxUses de core/ai/LEVELS.json (6/3, 12/8, 20/15), 1 000 jetons de sortie par appel, 5 000 jetons par resultat de recherche",
+      "levels": {
+        "rapide": "claude-haiku-5-5 effort low",
+        "equilibre": "claude-sonnet-5-5 effort medium",
+        "approfondi": "claude-opus-5-5 effort high"
+      },
+      "caveat": "Hypotheses de calcul, pas des mesures. A recalibrer avec le registre de couts reel (branche ws/p1-e1-ledger). Les jetons de reflexion des niveaux eleves comptent en sortie : voir la sensibilite x2."
+    },
+    "perMission": {
+      "rapide": {
+        "leger": {
+          "usd": 0.0021,
+          "chf": 0.0017,
+          "chf_per_credit": 0.0017
+        },
+        "typique": {
+          "usd": 0.015,
+          "chf": 0.0125,
+          "chf_per_credit": 0.0125
+        },
+        "lourd": {
+          "usd": 0.0424,
+          "chf": 0.0352,
+          "chf_per_credit": 0.0352
+        }
+      },
+      "equilibre": {
+        "leger": {
+          "usd": 0.0404,
+          "chf": 0.0336,
+          "chf_per_credit": 0.0112
+        },
+        "typique": {
+          "usd": 0.1077,
+          "chf": 0.0895,
+          "chf_per_credit": 0.0298
+        },
+        "lourd": {
+          "usd": 0.273,
+          "chf": 0.2269,
+          "chf_per_credit": 0.0756
+        }
+      },
+      "approfondi": {
+        "leger": {
+          "usd": 0.0808,
+          "chf": 0.0672,
+          "chf_per_credit": 0.0084
+        },
+        "typique": {
+          "usd": 0.2054,
+          "chf": 0.1707,
+          "chf_per_credit": 0.0213
+        },
+        "lourd": {
+          "usd": 0.516,
+          "chf": 0.4288,
+          "chf_per_credit": 0.0536
+        }
+      }
+    },
+    "ceiling": {
+      "rapide": {
+        "usd": 0.044,
+        "chf": 0.036,
+        "maxIterations": 6,
+        "webMaxUses": 3
+      },
+      "equilibre": {
+        "usd": 1.036,
+        "chf": 0.861,
+        "maxIterations": 12,
+        "webMaxUses": 8
+      },
+      "approfondi": {
+        "usd": 5.229,
+        "chf": 4.346,
+        "maxIterations": 20,
+        "webMaxUses": 15
+      }
+    },
+    "sensitivityOutputX2HeavyScenario": {
+      "rapide": {
+        "usd": 0.0454,
+        "chf": 0.0377
+      },
+      "equilibre": {
+        "usd": 0.333,
+        "chf": 0.2767
+      },
+      "approfondi": {
+        "usd": 0.636,
+        "chf": 0.5286
+      }
+    },
+    "warmCacheTypical": {
+      "rapide": {
+        "usd": 0.014,
+        "chf": 0.0116
+      },
+      "equilibre": {
+        "usd": 0.0861,
+        "chf": 0.0716
+      },
+      "approfondi": {
+        "usd": 0.1622,
+        "chf": 0.1348
+      }
+    },
+    "conversationCacheLeverHeavy": {
+      "rapide": {
+        "usd": 0.0369,
+        "chf": 0.0307
+      },
+      "equilibre": {
+        "usd": 0.157,
+        "chf": 0.1305
+      },
+      "approfondi": {
+        "usd": 0.284,
+        "chf": 0.236
+      }
+    },
+    "script": "docs/pricing-cost-model.py"
+  },
+  "otherCosts": {
+    "fx": {
+      "source": "BCE via https://api.frankfurter.dev/v1/latest (donnees du 2026-10-09, dernier cours publie le 2026-10-12)",
+      "eurUsd": 1.1206,
+      "eurChf": 0.9313,
+      "usdChf": 0.83107,
+      "chfUsd": 1.2033
+    },
+    "vps": {
+      "source": "https://www.ovhcloud.com/en/vps/",
+      "dateConsulted": "2026-10-12",
+      "ourServer": "OVH, 2 vCPU / 3,8 Go (d'apres la memoire du projet), correspond a l'offre VPS-1 (2 vCores, 4 Go, 40 Go)",
+      "vps1FromUsdPerMonth": 4.54,
+      "vps2FromUsdPerMonth": 8.5,
+      "vps1Chf": 3.77,
+      "vps2Chf": 7.06,
+      "note": "Prix 'a partir de', devise et TVA non precisees ; contrat reel a confirmer. Part par client negligeable (moins de 0,10 CHF a 50 clients) mais capacite limitee : 2 vCPU pour des missions PowerShell de 600 s max.",
+      "status": "partiel"
+    },
+    "twilio": {
+      "source": "https://www.twilio.com/en-us/voice/pricing/ch",
+      "dateConsulted": "2026-10-12",
+      "pricingDate": "aout 2026 (selon la page)",
+      "swissLocalNumberUsdPerMonth": 1.15,
+      "inboundLocalUsdPerMin": 0.01,
+      "outboundLocalUsdPerMin": 0.0419,
+      "outboundMobileUsdPerMin": 0.1802,
+      "gatherSpeechUsdPerUse": 0.02,
+      "ttsNeuralUsdPer100Chars": 0.0032,
+      "ttsBasicUsd": 0.0,
+      "conversationRelayUsdPerMin": 0.07,
+      "phoneCostPerMinute": {
+        "hypothesis": "5 tours de parole par minute ; reponse de 250 caracteres ; appel du modele ~0,0003 USD par tour",
+        "usd": 0.1515,
+        "chf": 0.1259,
+        "range": {
+          "4 tours, voix gratuite": "0,076 CHF",
+          "6,5 tours, voix neurale": "0,161 CHF"
+        },
+        "formula": "0,01 + 5 x (0,02 + 250/100 x 0,0032 + 0,0003) = 0,1515 USD"
+      },
+      "note": "Un numero suisse demande une adresse verifiee (memoire du projet). Le compte Twilio est encore en mode essai : aucun numero achete."
+    },
+    "whatsapp": {
+      "sources": [
+        "https://www.twilio.com/en-us/whatsapp/pricing",
+        "https://developers.facebook.com/docs/whatsapp/pricing/"
+      ],
+      "dateConsulted": "2026-10-12",
+      "viaMetaDirectCloudApi": "Notre canal actuel (dashboard/whatsapp_channel.py) utilise l'API Cloud de Meta directement : les reponses non-modele dans la fenetre de 24 h apres un message du client sont gratuites cote Meta ; les messages modeles (hors fenetre) sont payes par message depuis le 2025-07-01.",
+      "viaTwilio": "Twilio ajoute 0,005 USD par message (entrant ou sortant) en plus des frais Meta ; page 'valable septembre 2026'.",
+      "metaRatesSwitzerlandFrance": "non verifie (tableau dynamique ; la Suisse releve de 'Rest of Western Europe')",
+      "costPerTenMessageConversationViaTwilioUsd": 0.05
+    },
+    "stripe": {
+      "source": "https://stripe.com/ch/pricing",
+      "dateConsulted": "2026-10-12",
+      "swissCards": "2,9 % + 0,30 CHF",
+      "foreignCards": "3,25 % + 0,30 CHF",
+      "currencyConversion": "+2 %",
+      "billing": "0,7 % du volume Billing (paiement a l'usage)",
+      "dispute": "20 CHF par litige",
+      "example": {
+        "plan29": {
+          "swissCardIncludingBilling": 1.34,
+          "foreignCardWithConversion": 2.03
+        },
+        "plan99": {
+          "swissCardIncludingBilling": 3.86,
+          "foreignCardWithConversion": 6.19
+        }
+      }
+    },
+    "vat": "Le site indique que BK-ENTREPRISE n'est pas assujettie a la TVA sous 100 000 CHF de chiffre d'affaires annuel : prix sans TVA, comparables aux prix HT de Limova."
+  },
+  "ourOfferToday": {
+    "source": "dashboard/server.py PLAN_CATALOG et dashboard/seo_pages.py PRICING_PLANS (origin/main, 2026-10-12) ; core/ai/LEVELS.json (branche origin/ws/memory-v2, desactive par defaut)",
+    "plans": [
+      {
+        "id": "essai",
+        "name": "Essai",
+        "priceChf": 0,
+        "credits": 15,
+        "note": "3 jours, sans carte"
+      },
+      {
+        "id": "starter",
+        "name": "Starter",
+        "priceChfMonth": 39,
+        "priceChfYear": 390,
+        "credits": 150,
+        "chfPerCredit": 0.26
+      },
+      {
+        "id": "business",
+        "name": "Business",
+        "priceChfMonth": 99,
+        "priceChfYear": 990,
+        "credits": 600,
+        "chfPerCredit": 0.165
+      },
+      {
+        "id": "pro",
+        "name": "Pro",
+        "priceChfMonth": 139,
+        "priceChfYear": 1390,
+        "credits": 1500,
+        "chfPerCredit": 0.0927
+      },
+      {
+        "id": "scale",
+        "name": "Scale",
+        "priceChfMonth": 449,
+        "priceChfYear": 4490,
+        "credits": 4000,
+        "chfPerCredit": 0.1123
+      },
+      {
+        "id": "enterprise",
+        "name": "Enterprise",
+        "priceChf": null,
+        "credits": null,
+        "note": "sur devis, illimite"
+      }
+    ],
+    "levelsProposed": {
+      "rapide": 1,
+      "equilibre": 3,
+      "approfondi": 8
+    },
+    "observations": [
+      "Aujourd'hui 1 mission = 1 credit quel que soit le modele (niveaux desactives, 'enabled': false).",
+      "La recharge de credits n'est pas reliee a un paiement (reservee au proprietaire) : aucun client ne peut acheter de credits supplementaires.",
+      "Le prix par credit est incoherent : Pro (0,093 CHF) est moins cher que Scale (0,112 CHF).",
+      "La page d'accueil affirme 'au moins 5 % moins cher que les alternatives comparables' et 'un chatbot seul coute 79 a 149 CHF/mois' : aucune source ne l'etaye dans le depot.",
+      "Les prix Stripe reels sont a recreer (note du 2026-09-15 dans IMPLEMENTATION-COMMERCIALISATION-SUISSE)."
+    ]
+  },
+  "recommendation": {
+    "creditScale": {
+      "current": {
+        "rapide": 1,
+        "equilibre": 3,
+        "approfondi": 8
+      },
+      "recommended": {
+        "rapide": 1,
+        "equilibre": 6,
+        "approfondi": 12
+      },
+      "unit": "1 credit = une mission Rapide ; cout reel pire cas d'un credit ~ 0,038 CHF (Equilibre lourd 0,2269 / 6)",
+      "heavyCostPerCreditChf": {
+        "actuelle 1/3/8": {
+          "rapide": 0.0352,
+          "equilibre": 0.0756,
+          "approfondi": 0.0536
+        },
+        "1/6/12": {
+          "rapide": 0.0352,
+          "equilibre": 0.0378,
+          "approfondi": 0.0357
+        }
+      },
+      "typicalCostPerCreditChf": {
+        "actuelle 1/3/8": {
+          "rapide": 0.0125,
+          "equilibre": 0.0298,
+          "approfondi": 0.0213
+        },
+        "1/6/12": {
+          "rapide": 0.0125,
+          "equilibre": 0.0149,
+          "approfondi": 0.0142
+        }
+      },
+      "verdictOnCurrentScale": "A CORRIGER : Equilibre a 3 credits coute 6,4x Rapide mais ne facture que 3x ; au pire cas Business 46 %, Pro 82 %, Scale 67 % du prix (regle 35 % depassee) ; Starter 29 % passe.",
+      "oldPlansEconomics": [
+        {
+          "plan": "Starter",
+          "priceChfMonth": 39,
+          "credits": 150,
+          "chfPerCredit": 0.26,
+          "aiWorstCaseChf": 11.34,
+          "aiWorstCasePct": 29.1,
+          "aiTypicalChf": 4.47,
+          "aiTypicalPct": 11.5,
+          "stripeSwissCardChf": 1.7,
+          "stripeForeignWithConversionChf": 2.62,
+          "marginWorstCaseSwissChf": 25.96,
+          "marginTypicalSwissChf": 32.82,
+          "maxCreditsFor35Pct": 180,
+          "passes35Pct": true
+        },
+        {
+          "plan": "Business",
+          "priceChfMonth": 99,
+          "credits": 600,
+          "chfPerCredit": 0.165,
+          "aiWorstCaseChf": 45.38,
+          "aiWorstCasePct": 45.8,
+          "aiTypicalChf": 17.9,
+          "aiTypicalPct": 18.1,
+          "stripeSwissCardChf": 3.86,
+          "stripeForeignWithConversionChf": 6.19,
+          "marginWorstCaseSwissChf": 49.76,
+          "marginTypicalSwissChf": 77.24,
+          "maxCreditsFor35Pct": 458,
+          "passes35Pct": false
+        },
+        {
+          "plan": "Pro",
+          "priceChfMonth": 139,
+          "credits": 1500,
+          "chfPerCredit": 0.0927,
+          "aiWorstCaseChf": 113.45,
+          "aiWorstCasePct": 81.6,
+          "aiTypicalChf": 44.75,
+          "aiTypicalPct": 32.2,
+          "stripeSwissCardChf": 5.3,
+          "stripeForeignWithConversionChf": 8.57,
+          "marginWorstCaseSwissChf": 20.25,
+          "marginTypicalSwissChf": 88.95,
+          "maxCreditsFor35Pct": 643,
+          "passes35Pct": false
+        },
+        {
+          "plan": "Scale",
+          "priceChfMonth": 449,
+          "credits": 4000,
+          "chfPerCredit": 0.1123,
+          "aiWorstCaseChf": 302.53,
+          "aiWorstCasePct": 67.4,
+          "aiTypicalChf": 119.33,
+          "aiTypicalPct": 26.6,
+          "stripeSwissCardChf": 16.46,
+          "stripeForeignWithConversionChf": 27.02,
+          "marginWorstCaseSwissChf": 130.01,
+          "marginTypicalSwissChf": 313.21,
+          "maxCreditsFor35Pct": 2077,
+          "passes35Pct": false
+        }
+      ]
+    },
+    "plans": [
+      {
+        "plan": "Solo",
+        "priceChfMonth": 29,
+        "credits": 250,
+        "chfPerCredit": 0.116,
+        "aiWorstCaseChf": 9.45,
+        "aiWorstCasePct": 32.6,
+        "aiTypicalChf": 3.73,
+        "aiTypicalPct": 12.9,
+        "stripeSwissCardChf": 1.34,
+        "stripeForeignWithConversionChf": 2.03,
+        "marginWorstCaseSwissChf": 18.21,
+        "marginTypicalSwissChf": 23.93,
+        "maxCreditsFor35Pct": 268,
+        "passes35Pct": true
+      },
+      {
+        "plan": "Trio",
+        "priceChfMonth": 59,
+        "credits": 500,
+        "chfPerCredit": 0.118,
+        "aiWorstCaseChf": 18.91,
+        "aiWorstCasePct": 32.0,
+        "aiTypicalChf": 7.46,
+        "aiTypicalPct": 12.6,
+        "stripeSwissCardChf": 2.42,
+        "stripeForeignWithConversionChf": 3.81,
+        "marginWorstCaseSwissChf": 37.67,
+        "marginTypicalSwissChf": 49.12,
+        "maxCreditsFor35Pct": 546,
+        "passes35Pct": true
+      },
+      {
+        "plan": "Equipe",
+        "priceChfMonth": 99,
+        "credits": 900,
+        "chfPerCredit": 0.11,
+        "aiWorstCaseChf": 34.03,
+        "aiWorstCasePct": 34.4,
+        "aiTypicalChf": 13.43,
+        "aiTypicalPct": 13.6,
+        "stripeSwissCardChf": 3.86,
+        "stripeForeignWithConversionChf": 6.19,
+        "marginWorstCaseSwissChf": 61.11,
+        "marginTypicalSwissChf": 81.72,
+        "maxCreditsFor35Pct": 916,
+        "passes35Pct": true
+      },
+      {
+        "plan": "Pro",
+        "priceChfMonth": 139,
+        "credits": 1250,
+        "chfPerCredit": 0.1112,
+        "aiWorstCaseChf": 47.27,
+        "aiWorstCasePct": 34.0,
+        "aiTypicalChf": 18.65,
+        "aiTypicalPct": 13.4,
+        "stripeSwissCardChf": 5.3,
+        "stripeForeignWithConversionChf": 8.57,
+        "marginWorstCaseSwissChf": 86.43,
+        "marginTypicalSwissChf": 115.05,
+        "maxCreditsFor35Pct": 1286,
+        "passes35Pct": true
+      },
+      {
+        "plan": "Scale",
+        "priceChfMonth": 449,
+        "credits": 4000,
+        "chfPerCredit": 0.1123,
+        "aiWorstCaseChf": 151.27,
+        "aiWorstCasePct": 33.7,
+        "aiTypicalChf": 59.67,
+        "aiTypicalPct": 13.3,
+        "stripeSwissCardChf": 16.46,
+        "stripeForeignWithConversionChf": 27.02,
+        "marginWorstCaseSwissChf": 281.27,
+        "marginTypicalSwissChf": 372.87,
+        "maxCreditsFor35Pct": 4155,
+        "passes35Pct": true
+      }
+    ],
+    "offers": [
+      {
+        "id": "essai",
+        "name": "Essai",
+        "priceChf": 0,
+        "credits": 15,
+        "levels": "Rapide seulement",
+        "notes": "3 jours, sans carte ; pas de minutes de telephone pendant l'essai"
+      },
+      {
+        "id": "solo",
+        "name": "Worker Solo (1 Worker au choix)",
+        "priceChfMonth": 29,
+        "priceChfYear": 290,
+        "credits": 250
+      },
+      {
+        "id": "trio",
+        "name": "Trio (3 Workers au choix)",
+        "priceChfMonth": 59,
+        "priceChfYear": 590,
+        "credits": 500
+      },
+      {
+        "id": "equipe",
+        "name": "Equipe (17 Workers + Chloe) - remplace 'Business'",
+        "priceChfMonth": 99,
+        "priceChfYear": 990,
+        "credits": 900
+      },
+      {
+        "id": "pro",
+        "name": "Pro",
+        "priceChfMonth": 139,
+        "priceChfYear": 1390,
+        "credits": 1250
+      },
+      {
+        "id": "scale",
+        "name": "Scale",
+        "priceChfMonth": 449,
+        "priceChfYear": 4490,
+        "credits": 4000
+      },
+      {
+        "id": "enterprise",
+        "name": "Enterprise",
+        "priceChf": null,
+        "notes": "sur devis"
+      }
+    ],
+    "retired": [
+      "Starter 39 CHF (remplace par Solo 29 et Trio 59)"
+    ],
+    "extraCreditPacks": [
+      {
+        "credits": 100,
+        "priceChf": 12,
+        "chfPerCredit": 0.12,
+        "aiWorstCasePct": 31.5
+      },
+      {
+        "credits": 500,
+        "priceChf": 55,
+        "chfPerCredit": 0.11,
+        "aiWorstCasePct": 34.4
+      }
+    ],
+    "metering": {
+      "phoneMinutes": "1,5 credit par minute d'appel (15 credits = 10 minutes), ~0,17 CHF/min au prix des plans ; cout reel estime 0,09 a 0,16 CHF/min (central 0,126)",
+      "whatsappAndEmailAutoReply": "1 credit par conversation traitee au niveau Rapide",
+      "ruleToRevisit": "passer a 2 credits/min si le cout mesure depasse 0,13 CHF/min"
+    },
+    "annualRule": "10 mensualites (2 mois offerts), comme le site actuel ; marche : Delos -8/-9 %, Limova -1/-2 % (hors codes), Marblism/Phonely/Zapier -33 a -45 %",
+    "comparisons": [
+      {
+        "comparison": "Solo 29 CHF/mois vs Delos Team (1 Worker) 50 EUR/mois",
+        "ourChf": 29,
+        "theirChf": 46.56,
+        "deltaPct": -37.7,
+        "verdict": "moins cher",
+        "basis": "prix publies, page Delos rendue le 2026-10-12"
+      },
+      {
+        "comparison": "Solo annuel 290 CHF (24,17/mois) vs Delos Team",
+        "ourChf": 24.17,
+        "theirChf": 46.56,
+        "deltaPct": -48.1,
+        "verdict": "moins cher",
+        "basis": "Delos n'affiche pas de prix annuel pour Team : comparaison avec le mensuel"
+      },
+      {
+        "comparison": "Solo 29 CHF vs Sintra helper individuel 39 USD (statut incertain)",
+        "ourChf": 29,
+        "theirChf": 32.41,
+        "deltaPct": -10.5,
+        "verdict": "moins cher",
+        "basis": "page Sintra ; plans individuels peut-etre retires (source tierce)"
+      },
+      {
+        "comparison": "Solo 29 CHF vs Lindy Team 49,99 USD",
+        "ourChf": 29,
+        "theirChf": 41.55,
+        "deltaPct": -30.2,
+        "verdict": "moins cher",
+        "basis": "Lindy = constructeur d'agents, pas un Worker pret a l'emploi"
+      },
+      {
+        "comparison": "Solo 29 CHF vs Marblism mensuel 44 USD (7 employes)",
+        "ourChf": 29,
+        "theirChf": 36.57,
+        "deltaPct": -20.7,
+        "verdict": "moins cher",
+        "basis": "Marblism = 7 employes pour ce prix"
+      },
+      {
+        "comparison": "Solo annuel 24,17 CHF/mois vs Marblism annuel 24 USD/mois",
+        "ourChf": 24.17,
+        "theirChf": 19.95,
+        "deltaPct": 21.2,
+        "verdict": "plus cher",
+        "basis": "Marblism = 7 employes pour ce prix"
+      },
+      {
+        "comparison": "Solo 29 CHF vs Dust Pro mensuel 30 EUR/siege",
+        "ourChf": 29,
+        "theirChf": 27.94,
+        "deltaPct": 3.8,
+        "verdict": "plus cher",
+        "basis": "Dust = plateforme de chat/agents, pas de canaux"
+      },
+      {
+        "comparison": "Solo 29 CHF vs Phonely Starter 50 USD (agent telephone seul)",
+        "ourChf": 29,
+        "theirChf": 41.55,
+        "deltaPct": -30.2,
+        "verdict": "moins cher",
+        "basis": "Phonely : 200-250 min incluses ; notre Solo : telephone en credits"
+      },
+      {
+        "comparison": "Solo annuel 24,17 CHF/mois vs Phonely Starter annuel 33 USD/mois",
+        "ourChf": 24.17,
+        "theirChf": 27.43,
+        "deltaPct": -11.9,
+        "verdict": "moins cher",
+        "basis": "idem"
+      },
+      {
+        "comparison": "Trio 59 CHF vs Limova Essentiel 79,90 EUR (8 agents, 5 utilisateurs)",
+        "ourChf": 59,
+        "theirChf": 74.41,
+        "deltaPct": -20.7,
+        "verdict": "moins cher",
+        "basis": "prix affiche HT ; Limova = 8 agents, nous = 3 Workers"
+      },
+      {
+        "comparison": "Trio 59 CHF vs Limova Essentiel avec code LEGEND10 (71,91 EUR)",
+        "ourChf": 59,
+        "theirChf": 66.97,
+        "deltaPct": -11.9,
+        "verdict": "moins cher",
+        "basis": "si le code s'applique au prix affiche (non verifie)"
+      },
+      {
+        "comparison": "Trio annuel 49,17 CHF/mois vs Limova Essentiel annuel 949,90 EUR/12",
+        "ourChf": 49.17,
+        "theirChf": 73.72,
+        "deltaPct": -33.3,
+        "verdict": "moins cher",
+        "basis": "prix affiches"
+      },
+      {
+        "comparison": "Equipe 99 CHF vs Limova Pro 139,90 EUR (agent telephone + chatbot WhatsApp)",
+        "ourChf": 99,
+        "theirChf": 130.29,
+        "deltaPct": -24.0,
+        "verdict": "moins cher",
+        "basis": "le seul plan Limova avec agent telephone et chatbot WhatsApp ; Limova facture en plus 0,20 EUR/min"
+      },
+      {
+        "comparison": "Equipe 99 CHF vs Limova Pro avec code LEGEND10 (125,91 EUR)",
+        "ourChf": 99,
+        "theirChf": 117.26,
+        "deltaPct": -15.6,
+        "verdict": "moins cher",
+        "basis": "si le code s'applique (non verifie)"
+      },
+      {
+        "comparison": "Equipe annuel 990 CHF vs Limova Pro annuel 1 649,90 EUR",
+        "ourChf": 990,
+        "theirChf": 1536.55,
+        "deltaPct": -35.6,
+        "verdict": "moins cher",
+        "basis": "prix affiches"
+      },
+      {
+        "comparison": "Equipe annuel 990 CHF vs Limova Pro annuel avec LEGEND25 (1 237,43 EUR)",
+        "ourChf": 990,
+        "theirChf": 1152.41,
+        "deltaPct": -14.1,
+        "verdict": "moins cher",
+        "basis": "si le code s'applique (non verifie)"
+      },
+      {
+        "comparison": "Equipe 99 CHF vs Limova Essentiel 79,90 EUR (sans agent telephone ni chatbot WhatsApp)",
+        "ourChf": 99,
+        "theirChf": 74.41,
+        "deltaPct": 33.0,
+        "verdict": "plus cher",
+        "basis": "17 Workers contre 8 agents"
+      },
+      {
+        "comparison": "Equipe 99 CHF vs Sintra 12 mois prix liste 52 USD",
+        "ourChf": 99,
+        "theirChf": 43.22,
+        "deltaPct": 129.1,
+        "verdict": "plus cher",
+        "basis": "Sintra : 12 helpers, 250 credits, US"
+      },
+      {
+        "comparison": "Equipe 99 CHF vs Marblism mensuel 44 USD",
+        "ourChf": 99,
+        "theirChf": 36.57,
+        "deltaPct": 170.7,
+        "verdict": "plus cher",
+        "basis": "Marblism : 7 employes, 50 h"
+      },
+      {
+        "comparison": "Equipe 99 CHF vs Swisscom Swiss AI Assistant Essential 149 CHF",
+        "ourChf": 99,
+        "theirChf": 149,
+        "deltaPct": -33.6,
+        "verdict": "moins cher",
+        "basis": "chatbot d'equipe, 10 utilisateurs"
+      },
+      {
+        "comparison": "Pro 139 CHF vs Limova Pro 139,90 EUR",
+        "ourChf": 139,
+        "theirChf": 130.29,
+        "deltaPct": 6.7,
+        "verdict": "plus cher",
+        "basis": "memes chiffres nominaux mais EUR vaut 0,9313 CHF"
+      },
+      {
+        "comparison": "Telephone 1,5 credit/min (~0,17 CHF) vs Limova Tom 0,20 EUR/min",
+        "ourChf": 0.17,
+        "theirChf": 0.19,
+        "deltaPct": -8.7,
+        "verdict": "moins cher",
+        "basis": "Limova exige en plus le plan Pro"
+      },
+      {
+        "comparison": "Telephone 1,5 credit/min (~0,17 CHF) vs Phonely depassement Starter 0,25 USD/min",
+        "ourChf": 0.17,
+        "theirChf": 0.21,
+        "deltaPct": -18.2,
+        "verdict": "moins cher",
+        "basis": "Phonely : hors minutes incluses"
+      }
+    ],
+    "positioning": {
+      "ifChannelsLive": "Un Worker IA qui repond a vos e-mails, a vos appels et sur WhatsApp, des CHF 29 par mois sans engagement : 38 % moins cher que le Worker a l'unite de Delos (50 EUR, soit CHF 46.56 au 12.10.2026), et sans le plan Pro a 139,90 EUR que Limova exige pour debloquer l'agent telephone et le chatbot WhatsApp.",
+      "today": "Un Worker IA specialise par metier, des CHF 29 par mois sans engagement, qui prepare vos e-mails et vos documents avec validation avant toute action sensible : 38 % moins cher que le Worker a l'unite de Delos (50 EUR/mois).",
+      "mustNotSay": [
+        "'au moins 5 % moins cher que les alternatives comparables' (faux face a Limova Essentiel, Sintra, Marblism, Dust)",
+        "'le moins cher du marche'",
+        "toute note, avis, nombre de clients ou certification de concurrent",
+        "'telephone/WhatsApp pour vos clients' tant que le numero et l'installation par client ne sont pas en production"
+      ]
+    },
+    "risks": [
+      "Baisse de prix d'un concurrent (Sintra et Marblism affichent deja 15,60 a 24 USD/mois en promotion).",
+      "Changement de prix Anthropic (Haiku 5.5 x5 au-dessus de 100 000 jetons de prompt ; cache Sonnet/Opus a 5 % ; nouveaux modeles).",
+      "Taux de change : couts en USD, ventes en CHF (+/-10 % sur le dollar = +/-3,4 points sur le ratio de 34 %).",
+      "Abus de l'essai (multi-comptes) : cout IA borne a ~0,57 CHF pire cas par essai, mais le telephone/WhatsApp sortant coute reellement : pas de telephone en essai.",
+      "Missions qui atteignent le plafond de la boucle (jusqu'a 4,35 CHF pour Approfondi) : plafond de cout par mission a imposer.",
+      "Canaux pas encore construits (numero Twilio, WhatsApp par client, declencheurs autonomes, installation par Worker) : ne pas vendre avant.",
+      "Capacite du serveur (2 vCPU) si les missions autonomes se multiplient.",
+      "Allegations comparatives : en droit suisse (LCD) et francais, une comparaison de prix doit etre exacte et verifiable ; la page d'accueil actuelle ne l'est pas."
+    ]
+  }
+}
