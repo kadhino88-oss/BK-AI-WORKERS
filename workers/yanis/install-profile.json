@@ -1,0 +1,206 @@
+{
+  "schema": "BK-INSTALL-PROFILE-V1",
+  "workerId": "yanis",
+  "displayName": "Yanis",
+  "tagline": "Transforme un projet flou en plan daté, RACI et registre des risques, puis suit l'avancement sans jamais tout peindre en vert.",
+  "idealFor": "Dirigeants et responsables de PME qui pilotent des projets (lancement, déménagement, refonte, recrutement, événement) sans chef de projet et veulent un plan réaliste et un suivi honnête.",
+  "services": [
+    {
+      "id": "cadrage-plan-projet",
+      "label": "Cadrage et plan de projet complet (charte, WBS, Gantt daté, RACI)",
+      "description": "Yanis reformule l'objectif et le périmètre (dans, hors), identifie les parties prenantes, rédige la charte de projet, découpe le travail en lots et tâches de 1 à 10 jours, calcule un planning daté en jours ouvrés (week-ends exclus, jours fériés signalés) avec dépendances, jalons et chemin critique, puis livre un classeur Excel (WBS, Gantt coloré, risques) et la charte en Word.",
+      "skills": ["ROADMAP_PLANNING", "MILESTONE_TRACKING", "DEPENDENCY_MANAGEMENT", "RESOURCE_ALLOCATION", "RISK_REGISTER", "TASK_TRACKING"],
+      "requiredConnectors": [],
+      "optionalConnectors": [],
+      "channels": ["web"],
+      "knowledgeFields": [
+        { "key": "objectif_projet", "label": "Objectif du projet", "help": "Ce que le projet doit produire et pour quand.", "required": true, "example": "Ouvrir un second atelier à Genève avant le 1er avril" },
+        { "key": "date_cible_contraintes", "label": "Date cible et contraintes dures", "help": "Date de fin, budget, jalons imposés, ressources disponibles.", "required": true, "example": "Ouverture le 1er avril, budget de 120 000 CHF, bail signé le 15 janvier" },
+        { "key": "equipe_et_roles", "label": "Équipe et parties prenantes", "help": "Qui participe, qui décide, qui est informé.", "required": false, "example": "Moi (sponsor), Paul (atelier), la fiduciaire, le propriétaire des locaux" },
+        { "key": "date_demarrage", "label": "Date de démarrage", "help": "Premier jour ouvré du projet.", "required": false, "example": "Lundi 12 octobre" }
+      ],
+      "autonomyRules": [
+        { "category": "analyse-calcul", "label": "Calculer le planning et le chemin critique", "examples": ["Calculer les dates au plus tôt en jours ouvrés", "Identifier la chaîne de tâches sans marge"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 30 },
+        { "category": "redaction", "label": "Rédiger la charte, le WBS et les fichiers", "examples": ["Rédiger la charte de projet", "Produire le classeur .xlsx avec onglets WBS, Gantt et Risques"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "engagement-budget", "label": "Engager un budget ou signer pour le projet", "examples": ["Valider une dépense du projet", "Signer un devis de prestataire"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Cadre mon projet d'ouvrir un second atelier à Genève avant le 1er avril, avec bail signé le 15 janvier et un budget de 120 000 CHF : charte, WBS, planning daté avec chemin critique, RACI et trois risques réels. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Les dates sont calculées en jours ouvrés, week-ends exclus, avec dépendances et jalons",
+          "Les risques sont propres à ce projet, avec probabilité, impact, parade et porteur",
+          "Le classeur .xlsx et la charte .docx sont proposés en téléchargement"
+        ]
+      },
+      "recommendedLevel": "approfondi"
+    },
+    {
+      "id": "point-avancement-rag",
+      "label": "Point d'avancement honnête : tableau de bord vert, orange, rouge",
+      "description": "À partir du plan de référence, Yanis donne pour chaque lot le statut (vert, orange, rouge), le pourcentage avancé et les écarts de délai et de budget, dit clairement ce qui est fait, en retard ou bloqué et pourquoi, et liste les prochaines actions avec porteur et échéance. Avec Asana, Trello ou monday connecté, il lit vos tâches pour partir de la réalité.",
+      "skills": ["STATUS_REPORTING", "STAKEHOLDER_REPORTING", "MILESTONE_TRACKING", "TASK_TRACKING"],
+      "requiredConnectors": [],
+      "optionalConnectors": ["asana.controlled", "trello.controlled", "monday.controlled"],
+      "connectorOperations": {
+        "asana.controlled": ["READ_TASK", "SEARCH_TASKS"],
+        "trello.controlled": ["READ_CARD", "SEARCH_CARDS"],
+        "monday.controlled": ["READ_ITEM", "SEARCH_ITEMS"]
+      },
+      "channels": ["web", "schedule"],
+      "suggestedFrequencyMinutes": 10080,
+      "knowledgeFields": [
+        { "key": "plan_de_reference", "label": "Votre plan de référence", "help": "Collez le plan, les jalons ou le dernier tableau d'avancement.", "required": true, "example": "Lot 1 bail (terminé), lot 2 aménagement (en cours), lot 3 recrutement (à démarrer)" },
+        { "key": "avancement_declare", "label": "Où vous en êtes", "help": "Ce qui est fait, ce qui bloque, depuis quand.", "required": true, "example": "Aménagement en retard de deux semaines, devis électricien en attente" },
+        { "key": "audience_rapport", "label": "À qui est destiné ce point", "help": "Vous, votre associé, un financeur ou un comité.", "required": false, "example": "Mon associé et la banque" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-outils", "label": "Lire vos tâches dans l'outil de projet", "examples": ["Rechercher les tâches ouvertes et en retard dans Asana ou Trello", "Lire les éléments d'un tableau monday"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 60 },
+        { "category": "redaction", "label": "Rédiger le tableau de bord et les actions", "examples": ["Rédiger le statut de chaque lot avec écart de délai", "Rédiger les prochaines actions avec porteur et échéance"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 30 },
+        { "category": "envoi-externe", "label": "Diffuser le rapport aux parties prenantes", "examples": ["Envoyer le rapport d'avancement à votre banque"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Voici l'état de mon projet d'atelier à Genève (lot bail terminé, aménagement en retard de deux semaines, recrutement non démarré). Fais le point d'avancement vert, orange, rouge avec les écarts et les prochaines actions. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Le retard est signalé clairement avec sa cause, sans complaisance",
+          "Chaque lot a un statut, un écart et une prochaine action avec porteur et échéance",
+          "Rien n'est diffusé à des tiers"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    },
+    {
+      "id": "coordination-multi-workers",
+      "label": "Découpage d'un projet en briefs pour vos autres Workers",
+      "description": "Yanis découpe le projet en lots attribuables et rédige pour chacun un mini-brief : Worker porteur, objectif, entrées, livrable attendu, échéance et dépendances amont. Vous soumettez chaque brief au Worker concerné (ou à Chloé pour le routage) ; vous rapportez ensuite les livrables et Yanis les consolide en un seul planning et un seul tableau de bord.",
+      "skills": ["DEPENDENCY_MANAGEMENT", "RESOURCE_ALLOCATION", "ROADMAP_PLANNING"],
+      "requiredConnectors": [],
+      "optionalConnectors": [],
+      "channels": ["web"],
+      "knowledgeFields": [
+        { "key": "objectif_projet", "label": "Objectif du projet", "help": "Ce que l'ensemble des Workers doit produire.", "required": true, "example": "Lancer la nouvelle gamme de batteries en novembre" },
+        { "key": "workers_disponibles", "label": "Workers mobilisables", "help": "Ceux que vous avez dans votre équipe.", "required": false, "example": "Emma, Léa, Lucas, Maya, Thomas" },
+        { "key": "date_cible_contraintes", "label": "Échéance et contraintes", "help": "Date finale et dépendances connues.", "required": false, "example": "Lancement le 15 novembre, visuels livrés avant l'intégration du site" }
+      ],
+      "autonomyRules": [
+        { "category": "redaction", "label": "Rédiger les mini-briefs et consolider", "examples": ["Rédiger un brief par lot avec Worker porteur et livrable attendu", "Consolider les livrables rapportés en un planning unique"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 30 },
+        { "category": "delegation-automatique", "label": "Lancer les autres Workers à votre place", "examples": ["Soumettre automatiquement un brief à un autre Worker"], "risk": "medium", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Découpe le lancement de ma nouvelle gamme de batteries en lots attribués à mes Workers (Emma, Léa, Lucas, Maya, Thomas) avec un mini-brief par lot, les dépendances et l'échéance du 15 novembre. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Chaque lot a un Worker porteur, un livrable et une échéance",
+          "Les dépendances croisées sont explicites (visuels avant intégration)",
+          "Aucun Worker n'est lancé automatiquement : vous soumettez les briefs"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    },
+    {
+      "id": "comite-de-pilotage",
+      "label": "Ordre du jour et compte-rendu de comité de pilotage",
+      "description": "Yanis prépare l'ordre du jour du comité (objectifs, durées, décisions attendues), le texte d'invitation et les créneaux proposés, puis, après la réunion, le compte-rendu : décisions, actions (qui, quoi, quand), points en suspens, avec mise à jour du registre des risques et du tableau d'avancement. Vous envoyez les invitations vous-même.",
+      "skills": ["STAKEHOLDER_REPORTING", "STATUS_REPORTING", "TASK_TRACKING"],
+      "requiredConnectors": [],
+      "optionalConnectors": [],
+      "channels": ["web"],
+      "knowledgeFields": [
+        { "key": "contexte_comite", "label": "Le comité", "help": "Participants, date envisagée, sujets, décisions à prendre.", "required": true, "example": "Comité mensuel avec mon associé et la fiduciaire : décision sur le budget d'aménagement" },
+        { "key": "notes_comite", "label": "Vos notes après le comité", "help": "Pour le compte-rendu.", "required": false, "example": "Budget approuvé à 45 000 CHF, devis électricien à relancer" }
+      ],
+      "autonomyRules": [
+        { "category": "redaction", "label": "Rédiger ordre du jour et compte-rendu", "examples": ["Rédiger l'ordre du jour avec durée et décision attendue par point", "Rédiger le compte-rendu avec actions assignées"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 30 },
+        { "category": "envoi-externe", "label": "Envoyer les invitations et le compte-rendu", "examples": ["Envoyer le compte-rendu aux participants"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Prépare l'ordre du jour d'un comité mensuel de 45 minutes sur le budget d'aménagement de l'atelier, puis rédige le compte-rendu avec ces décisions (budget approuvé à 45 000 CHF, devis à relancer). Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Chaque point a une durée et une décision attendue",
+          "Chaque action du compte-rendu a un responsable et une échéance",
+          "Rien n'est envoyé aux participants"
+        ]
+      },
+      "recommendedLevel": "rapide"
+    },
+    {
+      "id": "registre-risques-raid",
+      "label": "Registre des risques, hypothèses, problèmes et dépendances",
+      "description": "Yanis liste des risques réels pour votre projet (pas « risque de retard » générique), évalue chacun en probabilité fois impact avec un code couleur, propose la parade et un porteur, et tient à jour les hypothèses, problèmes et dépendances. Livré en tableur avec mise en forme conditionnelle.",
+      "skills": ["RISK_REGISTER", "DEPENDENCY_MANAGEMENT"],
+      "requiredConnectors": [],
+      "optionalConnectors": [],
+      "channels": ["web"],
+      "knowledgeFields": [
+        { "key": "description_projet", "label": "Votre projet en quelques lignes", "help": "Objectif, ressources, échéance, points déjà inquiétants.", "required": true, "example": "Second atelier à Genève ouvert en avril, un seul mécanicien à recruter, travaux d'électricité à prévoir" },
+        { "key": "risques_connus", "label": "Risques que vous voyez déjà", "help": "Yanis les complète et les évalue.", "required": false, "example": "Délai de livraison des établis, recrutement difficile" }
+      ],
+      "autonomyRules": [
+        { "category": "analyse-calcul", "label": "Évaluer et classer les risques", "examples": ["Calculer la criticité de chaque risque", "Classer les risques par couleur"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 30 },
+        { "category": "redaction", "label": "Rédiger le registre et les parades", "examples": ["Produire le registre en .xlsx avec mise en forme conditionnelle", "Rédiger la parade et le porteur de chaque risque"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 }
+      ],
+      "testScenario": {
+        "objective": "Dresse le registre des risques de mon projet de second atelier à Genève : 8 risques réels avec probabilité, impact, criticité, parade et porteur, en tableur. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Chaque risque est propre au projet décrit",
+          "La criticité est calculée et colorée selon le seuil",
+          "Chaque risque a une parade et un porteur"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    },
+    {
+      "id": "methode-sprints-cloture",
+      "label": "Choix de méthode, planification de sprints et bilan de clôture",
+      "description": "Yanis choisit la méthode adaptée (classique, agile, kanban ou hybride) et la justifie en une ligne, planifie des sprints avec backlog priorisé et rétrospective, estime par analogie ou à trois points, puis, en fin de projet, rédige le bilan de clôture avec les enseignements à réutiliser.",
+      "skills": ["SPRINT_PLANNING", "RETROSPECTIVES", "ROADMAP_PLANNING"],
+      "requiredConnectors": [],
+      "optionalConnectors": ["trello.controlled", "asana.controlled"],
+      "connectorOperations": {
+        "trello.controlled": ["SEARCH_CARDS", "CREATE_CARD"],
+        "asana.controlled": ["SEARCH_TASKS", "CREATE_TASK"]
+      },
+      "channels": ["web"],
+      "knowledgeFields": [
+        { "key": "nature_projet", "label": "Nature du projet", "help": "Périmètre stable ou évolutif, flux continu de demandes, livraisons par étapes.", "required": true, "example": "Refonte de notre site avec des retours fréquents du client" },
+        { "key": "equipe_et_roles", "label": "Équipe disponible", "help": "Qui travaille et combien de temps par semaine.", "required": false, "example": "3 personnes, 2 jours par semaine chacune" },
+        { "key": "bilan_projet", "label": "Éléments du bilan (pour la clôture)", "help": "Ce qui s'est bien passé, ce qui a coûté du temps.", "required": false, "example": "Livré avec deux semaines de retard à cause de validations tardives" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-outils", "label": "Rechercher dans votre outil de projet", "examples": ["Rechercher les cartes Trello ou tâches Asana liées au projet"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 60 },
+        { "category": "redaction", "label": "Rédiger le choix de méthode, le plan de sprints et le bilan", "examples": ["Rédiger le backlog priorisé et le plan du premier sprint", "Rédiger le bilan de clôture avec les enseignements"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 30 },
+        { "category": "ecriture-outil", "label": "Créer une carte ou une tâche dans votre outil", "examples": ["Créer la carte du premier jalon dans Trello, après votre confirmation, une action à la fois"], "risk": "low", "defaultMode": "ask", "maxAutoPerDay": null, "operations": ["trello.controlled:CREATE_CARD", "asana.controlled:CREATE_TASK"] }
+      ],
+      "testScenario": {
+        "objective": "Pour la refonte de mon site avec des retours fréquents, choisis la méthode, justifie-la en une ligne, planifie le premier sprint avec un backlog priorisé et prépare la trame de rétrospective. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "La méthode choisie est justifiée par la nature du projet",
+          "Le backlog est priorisé et le premier sprint réaliste pour l'équipe indiquée",
+          "Aucune carte ni tâche n'est créée sans confirmation"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    }
+  ],
+  "channelSupport": {
+    "email": "planned",
+    "phone": "no",
+    "whatsapp": "planned",
+    "web": "available",
+    "schedule": "available"
+  },
+  "plannedCapabilities": [
+    "Lancement automatique des autres Workers à partir des mini-briefs (aujourd'hui vous soumettez chaque brief vous-même)",
+    "Création en une fois de toutes les tâches du plan dans Asana, Trello ou monday (aujourd'hui une seule création est possible par mission, après confirmation)",
+    "Rapport d'avancement hebdomadaire envoyé par email ou WhatsApp après votre validation",
+    "Dépôt de vos plans existants (Excel, MS Project) directement dans la conversation",
+    "Lecture de vos échanges Microsoft Teams pour alimenter le suivi"
+  ],
+  "installationSteps": [
+    "Ajoutez Yanis à votre équipe depuis le catalogue des Workers.",
+    "Décrivez dans la fiche d'entreprise votre façon de travailler : équipe, jours ouvrés, outil de suivi utilisé.",
+    "Connectez Asana, Trello ou monday dans la page Connecteurs si vous voulez que Yanis lise vos tâches (facultatif).",
+    "Gardez les réglages par défaut : Yanis planifie et rédige seul, mais n'engage aucun budget, ne contacte personne et ne lance aucun autre Worker.",
+    "Lancez le scénario d'essai « Cadrage et plan de projet » sur un projet réel et vérifiez les dates, les dépendances et le chemin critique.",
+    "Soumettez vous-même chaque mini-brief au Worker concerné et rapportez les livrables à Yanis pour la consolidation.",
+    "Programmez un point d'avancement hebdomadaire une fois le plan validé."
+  ]
+}
