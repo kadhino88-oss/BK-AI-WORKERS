@@ -37,22 +37,30 @@ SCENARIOS = {
 }
 
 
-def mission_cost(model, calls, out, searches, search_tok, u0, cold=True, out_mult=1.0):
-    """Cout USD d'une mission. Seul le prompt systeme est en cache ; tout le reste du contexte
-    (demande, sorties precedentes, resultats de recherche) est refacture au tarif d'entree a
-    chaque appel (hypothese prudente : pas de cache de la conversation)."""
+def mission_cost(model, calls, out, searches, search_tok, u0, cold=True, out_mult=1.0, cache_conversation=False):
+    """Cout USD d'une mission. Par defaut seul le prompt systeme est en cache ; tout le reste du
+    contexte (demande, sorties precedentes, resultats de recherche) est refacture au tarif d'entree
+    a chaque appel (hypothese prudente : pas de cache de la conversation).
+    cache_conversation=True : calcul indicatif d'un levier d'economie (le contexte deja envoye a l'appel
+    precedent est relu au tarif de lecture du cache, seuls les jetons nouveaux sont payes, en ecriture 1,25x)."""
     p = MODELS[model]
     out_per_call = out * out_mult / calls
-    extra = 0.0          # jetons non caches accumules par les appels precedents
-    total = 0.0
     # les recherches ont lieu dans les appels 1..n-1 ; leurs resultats gonflent les appels suivants
     per_call_searches = [0] * calls
     for k in range(searches):
         per_call_searches[k % max(1, calls - 1)] += 1
+    total = 0.0
+    extra = 0.0          # jetons de contexte accumules par les appels precedents (hors prompt systeme)
+    seen = 0.0           # contexte deja envoye a l'appel precedent (pour le calcul avec cache)
     for i in range(calls):
         sys_rate = p["cw"] if (i == 0 and cold) else p["cr"]
         total += SYS_TOKENS * sys_rate / 1e6
-        total += (u0 + extra) * p["inp"] / 1e6
+        ctx = u0 + extra
+        if cache_conversation:
+            total += seen * p["cr"] / 1e6 + (ctx - seen) * p["cw"] / 1e6
+            seen = ctx
+        else:
+            total += ctx * p["inp"] / 1e6
         total += out_per_call * p["out"] / 1e6
         extra += out_per_call + per_call_searches[i] * search_tok
     total += searches * SEARCH_USD
@@ -67,7 +75,8 @@ def ceiling_cost(model, out_mult=1.0):
 
 
 def build():
-    res = {"usd_chf": USD_CHF, "missions": {}, "ceiling": {}, "sensitivity_output_x2": {}, "warm_cache_typique": {}}
+    res = {"usd_chf": USD_CHF, "missions": {}, "ceiling": {}, "sensitivity_output_x2": {}, "warm_cache_typique": {},
+           "conversation_cache_lourd": {}}
     for lvl in MODELS:
         res["missions"][lvl] = {}
         for sc, a in SCENARIOS.items():
@@ -80,6 +89,9 @@ def build():
         a = SCENARIOS["lourd"]
         x2 = mission_cost(lvl, a["calls"], a["out"], a["searches"], a["search_tok"], a["u0"], out_mult=2.0)
         res["sensitivity_output_x2"][lvl] = {"usd": round(x2, 4), "chf": round(x2 * USD_CHF, 4)}
+        a = SCENARIOS["lourd"]
+        cc = mission_cost(lvl, a["calls"], a["out"], a["searches"], a["search_tok"], a["u0"], cache_conversation=True)
+        res["conversation_cache_lourd"][lvl] = {"usd": round(cc, 4), "chf": round(cc * USD_CHF, 4)}
         a = SCENARIOS["typique"]
         w = mission_cost(lvl, a["calls"], a["out"], a["searches"], a["search_tok"], a["u0"], cold=False)
         res["warm_cache_typique"][lvl] = {"usd": round(w, 4), "chf": round(w * USD_CHF, 4)}
@@ -100,6 +112,9 @@ def table():
     print("\nSensibilite : sortie x2 sur le scenario lourd (reflexion plus longue aux niveaux eleves) :")
     for lvl, c in r["sensitivity_output_x2"].items():
         print(f"  {lvl:<11} {c['usd']:>7.4f} USD = {c['chf']:>7.4f} CHF")
+    print("\nLevier d'economie : cache de la conversation (scenario lourd, indicatif) :")
+    for lvl, c in r["conversation_cache_lourd"].items():
+        print(f"  {lvl:<11} {c['usd']:>7.4f} USD = {c['chf']:>7.4f} CHF  (au lieu de {r['missions'][lvl]['lourd']['usd']:.4f} USD)")
     print("\nCache chaud (scenario typique, prompt systeme deja en cache) :")
     for lvl, c in r["warm_cache_typique"].items():
         print(f"  {lvl:<11} {c['usd']:>7.4f} USD = {c['chf']:>7.4f} CHF")
