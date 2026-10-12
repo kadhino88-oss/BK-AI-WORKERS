@@ -442,6 +442,26 @@ class OwnerEmail(Fixture):
         self.assertTrue(created3)
 
 
+class WhatsApp(Fixture):
+    def test_a_client_without_chloe_is_told_why_instead_of_retry_later(self):
+        write_billing(A, "solo", ["alex"])
+        sent = []
+        orig = server.wa.send_text
+        server.wa.send_text = lambda phone, text: sent.append(text) or True
+        self.addCleanup(setattr, server.wa, "send_text", orig)
+
+        class FakeStore:
+            def client_for(self, phone):
+                return A
+
+        deps = server._wa_deps()
+        server.wa._RATE.clear()
+        server.wa._handle_message("41790000000", "Fais ma prospection", FakeStore(), deps)
+        self.assertEqual(len(sent), 1)
+        self.assertIn("Trio", sent[0])
+        self.assertNotIn("Réessayez", sent[0])
+
+
 class RateLimits(Fixture):
     def test_limits_are_per_action_and_per_key(self):
         for _ in range(20):

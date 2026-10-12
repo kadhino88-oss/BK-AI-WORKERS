@@ -2551,8 +2551,12 @@ PLAN_CATALOG = {
     # propre pot de credits ; une fois le pot epuise, on passe au forfait superieur (pas de missions illimitees). Credits provisoires
     # (250 / 500), a ajuster apres mesure des couts reels. Activation : par le proprietaire apres facture reglee (byInvoice) tant qu'aucun
     # prix Stripe n'est cree -> jamais de bascule libre-service gratuite vers ces forfaits. Tous les autres forfaits gardent TOUS les Workers.
-    "solo":       {"name": "Solo",       "credits": 250, "workerSlots": inst.PLAN_WORKER_SLOTS["solo"], "byInvoice": True},
-    "trio":       {"name": "Trio",       "credits": 500, "workerSlots": inst.PLAN_WORKER_SLOTS["trio"], "byInvoice": True},
+    # priceChf = prix recommandes par l'etude de marche (docs/ETUDE-MARCHE-PRIX-2026-10.md, branche ws/market-study) : une information
+    # d'affichage, pas encore un prix Stripe (aucun Price ID pour ces forfaits : facturation manuelle).
+    "solo":       {"name": "Solo",       "credits": 250, "workerSlots": inst.PLAN_WORKER_SLOTS["solo"], "byInvoice": True,
+                   "priceChf": {"month": 29, "year": 290}},
+    "trio":       {"name": "Trio",       "credits": 500, "workerSlots": inst.PLAN_WORKER_SLOTS["trio"], "byInvoice": True,
+                   "priceChf": {"month": 59, "year": 590}},
 }
 
 # Plans qui passent par une vraie Checkout Session Stripe quand Stripe
@@ -2639,7 +2643,8 @@ def get_billing(client_id=DASHBOARD_CLIENT_ID):
         # Forfaits en libre-service (Solo/Trio sont accordes par le proprietaire apres facture : ils ont leur propre liste, workerPlans).
         "availablePlans": [{"planId": pid, "name": p["name"], "credits": p["credits"]} for pid, p in PLAN_CATALOG.items() if not p.get("byInvoice")],
         "workerPlans": [{"planId": pid, "name": p["name"], "credits": p["credits"], "workerSlots": p["workerSlots"],
-                         "chloeIncluded": pid in inst.PLANS_WITH_CHLOE} for pid, p in PLAN_CATALOG.items() if p.get("workerSlots")],
+                         "chloeIncluded": pid in inst.PLANS_WITH_CHLOE, "priceChf": p.get("priceChf")}
+                        for pid, p in PLAN_CATALOG.items() if p.get("workerSlots")],
         "workerSlots": inst.worker_slots(state),
         "hiredWorkers": inst.hired_workers(state),
         "hire": inst.hire_summary(state),

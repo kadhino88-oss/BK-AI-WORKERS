@@ -10,6 +10,12 @@ connecter, canaux, fiche de connaissances, regles d'autonomie, scenario d'essai)
 La fiche est stockee dans runtime/installations/<ClientId>/<WORKER>.json (volume persistant, supprimee avec le compte).
 
 Ce module est autonome (bibliotheque standard) : validation stricte, ecritures atomiques, aucun secret accepte, aucun chemin libre.
+
+Il porte aussi les DROITS D'ACCES par Worker (fin du fichier) : un forfait Solo (1 Worker) ou Trio (3 Workers + Chloe) n'ouvre que les Workers
+EMBAUCHES par le client ; tous les autres forfaits gardent l'acces a tous les Workers. Embauche, echange (un par periode de 30 jours),
+attribution par le proprietaire apres facture reglee : fonctions pures sur l'etat de facturation, branchees dans dashboard/server.py
+(refus HTTP 403 WORKER_NOT_INCLUDED sur toutes les routes qui demarrent une mission) et dans les scripts PowerShell (BK_ALLOWED_WORKERS).
+Documentation des routes : docs/HIRE-API.md.
 """
 import datetime
 import json
