@@ -519,6 +519,13 @@
           <button type="button" class="btn btn-ghost" id="billing-recharge-btn">Recharger (simulation)</button>
         </div>
 
+        <div id="installed-workers-section" class="iw-installed" hidden>
+          <h2 class="billing-section-title">Mes Workers installés</h2>
+          <p class="iw-installed-sub">Chaque Worker installé travaille avec la fiche que vous avez remplie. L'interrupteur le met en pause tout de suite : sa fiche ne lui est plus transmise, ses automatisations planifiées sont suspendues et rien n'est validé automatiquement. Vos missions lancées à la main continuent de fonctionner.</p>
+          <div id="installed-workers-summary" class="iw-installed-summary"></div>
+          <div id="installed-workers-list" class="iw-installed-list"></div>
+        </div>
+
         <h2 class="billing-section-title">Changer de plan</h2>
         <div class="billing-interval-toggle" id="billing-interval-toggle">
           <button type="button" class="active" data-interval="month">Mensuel</button>
@@ -585,6 +592,11 @@
         </form>
         <div id="admin-testimonials-list"></div>
       </div>
+
+      <h2 class="billing-section-title">Demandes d'embauche de Workers</h2>
+      <p class="iw-installed-sub">Un client en essai, Solo ou Trio demande à ajouter un Worker. Après réception de la facture réglée, attribuez-lui les Workers de son forfait. Aucun paiement n'est pris dans l'application.</p>
+      <div id="admin-hire-list" class="admin-activity"></div>
+      <div id="admin-grant-card" class="account-data-card iw-grant" hidden></div>
 
       <h2 class="billing-section-title">Demandes de démo</h2>
       <div id="admin-demo-list" class="admin-activity"></div>
@@ -754,6 +766,11 @@
             <div class="profile-block">
               <div class="block-title">Outils accessibles</div>
               <div id="profile-tools" class="tag-row"></div>
+            </div>
+
+            <div class="profile-block iw-block" id="install-block" hidden>
+              <div class="block-title" id="install-title">Installer ce Worker</div>
+              <div id="install-panel" class="iw-panel" aria-live="polite"></div>
             </div>
 
             <div class="profile-block">
