@@ -16,8 +16,7 @@
         "gmail.controlled": ["DRAFT_MESSAGE"],
         "outlook_mail.controlled": ["DRAFT_MESSAGE"]
       },
-      "channels": ["web", "schedule"],
-      "suggestedFrequencyMinutes": 43200,
+      "channels": ["web"],
       "knowledgeFields": [
         { "key": "pays_et_devise", "label": "Pays et devise de votre comptabilité", "help": "Détermine la TVA, les charges sociales et la présentation des comptes.", "required": true, "example": "Suisse, francs suisses (CHF)" },
         { "key": "chiffres_a_traiter", "label": "Vos chiffres", "help": "Collez chiffre d'affaires, charges par poste et période. Dario ne se connecte pas encore à votre comptabilité.", "required": true, "example": "CA 480 000 CHF, salaires 210 000 CHF, loyer 36 000 CHF, marketing 24 000 CHF" },
@@ -47,8 +46,7 @@
       "skills": ["CASH_FLOW_FORECAST", "FINANCIAL_REPORTING"],
       "requiredConnectors": [],
       "optionalConnectors": [],
-      "channels": ["web", "schedule"],
-      "suggestedFrequencyMinutes": 43200,
+      "channels": ["web"],
       "knowledgeFields": [
         { "key": "solde_ouverture", "label": "Solde de trésorerie actuel", "help": "Total de vos comptes bancaires aujourd'hui.", "required": true, "example": "85 000 CHF" },
         { "key": "encaissements_prevus", "label": "Ventes et délais de paiement clients", "help": "Chiffre d'affaires mensuel attendu et délai moyen d'encaissement.", "required": true, "example": "40 000 CHF par mois, payés à 45 jours" },
@@ -106,8 +104,7 @@
       "skills": ["VARIANCE_ANALYSIS", "KPI_DASHBOARD_FINANCE", "BUDGET_TRACKING"],
       "requiredConnectors": [],
       "optionalConnectors": [],
-      "channels": ["web", "schedule"],
-      "suggestedFrequencyMinutes": 43200,
+      "channels": ["web"],
       "knowledgeFields": [
         { "key": "budget_de_reference", "label": "Votre budget", "help": "Collez le budget par poste pour la période.", "required": true, "example": "Marketing 2 000 CHF, achats 12 500 CHF, salaires 17 500 CHF par mois" },
         { "key": "chiffres_reels", "label": "Vos chiffres réels", "help": "Collez les montants réels pour la même période.", "required": true, "example": "Marketing 2 900 CHF, achats 13 100 CHF, salaires 17 500 CHF" },
@@ -163,8 +160,7 @@
       "skills": ["EXPENSE_CATEGORIZATION", "INVOICE_RECONCILIATION", "TAX_DOCUMENT_PREPARATION", "AUDIT_PREPARATION"],
       "requiredConnectors": [],
       "optionalConnectors": [],
-      "channels": ["web", "schedule"],
-      "suggestedFrequencyMinutes": 43200,
+      "channels": ["web"],
       "knowledgeFields": [
         { "key": "pays_et_devise", "label": "Pays et devise", "help": "Pour appliquer la bonne TVA.", "required": true, "example": "Suisse, CHF" },
         { "key": "releve_ou_depenses", "label": "Relevé ou liste de dépenses", "help": "Collez le tableau (date, libellé, montant). Il n'y a pas encore d'ajout de fichier.", "required": true, "example": "03.10 Garage Dupont 480.00 ; 05.10 Papeterie Schmid 62.40" },

@@ -137,8 +137,7 @@
       "skills": ["GDPR_CHECKLIST", "COMPLIANCE_CHECKLIST", "DOCUMENT_RETENTION_POLICY"],
       "requiredConnectors": [],
       "optionalConnectors": [],
-      "channels": ["web", "schedule"],
-      "suggestedFrequencyMinutes": 43200,
+      "channels": ["web"],
       "knowledgeFields": [
         { "key": "traitements_donnees", "label": "Données personnelles que vous traitez", "help": "Clients, employés, prospects : quelles données, dans quel outil, pour quoi faire.", "required": true, "example": "Noms et emails de clients dans un CRM, fiches de paie dans un logiciel de salaires" },
         { "key": "pays_des_personnes", "label": "Où habitent les personnes concernées", "help": "Détermine le régime applicable (nLPD, RGPD ou les deux).", "required": true, "example": "Clients en Suisse romande et en France voisine" },
