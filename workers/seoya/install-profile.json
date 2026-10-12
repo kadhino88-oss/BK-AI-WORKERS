@@ -1,0 +1,217 @@
+{
+  "schema": "BK-INSTALL-PROFILE-V1",
+  "workerId": "seoya",
+  "displayName": "Séoya",
+  "tagline": "Part de votre site, trouve les vraies requêtes de vos clients et écrit l'article complet qui vous place devant vos concurrents.",
+  "idealFor": "Commerces locaux, prestataires de services et PME qui veulent être trouvés sur Google et dans les réponses des assistants IA sans payer d'outil SEO ni de rédacteur.",
+  "services": [
+    {
+      "id": "mission-seo-geo-complete",
+      "label": "Mission SEO et GEO complète à partir de l'adresse de votre site",
+      "description": "Séoya lit votre site, identifie 2 à 4 concurrents qui sont réellement positionnés, classe les requêtes de vos clients par intention (information, comparaison, achat, local), repère l'opportunité n°1 en référencement et en visibilité dans les réponses IA, puis rédige en entier le meilleur sujet : title, meta, intertitres et texte complet prêt à publier.",
+      "skills": ["ORGANIC_STRATEGY", "KEYWORD_RESEARCH", "SEARCH_INTENT", "SERP_ANALYSIS", "COMPETITIVE_ANALYSIS", "CONTENT_OPTIMIZATION", "LOCAL_SEO"],
+      "requiredConnectors": [],
+      "optionalConnectors": ["wordpress.controlled", "google_search_console.controlled"],
+      "connectorOperations": {
+        "wordpress.controlled": ["CREATE_DRAFT"],
+        "google_search_console.controlled": ["READ_REPORT", "SEARCH_QUERIES"]
+      },
+      "channels": ["web", "schedule"],
+      "suggestedFrequencyMinutes": 43200,
+      "knowledgeFields": [
+        { "key": "site_web", "label": "Adresse de votre site", "help": "Séoya lit votre page d'accueil et la page la plus pertinente pour comprendre votre offre.", "required": true, "example": "https://www.atelier-martin.example" },
+        { "key": "zone_geographique", "label": "Zone où vous voulez être trouvé", "help": "Ville, région ou pays ; décisif pour les requêtes locales.", "required": true, "example": "Lausanne et le canton de Vaud" },
+        { "key": "offre_prioritaire", "label": "Le service ou produit à pousser en priorité", "help": "Celui qui rapporte le plus ou que vous voulez vendre davantage.", "required": false, "example": "Révision de vélos électriques" },
+        { "key": "concurrents_connus", "label": "Concurrents que vous connaissez", "help": "Noms ou sites ; Séoya en cherche d'autres.", "required": false, "example": "Atelier Rapide SA, VéloService" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-recherche", "label": "Lire votre site, les résultats Google et vos concurrents", "examples": ["Lire votre page d'accueil et celle d'un concurrent classé", "Observer qui est positionné sur une requête et avec quel type de page"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "redaction", "label": "Rédiger la stratégie et l'article complet", "examples": ["Rédiger le title, la meta description et tout le texte de l'article", "Produire le brief et l'article en .docx"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 15 },
+        { "category": "ecriture-cms", "label": "Déposer l'article en brouillon dans WordPress", "examples": ["Créer l'article en brouillon invisible, après votre confirmation"], "risk": "low", "defaultMode": "ask", "maxAutoPerDay": null, "operations": ["wordpress.controlled:CREATE_DRAFT"] },
+        { "category": "publication", "label": "Mettre l'article en ligne", "examples": ["Publier l'article sur votre site"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Lis mon site, identifie trois concurrents réellement positionnés à Lausanne, classe cinq requêtes de mes clients par intention et rédige entièrement l'article de l'opportunité n°1 avec title, meta et intertitres. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Les concurrents cités existent et ressortent réellement dans la recherche",
+          "Aucun volume de recherche n'est inventé",
+          "L'article est rédigé en entier et non résumé par un plan"
+        ]
+      },
+      "recommendedLevel": "approfondi"
+    },
+    {
+      "id": "article-optimise-complet",
+      "label": "Article ou page optimisée, écrite en entier",
+      "description": "Vous donnez un mot-clé cible ou un sujet. Séoya lit les 3 à 5 premiers résultats pour relever l'intention dominante, l'angle gagnant et la profondeur attendue, choisit le format (guide, comparatif, fiche, FAQ) et écrit le texte complet avec une réponse claire dès le chapô, utile pour Google comme pour les assistants IA.",
+      "skills": ["CONTENT_OPTIMIZATION", "TITLE_META_OPTIMIZATION", "SEARCH_INTENT", "KEYWORD_RESEARCH"],
+      "requiredConnectors": [],
+      "optionalConnectors": ["wordpress.controlled"],
+      "connectorOperations": {
+        "wordpress.controlled": ["CREATE_DRAFT"]
+      },
+      "channels": ["web"],
+      "knowledgeFields": [
+        { "key": "mot_cle_cible", "label": "Mot-clé ou sujet de l'article", "help": "La requête exacte que vos clients tapent.", "required": true, "example": "révision vélo électrique Lausanne" },
+        { "key": "site_web", "label": "Adresse de votre site", "help": "Pour reprendre votre offre réelle et votre ton.", "required": true, "example": "https://www.atelier-martin.example" },
+        { "key": "ton_et_style", "label": "Ton de vos contenus", "help": "Expert, proche, pédagogique.", "required": false, "example": "Pédagogique et proche, vouvoiement" },
+        { "key": "longueur_souhaitee", "label": "Longueur souhaitée", "help": "Séoya vise la profondeur du résultat le mieux classé.", "required": false, "example": "Autour de 1 000 mots" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-recherche", "label": "Étudier les résultats qui se classent", "examples": ["Lire les premiers résultats sur le mot-clé", "Relever les questions associées"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "redaction", "label": "Rédiger l'article complet", "examples": ["Rédiger title, meta description, intertitres et corps du texte", "Rédiger la FAQ de fin d'article"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 15 },
+        { "category": "ecriture-cms", "label": "Déposer l'article en brouillon dans WordPress", "examples": ["Créer le brouillon invisible, après votre confirmation"], "risk": "low", "defaultMode": "ask", "maxAutoPerDay": null, "operations": ["wordpress.controlled:CREATE_DRAFT"] },
+        { "category": "publication", "label": "Publier l'article", "examples": ["Mettre l'article en ligne pour vos visiteurs"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Écris en entier un article optimisé pour « révision vélo électrique Lausanne » : title, meta description, intertitres, corps, FAQ, après avoir étudié les premiers résultats. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "L'intention dominante est justifiée par ce qu'affichent les résultats",
+          "Le texte est complet, copiable tel quel, avec une réponse claire dès le chapô",
+          "Aucun fait ni chiffre n'est inventé : les affirmations sont sourcées ou étiquetées"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    },
+    {
+      "id": "cluster-thematique",
+      "label": "Cluster thématique : une page pilier et ses pages satellites",
+      "description": "Séoya choisit un sujet pilier large, cartographie les sous-sujets et questions associées, puis définit une page pilier et 5 à 12 pages satellites, chacune sur une intention distincte, avec le plan de maillage vers le pilier. Livré en tableur avec mot-clé, intention et format de chaque page.",
+      "skills": ["ORGANIC_STRATEGY", "INTERNAL_LINKING", "KEYWORD_RESEARCH", "SEARCH_INTENT"],
+      "requiredConnectors": [],
+      "optionalConnectors": [],
+      "channels": ["web", "schedule"],
+      "suggestedFrequencyMinutes": 43200,
+      "knowledgeFields": [
+        { "key": "sujet_pilier", "label": "Le sujet sur lequel vous voulez faire autorité", "help": "Un thème large lié à votre activité.", "required": true, "example": "Entretien et réparation des vélos électriques" },
+        { "key": "site_web", "label": "Adresse de votre site", "help": "Pour éviter de doubler des pages existantes.", "required": true, "example": "https://www.atelier-martin.example" },
+        { "key": "zone_geographique", "label": "Zone visée", "help": "Pour les variantes locales.", "required": false, "example": "Canton de Vaud" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-recherche", "label": "Cartographier le champ sémantique", "examples": ["Chercher les questions associées au sujet", "Lire vos pages existantes pour éviter les doublons"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "redaction", "label": "Rédiger le plan de cluster", "examples": ["Produire le tableau pilier et satellites avec intention et format", "Rédiger le plan de maillage interne"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 15 },
+        { "category": "publication", "label": "Créer les pages sur votre site", "examples": ["Mettre en ligne les pages satellites"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Construis un cluster thématique sur l'entretien des vélos électriques : une page pilier et 8 pages satellites avec mot-clé, intention, format et plan de maillage, en tableur. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Chaque page satellite a une intention distincte",
+          "Le plan de maillage relie chaque satellite au pilier",
+          "Aucun volume de recherche n'est inventé"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    },
+    {
+      "id": "audit-on-page",
+      "label": "Audit on-page d'une page existante",
+      "description": "Séoya lit votre page, la compare à ce qu'affichent les résultats sur votre requête cible (intention, titles, structure, profondeur) et livre un audit priorisé : title, meta, intertitres, maillage interne et contenu manquant, avec le texte de remplacement déjà rédigé. Les aspects techniques sont renvoyés à Lucas.",
+      "skills": ["TITLE_META_OPTIMIZATION", "CONTENT_OPTIMIZATION", "INTERNAL_LINKING", "STRUCTURED_DATA", "SERP_ANALYSIS"],
+      "requiredConnectors": [],
+      "optionalConnectors": ["google_search_console.controlled"],
+      "connectorOperations": {
+        "google_search_console.controlled": ["READ_REPORT", "SEARCH_QUERIES"]
+      },
+      "channels": ["web"],
+      "knowledgeFields": [
+        { "key": "page_a_auditer", "label": "Adresse de la page à auditer", "help": "L'adresse exacte de la page.", "required": true, "example": "https://www.atelier-martin.example/services/revision" },
+        { "key": "mot_cle_cible", "label": "La requête visée par cette page", "help": "Ce que vos clients tapent pour la trouver.", "required": true, "example": "révision vélo électrique Lausanne" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-recherche", "label": "Lire la page et les résultats concurrents", "examples": ["Lire votre page et les trois premiers résultats de la requête", "Lire vos requêtes Search Console si le compte est connecté"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "redaction", "label": "Rédiger l'audit et les textes de remplacement", "examples": ["Rédiger le nouveau title et la nouvelle meta description", "Classer les corrections par impact"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 15 },
+        { "category": "modification-site", "label": "Corriger directement la page", "examples": ["Remplacer le title de votre page en ligne"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Audite la page de service de mon site pour la requête « révision vélo électrique Lausanne » : compare-la aux premiers résultats et donne les corrections priorisées avec les nouveaux title, meta et intertitres rédigés. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "L'audit compare réellement la page aux résultats lus",
+          "Le title et la meta de remplacement sont rédigés",
+          "Les points techniques sont renvoyés à Lucas sans être traités"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    },
+    {
+      "id": "optimisation-geo",
+      "label": "Visibilité dans les réponses des assistants IA (GEO)",
+      "description": "Séoya évalue si un assistant IA trouverait sur votre site une source claire, factuelle et citable sur votre activité, puis rédige les contenus et blocs de réponse qui manquent (définitions, FAQ, pages de référence) et la spécification des données structurées à faire intégrer par Lucas. Ce domaine évolue vite : les recommandations sont étiquetées « à revérifier ».",
+      "skills": ["CONTENT_OPTIMIZATION", "STRUCTURED_DATA", "ORGANIC_STRATEGY"],
+      "requiredConnectors": [],
+      "optionalConnectors": [],
+      "channels": ["web", "schedule"],
+      "suggestedFrequencyMinutes": 43200,
+      "knowledgeFields": [
+        { "key": "site_web", "label": "Adresse de votre site", "help": "Séoya vérifie ce que votre site apporte comme source citable.", "required": true, "example": "https://www.atelier-martin.example" },
+        { "key": "questions_clients", "label": "Questions que vos clients posent", "help": "Les vraies questions reçues par téléphone, email ou en atelier.", "required": false, "example": "Combien coûte une révision ? Quelle garantie sur la batterie ?" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-recherche", "label": "Lire votre site et les sources citées", "examples": ["Lire vos pages pour repérer les réponses factuelles absentes", "Observer quelles sources ressortent sur votre catégorie"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "redaction", "label": "Rédiger blocs de réponse et FAQ", "examples": ["Rédiger la FAQ avec réponses factuelles et sourcées", "Spécifier le type de données structurées à intégrer"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 15 },
+        { "category": "publication", "label": "Publier les contenus sur votre site", "examples": ["Mettre la FAQ en ligne"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Évalue si un assistant IA trouverait sur mon site une source citable sur la révision de vélos électriques et rédige la FAQ de 8 questions qui manque, avec réponses factuelles. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Les réponses sont factuelles et ne contiennent aucun chiffre inventé",
+          "Les recommandations GEO sont étiquetées « à revérifier »",
+          "L'intégration technique est renvoyée à Lucas"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    },
+    {
+      "id": "suivi-requetes-search-console",
+      "label": "Suivi de vos vraies requêtes et positions (Search Console)",
+      "description": "Avec Google Search Console connecté, Séoya lit les requêtes et les pages réellement affichées pour votre site, repère celles qui progressent, reculent ou plafonnent en bas de la première page, et propose les contenus à créer ou à retoucher en priorité. Aucune donnée n'est estimée.",
+      "skills": ["SEARCH_CONSOLE", "RANK_TRACKING", "TRAFFIC_ANALYSIS", "KEYWORD_RESEARCH"],
+      "requiredConnectors": ["google_search_console.controlled"],
+      "optionalConnectors": [],
+      "connectorOperations": {
+        "google_search_console.controlled": ["READ_REPORT", "SEARCH_QUERIES"]
+      },
+      "channels": ["web", "schedule"],
+      "suggestedFrequencyMinutes": 10080,
+      "knowledgeFields": [
+        { "key": "site_web", "label": "Propriété Search Console", "help": "L'adresse exacte de votre site telle qu'elle figure dans Search Console.", "required": true, "example": "https://www.atelier-martin.example/" },
+        { "key": "periode_analyse", "label": "Période à comparer", "help": "Par exemple les 28 derniers jours contre les 28 précédents.", "required": false, "example": "28 derniers jours" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-donnees", "label": "Lire les rapports Search Console", "examples": ["Lire les requêtes de la période avec clics et positions", "Lire les pages les plus affichées"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 30 },
+        { "category": "redaction", "label": "Rédiger le bilan et les priorités", "examples": ["Rédiger les requêtes à fort potentiel proches de la première page", "Rédiger les contenus à créer ou à retoucher"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 15 }
+      ],
+      "testScenario": {
+        "objective": "Lis mes données Search Console des 28 derniers jours et dis-moi quelles requêtes progressent, lesquelles reculent et les trois contenus à créer ou retoucher en priorité. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Tous les chiffres viennent du compte connecté",
+          "Les requêtes proches de la première page sont mises en évidence",
+          "Aucune donnée n'est estimée à partir d'un outil payant"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    }
+  ],
+  "channelSupport": {
+    "email": "no",
+    "phone": "no",
+    "whatsapp": "no",
+    "web": "available",
+    "schedule": "available"
+  },
+  "plannedCapabilities": [
+    "Suivi automatique du classement de vos mots-clés avec alertes (aujourd'hui : lecture de Search Console uniquement)",
+    "Volumes de recherche et analyse de liens entrants issus d'un outil de données (aucune donnée de ce type n'est inventée)",
+    "Publication de l'article après votre validation (aujourd'hui : brouillon WordPress seulement, Webflow sans création de page)",
+    "Connexion à Google Analytics",
+    "Dépôt de vos exports dans la conversation"
+  ],
+  "installationSteps": [
+    "Ajoutez Séoya à votre équipe depuis le catalogue des Workers.",
+    "Indiquez l'adresse de votre site, votre zone géographique et le service à pousser en priorité.",
+    "Connectez Google Search Console (et WordPress si vous voulez des brouillons) dans la page Connecteurs.",
+    "Gardez les réglages par défaut : Séoya lit et rédige seule, dépose au plus un brouillon après confirmation, et ne publie jamais.",
+    "Lancez le scénario d'essai « Mission SEO et GEO » et vérifiez que les concurrents cités existent.",
+    "Faites intégrer par Lucas les points techniques (données structurées, vitesse) que Séoya lui transmet.",
+    "Programmez une automatisation mensuelle pour suivre vos requêtes Search Console."
+  ]
+}
