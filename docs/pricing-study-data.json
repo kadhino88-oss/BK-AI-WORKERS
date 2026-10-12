@@ -124,7 +124,7 @@
     },
     {
       "id": "limova",
-      "name": "Limova (Limova.ai, editeur KAINOTOM.IA selon Capterra)",
+      "name": "Limova (Limova.ai ; editeur KAINOTOM.IA selon un resultat de recherche Capterra, non verifie)",
       "category": "direct",
       "origin": "France (telephone +33)",
       "dateConsulted": "2026-10-12",
@@ -1994,12 +1994,12 @@
         "basis": "prix affiches"
       },
       {
-        "comparison": "Equipe 99 CHF vs Limova Pro 139,90 EUR (telephone + WhatsApp)",
+        "comparison": "Equipe 99 CHF vs Limova Pro 139,90 EUR (agent telephone + chatbot WhatsApp)",
         "ourChf": 99,
         "theirChf": 130.29,
         "deltaPct": -24.0,
         "verdict": "moins cher",
-        "basis": "le seul plan Limova avec telephone et WhatsApp ; Limova facture en plus 0,20 EUR/min"
+        "basis": "le seul plan Limova avec agent telephone et chatbot WhatsApp ; Limova facture en plus 0,20 EUR/min"
       },
       {
         "comparison": "Equipe 99 CHF vs Limova Pro avec code LEGEND10 (125,91 EUR)",
@@ -2026,7 +2026,7 @@
         "basis": "si le code s'applique (non verifie)"
       },
       {
-        "comparison": "Equipe 99 CHF vs Limova Essentiel 79,90 EUR (sans telephone ni WhatsApp)",
+        "comparison": "Equipe 99 CHF vs Limova Essentiel 79,90 EUR (sans agent telephone ni chatbot WhatsApp)",
         "ourChf": 99,
         "theirChf": 74.41,
         "deltaPct": 33.0,
@@ -2083,7 +2083,7 @@
       }
     ],
     "positioning": {
-      "ifChannelsLive": "Un Worker IA qui repond a vos e-mails, a vos appels et sur WhatsApp, des CHF 29 par mois sans engagement : 38 % moins cher que le Worker a l'unite de Delos (50 EUR, soit CHF 46.56 au 12.10.2026), et sans le plan Pro a 139,90 EUR que Limova exige pour debloquer le telephone et WhatsApp.",
+      "ifChannelsLive": "Un Worker IA qui repond a vos e-mails, a vos appels et sur WhatsApp, des CHF 29 par mois sans engagement : 38 % moins cher que le Worker a l'unite de Delos (50 EUR, soit CHF 46.56 au 12.10.2026), et sans le plan Pro a 139,90 EUR que Limova exige pour debloquer l'agent telephone et le chatbot WhatsApp.",
       "today": "Un Worker IA specialise par metier, des CHF 29 par mois sans engagement, qui prepare vos e-mails et vos documents avec validation avant toute action sensible : 38 % moins cher que le Worker a l'unite de Delos (50 EUR/mois).",
       "mustNotSay": [
         "'au moins 5 % moins cher que les alternatives comparables' (faux face a Limova Essentiel, Sintra, Marblism, Dust)",

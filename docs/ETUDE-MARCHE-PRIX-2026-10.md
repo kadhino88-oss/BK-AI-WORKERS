@@ -63,7 +63,7 @@ Toutes les pages ci-dessous ont été consultées le **12.10.2026**. Conversion 
 
 ### Limova — https://www.limova.ai/offres (aussi `limova.ai/en/pricing`, consultées le 12.10.2026) — statut : **vérifié** (prix lus à l'écran car affichés par animation)
 
-- **Qui :** Limova.ai (éditeur indiqué « KAINOTOM.IA » sur Capterra : https://www.capterra.co.uk/software/1075207/Limova-ai ; téléphone français). 8 agents nommés : **Charly** (assistant général), **John** (réseaux sociaux), **Lou** (SEO), **Elio** (prospection LinkedIn/téléphone), **Manue** (comptabilité), **Julia** (juridique), **Tom** (téléphone/SAV), un agent recrutement.
+- **Qui :** Limova.ai (éditeur « KAINOTOM.IA » d'après un résultat de recherche Capterra, https://www.capterra.co.uk/software/1075207/Limova-ai — page non ouverte (accès refusé) : **non vérifié** ; téléphone français affiché sur le site). 8 agents nommés : **Charly** (assistant général), **John** (réseaux sociaux), **Lou** (SEO), **Elio** (prospection LinkedIn/téléphone), **Manue** (comptabilité), **Julia** (juridique), **Tom** (téléphone/SAV), un agent recrutement.
 - **Cible :** entrepreneurs, freelances, TPE/PME francophones.
 - **Comment ils facturent :** **un abonnement qui donne accès à tous les agents, « pour 5 utilisateurs »** (prix **HT**), plus **0,20 € par minute d'appel** pour le téléphone.
 
