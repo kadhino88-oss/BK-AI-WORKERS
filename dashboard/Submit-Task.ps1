@@ -52,6 +52,18 @@ if (-not [string]::IsNullOrWhiteSpace($AllowedRaw)) {
     }
 }
 
+# Niveau de la mission et son cout en credits (core/ai/LEVELS.json : Rapide 1 / Equilibre 6 / Approfondi 12) : sans niveau (BK_LEVELS=0, ou
+# mission lancee sans variable) = ancien comportement, 1 credit. Valable pour un Worker comme pour CHACUN des Workers appeles par Chloe :
+# chaque appel de Worker tourne a ce niveau, donc coute ce niveau (sinon une mission Approfondi de Chloe ne couterait qu'un credit par Worker).
+$MissionLevelName = [string]$env:BK_MISSION_LEVEL
+$MissionCredits = 1
+if ($MissionLevelName -match '^[a-z]{3,20}$') {
+    try {
+        $LvProp = (Get-Content -LiteralPath (Join-Path $Root "core/ai/LEVELS.json") -Raw -Encoding UTF8 | ConvertFrom-Json).levels.PSObject.Properties[$MissionLevelName]
+        if ($LvProp -and [int]$LvProp.Value.credits -gt 0) { $MissionCredits = [int]$LvProp.Value.credits }
+    } catch { }
+}
+
 . (Join-Path $Root "core/security/identity-auth/runtime.ps1")
 . (Join-Path $Root "core/security/session-token-security/runtime.ps1")
 . (Join-Path $Root "core/security/rbac/RBAC.ps1")
@@ -142,6 +154,8 @@ if ($WorkerId.ToLowerInvariant() -eq "chloe") {
                 Mode = $Mode
                 Result = $Item.Result
                 CreatedAtUtc = [DateTime]::UtcNow.ToString("o")
+                Level = $MissionLevelName
+                Credits = $MissionCredits
             }
             [System.IO.File]::WriteAllText(
                 (Join-Path $ChloeRuntimeDir ("$($Item.TaskId).json")),
@@ -220,16 +234,6 @@ elseif (-not [string]::IsNullOrWhiteSpace($WorkerId)) {
         -Model "NONE"
 
     $WorkerResult = ($WorkerJson | Select-Object -Last 1) | ConvertFrom-Json -ErrorAction SilentlyContinue
-
-    # Niveau de la mission et son cout en credits (core/ai/LEVELS.json) : sans niveau = ancien comportement, 1 credit.
-    $MissionLevelName = [string]$env:BK_MISSION_LEVEL
-    $MissionCredits = 1
-    if ($MissionLevelName -match '^[a-z]{3,20}$') {
-        try {
-            $LvProp = (Get-Content -LiteralPath (Join-Path $Root "core/ai/LEVELS.json") -Raw -Encoding UTF8 | ConvertFrom-Json).levels.PSObject.Properties[$MissionLevelName]
-            if ($LvProp -and [int]$LvProp.Value.credits -gt 0) { $MissionCredits = [int]$LvProp.Value.credits }
-        } catch { }
-    }
 
     $Result = [ordered]@{
         TaskId = $TaskId

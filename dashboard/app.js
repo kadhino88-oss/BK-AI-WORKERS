@@ -1834,13 +1834,12 @@ async function renderPricingScale() {
     return;
   }
   const base = levels.reduce((a, b) => (b.credits < a.credits ? b : a));
-  const top = levels.reduce((a, b) => (b.credits > a.credits ? b : a));
   const rows = levels.map((l) => `<li><strong>${escapeHtml(l.label)}</strong> — <span class="scale-cost">${l.credits}</span> ${l.credits > 1 ? "crédits" : "crédit"} par mission</li>`).join("");
   box.innerHTML = `
     <h2>Combien de missions pour mes crédits ?</h2>
     <p>Un crédit n'est pas une mission : le coût dépend du niveau de travail que vous choisissez.</p>
     <ul class="pricing-scale-list">${rows}</ul>
-    <p>Exemple avec <strong>250</strong> crédits (Solo) : <strong>${Math.floor(250 / base.credits)}</strong> missions <em>${escapeHtml(base.label)}</em>, ou <strong>${Math.floor(250 / top.credits)}</strong> missions <em>${escapeHtml(top.label)}</em>.</p>
+    <p>Exemple avec <strong>250</strong> crédits (Solo) : ${levels.map((l) => `<strong>${Math.floor(250 / l.credits)}</strong> missions <em>${escapeHtml(l.label)}</em>`).join(", ou ")}.</p>
     <p>Les missions récurrentes (automatisations) tournent toujours au niveau le plus rapide : <strong>${base.credits}</strong> ${base.credits > 1 ? "crédits" : "crédit"} chacune.</p>
     <p>${noRecharge}</p>`;
 }

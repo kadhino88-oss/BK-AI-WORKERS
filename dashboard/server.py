@@ -2767,7 +2767,7 @@ def quota_reached_message(billing):
 
 
 def _billing_default_state():
-    now = datetime.datetime.utcnow().isoformat() + "Z"
+    now = _utcnow().isoformat() + "Z"
     return {
         "planId": "essai",
         "cycleStartUtc": now,
@@ -2892,7 +2892,7 @@ def set_billing_plan(plan_id, via_stripe=False, stripe_subscription_id=None, cli
         return get_billing(client_id)
     old_name = PLAN_CATALOG.get(state.get("planId", "essai"), PLAN_CATALOG["essai"])["name"]
     new_name = PLAN_CATALOG[plan_id]["name"]
-    now = datetime.datetime.utcnow().isoformat() + "Z"
+    now = _utcnow().isoformat() + "Z"
     state["planId"] = plan_id
     state["cycleStartUtc"] = now
     state["extraCredits"] = 0
@@ -2933,7 +2933,7 @@ def cancel_billing_plan(client_id=DASHBOARD_CLIENT_ID):
             return get_billing(client_id)      # deja a l'essai : « annuler » ne redonne pas 15 credits gratuits
         old_plan = PLAN_CATALOG.get(state.get("planId", "essai"), PLAN_CATALOG["essai"])
         old_name = old_plan["name"]
-        now = datetime.datetime.utcnow().isoformat() + "Z"
+        now = _utcnow().isoformat() + "Z"
         state["planId"] = "essai"
         # Le cycle n'est PAS remis a zero : la fenetre mensuelle en cours est conservee et ses missions restent comptees, sinon
         # s'abonner puis annuler redonnerait 15 credits d'essai gratuits a chaque fois (l'essai n'est pas renouvelable).
@@ -2954,7 +2954,7 @@ def _billing_note(client_id, text):
     """Ajoute une ligne a l'historique de facturation du client (visible dans « Historique du compte »)."""
     with _STATE_LOCK:
         state = _billing_load(client_id)
-        state.setdefault("history", []).append({"dateUtc": datetime.datetime.utcnow().isoformat() + "Z", "event": text})
+        state.setdefault("history", []).append({"dateUtc": _utcnow().isoformat() + "Z", "event": text})
         _billing_save(state, client_id)
 
 
@@ -3049,7 +3049,7 @@ def set_client_plan(client_id, plan_id, contract_credits=None):
     if state.get("stripeSubscriptionId"):
         return {"error": "ACTIVE_SUBSCRIPTION", "detail": "Ce client a un abonnement Stripe actif : annulez-le avant d'attribuer un forfait sur facture."}, 409
     old_name = PLAN_CATALOG.get(state.get("planId") or "essai", PLAN_CATALOG["essai"])["name"]
-    now = datetime.datetime.utcnow().isoformat() + "Z"
+    now = _utcnow().isoformat() + "Z"
     state["planId"] = plan_id
     state["cycleStartUtc"] = now
     state["extraCredits"] = 0
@@ -3302,7 +3302,7 @@ def grant_workers(client_id, plan_id, workers, new_cycle=True):
         return {"error": "ACTIVE_SUBSCRIPTION", "detail": "Ce client a un abonnement Stripe actif : annulez-le avant d'attribuer un forfait sur facture."}, 409
     old_plan, old_hired = state.get("planId"), inst.hired_workers(state)
     plan_changed = old_plan != plan_id
-    now = datetime.datetime.utcnow().isoformat() + "Z"
+    now = _utcnow().isoformat() + "Z"
     state["planId"] = plan_id
     if plan_changed or new_cycle:
         state["cycleStartUtc"] = now
@@ -3462,7 +3462,7 @@ def recharge_billing_credits(amount, client_id=DASHBOARD_CLIENT_ID):
         return {"error": "RECHARGE_NOT_AVAILABLE",
                 "detail": "Il n'y a pas de recharge de crédits : chaque forfait inclut un quota mensuel fixe. Quand il est atteint, passez au forfait supérieur."}
     state = _billing_load(client_id)
-    now = datetime.datetime.utcnow().isoformat() + "Z"
+    now = _utcnow().isoformat() + "Z"
     state["extraCredits"] = int(state.get("extraCredits") or 0) + amount
     state.setdefault("history", []).append({
         "dateUtc": now,
