@@ -185,7 +185,8 @@ check("l'essai a blanc et la fiche du Worker partagent submitMissionAndWait", AP
 
 # ------------------------------------------------------------------ 4. honnetete
 check("aucun prix ni devise dans l'interface d'installation/embauche (la page Tarifs n'affiche pas Solo/Trio)", not re.search(r"CHF|€|EUR\b|\$\d|\b\d+\s?(?:/ ?mois|par mois)", BLOCK))
-check("jamais de « priceChf » lu par l'interface", "priceChf" not in APP and "workerPlans" not in APP)
+# Le bloc HIRE-UI ne lit jamais de prix ; la page Tarifs / Facturation (pricing-v2) lit « priceChf » dans le catalogue du serveur, hors du bloc.
+check("jamais de « priceChf » lu par l'assistant et le parcours d'embauche (bloc HIRE-UI)", "priceChf" not in BLOCK and "workerPlans" not in APP)
 for word in ("téléphone", "whatsapp"):
     for kind, raw in js_strings(BLOCK):
         t = unescape_js(raw).lower()

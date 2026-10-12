@@ -16,7 +16,7 @@ Complète `docs/HIRE-API.md` (le serveur). Tout le code de l'interface est dans 
 
 - « Autonome » n'est proposé que pour les actions que le profil classe en risque faible ; la règle « envoyer, publier, payer, supprimer, appeler : toujours votre validation » est affichée à l'étape 3 et dans le récapitulatif d'activation.
 - Seuls les canaux réellement disponibles (`liveChannels` et `channelSupport == "available"`) sont envoyés au serveur ; téléphone, WhatsApp et e-mail apparaissent « bientôt ». Aucune promesse de numéro de téléphone, de WhatsApp ou de boîte e-mail pour les propres clients du client.
-- Aucun prix pour Solo/Trio (la page Tarifs n'en montre pas) : l'interface ne lit pas `priceChf`, parle de « tarif communiqué avant toute facture » et n'effectue aucun paiement.
+- Aucun prix dans l'assistant ni dans le parcours d'embauche : le bloc `HIRE-UI` ne lit pas `priceChf`, parle de « tarif communiqué avant toute facture » et n'effectue aucun paiement. Les prix de Solo et Trio ne s'affichent que sur la page Tarifs et dans Facturation (grille de prix, `docs/PRICING.md`), qui les lisent dans le catalogue du serveur (`priceChf` de `availablePlans`) ; le paiement passe par `POST /api/billing/plan` (Stripe Checkout), jamais par l'assistant.
 - L'essai à blanc est une vraie mission (`submitMissionAndWait`, le chemin de la fiche) : elle compte dans le quota, et l'interface le dit. Les actions vers l'extérieur restent validées par le client.
 - Activer, mettre en pause et supprimer sont des gestes du client ; rien n'est activé au chargement. La pause agit tout de suite (voir `docs/HIRE-API.md`, « Interrupteur d'arrêt »).
 - Tout texte venant du serveur ou du client passe par `escapeHtml` (vérifié par `tests/hire-ui/test_static.py`). Les descriptions de services, les champs de la fiche et les exemples viennent des profils en français et ne sont pas traduits en anglais.
@@ -38,7 +38,7 @@ Le serveur jetable démarre sur une copie : après une modification de `dashboar
 
 - Aucun point d'entrée pour fermer une demande d'embauche sans attribuer : la liste du propriétaire ne se vide que par une attribution.
 - Les profils d'installation sont en français ; en anglais, seul le cadre de l'interface est traduit.
-- Pas de prix Stripe pour Solo/Trio : facturation manuelle, attribution par le propriétaire.
+- Solo/Trio : tant que Stripe n'est pas configuré, facturation manuelle et attribution par le propriétaire (`PLAN_BY_INVOICE`, voir `docs/PRICING.md` §4) ; avec Stripe, le client paie le forfait depuis Facturation et l'assistant n'y change rien.
 - Barre du haut (antérieure à cette offre, non modifiée) : connecté, elle demande environ 1520 px de large ; en dessous (et au-dessus de 720 px, où le menu devient un hamburger), « Se déconnecter » dépasse à droite de l'écran. Vu à 1280 px dans le navigateur intégré.
 - L'essai à blanc lance une vraie mission : sur le serveur jetable (sans modèle) il n'a été vérifié qu'avec une réponse simulée de la route de mission, pas avec un vrai Worker.
 
