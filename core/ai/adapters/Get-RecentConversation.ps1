@@ -68,9 +68,12 @@ function Add-BKConversationTurn {
         $Line = ($Entry | ConvertTo-Json -Compress -Depth 5)
         [System.IO.File]::AppendAllText($Path, $Line + "`n", [System.Text.UTF8Encoding]::new($false))
 
-        # Rotation : un fil ne grossit pas sans fin (on garde les 300 derniers tours au-dela de 2 Mo).
+        # Memoire ILLIMITEE : un fil trop gros est ARCHIVE (jamais supprime ni tronque) et le fil actif repart avec les 60 derniers
+        # tours ; l'outil "memory" (Client-Memory.ps1) cherche dans tous les fichiers .jsonl du client, archives comprises.
         if ((Get-Item -LiteralPath $Path).Length -gt 2MB) {
-            $Keep = @(Get-Content -LiteralPath $Path -Tail 300 -Encoding UTF8)
+            $Keep = @(Get-Content -LiteralPath $Path -Tail 60 -Encoding UTF8)
+            $Archive = [System.IO.Path]::ChangeExtension($Path, $null).TrimEnd('.') + ".archive-" + (Get-Date).ToUniversalTime().ToString("yyyyMMddHHmmss") + ".jsonl"
+            Move-Item -LiteralPath $Path -Destination $Archive -Force
             [System.IO.File]::WriteAllText($Path, (($Keep -join "`n") + "`n"), [System.Text.UTF8Encoding]::new($false))
         }
     }

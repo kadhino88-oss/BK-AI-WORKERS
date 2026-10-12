@@ -3351,3 +3351,10 @@ input, textarea, select { border-radius: 14px; }
 .admin-activity-row a { color: var(--gold); }
 .admin-pilot-usecase { white-space: pre-wrap; }
 .admin-pilot-actions { grid-column: 1 / -1; display: flex; gap: 14px; align-items: center; color: var(--ink-muted); font-size: 12px; }
+
+/* Niveau de travail des missions (Rapide / Equilibre / Approfondi) */
+.level-picker { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 10px; }
+.level-chip { border: 1px solid rgba(201, 168, 106, 0.45); background: transparent; color: inherit; border-radius: 999px; padding: 6px 12px; font: inherit; font-size: 13px; cursor: pointer; }
+.level-chip .level-cost { opacity: 0.65; font-size: 12px; margin-left: 4px; }
+.level-chip.active { background: rgba(201, 168, 106, 0.18); border-color: #c9a86a; }
+.level-chip:focus-visible { outline: 2px solid #c9a86a; outline-offset: 2px; }

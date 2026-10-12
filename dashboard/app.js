@@ -2775,6 +2775,28 @@ function renderTaskFilesBlock(taskId, files) {
   return el;
 }
 
+// Niveau de travail (Rapide / Equilibre / Approfondi) : memorise sur l'appareil, envoye avec chaque mission.
+let missionLevels = { default: "", levels: [] };
+function currentMissionLevel() {
+  try { return localStorage.getItem("bk_mission_level") || missionLevels.default || ""; } catch (e) { return missionLevels.default || ""; }
+}
+async function loadMissionLevels() {
+  const picker = document.getElementById("level-picker");
+  if (!picker) return;
+  try { missionLevels = await fetchJson("/api/mission-levels"); } catch (e) { return; }
+  if (!missionLevels.levels || !missionLevels.levels.length) { picker.hidden = true; return; }
+  const chosen = currentMissionLevel();
+  picker.innerHTML = missionLevels.levels.map((l) =>
+    `<button type="button" role="radio" class="level-chip${l.id === chosen ? " active" : ""}" aria-checked="${l.id === chosen}" data-level="${escapeHtml(l.id)}" title="${escapeHtml(l.description)}">${escapeHtml(l.label)} <span class="level-cost">${l.credits} crédit${l.credits > 1 ? "s" : ""}</span></button>`
+  ).join("");
+  picker.hidden = false;
+  picker.querySelectorAll(".level-chip").forEach((b) => b.addEventListener("click", () => {
+    try { localStorage.setItem("bk_mission_level", b.dataset.level); } catch (e) { /* stockage indisponible : niveau par defaut */ }
+    picker.querySelectorAll(".level-chip").forEach((x) => { const on = x === b; x.classList.toggle("active", on); x.setAttribute("aria-checked", on); });
+  }));
+}
+loadMissionLevels();
+
 async function runTask(objective) {
   if (!accountAuthenticated) {
     requireAccount(() => runTask(objective));
@@ -2823,7 +2845,7 @@ async function runTask(objective) {
     const started = await fetchJson(asyncEndpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ objective }),
+      body: JSON.stringify({ objective, level: currentMissionLevel() }),
     });
 
     if (started.error || !started.jobId) {

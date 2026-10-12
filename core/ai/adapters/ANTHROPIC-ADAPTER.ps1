@@ -46,6 +46,7 @@ $ProjectRoot = if ($env:BK_ROOT) { $env:BK_ROOT } else { "C:/Users/FEUCOM/BK-AI-
 . (Join-Path $ProjectRoot "core/ai/BK-Secret.ps1")
 . (Join-Path $ProjectRoot "core/ai/adapters/Build-WorkerSystemPrompt.ps1")
 . (Join-Path $ProjectRoot "core/ai/adapters/Get-RecentConversation.ps1")
+. (Join-Path $ProjectRoot "core/ai/adapters/Client-Memory.ps1")
 . (Join-Path $ProjectRoot "core/integrations/Connector-Dispatch.ps1")
 
 # Modele : celui demande, sinon celui de AI-PROVIDERS.json, sinon Haiku 4.5.
@@ -57,6 +58,22 @@ if ([string]::IsNullOrWhiteSpace($EffectiveModel) -or $EffectiveModel -eq "NONE"
         if ($Cfg.providers.anthropic.model) { $EffectiveModel = [string]$Cfg.providers.anthropic.model }
     } catch { }
 }
+
+# Niveau de travail de la mission (Rapide / Equilibre / Approfondi) : modele, effort, etapes, recherches, delai (core/ai/LEVELS.json).
+$LevelCfg = $null
+if ($env:BK_MISSION_LEVEL -match '^[a-z]{3,20}$') {
+    try {
+        $AllLevels = Get-Content -LiteralPath (Join-Path $ProjectRoot "core/ai/LEVELS.json") -Raw -Encoding UTF8 | ConvertFrom-Json
+        $LevelProp = $AllLevels.levels.PSObject.Properties[$env:BK_MISSION_LEVEL]
+        if ($LevelProp) { $LevelCfg = $LevelProp.Value }
+    } catch { $LevelCfg = $null }
+}
+if ($LevelCfg -and $LevelCfg.model) { $EffectiveModel = [string]$LevelCfg.model }
+$WebMaxUses = if ($LevelCfg -and $LevelCfg.webMaxUses) { [int]$LevelCfg.webMaxUses } else { 5 }
+$CallTimeout = if ($LevelCfg -and $LevelCfg.callTimeoutSec) { [int]$LevelCfg.callTimeoutSec } else { 240 }
+# output_config.effort : GA sur les modeles 5.x, PAS sur Haiku 4.5 (le modele historique des Workers).
+$UseEffort = ($LevelCfg -and $LevelCfg.effort -and $EffectiveModel -notlike "claude-haiku-4*")
+$MissionDeadline = (Get-Date).AddSeconds(540)   # le serveur coupe a 600 s : on rend un resultat partiel avant
 
 Write-Host "ANTHROPIC ADAPTER | worker=$WorkerId | model=$EffectiveModel"
 
@@ -284,6 +301,8 @@ try {
     }
     $SystemBlocks = @(@{ type = "text"; text = [string]$SystemPrompt; cache_control = @{ type = "ephemeral" } })
     $ToolDef = Build-ConnectorToolDefinition -ClientId $ClientId
+    # Outil "memory" : memoire durable et archive illimitee de CE client (Client-Memory.ps1) ; absent pour l'essai public.
+    $MemoryToolDef = if (Get-BKMemoryDir -Root $ProjectRoot -ClientId $ClientId) { Get-BKMemoryToolDefinition } else { $null }
     $Messages = [System.Collections.ArrayList]@()
     foreach ($Turn in (Get-BKRecentConversationTurns -Root $ProjectRoot -ClientId $ClientId -WorkerId $WorkerId)) {
         [void]$Messages.Add($Turn)
@@ -315,16 +334,17 @@ try {
     # comportement d'aujourd'hui. Si les DEUX echouent, l'exception remonte
     # au catch principal (aucune erreur reelle n'est avalee).
     $ToolsNew = @(
-        @{ type = "web_search_20250305"; name = "web_search"; max_uses = 5 }
-        @{ type = "web_fetch_20250910"; name = "web_fetch"; max_uses = 5 }
+        @{ type = "web_search_20250305"; name = "web_search"; max_uses = $WebMaxUses }
+        @{ type = "web_fetch_20250910"; name = "web_fetch"; max_uses = $WebMaxUses }
         @{ type = "code_execution_20250825"; name = "code_execution" }
     )
     $ToolsOld = @(
-        @{ type = "web_search_20250305"; name = "web_search"; max_uses = 5 }
-        @{ type = "web_fetch_20250910"; name = "web_fetch"; max_uses = 5 }
+        @{ type = "web_search_20250305"; name = "web_search"; max_uses = $WebMaxUses }
+        @{ type = "web_fetch_20250910"; name = "web_fetch"; max_uses = $WebMaxUses }
         @{ type = "code_execution_20250522"; name = "code_execution" }
     )
     if ($ToolDef) { $ToolsNew += $ToolDef; $ToolsOld += $ToolDef }
+    if ($MemoryToolDef) { $ToolsNew += $MemoryToolDef; $ToolsOld += $MemoryToolDef }
 
     $HeadersNew = @{
         "x-api-key" = $PlainKey; "anthropic-version" = "2023-06-01"
@@ -340,9 +360,10 @@ try {
         $BodyObj = [ordered]@{
             model = $EffectiveModel; max_tokens = 64000; system = $SystemBlocks; messages = $Messages; tools = $Tools
         }
+        if ($UseEffort) { $BodyObj["output_config"] = @{ effort = [string]$LevelCfg.effort } }
         $Response = Invoke-RestMethod -Uri "https://api.anthropic.com/v1/messages" -Method Post `
             -Headers $Headers -ContentType "application/json; charset=utf-8" `
-            -Body ([System.Text.Encoding]::UTF8.GetBytes(($BodyObj | ConvertTo-Json -Depth 10))) -TimeoutSec 240
+            -Body ([System.Text.Encoding]::UTF8.GetBytes(($BodyObj | ConvertTo-Json -Depth 10))) -TimeoutSec $CallTimeout
     }
     catch {
         # Repli UNIQUEMENT si l'API refuse la version d'outil (HTTP 400 qui parle d'outil / beta). Timeout, 429, 5xx,
@@ -356,9 +377,10 @@ try {
         $BodyObj = [ordered]@{
             model = $EffectiveModel; max_tokens = 64000; system = $SystemBlocks; messages = $Messages; tools = $Tools
         }
+        if ($UseEffort) { $BodyObj["output_config"] = @{ effort = [string]$LevelCfg.effort } }
         $Response = Invoke-RestMethod -Uri "https://api.anthropic.com/v1/messages" -Method Post `
             -Headers $Headers -ContentType "application/json; charset=utf-8" `
-            -Body ([System.Text.Encoding]::UTF8.GetBytes(($BodyObj | ConvertTo-Json -Depth 10))) -TimeoutSec 240
+            -Body ([System.Text.Encoding]::UTF8.GetBytes(($BodyObj | ConvertTo-Json -Depth 10))) -TimeoutSec $CallTimeout
     }
 
     # ---------------- BOUCLE AGENTIQUE (2026-09-30) ----------------
@@ -374,19 +396,25 @@ try {
     # de CE code pour s'executer.
     $ConnectorActionsList = @()
     $AllFileIds = @(Get-CodeExecFileIds -Resp $Response)
-    $MaxIterations = 8
+    $MaxIterations = if ($LevelCfg -and $LevelCfg.maxIterations) { [int]$LevelCfg.maxIterations } else { 8 }
     $Iteration = 0
     $StopLoop = $false
 
-    while ($Response.stop_reason -eq "tool_use" -and $Iteration -lt $MaxIterations -and -not $StopLoop) {
+    while (($Response.stop_reason -eq "tool_use" -or $Response.stop_reason -eq "pause_turn") -and $Iteration -lt $MaxIterations -and -not $StopLoop -and (Get-Date) -lt $MissionDeadline) {
         $Iteration++
         $ToolUses = @($Response.content | Where-Object { $_.type -eq "tool_use" })
-        if ($ToolUses.Count -eq 0) { break }
+        if ($ToolUses.Count -eq 0 -and $Response.stop_reason -ne "pause_turn") { break }   # pause_turn : on reprend le tour des outils serveur tel quel
 
         [void]$Messages.Add(@{ role = "assistant"; content = $Response.content })
         $ToolResults = @()
 
         foreach ($ToolUse in $ToolUses) {
+            if ([string]$ToolUse.name -eq "memory") {
+                # Memoire du client : executee ici (lecture/ecriture de SON dossier uniquement), aucune validation humaine requise.
+                $MemOut = Invoke-BKMemoryTool -Root $ProjectRoot -ClientId $ClientId -ToolInput $ToolUse.input
+                $ToolResults += @{ type = "tool_result"; tool_use_id = $ToolUse.id; content = [string]$MemOut }
+                continue
+            }
             $ConnId = [string]$ToolUse.input.connectorId
             $Op     = [string]$ToolUse.input.operation
             $Reason = [string]$ToolUse.input.reason
@@ -447,19 +475,23 @@ try {
             }
         }
 
-        [void]$Messages.Add(@{ role = "user"; content = $ToolResults })
+        if ($ToolResults.Count -gt 0) { [void]$Messages.Add(@{ role = "user"; content = $ToolResults }) }
 
         $BodyObjN = [ordered]@{
             model = $EffectiveModel; max_tokens = 64000; system = $SystemBlocks; messages = $Messages
             tools = $Tools
         }
+        if ($UseEffort) { $BodyObjN["output_config"] = @{ effort = [string]$LevelCfg.effort } }
         $Response = Invoke-RestMethod -Uri "https://api.anthropic.com/v1/messages" -Method Post `
             -Headers $Headers -ContentType "application/json; charset=utf-8" `
-            -Body ([System.Text.Encoding]::UTF8.GetBytes(($BodyObjN | ConvertTo-Json -Depth 10))) -TimeoutSec 240
+            -Body ([System.Text.Encoding]::UTF8.GetBytes(($BodyObjN | ConvertTo-Json -Depth 10))) -TimeoutSec ([int][Math]::Max(30, [Math]::Min($CallTimeout, ($MissionDeadline - (Get-Date)).TotalSeconds)))
         $AllFileIds += @(Get-CodeExecFileIds -Resp $Response)
     }
 
     $ResponseText = (@($Response.content | Where-Object { $_.type -eq "text" } | ForEach-Object { $_.text }) -join "`n").Trim()
+    if ([string]::IsNullOrWhiteSpace($ResponseText) -and ($Response.stop_reason -eq "tool_use" -or $Response.stop_reason -eq "pause_turn")) {
+        $ResponseText = "La mission a atteint sa duree ou son nombre d'etapes maximum avant de conclure. Ecrivez « continue » : je reprends exactement la ou je me suis arretee, avec ce qui est deja fait."
+    }
     if ([string]::IsNullOrWhiteSpace($ResponseText) -and $ConnectorActionsList.Count -gt 0) {
         $LastPending = $ConnectorActionsList | Where-Object { $_.status -eq "PENDING_CONFIRMATION" } | Select-Object -Last 1
         if ($LastPending) {

@@ -523,7 +523,7 @@ def detect_reply_language(text):
     return None
 
 
-def submit_task(worker_hint_text, worker_id="", plan_only=False, client_id=""):
+def submit_task(worker_hint_text, worker_id="", plan_only=False, client_id="", level=None):
     """Appelle le vrai pipeline via Submit-Task.ps1 (PowerShell).
     Le resultat est ecrit par le script dans un fichier temporaire
     dedie (evite tout parsing fragile de stdout, pollue par les
@@ -550,6 +550,11 @@ def submit_task(worker_hint_text, worker_id="", plan_only=False, client_id=""):
             child_env["BK_REPLY_LANG"] = reply_lang
         else:
             child_env.pop("BK_REPLY_LANG", None)
+        lvl = normalize_level(level, client_id)
+        if lvl:
+            child_env["BK_MISSION_LEVEL"] = lvl
+        else:
+            child_env.pop("BK_MISSION_LEVEL", None)
         proc = subprocess.run(
             cmd,
             capture_output=True, timeout=600, env=child_env
@@ -676,7 +681,7 @@ def submit_task_limited(objective, **kw):
         _async_release(cid)
 
 
-def submit_task_async(objective, worker_id="", client_id="", plan_only=False):
+def submit_task_async(objective, worker_id="", client_id="", plan_only=False, level=None):
     """Lance une mission en arriere-plan, renvoie un jobId a interroger.
     Le job (runtime/async-jobs/<jobId>.json) passe de RUNNING a DONE/ERROR.
     IMPORTANT : le job n'est PAS un TASK-*.json -> aucun double comptage de
@@ -699,7 +704,7 @@ def submit_task_async(objective, worker_id="", client_id="", plan_only=False):
         record = dict(base)
         try:
             result = submit_task(objective, worker_id=worker_id,
-                                 plan_only=plan_only, client_id=client_id)
+                                 plan_only=plan_only, client_id=client_id, level=level)
             if not plan_only:
                 try:
                     result = attach_pending_action(result)
@@ -729,6 +734,104 @@ def submit_task_async(objective, worker_id="", client_id="", plan_only=False):
 
 
 TASK_ID_PATTERN = re.compile(r"^TASK-[A-F0-9]{32}$")
+
+# Memoire durable du client (core/ai/adapters/Client-Memory.ps1) : le client voit et supprime ses notes.
+CLIENT_MEMORY_DIR = os.path.join(ROOT, "runtime", "client-memory")
+MEMORY_NOTE_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,59}$")
+
+
+def _memory_client_ok(client_id):
+    """Un vrai compte client OU le compte du proprietaire (acces par la porte) : jamais un identifiant libre."""
+    return bool(CLIENT_ID_RE.match(client_id or "")) or client_id == DASHBOARD_CLIENT_ID
+
+
+def list_client_memory(client_id):
+    d = os.path.join(CLIENT_MEMORY_DIR, client_id)
+    notes = []
+    if _memory_client_ok(client_id) and os.path.isdir(d):
+        for name in sorted(os.listdir(d), key=lambda n: os.path.getmtime(os.path.join(d, n)), reverse=True):
+            if not name.endswith(".md") or name == "MEMORY.md":
+                continue
+            meta, body = {}, ""
+            try:
+                with open(os.path.join(d, name), encoding="utf-8") as f:
+                    text = f.read()
+                if text.startswith("---"):
+                    head, _, body = text[3:].partition("\n---")
+                    for line in head.splitlines():
+                        k, _, v = line.partition(":")
+                        if k.strip():
+                            meta[k.strip()] = v.strip()
+                else:
+                    body = text
+            except OSError:
+                continue
+            notes.append({"name": name[:-3], "type": meta.get("type", ""), "description": meta.get("description", ""),
+                          "source": meta.get("source", ""), "updated": meta.get("updated", ""), "content": body.strip()[:4000]})
+    return notes
+
+
+def delete_client_memory_note(client_id, name):
+    if not (_memory_client_ok(client_id) and MEMORY_NOTE_NAME_RE.match(name or "")):
+        return False
+    p = os.path.join(CLIENT_MEMORY_DIR, client_id, name + ".md")
+    if not os.path.isfile(p):
+        return False
+    os.remove(p)
+    # l'index MEMORY.md est reconstruit par le prochain enregistrement ; on le retire pour ne rien afficher de supprime
+    idx = os.path.join(CLIENT_MEMORY_DIR, client_id, "MEMORY.md")
+    try:
+        with open(idx, encoding="utf-8") as f:
+            lines = [l for l in f.read().splitlines() if not l.startswith(f"- [{name}](")]
+        with open(idx, "w", encoding="utf-8", newline="\n") as f:
+            f.write("\n".join(lines) + ("\n" if lines else ""))
+    except OSError:
+        pass
+    return True
+
+
+# Niveaux de travail (core/ai/LEVELS.json) : Rapide / Equilibre / Approfondi = modele + effort + etapes + cout en credits.
+MISSION_LEVELS_PATH = os.path.join(ROOT, "core", "ai", "LEVELS.json")
+
+
+def mission_levels():
+    data = load_json(MISSION_LEVELS_PATH, {}) or {}
+    levels = data.get("levels") if isinstance(data.get("levels"), dict) else {}
+    return data, levels
+
+
+def normalize_level(value, client_id=""):
+    """Niveau a appliquer a une mission ("" = niveaux desactives : BK_LEVELS=0 ou fichier absent). Le client anonyme de
+    l'essai public est toujours au niveau le moins cher ; une valeur inconnue retombe sur le niveau par defaut."""
+    if os.environ.get("BK_LEVELS") == "0":
+        return ""
+    data, levels = mission_levels()
+    if not levels:
+        return ""
+    if client_id == "CLI-TRIAL-PUBLIC":
+        return data.get("trial") if data.get("trial") in levels else next(iter(levels))
+    v = str(value or "").strip().lower()
+    if v in levels:
+        return v
+    return data.get("default") if data.get("default") in levels else next(iter(levels))
+
+
+def level_credits(level):
+    _, levels = mission_levels()
+    try:
+        return max(1, int((levels.get(level) or {}).get("credits") or 1))
+    except (TypeError, ValueError):
+        return 1
+
+
+def public_mission_levels():
+    data, levels = mission_levels()
+    if os.environ.get("BK_LEVELS") == "0":
+        return {"levels": [], "default": ""}
+    return {"default": data.get("default"),
+            "levels": [{"id": k, "label": v.get("label", k), "description": v.get("description", ""), "credits": level_credits(k)}
+                       for k, v in levels.items()]}
+
 
 
 def _pending_action_path(task_id):
@@ -2066,6 +2169,7 @@ def _purge_client_mission_artifacts(client_id, task_ids):
             except OSError:
                 pass
     shutil.rmtree(os.path.join(ROOT, "runtime", "threads", client_id), ignore_errors=True)   # memoire de conversation v2
+    shutil.rmtree(os.path.join(ROOT, "runtime", "client-memory", client_id), ignore_errors=True)   # notes durables
     try:
         for name in os.listdir(ASYNC_JOBS_DIR):
             if not name.endswith(".json"):
@@ -2462,7 +2566,10 @@ def get_billing(client_id=DASHBOARD_CLIENT_ID):
             created = data.get("CreatedAtUtc", "")
             if cycle_start and created and created < cycle_start:
                 continue
-            used += 1
+            try:
+                used += max(1, int(data.get("Credits") or 1))
+            except (TypeError, ValueError):
+                used += 1
 
     base_credits = plan["credits"]
     extra = int(state.get("extraCredits") or 0)
@@ -2482,6 +2589,7 @@ def get_billing(client_id=DASHBOARD_CLIENT_ID):
         "unlimited": total_credits is None,
         "history": list(reversed(state.get("history", [])))[:20],
         "availablePlans": [{"planId": pid, "name": p["name"], "credits": p["credits"]} for pid, p in PLAN_CATALOG.items()],
+        "missionLevels": public_mission_levels(),
     }
 
 
@@ -2541,7 +2649,7 @@ def cancel_billing_plan(client_id=DASHBOARD_CLIENT_ID):
     return get_billing(client_id)
 
 
-def subscription_blocks_mission(client_id):
+def subscription_blocks_mission(client_id, level=None):
     """None si le client peut lancer une vraie mission, sinon un message
     a renvoyer tel quel (credits d'essai epuises ou plan sans quota
     restant — l'abonnement devient alors obligatoire, comme demande).
@@ -2555,8 +2663,14 @@ def subscription_blocks_mission(client_id):
     billing = get_billing(client_id)
     if billing["unlimited"]:
         return None
-    if (billing["creditsRemaining"] or 0) > 0:
+    remaining = billing["creditsRemaining"] or 0
+    lvl = normalize_level(level, client_id)
+    needed = level_credits(lvl) if lvl else 1
+    if remaining >= needed:
         return None
+    if remaining > 0:
+        return (f"Il vous reste {remaining} crédit(s), ce niveau en demande {needed}. "
+                "Choisissez un niveau plus rapide ou souscrivez un abonnement pour continuer.")
     return "Votre quota est épuisé. Souscrivez un abonnement pour continuer à confier des missions."
 
 
@@ -3272,6 +3386,14 @@ class Handler(BaseHTTPRequestHandler):
                     self._redirect(f"/?oauth=ok&vendor={vendor}&provider={pending['provider']}" + ("&email=" + res["email"] if res.get("email") else ""))
                 else:
                     self._redirect("/?oauth=error&reason=" + str(res.get("error") or "UNKNOWN")[:60].replace(" ", "_"))
+        elif path == "/api/memory":
+            client_id = self._resolve_client_id()
+            if not client_id:
+                self._send_account_required()
+                return
+            self._send_json({"notes": list_client_memory(client_id)})
+        elif path == "/api/mission-levels":
+            self._send_json(public_mission_levels())
         elif path == "/api/fx":
             self._send_json(get_fx_rates())
         elif path == "/webhooks/whatsapp":
@@ -3682,7 +3804,7 @@ class Handler(BaseHTTPRequestHandler):
             if not objective:
                 self._send_json({"error": "OBJECTIVE_REQUIRED"}, 400)
                 return
-            result = submit_task_limited(objective, worker_id="chloe", client_id=client_id)
+            result = submit_task_limited(objective, worker_id="chloe", client_id=client_id, level=body.get("level"))
             self._send_json(attach_pending_action(result))
         elif path == "/api/chloe/task/async":
             # Variante asynchrone de /api/chloe/task : memes gardes (compte,
@@ -3694,21 +3816,21 @@ class Handler(BaseHTTPRequestHandler):
             if not client_id:
                 self._send_account_required()
                 return
-            block = subscription_blocks_mission(client_id)
-            if block:
-                self._send_json({"error": "SUBSCRIPTION_REQUIRED", "detail": block}, 402)
-                return
             length = int(self.headers.get("Content-Length", 0))
             raw = self.rfile.read(length) if length else b"{}"
             try:
                 body = json.loads(raw.decode("utf-8"))
             except Exception:
                 body = {}
+            block = subscription_blocks_mission(client_id, body.get("level"))
+            if block:
+                self._send_json({"error": "SUBSCRIPTION_REQUIRED", "detail": block}, 402)
+                return
             objective = (body.get("objective") or "").strip()
             if not objective:
                 self._send_json({"error": "OBJECTIVE_REQUIRED"}, 400)
                 return
-            res = submit_task_async(objective, worker_id="chloe", client_id=client_id)
+            res = submit_task_async(objective, worker_id="chloe", client_id=client_id, level=body.get("level"))
             self._send_json(res, 429 if res.get("error") else 202)
         elif path == "/api/chloe/plan":
             # Etape "Demander a Chloe" du parcours Demarrer : reservee aux
@@ -3754,7 +3876,7 @@ class Handler(BaseHTTPRequestHandler):
             if not objective:
                 self._send_json({"error": "OBJECTIVE_REQUIRED"}, 400)
                 return
-            result = submit_task_limited(objective, worker_id=wid, client_id=client_id)
+            result = submit_task_limited(objective, worker_id=wid, client_id=client_id, level=body.get("level"))
             self._send_json(attach_pending_action(result))
         elif path.startswith("/api/workers/") and path.endswith("/task/async"):
             # Variante asynchrone de /api/workers/<id>/task : memes gardes
@@ -3769,21 +3891,21 @@ class Handler(BaseHTTPRequestHandler):
             if not client_id:
                 self._send_account_required()
                 return
-            block = subscription_blocks_mission(client_id)
-            if block:
-                self._send_json({"error": "SUBSCRIPTION_REQUIRED", "detail": block}, 402)
-                return
             length = int(self.headers.get("Content-Length", 0))
             raw = self.rfile.read(length) if length else b"{}"
             try:
                 body = json.loads(raw.decode("utf-8"))
             except Exception:
                 body = {}
+            block = subscription_blocks_mission(client_id, body.get("level"))
+            if block:
+                self._send_json({"error": "SUBSCRIPTION_REQUIRED", "detail": block}, 402)
+                return
             objective = (body.get("objective") or "").strip()
             if not objective:
                 self._send_json({"error": "OBJECTIVE_REQUIRED"}, 400)
                 return
-            res = submit_task_async(objective, worker_id=wid, client_id=client_id)
+            res = submit_task_async(objective, worker_id=wid, client_id=client_id, level=body.get("level"))
             self._send_json(res, 429 if res.get("error") else 202)
         elif path == "/api/connector-action/confirm":
             client_id = self._resolve_client_id()
@@ -3814,6 +3936,19 @@ class Handler(BaseHTTPRequestHandler):
             except Exception:
                 pass
             self._send_json(result)
+        elif path == "/api/memory/delete":
+            client_id = self._resolve_client_id()
+            if not client_id:
+                self._send_account_required()
+                return
+            length = int(self.headers.get("Content-Length", 0))
+            raw_body = self.rfile.read(length) if length else b"{}"
+            try:
+                body = json.loads(raw_body.decode("utf-8"))
+            except Exception:
+                body = {}
+            ok = delete_client_memory_note(client_id, (body.get("name") or "").strip())
+            self._send_json({"ok": ok} if ok else {"error": "NOT_FOUND"}, 200 if ok else 404)
         elif path == "/api/connector-action/cancel":
             client_id = self._resolve_client_id()
             if not client_id:
