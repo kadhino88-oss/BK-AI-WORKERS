@@ -1,0 +1,212 @@
+{
+  "schema": "BK-INSTALL-PROFILE-V1",
+  "workerId": "thomas",
+  "displayName": "Thomas",
+  "tagline": "Écrit vos fiches produit, calcule vos marges frais de marketplace inclus et prépare vos catalogues, sans jamais toucher à votre boutique.",
+  "idealFor": "Boutiques en ligne Shopify ou WooCommerce et vendeurs qui veulent entrer sur Galaxus, Amazon ou Ricardo, avec des fiches qui convertissent et des prix qui laissent une vraie marge.",
+  "services": [
+    {
+      "id": "fiche-produit-optimisee",
+      "label": "Fiches produit optimisées pour le référencement et la vente",
+      "description": "Thomas lit votre boutique et vos fiches actuelles, cherche comment un acheteur recherche le produit, puis écrit la fiche entière : titre optimisé, description prête à coller, 5 bénéfices concrets, attributs et mots-clés, adaptés à votre boutique ou à la marketplace visée. Il signale aussi ce qui manque pour rassurer l'acheteur (preuve, garantie, délai, retours).",
+      "skills": ["PRODUCT_LISTING_OPTIMIZATION", "MARKETPLACE_SEO", "PRODUCT_CATEGORIZATION"],
+      "requiredConnectors": [],
+      "optionalConnectors": ["shopify.controlled", "woocommerce.controlled"],
+      "connectorOperations": {
+        "shopify.controlled": ["READ_PRODUCT"],
+        "woocommerce.controlled": ["READ_PRODUCT"]
+      },
+      "channels": ["web"],
+      "knowledgeFields": [
+        { "key": "site_web", "label": "Adresse de votre boutique", "help": "Thomas lit votre accueil, une catégorie et une ou deux fiches produit.", "required": true, "example": "https://www.atelier-martin.example/boutique" },
+        { "key": "produits_a_optimiser", "label": "Produits à optimiser", "help": "Références, liens ou caractéristiques réelles du produit. Thomas n'invente aucune caractéristique.", "required": true, "example": "Batterie 36 V 500 Wh compatible vélos urbains, garantie 24 mois" },
+        { "key": "canal_destination", "label": "Où la fiche sera publiée", "help": "Boutique propre, Galaxus, Amazon, Ricardo...", "required": false, "example": "Boutique propre et Galaxus" },
+        { "key": "politique_livraison_retours", "label": "Livraison et retours", "help": "Délais, frais de port, retours : éléments de réassurance à afficher.", "required": false, "example": "Livraison en 2 à 3 jours, retour gratuit sous 30 jours" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-recherche", "label": "Lire votre boutique et étudier la recherche d'acheteurs", "examples": ["Lire une fiche produit existante", "Chercher comment les acheteurs formulent la recherche"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 30 },
+        { "category": "redaction", "label": "Rédiger les fiches et le catalogue d'import", "examples": ["Rédiger titre, description, 5 bénéfices et attributs", "Produire le catalogue .csv ou .xlsx à importer vous-même"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 40 },
+        { "category": "modification-boutique", "label": "Modifier vos produits dans la boutique", "examples": ["Remplacer le titre et la description d'un produit en ligne"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Réécris la fiche d'un de mes produits (caractéristiques collées ci-dessous) pour ma boutique et pour Galaxus : titre, description complète, 5 bénéfices, attributs et mots-clés. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "La fiche est entièrement rédigée, copiable telle quelle, sans « à rédiger »",
+          "Aucune caractéristique, avis ou prix n'est inventé",
+          "Les différences de format entre boutique propre et marketplace sont respectées"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    },
+    {
+      "id": "pricing-marge-marketplace",
+      "label": "Prix de vente et marge nette par canal, frais inclus",
+      "description": "Thomas récupère coût d'achat, frais de marketplace (commission, frais fixes, retours), logistique et TVA, relève les prix réels de 2 ou 3 concurrents avec leur lien, calcule par programme la marge brute et nette de chaque canal (boutique propre, Galaxus, Amazon...) et recommande un prix, avec le point mort et trois scénarios.",
+      "skills": ["PRICING_STRATEGY_PREP", "MARKETPLACE_MANAGEMENT"],
+      "requiredConnectors": [],
+      "optionalConnectors": [],
+      "channels": ["web"],
+      "knowledgeFields": [
+        { "key": "cout_achat_logistique", "label": "Coût d'achat et logistique", "help": "Prix d'achat unitaire, emballage, port, préparation.", "required": true, "example": "Achat 180 CHF, emballage et préparation 6 CHF, port 9 CHF" },
+        { "key": "prix_vise", "label": "Prix de vente visé", "help": "Votre prix actuel ou envisagé, TTC.", "required": true, "example": "349 CHF TTC" },
+        { "key": "canaux_vises", "label": "Canaux de vente à comparer", "help": "Boutique propre et marketplaces envisagées.", "required": false, "example": "Boutique propre, Galaxus, Ricardo" },
+        { "key": "pays_et_tva", "label": "Pays de vente et régime de TVA", "help": "Le taux exact est confirmé ou délégué à Dario.", "required": false, "example": "Suisse, assujetti" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-recherche", "label": "Relever les prix concurrents et les frais", "examples": ["Lire les pages de prix de deux concurrents", "Confirmer la commission affichée d'une marketplace"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "analyse-calcul", "label": "Calculer marges et scénarios", "examples": ["Calculer la marge nette après commission et logistique", "Calculer le point mort en unités"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 30 },
+        { "category": "engagement-commercial", "label": "Changer vos prix en ligne", "examples": ["Modifier un prix dans la boutique ou sur la marketplace"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Mon produit coûte 180 CHF à l'achat, 15 CHF de logistique, je veux le vendre 349 CHF TTC. Calcule ma marge nette sur ma boutique et sur Galaxus avec les frais, compare à deux concurrents réels et recommande un prix. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "La commission est calculée sur le prix TTC selon la règle de la marketplace",
+          "Chaque prix concurrent a un lien et une date, sinon il est marqué « à confirmer »",
+          "Les hypothèses sont étiquetées et aucun prix n'est modifié"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    },
+    {
+      "id": "mise-sur-marketplace",
+      "label": "Préparation d'une mise en vente sur une marketplace",
+      "description": "Thomas choisit les marketplaces adaptées à votre produit (Galaxus, Digitec, manor, Ricardo en Suisse ; Amazon, Cdiscount ou Fnac en France et en Europe) en justifiant par le public et les frais, prépare la fiche au format exact de chacune (titre, attributs obligatoires, EAN, catégorie) et un fichier catalogue d'import. Vous importez vous-même.",
+      "skills": ["MARKETPLACE_MANAGEMENT", "MARKETPLACE_SEO", "PRODUCT_LISTING_OPTIMIZATION", "PRODUCT_CATEGORIZATION"],
+      "requiredConnectors": [],
+      "optionalConnectors": [],
+      "channels": ["web"],
+      "knowledgeFields": [
+        { "key": "produits_a_optimiser", "label": "Produits à mettre en vente", "help": "Références avec caractéristiques réelles, codes EAN et photos disponibles.", "required": true, "example": "Batterie 36 V 500 Wh, EAN 7612345678901" },
+        { "key": "marche_vise", "label": "Pays et marché visés", "help": "Détermine les marketplaces pertinentes.", "required": true, "example": "Suisse puis France" },
+        { "key": "capacite_logistique", "label": "Votre capacité de livraison", "help": "Stock, délais, expédition à l'étranger.", "required": false, "example": "Stock de 40 unités, expédition en Suisse seulement" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-recherche", "label": "Étudier les exigences de chaque marketplace", "examples": ["Lire les exigences de fiche d'une marketplace", "Comparer les frais publiés de deux plateformes"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "redaction", "label": "Préparer fiches et fichier d'import", "examples": ["Rédiger la fiche au format de la plateforme", "Produire le catalogue d'import en .csv"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 30 },
+        { "category": "publication", "label": "Mettre le produit en vente sur la marketplace", "examples": ["Publier la fiche sur Galaxus ou Amazon"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null },
+        { "category": "paiement-abonnement", "label": "Souscrire un abonnement vendeur ou de la publicité", "examples": ["Souscrire un abonnement vendeur"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Je veux vendre une batterie de vélo électrique en Suisse puis en France : choisis les deux marketplaces les plus pertinentes avec les frais publiés, prépare la fiche au format de la première et le fichier d'import. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Le choix des marketplaces est justifié par le public et les frais",
+          "La fiche respecte les attributs obligatoires de la plateforme",
+          "Rien n'est mis en ligne et aucun abonnement n'est souscrit"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    },
+    {
+      "id": "conformite-boutique",
+      "label": "Conformité d'une boutique en ligne (suisse, française ou européenne)",
+      "description": "Thomas identifie votre pays d'établissement et de vente, puis déroule la checklist de conformité : mentions légales, CGV, droit de rétractation, affichage des prix (TTC, port, TVA), retours et remboursements, cookies et données, annonces de réduction. Il re-vérifie les points sensibles à la date du jour et renvoie le texte contraignant à Clara et le taux de TVA exact à Dario.",
+      "skills": [],
+      "requiredConnectors": [],
+      "optionalConnectors": [],
+      "channels": ["web"],
+      "knowledgeFields": [
+        { "key": "site_web", "label": "Adresse de votre boutique", "help": "Thomas relève ce qui est affiché aujourd'hui.", "required": true, "example": "https://www.atelier-martin.example/boutique" },
+        { "key": "pays_etablissement_vente", "label": "Pays d'établissement et de vente", "help": "Pilote toute la checklist (Suisse, France, UE).", "required": true, "example": "Établi en Suisse, ventes en Suisse et en France" },
+        { "key": "modes_livraison_paiement", "label": "Livraison et paiement proposés", "help": "Transporteurs, pays livrés, moyens de paiement.", "required": false, "example": "La Poste, paiement par carte et TWINT" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-recherche", "label": "Lire votre boutique et les sources officielles", "examples": ["Lire vos pages de mentions légales et de CGV", "Vérifier un seuil de TVA sur la source officielle"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "redaction", "label": "Rédiger la checklist et la trame de CGV", "examples": ["Rédiger la checklist de conformité avec écarts constatés", "Rédiger la trame de CGV à faire valider par Clara"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 15 },
+        { "category": "modification-boutique", "label": "Modifier les pages légales de votre boutique", "examples": ["Remplacer vos mentions légales en ligne"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Contrôle la conformité de ma boutique (établie en Suisse, ventes en Suisse et en France) : mentions légales, CGV, rétractation, prix affichés, retours. Liste les écarts et la trame corrigée. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Les écarts cités sont constatés sur les pages réellement lues",
+          "Les seuils et délais sont confirmés à leur source ou marqués « à confirmer »",
+          "Le texte contraignant est renvoyé à Clara et le taux de TVA à Dario"
+        ]
+      },
+      "recommendedLevel": "approfondi"
+    },
+    {
+      "id": "suivi-stock-commandes",
+      "label": "Suivi du stock et des commandes (lecture seule)",
+      "description": "Avec Shopify ou WooCommerce connecté, Thomas lit vos produits, vos commandes et votre stock, repère les ruptures proches, les produits qui dorment et les commandes récentes inhabituelles, et rédige un point de situation avec les actions à décider. Aucun stock, prix ni commande n'est modifié.",
+      "skills": ["INVENTORY_SYNC_MONITORING", "PRODUCT_CATEGORIZATION"],
+      "requiredConnectors": [],
+      "requiredAnyOf": [["shopify.controlled", "woocommerce.controlled"]],
+      "optionalConnectors": [],
+      "connectorOperations": {
+        "shopify.controlled": ["READ_PRODUCT", "SEARCH_ORDERS", "READ_INVENTORY"],
+        "woocommerce.controlled": ["READ_PRODUCT", "SEARCH_ORDERS", "READ_INVENTORY"]
+      },
+      "channels": ["web", "schedule"],
+      "suggestedFrequencyMinutes": 1440,
+      "knowledgeFields": [
+        { "key": "seuil_stock_bas", "label": "Seuil de stock bas", "help": "En dessous de ce niveau, Thomas signale une rupture proche.", "required": true, "example": "Moins de 5 unités sur les produits phares" },
+        { "key": "produits_phares", "label": "Produits à surveiller en priorité", "help": "Références ou familles clés.", "required": false, "example": "Batteries et chargeurs" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-boutique", "label": "Lire produits, commandes et stock", "examples": ["Lire les niveaux de stock des produits phares", "Rechercher les commandes récentes"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 60 },
+        { "category": "redaction", "label": "Rédiger le point de situation", "examples": ["Rédiger la liste des ruptures proches avec action recommandée", "Rédiger la liste des produits sans vente"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "modification-boutique", "label": "Modifier stock, prix ou commandes", "examples": ["Mettre à jour un stock", "Annuler une commande"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Lis les produits, le stock et les commandes de ma boutique connectée, signale les ruptures proches et les produits sans vente, et recommande les actions. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Les chiffres viennent de la boutique connectée",
+          "Les ruptures proches sont listées avec leur seuil",
+          "Rien n'est modifié dans la boutique"
+        ]
+      },
+      "recommendedLevel": "rapide"
+    },
+    {
+      "id": "promotions-parcours-achat",
+      "label": "Promotions conformes et amélioration du parcours d'achat",
+      "description": "Thomas prépare un calendrier de promotions (soldes, Black Friday, opérations de saison) dont les annonces de réduction respectent les règles sur les prix barrés, et repère les freins du parcours d'achat à corriger : réassurance, frais de port, retours, étapes de paiement. Il chiffre l'effet attendu avec des hypothèses étiquetées.",
+      "skills": ["PROMOTIONS_CALENDAR", "CHECKOUT_OPTIMIZATION", "CART_ABANDONMENT_ANALYSIS"],
+      "requiredConnectors": [],
+      "optionalConnectors": [],
+      "channels": ["web"],
+      "knowledgeFields": [
+        { "key": "site_web", "label": "Adresse de votre boutique", "help": "Thomas lit le parcours réel avant de proposer quoi que ce soit.", "required": true, "example": "https://www.atelier-martin.example/boutique" },
+        { "key": "objectif_promotion", "label": "Objectif des promotions", "help": "Écouler un stock, gagner de nouveaux clients, saison.", "required": true, "example": "Écouler les accessoires d'hiver avant février" },
+        { "key": "marge_disponible", "label": "Marge disponible pour les remises", "help": "Taux de marge brute moyen par famille de produits.", "required": false, "example": "Accessoires : 45 % de marge brute" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-recherche", "label": "Lire votre parcours d'achat et les règles de réduction", "examples": ["Parcourir la fiche produit, le panier et la page de validation de commande", "Vérifier la règle sur les prix barrés"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "redaction", "label": "Rédiger le calendrier et les corrections", "examples": ["Rédiger le calendrier de promotions avec marge restante", "Rédiger la liste des freins du parcours d'achat"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 15 },
+        { "category": "engagement-commercial", "label": "Lancer une promotion en ligne", "examples": ["Activer une remise sur la boutique"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Prépare un calendrier de promotions pour écouler mes accessoires d'hiver avant février, avec la marge restante par opération, des annonces de réduction conformes et les trois principaux freins de mon parcours d'achat. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Chaque promotion indique la marge restante après remise",
+          "Les annonces de réduction respectent la règle sur les prix barrés ou signalent ce qui est à confirmer",
+          "Les freins cités sont constatés dans le parcours réellement lu"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    }
+  ],
+  "channelSupport": {
+    "email": "no",
+    "phone": "no",
+    "whatsapp": "no",
+    "web": "available",
+    "schedule": "available"
+  },
+  "plannedCapabilities": [
+    "Mise à jour de vos fiches, prix et stocks directement dans Shopify ou WooCommerce, après votre validation (aujourd'hui lecture seule)",
+    "Connexion aux marketplaces (Galaxus, Amazon, Ricardo) pour publier après votre validation",
+    "Lecture de vos avis clients et de vos paniers abandonnés",
+    "Dépôt de vos exports de catalogue et de vos photos produit dans la conversation",
+    "Connexion à Google Analytics pour mesurer la conversion de vos fiches"
+  ],
+  "installationSteps": [
+    "Ajoutez Thomas à votre équipe depuis le catalogue des Workers.",
+    "Indiquez l'adresse de votre boutique, vos pays de vente et vos règles de livraison et de retours dans la fiche d'entreprise.",
+    "Connectez Shopify ou WooCommerce dans la page Connecteurs (lecture seule) si vous voulez que Thomas lise vos produits et votre stock.",
+    "Gardez les réglages par défaut : Thomas rédige et calcule seul, mais ne modifie ni prix, ni stock, ni fiches en ligne.",
+    "Lancez le scénario d'essai « Fiche produit optimisée » avec un produit réel et vérifiez qu'aucune caractéristique n'est inventée.",
+    "Importez vous-même le fichier catalogue préparé dans votre boutique ou sur la marketplace.",
+    "Programmez un suivi quotidien du stock si votre boutique est connectée."
+  ]
+}
