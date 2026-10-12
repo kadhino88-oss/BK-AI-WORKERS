@@ -120,7 +120,7 @@ class CostCeilingConfig(unittest.TestCase):
         self.assertIsNone(lv["rapide"]["maxCostChf"])             # son maximum theorique (0,036 CHF) n'en demande pas
         self.assertEqual(lv["equilibre"]["maxCostChf"], 0.5)
         self.assertEqual(lv["approfondi"]["maxCostChf"], 1.0)
-        self.assertFalse(self.levels()["enabled"])                # les niveaux restent inactifs : le plafond ne change rien a la prod tant qu'ils le sont
+        self.assertTrue(self.levels()["enabled"])                 # niveaux actifs depuis la validation de la grille (pricing-v2) : le plafond s'applique donc en production ; BK_LEVELS=0 reste l'interrupteur d'arret
 
     def test_the_ceiling_is_not_exposed_to_clients(self):
         for level in server.public_mission_levels()["levels"]:
