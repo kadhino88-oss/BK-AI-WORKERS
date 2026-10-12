@@ -542,7 +542,8 @@ try {
         # note qui dit ce qu'il reste a faire. Les actions en attente restent valides (fichier PENDING-ACTION + connector_actions).
         if ([string]::IsNullOrWhiteSpace($ResponseText)) { $ResponseText = $LastNonEmptyText }
         $PendingForNote = @($ConnectorActionsList | Where-Object { $_.status -eq "PENDING_CONFIRMATION" })
-        $UnusedReadsForNote = @($ConnectorActionsList | Select-Object -Skip $CostStopFrom | Where-Object { $_.executed -and -not $_.autoApproved })
+        # Lectures du dernier tour dont le modele n'a jamais vu le resultat (les brouillons auto-approuves, eux, sont des actions faites).
+        $UnusedReadsForNote = @($ConnectorActionsList | Select-Object -Skip $CostStopFrom | Where-Object { $_.executed -and (Test-ReadOnlyOperation -Operation ([string]$_.operation)) })
         $CostNote = Get-BKCostCapNote -PendingActions $PendingForNote -UnusedReads $UnusedReadsForNote -FileCount @($AllFileIds | Select-Object -Unique).Count
         $ResponseText = (([string]$ResponseText).Trim() + "`n`n" + $CostNote).Trim()
     }

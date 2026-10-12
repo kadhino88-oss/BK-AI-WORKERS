@@ -98,6 +98,36 @@ Toute opération financière réelle doit rester :
 NEEDS_HUMAN
 KADER_APPROVAL
 
+## PLAFOND DE COÛT PAR MISSION (2026-10-12, adaptateur Anthropic)
+
+Chaque niveau de `core/ai/LEVELS.json` peut porter `maxCostChf` (Équilibré 0,50, Approfondi 1,00 ;
+Rapide : `null`, pas de plafond). `Mission-Cost.ps1` cumule le coût réel de chaque appel
+(jetons d'entrée, écriture et lecture du cache, sortie, recherches web) avec les tarifs de
+`core/ai/AI-PRICING.json` (table unique, lue aussi par le résumé des coûts du dashboard) et le taux
+fixe 1 USD = 0,83107 CHF. Avant chaque appel suivant (jamais avant le premier) :
+
+1. coût engagé ≥ plafond : on s'arrête ;
+2. sinon on estime l'appel suivant de façon prudente (prompt du dernier appel + sa sortie + les
+   nouveaux résultats d'outils à 3 caractères par jeton, plein tarif sans cache ; sortie = la plus
+   grosse vue, au moins 2 000 jetons ; recherches web du dernier appel) et on s'arrête si le total
+   dépasse le plafond.
+
+Un arrêt est propre : les outils du dernier tour sont traités comme d'habitude (une action en attente
+de confirmation reste écrite sur disque et listée dans `connector_actions`), aucun appel de plus
+n'est lancé, la réponse est la meilleure obtenue suivie d'une note en français (ce qu'il reste à
+faire, fichiers peut-être incomplets) et les champs suivants sont renseignés :
+
+- `cost_capped` (booléen, repris par le moteur puis par `Invoke-Worker-AI.ps1` en `CostCapped` dans le
+  résultat de la tâche) ;
+- `usage` : `input_tokens` / `output_tokens` CUMULÉS sur tous les appels, `cache_creation_input_tokens`,
+  `cache_read_input_tokens`, `web_search_requests`, `api_calls`, `estimated_cost_usd`,
+  `estimated_cost_chf`, `fx_chf_per_usd`, `cost_ceiling_chf`, `cost_priced`, `cost_complete`,
+  `cost_capped`, `cost_cap_reason` (`ceiling-reached` ou `next-call-would-exceed`).
+
+Limites connues : un appel unique n'est pas interrompu (`max_tokens` reste à 64 000 pour ne jamais
+rendre une réponse tronquée en silence) ; le premier appel n'est jamais refusé ; un modèle sans tarif
+dans `AI-PRICING.json` n'a ni coût ni plafond (`cost_priced = false`).
+
 ## VERSION
 
 7E-4
