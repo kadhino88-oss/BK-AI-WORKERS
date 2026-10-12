@@ -24,6 +24,14 @@
 #     core/integrations/Connector-Dispatch.ps1. Meme principe que le
 #     reste de la plateforme depuis le debut : un Worker prepare, il
 #     n'envoie jamais seul.
+#
+# 2026-10-12 : PLAFOND DE COUT PAR MISSION (Mission-Cost.ps1, tarifs
+# dans core/ai/AI-PRICING.json, plafond maxCostChf par niveau dans
+# core/ai/LEVELS.json). Le cout reel de chaque appel est cumule
+# (jetons, cache, recherches web) ; la boucle s'arrete AVANT l'appel
+# qui ferait depasser le plafond et rend la meilleure reponse obtenue
+# + une note en francais + cost_capped=true. usage porte les jetons
+# cumules et le cout estime (estimated_cost_usd / estimated_cost_chf).
 # ============================================================
 
 param(
@@ -48,6 +56,7 @@ $ProjectRoot = if ($env:BK_ROOT) { $env:BK_ROOT } else { "C:/Users/FEUCOM/BK-AI-
 . (Join-Path $ProjectRoot "core/ai/adapters/Get-RecentConversation.ps1")
 . (Join-Path $ProjectRoot "core/ai/adapters/Client-Memory.ps1")
 . (Join-Path $ProjectRoot "core/ai/adapters/Client-Installation.ps1")
+. (Join-Path $ProjectRoot "core/ai/adapters/Mission-Cost.ps1")
 . (Join-Path $ProjectRoot "core/integrations/Connector-Dispatch.ps1")
 
 # Modele : celui demande, sinon celui de AI-PROVIDERS.json, sinon Haiku 4.5.
@@ -75,6 +84,10 @@ $CallTimeout = if ($LevelCfg -and $LevelCfg.callTimeoutSec) { [int]$LevelCfg.cal
 # output_config.effort : GA sur les modeles 5.x, PAS sur Haiku 4.5 (le modele historique des Workers).
 $UseEffort = ($LevelCfg -and $LevelCfg.effort -and $EffectiveModel -notlike "claude-haiku-4*")
 $MissionDeadline = (Get-Date).AddSeconds(540)   # le serveur coupe a 600 s : on rend un resultat partiel avant
+# Plafond de cout de la mission (maxCostChf du niveau) et suivi du cout reel appel par appel : Mission-Cost.ps1, tarifs dans
+# core/ai/AI-PRICING.json. Sans niveau (ancien comportement) ou pour Rapide : pas de plafond, le cout est quand meme releve.
+$CostCeilingChf = if ($LevelCfg) { $LevelCfg.maxCostChf } else { $null }
+$MissionCost = New-BKMissionCost -Pricing (Get-BKPricing -Root $ProjectRoot) -Model $EffectiveModel -CeilingChf $CostCeilingChf
 
 Write-Host "ANTHROPIC ADAPTER | worker=$WorkerId | model=$EffectiveModel"
 
@@ -257,6 +270,13 @@ function Test-ReadOnlyOperation {
 # ENVOIE vraiment sur Teams/WhatsApp (revue 2026-10-11). BK_AUTOAPPROVE_DRAFTS_ONLY=0 restaure l'ancien comportement.
 $AutoApproveSafeOps = @("gmail|DRAFT_MESSAGE", "outlook_mail|DRAFT_MESSAGE", "wordpress|CREATE_DRAFT", "wordpress|UPDATE_DRAFT", "zendesk|DRAFT_REPLY", "intercom|DRAFT_REPLY")
 
+function Get-ResponseText {
+    # Texte (blocs "text") d'UNE reponse de l'API.
+    param($Resp)
+    if ($null -eq $Resp -or $null -eq $Resp.content) { return "" }
+    return (@($Resp.content | Where-Object { $_.type -eq "text" } | ForEach-Object { $_.text }) -join "`n").Trim()
+}
+
 function Get-CodeExecFileIds {
     # file_id des fichiers produits par l'execution de code dans UNE reponse de l'API.
     param($Resp)
@@ -384,6 +404,10 @@ try {
             -Body ([System.Text.Encoding]::UTF8.GetBytes(($BodyObj | ConvertTo-Json -Depth 10))) -TimeoutSec $CallTimeout
     }
 
+    # Cout du premier appel (un POST refuse par l'API, comme le repli d'outil ci-dessus, n'est pas facture et n'est pas compte).
+    Add-BKCallCost -Cost $MissionCost -Response $Response
+    $LastNonEmptyText = Get-ResponseText -Resp $Response   # meilleure reponse obtenue jusqu'ici (arret au plafond de cout)
+
     # ---------------- BOUCLE AGENTIQUE (2026-09-30) ----------------
     # Avant : un SEUL aller-retour possible pour use_connector (le Worker
     # ne pouvait jamais enchainer deux actions dans la meme mission —
@@ -400,9 +424,11 @@ try {
     $MaxIterations = if ($LevelCfg -and $LevelCfg.maxIterations) { [int]$LevelCfg.maxIterations } else { 8 }
     $Iteration = 0
     $StopLoop = $false
+    $CostStopFrom = 0   # indice, dans $ConnectorActionsList, des actions du DERNIER tour (note d'arret au plafond de cout)
 
     while (($Response.stop_reason -eq "tool_use" -or $Response.stop_reason -eq "pause_turn") -and $Iteration -lt $MaxIterations -and -not $StopLoop -and (Get-Date) -lt $MissionDeadline) {
         $Iteration++
+        $TurnActionsStart = $ConnectorActionsList.Count
         $ToolUses = @($Response.content | Where-Object { $_.type -eq "tool_use" })
         if ($ToolUses.Count -eq 0 -and $Response.stop_reason -ne "pause_turn") { break }   # pause_turn : on reprend le tour des outils serveur tel quel
 
@@ -483,6 +509,25 @@ try {
 
         if ($ToolResults.Count -gt 0) { [void]$Messages.Add(@{ role = "user"; content = $ToolResults }) }
 
+        # PLAFOND DE COUT PAR MISSION (2026-10-12, etude de marche 4.1) : on ne lance pas l'appel suivant s'il fait depasser le
+        # plafond du niveau. Les outils de ce tour sont deja traites ci-dessus : une action en attente de confirmation reste
+        # ecrite sur disque et listee dans connector_actions. Resultat : meilleure reponse obtenue + note + cost_capped.
+        if ($MissionCost.CeilingChf) {
+            $NewChars = 0
+            foreach ($TR in $ToolResults) { $NewChars += ([string]$TR.content).Length }
+            foreach ($Blk in @($Response.content)) {   # resultats d'outils serveur (recherche web, code) : renvoyes dans le prompt suivant
+                if ($Blk -and ([string]$Blk.type) -like '*_tool_result') { $NewChars += ($Blk | ConvertTo-Json -Depth 12 -Compress).Length }
+            }
+            $CostGate = Test-BKCostGate -Cost $MissionCost -NewChars $NewChars
+            if ($CostGate.Stop) {
+                $MissionCost.Capped = $true
+                $MissionCost.CapReason = [string]$CostGate.Reason
+                $CostStopFrom = $TurnActionsStart
+                Write-Host ("COST CEILING | stop before call #" + ($MissionCost.Calls + 1) + " | " + $CostGate.Reason)
+                break
+            }
+        }
+
         $BodyObjN = [ordered]@{
             model = $EffectiveModel; max_tokens = 64000; system = $SystemBlocks; messages = $Messages
             tools = $Tools
@@ -492,16 +537,31 @@ try {
             -Headers $Headers -ContentType "application/json; charset=utf-8" `
             -Body ([System.Text.Encoding]::UTF8.GetBytes(($BodyObjN | ConvertTo-Json -Depth 10))) -TimeoutSec ([int][Math]::Max(30, [Math]::Min($CallTimeout, ($MissionDeadline - (Get-Date)).TotalSeconds)))
         $AllFileIds += @(Get-CodeExecFileIds -Resp $Response)
+        Add-BKCallCost -Cost $MissionCost -Response $Response
+        $TurnText = Get-ResponseText -Resp $Response
+        if (-not [string]::IsNullOrWhiteSpace($TurnText)) { $LastNonEmptyText = $TurnText }
     }
 
-    $ResponseText = (@($Response.content | Where-Object { $_.type -eq "text" } | ForEach-Object { $_.text }) -join "`n").Trim()
-    if ([string]::IsNullOrWhiteSpace($ResponseText) -and ($Response.stop_reason -eq "tool_use" -or $Response.stop_reason -eq "pause_turn")) {
-        $ResponseText = "La mission a atteint sa duree ou son nombre d'etapes maximum avant de conclure. Ecrivez « continue » : je reprends exactement la ou je me suis arretee, avec ce qui est deja fait."
+    $ResponseText = Get-ResponseText -Resp $Response
+    if ($MissionCost.Capped) {
+        # Arret au plafond de cout : la meilleure reponse obtenue (celle du dernier tour, sinon la derniere non vide), puis une
+        # note qui dit ce qu'il reste a faire. Les actions en attente restent valides (fichier PENDING-ACTION + connector_actions).
+        if ([string]::IsNullOrWhiteSpace($ResponseText)) { $ResponseText = $LastNonEmptyText }
+        $PendingForNote = @($ConnectorActionsList | Where-Object { $_.status -eq "PENDING_CONFIRMATION" })
+        # Lectures du dernier tour dont le modele n'a jamais vu le resultat (les brouillons auto-approuves, eux, sont des actions faites).
+        $UnusedReadsForNote = @($ConnectorActionsList | Select-Object -Skip $CostStopFrom | Where-Object { $_.executed -and (Test-ReadOnlyOperation -Operation ([string]$_.operation)) })
+        $CostNote = Get-BKCostCapNote -PendingActions $PendingForNote -UnusedReads $UnusedReadsForNote -FileCount @($AllFileIds | Select-Object -Unique).Count
+        $ResponseText = (([string]$ResponseText).Trim() + "`n`n" + $CostNote).Trim()
     }
-    if ([string]::IsNullOrWhiteSpace($ResponseText) -and $ConnectorActionsList.Count -gt 0) {
-        $LastPending = $ConnectorActionsList | Where-Object { $_.status -eq "PENDING_CONFIRMATION" } | Select-Object -Last 1
-        if ($LastPending) {
-            $ResponseText = "J'ai préparé une action réelle ($($LastPending.connectorId) — $($LastPending.operation)). Elle n'est PAS encore envoyée — confirmez-la depuis votre tableau de bord pour qu'elle parte réellement."
+    else {
+        if ([string]::IsNullOrWhiteSpace($ResponseText) -and ($Response.stop_reason -eq "tool_use" -or $Response.stop_reason -eq "pause_turn")) {
+            $ResponseText = "La mission a atteint sa duree ou son nombre d'etapes maximum avant de conclure. Ecrivez « continue » : je reprends exactement la ou je me suis arretee, avec ce qui est deja fait."
+        }
+        if ([string]::IsNullOrWhiteSpace($ResponseText) -and $ConnectorActionsList.Count -gt 0) {
+            $LastPending = $ConnectorActionsList | Where-Object { $_.status -eq "PENDING_CONFIRMATION" } | Select-Object -Last 1
+            if ($LastPending) {
+                $ResponseText = "J'ai préparé une action réelle ($($LastPending.connectorId) — $($LastPending.operation)). Elle n'est PAS encore envoyée — confirmez-la depuis votre tableau de bord pour qu'elle parte réellement."
+            }
         }
     }
 
@@ -612,7 +672,10 @@ if ($ExitCode -eq 0) {
         client_id=$ClientId; project_id=$ProjectId; worker=$WorkerId.ToUpper(); task_id=$TaskId
         answer=$ResponseText; recommendations=@()
         files=@($CapturedFiles)
-        usage=[ordered]@{ input_tokens=[int]$Response.usage.input_tokens; output_tokens=[int]$Response.usage.output_tokens }
+        # usage = jetons CUMULES sur tous les appels de la mission + cout estime (USD/CHF), plafond et drapeau cost_capped
+        # (Mission-Cost.ps1) : le resume des couts du dashboard lit estimated_cost_usd.
+        usage=(Get-BKCostUsageFields -Cost $MissionCost)
+        cost_capped=[bool]$MissionCost.Capped
         next_action="Utiliser la reponse du fournisseur dans le traitement du Worker."
         security_status="VALID"; financial_actions=$false; external_actions=$false
         generated_at=(Get-Date).ToUniversalTime().ToString("o")

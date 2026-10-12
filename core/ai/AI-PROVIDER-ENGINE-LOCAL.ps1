@@ -235,6 +235,7 @@ else {
     $providerMode = ""
     $providerUsage = $null
     $providerFiles = @()
+    $providerCostCapped = $false   # mission arretee a son plafond de cout (ANTHROPIC-ADAPTER.ps1, Mission-Cost.ps1)
     $providerResult = $null
     $providerError = ""
 
@@ -328,6 +329,8 @@ else {
                         $providerAnswer = [string]$ParsedAnthropic.answer
                         $providerUsage = $ParsedAnthropic.usage
                         $providerFiles = if ($ParsedAnthropic.files) { $ParsedAnthropic.files } else { @() }
+                        $CostCappedProp = $ParsedAnthropic.PSObject.Properties["cost_capped"]
+                        $providerCostCapped = [bool]($CostCappedProp -and $CostCappedProp.Value)
                     }
                     else {
                         $providerError = "ANTHROPIC_EMPTY_RESPONSE"
@@ -356,6 +359,7 @@ else {
             project_id = $ProjectId
             answer = $providerAnswer
             usage = $providerUsage
+            cost_capped = $providerCostCapped
             files = @($providerFiles)
             recommendations = @()
             next_action = "Utiliser la réponse du fournisseur dans le traitement du Worker."

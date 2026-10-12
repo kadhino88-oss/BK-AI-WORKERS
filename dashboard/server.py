@@ -1502,6 +1502,7 @@ def _summarize_mission_result(result):
                     "status": r.get("Status"),
                     "answer": (r.get("Result") or {}).get("Answer"),
                     "files": (r.get("Result") or {}).get("Files"),
+                    "costCapped": bool((r.get("Result") or {}).get("CostCapped")),
                 }
                 for r in result.get("Results", []) if isinstance(r, dict)
             ],
@@ -1512,6 +1513,8 @@ def _summarize_mission_result(result):
         "status": result.get("Status"),
         "answer": (result.get("Result") or {}).get("Answer"),
         "files": (result.get("Result") or {}).get("Files"),
+        # True = mission arretee a son plafond de cout par niveau : la reponse est partielle (la note de fin le dit).
+        "costCapped": bool((result.get("Result") or {}).get("CostCapped")),
     }
 
 
@@ -1672,27 +1675,29 @@ ESTIMATED_MINUTES_SAVED_PER_MISSION = 12
 # Tarifs publics indicatifs (USD par million de tokens : entree, sortie).
 # Tarifs API Anthropic de premiere partie + OpenAI (indicatifs, 2026).
 # Un modele absent de cette table n'a PAS de cout affiche (jamais devine).
-# La table couvre desormais les modeles "forts" (Fable/Opus/Sonnet), pas
-# seulement Haiku : basculer un Worker sur un modele fort donne ainsi un
-# cout mesure et non "sans prix".
-MODEL_PRICING_USD_PER_MTOK = {
-    # Anthropic — famille Claude
-    "claude-fable-5-1": (10.00, 50.00),
-    "claude-fable-5": (10.00, 50.00),
-    "claude-opus-5-5": (4.00, 20.00),
-    "claude-opus-5": (5.00, 25.00),
-    "claude-opus-4-8": (5.00, 25.00),
-    "claude-opus-4-7": (5.00, 25.00),
-    "claude-opus-4-6": (5.00, 25.00),
-    "claude-sonnet-5-5": (2.00, 10.00),
-    "claude-sonnet-5": (2.00, 10.00),
-    "claude-sonnet-4-6": (3.00, 15.00),
-    "claude-haiku-5-5": (0.10, 0.50),
-    "claude-haiku-4-5": (1.00, 5.00),
-    # OpenAI
-    "gpt-4o": (2.50, 10.00),
-    "gpt-4o-mini": (0.15, 0.60),
-}
+# La table couvre les modeles "forts" (Fable/Opus/Sonnet), pas seulement
+# Haiku : basculer un Worker sur un modele fort donne ainsi un cout mesure
+# et non "sans prix".
+# UNE SEULE source (2026-10-12) : core/ai/AI-PRICING.json, lue aussi par
+# l'adaptateur Anthropic (core/ai/adapters/Mission-Cost.ps1) pour le plafond
+# de cout par mission, avec les prix du cache, des recherches web et le taux
+# CHF. Pour changer un prix, modifier ce fichier, pas ce code.
+AI_PRICING_PATH = os.path.join(ROOT, "core", "ai", "AI-PRICING.json")
+
+
+def pricing_table_from(data):
+    """{modele: (entree, sortie)} (USD par million de tokens) depuis le contenu de AI-PRICING.json ; {} si illisible."""
+    table = {}
+    models = (data or {}).get("models") if isinstance(data, dict) else None
+    for key, entry in (models if isinstance(models, dict) else {}).items():
+        try:
+            table[str(key).lower()] = (float(entry["input"]), float(entry["output"]))
+        except (KeyError, TypeError, ValueError):
+            continue
+    return table
+
+
+MODEL_PRICING_USD_PER_MTOK = pricing_table_from(load_json(AI_PRICING_PATH, {}))
 
 
 def price_for_model(model_id):
@@ -1729,7 +1734,7 @@ def configured_model_for(provider):
 def get_ai_cost_summary(client_id=DASHBOARD_CLIENT_ID):
     """Tokens reellement consommes (releves dans les reponses des
     fournisseurs) et cout ESTIME au tarif public — pas une facture."""
-    input_tokens = output_tokens = missions = 0
+    input_tokens = output_tokens = missions = capped = 0
     cost_usd = 0.0
     unpriced = 0
     if os.path.isdir(TASKS_DIR):
@@ -1747,6 +1752,14 @@ def get_ai_cost_summary(client_id=DASHBOARD_CLIENT_ID):
             input_tokens += i
             output_tokens += o
             missions += 1
+            if res.get("CostCapped") or usage.get("cost_capped"):
+                capped += 1
+            # Cout releve par l'adaptateur (tous les appels de la mission : cache et recherches web compris) : prioritaire sur
+            # l'estimation jetons x tarif, qui ignore le cache et les recherches web.
+            measured = usage.get("estimated_cost_usd")
+            if isinstance(measured, (int, float)) and not isinstance(measured, bool) and measured >= 0:
+                cost_usd += float(measured)
+                continue
             model_used = res.get("Model") or res.get("model")
             if str(model_used or "").strip().upper() in ("", "NONE"):
                 model_used = configured_model_for(res.get("Provider"))
@@ -1762,6 +1775,7 @@ def get_ai_cost_summary(client_id=DASHBOARD_CLIENT_ID):
         "estimatedCostUsd": round(cost_usd, 4),
         "avgCostUsdPerCall": round(cost_usd / missions, 4) if missions else 0,
         "callsWithoutPrice": unpriced,
+        "costCappedMissions": capped,
         "note": "Estimation au tarif public du fournisseur (tokens reels releves dans les reponses) — pas une facture.",
     }
 
