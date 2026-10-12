@@ -137,6 +137,23 @@ def main():
         with open(os.path.join(app, "runtime", "tasks", task_id + ".json"), "w", encoding="utf-8") as f:
             json.dump(record, f)
         base = f"/api/missions/{task_id}/files/"
+        # Action preparee par le Worker, pas encore confirmee (comme l'ecrit ANTHROPIC-ADAPTER.ps1)
+        os.makedirs(os.path.join(app, "memory", "runtime"), exist_ok=True)
+        with open(os.path.join(app, "memory", "runtime", f"PENDING-ACTION-{task_id}.json"), "w", encoding="utf-8") as f:
+            json.dump({"taskId": task_id, "connectorId": "gmail", "operation": "DRAFT_MESSAGE", "reason": "brouillon a valider",
+                       "params": {"to": "client@example.com", "subject": "Offre", "body": "Bonjour", "access_token": "ya29.SECRET-TOKEN-VALUE"}}, f)
+
+        print("\n== historique : l'action en attente revient (carte Confirmer / Annuler apres rechargement) ==")
+        st, out = a.json("GET", "/api/workers/dario/activity")
+        pa = ((out.get("activity") or [{}])[0]).get("pendingAction") or {}
+        check("l'historique renvoie l'action en attente avec le contenu exact (destinataire, objet)",
+              pa.get("connectorId") == "gmail" and pa.get("operation") == "DRAFT_MESSAGE" and (pa.get("params") or {}).get("to") == "client@example.com", pa)
+        check("les secrets de l'action en attente sont masques dans l'historique", "SECRET-TOKEN-VALUE" not in json.dumps(out), out)
+        st, out = b.json("GET", "/api/workers/dario/activity")
+        check("un autre client ne voit pas l'action en attente", st == 200 and out.get("activity") == [], out)
+        os.remove(os.path.join(app, "memory", "runtime", f"PENDING-ACTION-{task_id}.json"))
+        st, out = a.json("GET", "/api/workers/dario/activity")
+        check("une fois l'action confirmee/annulee (fichier supprime), la carte ne revient plus", "pendingAction" not in (out.get("activity") or [{}])[0], out)
 
         print("\n== historique : les fichiers de la mission reviennent ==")
         st, out = a.json("GET", "/api/workers/dario/activity")

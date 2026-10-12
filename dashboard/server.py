@@ -492,7 +492,15 @@ def get_worker_activity(worker_id_upper, client_id, limit=8):
                           for f in ((data.get("Result") or {}).get("Files") or []) if isinstance(f, dict) and f.get("filename")],
             })
     records.sort(key=lambda r: r.get("createdAtUtc") or "", reverse=True)
-    return records[:limit]
+    records = records[:limit]
+    # Action preparee par le Worker et pas encore confirmee/annulee : le fichier PENDING-ACTION-<TaskId>.json existe encore. On la
+    # remonte pour que la carte "Confirmer / Annuler" revienne apres un rechargement de la page (jusqu'ici, elle n'existait que dans la
+    # reponse de la mission en direct). Memes champs et memes masquages de secrets que dans la reponse en direct.
+    for r in records:
+        pending = attach_pending_action({"TaskId": r.get("taskId")}).get("pendingAction")
+        if pending:
+            r["pendingAction"] = pending
+    return records
 
 
 
