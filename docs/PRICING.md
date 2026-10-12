@@ -32,7 +32,7 @@ Décision du propriétaire du 2026-10-12, prise après l'étude de marché (`doc
 | Chaque Worker appelé par Chloé est facturé au niveau de la mission (un Worker de Chloé ne coûte plus un crédit quel que soit le niveau) | `dashboard/Submit-Task.ps1` |
 | Le quota est contrôlé **au niveau demandé** sur toutes les routes de mission (une mission Approfondi ne passe pas avec le solde d'une mission Équilibre) | `subscription_blocks_mission(client_id, level)` |
 
-**Interrupteur d'arrêt : `BK_LEVELS=0`** dans l'environnement du serveur (puis redémarrage). Retour à l'ancien comportement : un seul niveau, modèle léger, **1 crédit par mission** (automatisations comprises, `level` vide). `BK_LEVELS=1` force l'activation quel que soit le fichier. Sans variable, c'est `enabled` de `core/ai/LEVELS.json` qui décide.
+**Interrupteur d'arrêt : `BK_LEVELS=0`** dans le `.env` du serveur (puis `docker compose up -d`, qui recrée le conteneur ; voir `.env.example`). Retour à l'ancien comportement : un seul niveau, modèle léger, **1 crédit par mission** (automatisations comprises, `level` vide). `BK_LEVELS=1` force l'activation quel que soit le fichier. Sans variable, c'est `enabled` de `core/ai/LEVELS.json` qui décide.
 
 Ce que 1/6/12 donne en missions par mois :
 

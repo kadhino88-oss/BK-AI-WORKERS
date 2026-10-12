@@ -73,7 +73,7 @@ sauvegarde quotidienne du VPS ; garde aussi une copie de temps en temps hors du 
 - Grille de prix validée le 2026-10-12 (détail : `docs/PRICING.md`) : Solo 29, Trio 59, Équipe 99, Pro 139, Scale 449 CHF/mois (annuel = 10 mois : 290 / 590 / 990 / 1390 / 4490), Enterprise sur devis. Starter (39) et Business (99) ne sont plus vendus mais restent actifs pour les abonnés existants.
 - Price ID Stripe : les Price ID déjà saisis (`prices` / `pricesAnnual` du secret) restent utilisés tels quels (Pro, Scale, et ceux de Starter / Business pour les abonnés existants). Pour **Solo, Trio et Équipe**, aucun Price ID n'est nécessaire : le serveur envoie le montant du catalogue (`PLAN_CATALOG`, en centimes de CHF) à la création de la Checkout Session. Si vous créez un Price ID pour l'un d'eux, il est utilisé à la place : son montant doit alors être celui de la grille.
 - Coupon de lancement -30 % 2 mois (`BK_STRIPE_LAUNCH_COUPON`) : mensuel seulement, inchangé.
-- Niveaux de mission (Rapide 1 / Équilibre 6 / Approfondi 12 crédits) actifs depuis la fusion ; interrupteur d'arrêt : `BK_LEVELS=0` dans l'environnement du serveur puis redémarrage (retour à un seul niveau, modèle léger, 1 crédit par mission).
+- Niveaux de mission (Rapide 1 / Équilibre 6 / Approfondi 12 crédits) actifs depuis la fusion ; interrupteur d'arrêt : `BK_LEVELS=0` dans `.env` du serveur puis `docker compose up -d` (recrée le conteneur ; un simple `restart` ne relit pas `.env`) (retour à un seul niveau, modèle léger, 1 crédit par mission).
 - Renseigner `BK_SECRET_STRIPE` (JSON sur une ligne, voir `.env.example`).
 
 ## Libre-service multi-comptes (2026-09-22)
