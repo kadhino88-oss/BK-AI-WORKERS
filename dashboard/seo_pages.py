@@ -247,9 +247,8 @@ def _credit_scale_html(levels):
         return ("<p>Chaque forfait inclut un quota mensuel fixe de crédits : une mission réellement traitée consomme un crédit. "
                 "Quand le quota est atteint, vous passez au forfait supérieur.</p>")
     items = "".join(f"<li><strong>{l['label']}</strong> : {l['credits']} crédit{'s' if l['credits'] > 1 else ''} par mission</li>" for l in rows)
-    top = max(rows, key=lambda l: l["credits"])
     base = min(rows, key=lambda l: l["credits"])
-    example = (f"Exemple avec 250 crédits (Solo) : {250 // base['credits']} missions {base['label']}, ou {250 // top['credits']} missions {top['label']}.")
+    example = "Exemple avec 250 crédits (Solo) : " + ", ou ".join(f"{250 // l['credits']} missions {l['label']}" for l in rows) + "."
     return (f"<h2>Combien de missions pour mes crédits ?</h2><ul>{items}</ul><p>{example} Les missions récurrentes (automatisations) tournent au niveau "
             f"{base['label']}.</p><p>Chaque forfait est un quota mensuel fixe, renouvelé chaque mois : il n'y a ni missions illimitées, ni recharge de crédits, "
             "ni paiement à l'usage. Quand le quota est atteint, vous passez au forfait supérieur, qui a son propre quota.</p>")
