@@ -2513,6 +2513,8 @@ async function loadActivity(workerId) {
         <div class="a-request">${escapeHtml(a.request ?? "")}</div>
         ${answer ? `<div class="a-answer">${renderAnswer(answer)}</div>` : ""}
       `;
+      const filesBlock = renderTaskFilesBlock(a.taskId, a.files);
+      if (filesBlock) item.appendChild(filesBlock);
       el.appendChild(item);
     });
   }
@@ -2536,6 +2538,8 @@ async function loadActivity(workerId) {
         <div class="chat-msg chat-msg-user">${escapeHtml(a.request || "")}</div>
         <div class="chat-msg chat-msg-worker ${cls}"><div class="status-line">${escapeHtml(statusLine)}</div>${renderAnswer(answer)}</div>
       `;
+      const replayFiles = renderTaskFilesBlock(a.taskId, a.files);
+      if (replayFiles) turn.appendChild(replayFiles);
       threadEl.appendChild(turn);
     });
     threadEl.scrollTop = threadEl.scrollHeight;
@@ -2761,18 +2765,108 @@ function formatFileSize(bytes) {
 // fichier, servi par GET /api/missions/<taskId>/files/<filename>.
 function renderTaskFilesBlock(taskId, files) {
   if (!taskId || !Array.isArray(files) || !files.length) return null;
-  const links = files.map((file) => {
-    const fname = file && file.filename ? String(file.filename) : "";
-    if (!fname) return "";
-    const size = file && typeof file.sizeBytes === "number" ? ` (${formatFileSize(file.sizeBytes)})` : "";
-    const href = `/api/missions/${encodeURIComponent(taskId)}/files/${encodeURIComponent(fname)}`;
-    return `<a class="task-file-link" href="${href}" download>📎 ${escapeHtml(fname)}${escapeHtml(size)}</a>`;
-  }).join("");
-  if (!links) return null;
   const el = document.createElement("div");
   el.className = "task-files-block";
-  el.innerHTML = `<div class="task-files-title">Fichiers produits</div>${links}`;
+  el.innerHTML = '<div class="task-files-title">Fichiers produits</div>';
+  files.forEach((file) => {
+    const fname = file && file.filename ? String(file.filename) : "";
+    if (!fname) return;
+    const size = file && typeof file.sizeBytes === "number" ? ` (${formatFileSize(file.sizeBytes)})` : "";
+    const base = `/api/missions/${encodeURIComponent(taskId)}/files/${encodeURIComponent(fname)}`;
+    const row = document.createElement("div");
+    row.className = "task-file-row";
+    row.innerHTML = `<span class="task-file-name">📎 ${escapeHtml(fname)}${escapeHtml(size)}</span>
+      <button type="button" class="btn btn-ghost task-file-preview-btn">Aperçu</button>
+      <a class="btn btn-gold task-file-link" href="${base}" download>Télécharger</a>`;
+    row.querySelector(".task-file-preview-btn").addEventListener("click", () => openFilePreview(base, fname));
+    el.appendChild(row);
+  });
   return el;
+}
+
+// Aperçu d'un fichier produit AVANT de le télécharger (tableur, document, presentation, PDF, image, texte).
+async function openFilePreview(base, fname) {
+  document.querySelectorAll(".file-preview-overlay").forEach((n) => n.remove());
+  const overlay = document.createElement("div");
+  overlay.className = "file-preview-overlay";
+  overlay.innerHTML = `<div class="file-preview-box" role="dialog" aria-modal="true" aria-label="Aperçu du fichier">
+      <div class="file-preview-head"><strong class="file-preview-title"></strong>
+        <span class="file-preview-actions"><a class="btn btn-gold" download>Télécharger</a><button type="button" class="btn btn-ghost file-preview-close">Fermer</button></span></div>
+      <div class="file-preview-body"><div class="file-preview-loading">Chargement de l'aperçu…</div></div></div>`;
+  overlay.querySelector(".file-preview-title").textContent = fname;
+  overlay.querySelector("a[download]").href = base;
+  const close = () => { overlay.remove(); document.removeEventListener("keydown", onKey); };
+  const onKey = (e) => { if (e.key === "Escape") close(); };
+  document.addEventListener("keydown", onKey);
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
+  overlay.querySelector(".file-preview-close").addEventListener("click", close);
+  document.body.appendChild(overlay);
+  const body = overlay.querySelector(".file-preview-body");
+  const table = (rows) => {
+    const t = document.createElement("table");
+    t.className = "file-preview-table";
+    rows.forEach((r, i) => {
+      const tr = document.createElement("tr");
+      r.forEach((c) => { const td = document.createElement(i === 0 ? "th" : "td"); td.textContent = c; tr.appendChild(td); });
+      t.appendChild(tr);
+    });
+    return t;
+  };
+  try {
+    const res = await fetchJson(base + "/preview");
+    body.innerHTML = "";
+    if (!res.ok) { body.innerHTML = `<p class="file-preview-note">${escapeHtml(res.error || "Aperçu indisponible.")} Vous pouvez tout de même télécharger le fichier.</p>`; return; }
+    const p = res.preview || {};
+    if (p.kind === "table") {
+      const tabs = document.createElement("div");
+      tabs.className = "file-preview-tabs";
+      const panel = document.createElement("div");
+      const show = (i) => {
+        panel.innerHTML = "";
+        const s = p.sheets[i];
+        panel.appendChild(table(s.rows));
+        const notes = [];
+        if (s.truncated) notes.push("Aperçu limité aux premières lignes et colonnes.");
+        if (s.formulaCells) {
+          const open = s.formulaCells - (s.computedCells || 0);
+          notes.push(open > 0
+            ? `${s.formulaCells} cellule(s) contiennent une formule${s.computedCells ? ` (${s.computedCells} calculée(s) ici)` : ""} : ${open === s.formulaCells ? "les résultats" : "les autres résultats"} s'affichent à l'ouverture dans Excel.`
+            : `${s.formulaCells} cellule(s) contiennent une formule : valeurs calculées pour cet aperçu, le fichier garde ses formules.`);
+        }
+        if (notes.length) { const n = document.createElement("p"); n.className = "file-preview-note"; n.textContent = notes.join(" "); panel.appendChild(n); }
+        [...tabs.children].forEach((b, j) => b.classList.toggle("active", j === i));
+      };
+      p.sheets.forEach((s, i) => { const b = document.createElement("button"); b.type = "button"; b.className = "file-preview-tab"; b.textContent = s.name; b.addEventListener("click", () => show(i)); tabs.appendChild(b); });
+      if (p.sheets.length > 1) body.appendChild(tabs);
+      body.appendChild(panel);
+      show(0);
+    } else if (p.kind === "document") {
+      p.blocks.forEach((b) => {
+        if (b.type === "table") { body.appendChild(table(b.rows)); return; }
+        const n = document.createElement(b.type === "h" ? "h4" : "p");
+        n.textContent = b.text;
+        body.appendChild(n);
+      });
+      if (p.truncated) { const n = document.createElement("p"); n.className = "file-preview-note"; n.textContent = "Aperçu limité au début du document."; body.appendChild(n); }
+    } else if (p.kind === "slides") {
+      p.slides.forEach((s) => {
+        const d = document.createElement("div"); d.className = "file-preview-slide";
+        const h = document.createElement("strong"); h.textContent = "Diapositive " + s.n; d.appendChild(h);
+        s.lines.forEach((l) => { const li = document.createElement("p"); li.textContent = l; d.appendChild(li); });
+        body.appendChild(d);
+      });
+    } else if (p.kind === "text") {
+      const pre = document.createElement("pre"); pre.className = "file-preview-text"; pre.textContent = p.text; body.appendChild(pre);
+    } else if (p.kind === "pdf") {
+      const f = document.createElement("iframe"); f.className = "file-preview-frame"; f.title = "Aperçu PDF"; f.src = base + "?inline=1"; body.appendChild(f);
+    } else if (p.kind === "image") {
+      const img = document.createElement("img"); img.className = "file-preview-image"; img.alt = fname; img.src = base + "?inline=1"; body.appendChild(img);
+    } else {
+      body.innerHTML = '<p class="file-preview-note">Pas d\'aperçu pour ce type de fichier. Vous pouvez le télécharger.</p>';
+    }
+  } catch (e) {
+    body.innerHTML = '<p class="file-preview-note">Aperçu indisponible pour le moment. Vous pouvez télécharger le fichier.</p>';
+  }
 }
 
 async function runTask(objective) {
