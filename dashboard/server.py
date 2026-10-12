@@ -8,6 +8,7 @@ et peut soumettre une vraie tache via Submit-Task.ps1.
 Aucune dependance externe : http.server de la bibliotheque standard.
 """
 
+import calendar
 import json
 import os
 import re
@@ -819,7 +820,8 @@ def mission_levels():
 
 
 def levels_enabled(data=None):
-    """BK_LEVELS=1 / 0 force ; sinon l'interrupteur "enabled" de core/ai/LEVELS.json (inactif par defaut)."""
+    """Les niveaux sont ACTIFS (2026-10-12 : echelle de credits validee, "enabled": true dans core/ai/LEVELS.json). Interrupteur d'arret
+    du serveur : BK_LEVELS=0 revient a l'ancien comportement (un seul niveau, modele leger, 1 credit par mission) ; BK_LEVELS=1 les force."""
     env = os.environ.get("BK_LEVELS")
     if env in ("0", "1"):
         return env == "1"
@@ -828,14 +830,27 @@ def levels_enabled(data=None):
     return bool(data.get("enabled", False))
 
 
+def plan_level_lock(client_id):
+    """Niveau impose par le forfait du client (l'essai est verrouille sur Rapide), sinon "". Un compte client sans fichier de facturation
+    est a l'essai ; un fichier illisible aussi (le niveau le moins cher : on ne depense jamais plus par defaut)."""
+    if not _is_customer_id(client_id):
+        return ""
+    state = _billing_state_readonly(client_id)
+    plan = PLAN_CATALOG.get((state or {}).get("planId") or "essai") or PLAN_CATALOG["essai"]
+    return plan.get("levelLock") or ""
+
+
 def normalize_level(value, client_id=""):
-    """Niveau a appliquer a une mission ("" = niveaux desactives : BK_LEVELS=0 ou fichier absent). Le client anonyme de
-    l'essai public est toujours au niveau le moins cher ; une valeur inconnue retombe sur le niveau par defaut."""
+    """Niveau a appliquer a une mission ("" = niveaux desactives : BK_LEVELS=0 ou fichier absent). Le client anonyme de l'essai public et
+    tout compte au forfait Essai sont toujours au niveau le moins cher (Rapide) ; une valeur inconnue retombe sur le niveau par defaut."""
     data, levels = mission_levels()
     if not levels or not levels_enabled(data):
         return ""
     if client_id == "CLI-TRIAL-PUBLIC":
         return data.get("trial") if data.get("trial") in levels else next(iter(levels))
+    lock = plan_level_lock(client_id)
+    if lock in levels:
+        return lock
     v = str(value or "").strip().lower()
     if v in levels:
         return v
@@ -850,13 +865,33 @@ def level_credits(level):
         return 1
 
 
-def public_mission_levels():
+def public_mission_levels(client_id=""):
+    """Niveaux proposes au client (id, libelle, cout en credits) ; un forfait verrouille (l'essai) ne voit que son niveau."""
     data, levels = mission_levels()
     if not levels_enabled(data):
         return {"levels": [], "default": ""}
-    return {"default": data.get("default"),
+    lock = plan_level_lock(client_id)
+    shown = {k: v for k, v in levels.items() if not lock or k == lock} if lock in levels else levels
+    default = data.get("default")
+    if shown and default not in shown:
+        default = next(iter(shown))
+    return {"default": default, "locked": bool(lock and lock in levels),
             "levels": [{"id": k, "label": v.get("label", k), "description": v.get("description", ""), "credits": level_credits(k)}
-                       for k, v in levels.items()]}
+                       for k, v in shown.items()]}
+
+
+AUTOMATION_LEVEL = "rapide"     # les missions recurrentes (automatisations) tournent TOUJOURS au niveau le moins cher : 1 credit
+
+
+def automation_level(client_id=""):
+    """Niveau des automatisations planifiees : Rapide (1 credit), pour que les quotas restent parlants. "" quand les niveaux sont
+    desactives (BK_LEVELS=0 : ancien comportement, modele leger, 1 credit)."""
+    data, levels = mission_levels()
+    if not levels or not levels_enabled(data):
+        return ""
+    if AUTOMATION_LEVEL in levels:
+        return AUTOMATION_LEVEL
+    return min(levels, key=lambda k: level_credits(k))
 
 
 
@@ -2538,32 +2573,193 @@ BILLING_DATA_LEGACY_PATH = os.path.join(BILLING_DATA_DIR, "subscription.json")
 def _billing_path(client_id):
     return os.path.join(BILLING_DATA_DIR, f"{client_id}.json")
 
-# Quota de missions inclus par cycle, par plan (1 mission traitee = 1
-# credit consomme). Purement indicatif tant qu'aucun PSP n'est branche.
+# ---------------------------------------------------------------------
+# GRILLE DES FORFAITS (validee par le proprietaire le 2026-10-12 d'apres docs/ETUDE-MARCHE-PRIX-2026-10.md, branche ws/market-study).
+#
+# MODELE DE QUOTA (consigne explicite du proprietaire) : chaque forfait est un quota MENSUEL FIXE de credits, comme les limites d'usage de
+# Claude. Jamais de missions illimitees, jamais de paquet de credits, de paiement a l'usage ni de depassement facture. Quota atteint -> le
+# client passe au forfait SUIVANT (champ nextPlan), qui a son propre plafond plus eleve ; Scale mene a Enterprise (sur devis), qui a AUSSI
+# un plafond contractuel (jamais "illimite"). Cout d'une mission en credits : core/ai/LEVELS.json (Rapide 1 / Equilibre 6 / Approfondi 12).
+# Les fenetres hebdomadaire et de session (comme les 5 heures et la semaine de Claude) ne sont PAS construites : decision ouverte.
+#
+# Champs d'un forfait :
+#   name, credits (par mois), priceChf {month, year} (annuel = 10 mois), nextPlan (voie de montee en gamme) ;
+#   legacy      : forfait HERITE (Starter, Business) : plus vendu, il reste pour les abonnes existants avec les memes credits et le meme
+#                 prix qu'avant ; masque de la page Tarifs et du choix de forfait ;
+#   onQuote     : sur devis, jamais de bascule en libre-service (Enterprise) ;
+#   contractual : plafond fixe par le proprietaire pour CE client (billing["contractCredits"]), sinon la valeur "credits" ci-dessous ;
+#   renews      : False = pas de renouvellement mensuel (l'essai : 15 credits, une seule fois) ;
+#   trialDays, phoneMinutes, levelLock : l'essai dure 3 jours (affichage), n'inclut AUCUNE minute de telephone et reste au niveau Rapide ;
+#   workerSlots / byInvoice : offre "Worker a l'unite" (voir plus bas) ; byInvoice = tant que le paiement en ligne n'est pas configure, le
+#                 forfait est active par le proprietaire apres facture reglee -> jamais de bascule libre-service gratuite.
+# L'ordre du dictionnaire est l'ordre d'affichage (forfaits vendus d'abord, heritage a la fin).
+CONTACT_EMAIL = trust_pages.CONTACT_EMAIL     # adresse deja publiee (mentions legales) : sert pour Enterprise et le plafond contractuel
+ENTERPRISE_DEFAULT_CREDITS = 10000      # plafond mensuel par defaut d'Enterprise, a fixer par contrat pour chaque client (voir set_client_plan)
+ENTERPRISE_MAX_CREDITS = 1000000        # borne de securite d'un plafond contractuel saisi par le proprietaire
 PLAN_CATALOG = {
-    "essai":      {"name": "Essai",      "credits": 15},
-    "starter":    {"name": "Starter",    "credits": 150},
-    "business":   {"name": "Business",   "credits": 600},
-    "pro":        {"name": "Pro",        "credits": 1500},
-    "scale":      {"name": "Scale",      "credits": 4000},
-    "enterprise": {"name": "Enterprise", "credits": None},  # illimite, sur devis
-    # Offre "Worker a l'unite" (2026-10-12) : un forfait mensuel qui ne donne acces qu'aux Workers EMBAUCHES (workerSlots), avec son
-    # propre pot de credits ; une fois le pot epuise, on passe au forfait superieur (pas de missions illimitees). Credits provisoires
-    # (250 / 500), a ajuster apres mesure des couts reels. Activation : par le proprietaire apres facture reglee (byInvoice) tant qu'aucun
-    # prix Stripe n'est cree -> jamais de bascule libre-service gratuite vers ces forfaits. Tous les autres forfaits gardent TOUS les Workers.
-    # priceChf = prix recommandes par l'etude de marche (docs/ETUDE-MARCHE-PRIX-2026-10.md, branche ws/market-study) : une information
-    # d'affichage, pas encore un prix Stripe (aucun Price ID pour ces forfaits : facturation manuelle).
-    "solo":       {"name": "Solo",       "credits": 250, "workerSlots": inst.PLAN_WORKER_SLOTS["solo"], "byInvoice": True,
+    "essai":      {"name": "Essai", "credits": 15, "nextPlan": "solo", "renews": False, "trialDays": 3, "phoneMinutes": 0, "levelLock": "rapide"},
+    # Offre "Worker a l'unite" (2026-10-12) : Solo (1 Worker au choix) et Trio (3 Workers au choix + Chloe) n'ouvrent que les Workers
+    # EMBAUCHES (workerSlots), avec leur propre pot de credits. Tous les autres forfaits gardent TOUS les Workers.
+    "solo":       {"name": "Solo", "credits": 250, "workerSlots": inst.PLAN_WORKER_SLOTS["solo"], "byInvoice": True, "nextPlan": "trio",
                    "priceChf": {"month": 29, "year": 290}},
-    "trio":       {"name": "Trio",       "credits": 500, "workerSlots": inst.PLAN_WORKER_SLOTS["trio"], "byInvoice": True,
+    "trio":       {"name": "Trio", "credits": 500, "workerSlots": inst.PLAN_WORKER_SLOTS["trio"], "byInvoice": True, "nextPlan": "equipe",
                    "priceChf": {"month": 59, "year": 590}},
+    "equipe":     {"name": "Équipe", "credits": 900, "byInvoice": True, "nextPlan": "pro", "priceChf": {"month": 99, "year": 990}},
+    "pro":        {"name": "Pro", "credits": 1250, "nextPlan": "scale", "priceChf": {"month": 139, "year": 1390}},
+    "scale":      {"name": "Scale", "credits": 4000, "nextPlan": "enterprise", "priceChf": {"month": 449, "year": 4490}},
+    "enterprise": {"name": "Enterprise", "credits": ENTERPRISE_DEFAULT_CREDITS, "contractual": True, "onQuote": True, "nextPlan": None},
+    # Forfaits HERITES : memes credits et memes prix qu'avant (aucun changement silencieux pour un abonne existant).
+    "starter":    {"name": "Starter", "credits": 150, "legacy": True, "nextPlan": "equipe", "priceChf": {"month": 39, "year": 390}},
+    "business":   {"name": "Business", "credits": 600, "legacy": True, "nextPlan": "pro", "priceChf": {"month": 99, "year": 990}},
 }
 
-# Plans qui passent par une vraie Checkout Session Stripe quand Stripe
-# est configure (Essai = gratuit, Enterprise = sur devis -> jamais de
-# checkout self-service pour ces deux-la).
-PAID_PLANS_WITH_CHECKOUT = {"starter", "business", "pro", "scale"}
-INVOICE_ONLY_PLANS = {pid for pid, p in PLAN_CATALOG.items() if p.get("byInvoice")}   # solo, trio : accordes par le proprietaire
+# Forfaits qui passent par une vraie Checkout Session Stripe quand Stripe est configure (Essai = gratuit, Enterprise = sur devis, forfaits
+# heritages = plus vendus -> jamais de checkout pour ceux-la). Quand Stripe n'est PAS configure, les forfaits byInvoice ne basculent jamais
+# gratuitement : ils sont actives par le proprietaire apres facture reglee (INVOICE_ONLY_PLANS) ; Pro et Scale gardent la simulation locale.
+PAID_PLANS_WITH_CHECKOUT = {"solo", "trio", "equipe", "pro", "scale"}
+INVOICE_ONLY_PLANS = {pid for pid, p in PLAN_CATALOG.items() if p.get("byInvoice")}   # solo, trio, equipe
+STRIPE_AMOUNT_MIN_CENTS = 100             # garde-fou sur le montant envoye a Stripe : de CHF 1 ...
+STRIPE_AMOUNT_MAX_CENTS = 10000000        # ... a CHF 100'000
+
+
+def plan_price_cents(plan_id, interval="month"):
+    """Montant d'une Checkout Session Stripe, en centimes de franc suisse : prix du catalogue (annuel = 10 mois). None si le forfait n'a pas
+    de prix (essai, Enterprise sur devis) ou si l'intervalle est inconnu : on n'invente jamais un montant."""
+    plan = PLAN_CATALOG.get(plan_id) or {}
+    price = (plan.get("priceChf") or {}).get(interval if interval in ("month", "year") else "")
+    if isinstance(price, bool) or not isinstance(price, int) or price <= 0:
+        return None
+    cents = price * 100
+    return cents if STRIPE_AMOUNT_MIN_CENTS <= cents <= STRIPE_AMOUNT_MAX_CENTS else None
+
+
+def plan_monthly_credits(plan_id, state=None):
+    """Credits inclus PAR MOIS par ce forfait pour CE client : toujours un entier fini. Il n'existe pas de forfait sans plafond : un
+    plafond absent, negatif ou illisible vaut 0 (la mission est alors refusee), jamais "illimite". Enterprise : plafond contractuel fixe
+    par le proprietaire (billing["contractCredits"]), sinon ENTERPRISE_DEFAULT_CREDITS."""
+    plan = PLAN_CATALOG.get(plan_id) or PLAN_CATALOG["essai"]
+    credits = plan.get("credits")
+    if plan.get("contractual"):
+        custom = (state or {}).get("contractCredits")
+        if isinstance(custom, int) and not isinstance(custom, bool) and 1 <= custom <= ENTERPRISE_MAX_CREDITS:
+            credits = custom
+    if isinstance(credits, bool) or not isinstance(credits, int) or credits < 0:
+        return 0
+    return credits
+
+
+# ---- cycle mensuel : le quota se renouvelle chaque mois a la date d'activation du forfait (meme jour du mois, ramene au dernier jour
+# du mois pour les mois courts). Avant le 2026-10-12 la fenetre ne se renouvelait jamais : le compteur courait depuis l'activation.
+def _utcnow():
+    return datetime.datetime.utcnow()
+
+
+def _parse_utc(text):
+    """Date UTC naive d'un texte ISO 8601 (« 2026-10-12T10:11:12.123456Z ») ; None si illisible. Les fractions de seconde sont ignorees."""
+    m = re.match(r"^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2}):(\d{2})", str(text or ""))
+    if not m:
+        return None
+    try:
+        return datetime.datetime(*(int(g) for g in m.groups()))
+    except ValueError:
+        return None
+
+
+def _add_months(dt, months):
+    total = dt.year * 12 + (dt.month - 1) + months
+    year, month = divmod(total, 12)
+    month += 1
+    return dt.replace(year=year, month=month, day=min(dt.day, calendar.monthrange(year, month)[1]))
+
+
+def billing_cycle(anchor_text, renews=True, now=None):
+    """(debut de la fenetre en cours en texte ISO, date de renouvellement en texte ISO ou None). Fenetre mensuelle ancree sur
+    cycleStartUtc ; un forfait sans renouvellement (l'essai) garde sa fenetre unique ; une ancre illisible est renvoyee telle quelle."""
+    anchor = _parse_utc(anchor_text)
+    now = now or _utcnow()
+    if anchor is None or not renews or now < anchor:
+        return anchor_text, None
+    n = (now.year - anchor.year) * 12 + (now.month - anchor.month)
+    if _add_months(anchor, n) > now:
+        n -= 1
+    n = max(n, 0)
+    start = anchor_text if n == 0 else _add_months(anchor, n).isoformat() + "Z"
+    return start, _add_months(anchor, n + 1).isoformat() + "Z"
+
+
+_MOIS_FR = ("janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre")
+
+
+def _fr_date(text):
+    """« 2026-11-12T10:11:12Z » -> « 12 novembre 2026 » (sans dependre de la locale du serveur)."""
+    dt = _parse_utc(text)
+    if dt is None:
+        return ""
+    return f"{'1er' if dt.day == 1 else dt.day} {_MOIS_FR[dt.month - 1]} {dt.year}"
+
+
+def _fr_int(n):
+    return f"{int(n):,}".replace(",", " ")
+
+
+def _fr_price(plan):
+    price = (plan.get("priceChf") or {}).get("month")
+    return f"CHF {price} par mois" if price else ""
+
+
+def next_plan_info(plan_id):
+    """Forfait immediatement superieur (voie de montee en gamme : Solo, Trio, Equipe, Pro, Scale, Enterprise sur devis), avec ses credits
+    et son prix ; None pour le dernier. selfService = le client peut le prendre seul (POST /api/billing/plan) ; sinon : nous ecrire."""
+    nxt_id = (PLAN_CATALOG.get(plan_id) or {}).get("nextPlan")
+    nxt = PLAN_CATALOG.get(nxt_id) if nxt_id else None
+    if not nxt:
+        return None
+    return {"planId": nxt_id, "name": nxt["name"], "credits": None if nxt.get("contractual") else nxt["credits"],
+            "priceChf": nxt.get("priceChf"), "onQuote": bool(nxt.get("onQuote")), "selfService": not nxt.get("onQuote") and not nxt.get("legacy"),
+            "workerSlots": nxt.get("workerSlots")}
+
+
+def upgrade_payload(billing):
+    """Ce que l'interface affiche quand le quota est atteint (ou presque) : forfait actuel, credits inclus, date de renouvellement et forfait
+    suivant (credits, prix). None si le forfait est inconnu."""
+    pid = billing.get("planId")
+    plan = PLAN_CATALOG.get(pid)
+    if not plan:
+        return None
+    return {"planId": pid, "planName": plan["name"], "creditsIncluded": billing.get("creditsIncluded"),
+            "renews": bool(billing.get("renewsAtUtc")), "renewsAtUtc": billing.get("renewsAtUtc"), "next": next_plan_info(pid),
+            "contactEmail": CONTACT_EMAIL}
+
+
+def _upgrade_sentence(billing):
+    """Fin de phrase francaise qui nomme le forfait suivant (credits + prix), « passez au forfait Trio (500 crédits par mois, CHF 59 par mois) » ;
+    « écrivez-nous… » pour Enterprise ; chaine vide si le forfait est inconnu."""
+    up = upgrade_payload(billing)
+    if not up:
+        return ""
+    nxt = up["next"]
+    if nxt is None:
+        return f"écrivez-nous à {CONTACT_EMAIL} pour relever le plafond de votre contrat"
+    if nxt["onQuote"]:
+        return (f"passez à Enterprise, sur devis, avec un plafond de crédits fixé par contrat : écrivez-nous à {CONTACT_EMAIL}")
+    return f"passez au forfait {nxt['name']} ({_fr_int(nxt['credits'])} crédits par mois, {_fr_price(PLAN_CATALOG[nxt['planId']])})"
+
+
+def quota_reached_message(billing):
+    """Message affiche quand le quota est epuise : combien de credits le forfait inclut, quand il se renouvelle, quel est le forfait suivant."""
+    up = upgrade_payload(billing)
+    if not up:
+        return "Votre quota est épuisé. Souscrivez un abonnement pour continuer à confier des missions."
+    plan = PLAN_CATALOG[up["planId"]]
+    included = _fr_int(up["creditsIncluded"] or 0)
+    if plan.get("renews", True):
+        when = _fr_date(up["renewsAtUtc"])
+        base = (f"Votre quota est épuisé : le forfait {plan['name']} inclut {included} crédits par mois"
+                + (f", renouvelés le {when}." if when else ", renouvelés chaque mois."))
+    else:
+        base = f"Votre quota est épuisé : l'essai inclut {included} crédits."
+    sentence = _upgrade_sentence(billing)
+    return base + (f" Pour continuer sans attendre, {sentence}." if sentence else "")
 
 
 def _billing_default_state():
@@ -2597,11 +2793,26 @@ def _billing_save(state, client_id=DASHBOARD_CLIENT_ID):
     _write_json_atomic(_billing_path(client_id), state, ensure_ascii=False, indent=2)
 
 
+def _picker_plans(current_plan_id, state):
+    """Forfaits proposes dans le choix de forfait du client : tous ceux qui se vendent (Solo, Trio, Equipe, Pro, Scale, Enterprise sur devis),
+    plus SON forfait s'il est herite (Starter, Business : visible pour lui, jamais propose aux autres). Jamais l'essai (on y revient en
+    annulant l'abonnement). credits est toujours un entier ; pour Enterprise c'est le plafond par defaut du contrat (onQuote = a fixer avec nous)."""
+    out = []
+    for pid, p in PLAN_CATALOG.items():
+        if pid == "essai" or (p.get("legacy") and pid != current_plan_id):
+            continue
+        out.append({"planId": pid, "name": p["name"], "credits": plan_monthly_credits(pid, state if pid == current_plan_id else None),
+                    "priceChf": p.get("priceChf"), "onQuote": bool(p.get("onQuote")), "legacy": bool(p.get("legacy")),
+                    "workerSlots": p.get("workerSlots"), "chloeIncluded": pid in inst.PLANS_WITH_CHLOE if p.get("workerSlots") else True})
+    return out
+
+
 def get_billing(client_id=DASHBOARD_CLIENT_ID):
     state = _billing_load(client_id)
     plan_id = state.get("planId", "essai")
     plan = PLAN_CATALOG.get(plan_id, PLAN_CATALOG["essai"])
-    cycle_start = state.get("cycleStartUtc", "")
+    cycle_anchor = state.get("cycleStartUtc", "")
+    cycle_start, renews_at = billing_cycle(cycle_anchor, plan.get("renews", True))
 
     used = 0
     if os.path.isdir(TASKS_DIR):
@@ -2623,33 +2834,48 @@ def get_billing(client_id=DASHBOARD_CLIENT_ID):
             except (TypeError, ValueError):
                 used += 1
 
-    base_credits = plan["credits"]
-    extra = int(state.get("extraCredits") or 0)
-    total_credits = None if base_credits is None else base_credits + extra
-    remaining = None if total_credits is None else max(0, total_credits - used)
-    percent_used = None if total_credits in (None, 0) else round((used / total_credits) * 100)
+    # Quota MENSUEL FIXE : toujours un entier, jamais "illimite" (voir PLAN_CATALOG). extraCredits = credits accordes par le proprietaire.
+    included = plan_monthly_credits(plan_id, state)
+    try:
+        extra = max(0, int(state.get("extraCredits") or 0))
+    except (TypeError, ValueError):
+        extra = 0
+    total_credits = included + extra
+    remaining = max(0, total_credits - used)
+    percent_used = None if total_credits == 0 else round((used / total_credits) * 100)
+    alert = percent_used is not None and percent_used >= 80
 
-    return {
+    out = {
         "planId": plan_id,
         "planName": plan["name"],
         "cycleStartUtc": cycle_start,
+        "cycleAnchorUtc": cycle_anchor,
+        "renewsAtUtc": renews_at,
+        "creditsIncluded": included,
         "creditsTotal": total_credits,
         "creditsUsed": used,
         "creditsRemaining": remaining,
         "percentUsed": percent_used,
-        "alertThresholdReached": percent_used is not None and percent_used >= 80,
-        "unlimited": total_credits is None,
+        "alertThresholdReached": alert,
+        "unlimited": False,     # conserve pour les anciens clients de l'API : il n'y a plus de forfait illimite
+        "priceChf": plan.get("priceChf"),
+        "legacy": bool(plan.get("legacy")),
+        "trialDays": plan.get("trialDays"),
         "history": list(reversed(state.get("history", [])))[:20],
-        # Forfaits en libre-service (Solo/Trio sont accordes par le proprietaire apres facture : ils ont leur propre liste, workerPlans).
-        "availablePlans": [{"planId": pid, "name": p["name"], "credits": p["credits"]} for pid, p in PLAN_CATALOG.items() if not p.get("byInvoice")],
+        # Choix de forfait du client (voir _picker_plans) ; workerPlans : le detail de Solo/Trio (emplacements, Chloe, prix).
+        "availablePlans": _picker_plans(plan_id, state),
         "workerPlans": [{"planId": pid, "name": p["name"], "credits": p["credits"], "workerSlots": p["workerSlots"],
                          "chloeIncluded": pid in inst.PLANS_WITH_CHLOE, "priceChf": p.get("priceChf")}
                         for pid, p in PLAN_CATALOG.items() if p.get("workerSlots")],
         "workerSlots": inst.worker_slots(state),
         "hiredWorkers": inst.hired_workers(state),
         "hire": inst.hire_summary(state),
-        "missionLevels": public_mission_levels(),
+        "missionLevels": public_mission_levels(client_id),
     }
+    out["upgrade"] = upgrade_payload(out)
+    # Montee en gamme proposee des 80 % du quota (et quand il est epuise) ; sans forfait superieur (Enterprise) : « nous ecrire ».
+    out["upgradeSuggested"] = bool(alert and out["upgrade"])
+    return out
 
 
 @_state_locked
@@ -2657,12 +2883,16 @@ def set_billing_plan(plan_id, via_stripe=False, stripe_subscription_id=None, cli
     if plan_id not in PLAN_CATALOG:
         return {"error": "UNKNOWN_PLAN"}
     state = _billing_load(client_id)
+    if state.get("planId", "essai") == plan_id and not via_stripe:
+        # Redemander le forfait qu'on a deja ne doit JAMAIS repartir sur un nouveau cycle : ce serait un quota mensuel gratuit en plus.
+        return get_billing(client_id)
     old_name = PLAN_CATALOG.get(state.get("planId", "essai"), PLAN_CATALOG["essai"])["name"]
     new_name = PLAN_CATALOG[plan_id]["name"]
     now = datetime.datetime.utcnow().isoformat() + "Z"
     state["planId"] = plan_id
     state["cycleStartUtc"] = now
     state["extraCredits"] = 0
+    state.pop("contractCredits", None)   # le plafond contractuel d'Enterprise est propre a un contrat : il ne suit pas un changement de forfait
     inst.adapt_hired_to_plan(state)   # forfait restreint (solo/trio) : liste tronquee aux emplacements ; autre forfait : liste vidée
     # Un changement simule (ou vers Essai/Enterprise) n'a pas de vrai
     # abonnement Stripe derriere : on efface toute reference precedente
@@ -2695,11 +2925,17 @@ def cancel_billing_plan(client_id=DASHBOARD_CLIENT_ID):
 
     with _STATE_LOCK:
         state = _billing_load(client_id)
-        old_name = PLAN_CATALOG.get(state.get("planId", "essai"), PLAN_CATALOG["essai"])["name"]
+        if state.get("planId", "essai") == "essai" and not subscription_id:
+            return get_billing(client_id)      # deja a l'essai : « annuler » ne redonne pas 15 credits gratuits
+        old_plan = PLAN_CATALOG.get(state.get("planId", "essai"), PLAN_CATALOG["essai"])
+        old_name = old_plan["name"]
         now = datetime.datetime.utcnow().isoformat() + "Z"
         state["planId"] = "essai"
-        state["cycleStartUtc"] = now
+        # Le cycle n'est PAS remis a zero : la fenetre mensuelle en cours est conservee et ses missions restent comptees, sinon
+        # s'abonner puis annuler redonnerait 15 credits d'essai gratuits a chaque fois (l'essai n'est pas renouvelable).
+        state["cycleStartUtc"] = billing_cycle(state.get("cycleStartUtc", now), old_plan.get("renews", True))[0]
         state["extraCredits"] = 0
+        state.pop("contractCredits", None)
         state["stripeSubscriptionId"] = None
         inst.adapt_hired_to_plan(state)
         state.setdefault("history", []).append({
@@ -2722,17 +2958,28 @@ def subscription_blocks_mission(client_id, level=None):
     if client_id == DASHBOARD_CLIENT_ID:
         return None
     billing = get_billing(client_id)
-    if billing["unlimited"]:
-        return None
-    remaining = billing["creditsRemaining"] or 0
+    # Plus de forfait illimite : un nombre de credits absent ou illisible vaut 0 (on refuse), jamais « tout est permis ».
+    remaining = billing.get("creditsRemaining")
+    remaining = remaining if isinstance(remaining, int) and not isinstance(remaining, bool) and remaining > 0 else 0
     lvl = normalize_level(level, client_id)
     needed = level_credits(lvl) if lvl else 1
     if remaining >= needed:
         return None
     if remaining > 0:
-        return (f"Il vous reste {remaining} crédit(s), ce niveau en demande {needed}. "
-                "Choisissez un niveau plus rapide ou souscrivez un abonnement pour continuer.")
-    return "Votre quota est épuisé. Souscrivez un abonnement pour continuer à confier des missions."
+        sentence = _upgrade_sentence(billing)
+        return (f"Il vous reste {remaining} crédit(s), ce niveau en demande {needed}. Choisissez un niveau plus rapide"
+                + (f" ou {sentence}." if sentence else " ou souscrivez un abonnement pour continuer."))
+    return quota_reached_message(billing)
+
+
+def subscription_required_payload(client_id, detail):
+    """Corps de la reponse 402 : le message, plus de quoi afficher le bouton de montee en gamme (forfait actuel, credits inclus, date de
+    renouvellement, forfait suivant avec ses credits et son prix)."""
+    try:
+        upgrade = upgrade_payload(get_billing(client_id))
+    except Exception:  # noqa: BLE001 - le message suffit si la facturation est illisible
+        upgrade = None
+    return {"error": "SUBSCRIPTION_REQUIRED", "detail": detail, "upgrade": upgrade}
 
 
 # ---------------------------------------------------------------------
