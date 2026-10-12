@@ -3011,6 +3011,68 @@ a:focus-visible,
   .brand .brand-mark { width: 28px; height: 28px; font-size: 12px; }
 }
 
+/* ---------- TOPBAR ETROIT (2026-10-12) : le header debordait encore a
+   droite — scrollWidth 412 pour 375 de large, connecte a un compte client
+   ("Mon compte (client)" + EN + hamburger), et meme deconnecte sous 372 px
+   (360 px = largeur Android la plus courante). .topbar-actions et le
+   hamburger sortaient de l'ecran et toute la page defilait a l'horizontale.
+   Cause : .topbar-actions ne pouvait pas retrecir (min-width auto = somme
+   des contenus) et le bouton compte est en white-space: nowrap. Le
+   correctif tient en trois paliers, sans toucher au bureau (> 720 px) :
+     <= 520 px : le bloc d'actions peut retrecir ; connecte, le bouton
+                 compte devient une pastille icone (le libelle complet reste
+                 dans le DOM et en infobulle — voir syncAccountButtonLabel) ;
+                 deconnecte, "Se connecter" se tronque avec une ellipse en
+                 dernier recours ;
+     <= 400 px : espacements et marque un cran plus compacts ;
+     <= 359 px : le nom "BK-AI-WORKERS" est masque, la pastille "BK" reste. ---------- */
+@media (max-width: 520px) {
+  .topbar-actions { min-width: 0; }
+  .topbar-actions .lang-toggle,
+  .topbar-actions .mobile-menu-btn { flex: 0 0 auto; }
+  #topbar-account-btn { display: block; min-width: 0; text-overflow: ellipsis; }
+
+  #topbar-account-btn[data-state="client"],
+  #topbar-account-btn[data-state="owner"] {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    gap: 0;
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    font-size: 0;       /* masque le libelle sans le retirer du DOM */
+    line-height: 0;
+  }
+
+  /* Silhouette dessinee en degrades CSS (pas d'image : rien a charger, rien
+     que le CSP puisse bloquer). ::before est deja pris par le reflet dore. */
+  #topbar-account-btn[data-state="client"]::after,
+  #topbar-account-btn[data-state="owner"]::after {
+    content: "";
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
+    background:
+      radial-gradient(circle at 50% 29%, currentColor 3.3px, transparent 3.9px),
+      radial-gradient(ellipse 7.4px 6.6px at 50% 100%, currentColor 94%, transparent 100%);
+  }
+}
+
+@media (max-width: 400px) {
+  .topbar { gap: 6px; padding: 10px 12px; }
+  .topbar-actions { gap: 5px; }
+  .topbar-actions .lang-toggle { padding: 6px 9px; }
+  #topbar-account-btn { padding: 8px 10px; }
+  .brand { font-size: 13px; gap: 5px; }
+  .brand .brand-mark { width: 26px; height: 26px; font-size: 11px; }
+}
+
+@media (max-width: 359px) {
+  .brand > span { display: none; }
+}
+
 
 /* ---------- AGENTS DANS LE HERO (2026-09-25) : comparaison mesuree avec
    Delos a 1024x768 — chez eux les agents sont dans le PREMIER ecran
@@ -3358,3 +3420,30 @@ input, textarea, select { border-radius: 14px; }
 .level-chip .level-cost { opacity: 0.65; font-size: 12px; margin-left: 4px; }
 .level-chip.active { background: rgba(201, 168, 106, 0.18); border-color: #c9a86a; }
 .level-chip:focus-visible { outline: 2px solid #c9a86a; outline-offset: 2px; }
+
+/* Fichiers produits par un Worker + apercu avant telechargement */
+.task-files-block { margin: 12px 0 4px; padding: 12px 14px; border: 1px solid rgba(201, 168, 106, 0.4); border-radius: 12px; background: rgba(201, 168, 106, 0.07); }
+.task-files-title { font-weight: 600; margin-bottom: 8px; }
+.task-file-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; padding: 6px 0; }
+.task-file-name { flex: 1 1 220px; word-break: break-all; }
+.task-file-row .btn { padding: 6px 12px; font-size: 13px; text-decoration: none; }
+.file-preview-overlay { position: fixed; inset: 0; z-index: 10000; background: rgba(8, 8, 12, 0.72); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.file-preview-box { width: min(1000px, 100%); max-height: 90vh; display: flex; flex-direction: column; background: #14151a; color: #f3efe6; border: 1px solid rgba(201, 168, 106, 0.5); border-radius: 14px; overflow: hidden; }
+.file-preview-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 16px; border-bottom: 1px solid rgba(255, 255, 255, 0.1); }
+.file-preview-title { word-break: break-all; }
+.file-preview-actions { display: flex; gap: 8px; }
+.file-preview-actions .btn { padding: 6px 12px; font-size: 13px; text-decoration: none; }
+.file-preview-body { padding: 14px 16px; overflow: auto; }
+.file-preview-table { border-collapse: collapse; font-size: 13px; min-width: 100%; }
+.file-preview-table th, .file-preview-table td { border: 1px solid rgba(255, 255, 255, 0.14); padding: 5px 9px; text-align: left; vertical-align: top; white-space: pre-wrap; }
+.file-preview-table th { background: rgba(201, 168, 106, 0.18); position: sticky; top: 0; }
+.file-preview-tabs { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+.file-preview-tab { background: transparent; color: inherit; border: 1px solid rgba(201, 168, 106, 0.45); border-radius: 8px; padding: 4px 10px; cursor: pointer; font: inherit; font-size: 13px; }
+.file-preview-tab.active { background: rgba(201, 168, 106, 0.22); }
+.file-preview-note { opacity: 0.75; font-size: 13px; margin-top: 10px; }
+.file-preview-text { white-space: pre-wrap; word-break: break-word; font-size: 13px; }
+.file-preview-slide { border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 10px; padding: 10px 14px; margin-bottom: 10px; }
+.file-preview-frame { width: 100%; height: 70vh; border: 0; background: #fff; }
+.file-preview-image { max-width: 100%; height: auto; border-radius: 8px; }
+.file-preview-loading { opacity: 0.7; }
+@media (max-width: 640px) { .file-preview-overlay { padding: 0; } .file-preview-box { max-height: 100vh; height: 100%; border-radius: 0; } }

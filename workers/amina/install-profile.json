@@ -1,0 +1,201 @@
+{
+  "schema": "BK-INSTALL-PROFILE-V1",
+  "workerId": "amina",
+  "displayName": "Amina",
+  "tagline": "Cherche, lit et recoupe les sources pour vous rendre un rapport où chaque chiffre a son lien et sa date.",
+  "idealFor": "Dirigeants de TPE et PME qui préparent une décision (lancer une offre, fixer un prix, entrer sur un marché) et veulent des faits vérifiés plutôt que des impressions.",
+  "services": [
+    {
+      "id": "note-synthese-sourcee",
+      "label": "Note de synthèse sourcée sur un sujet",
+      "description": "Vous posez une question (« renseigne-toi sur... »). Amina la reformule avec la décision qu'elle éclaire, lit les pages d'origine, recoupe au moins deux sources indépendantes pour les faits clés et livre une note : résumé exécutif, constats détaillés, contradictions, recommandation et liste numérotée de sources datées.",
+      "skills": ["REPORT_SYNTHESIS", "LITERATURE_REVIEW", "DATA_SOURCING"],
+      "requiredConnectors": [],
+      "optionalConnectors": [],
+      "channels": ["web", "schedule"],
+      "suggestedFrequencyMinutes": 43200,
+      "knowledgeFields": [
+        { "key": "question_recherche", "label": "La question que vous voulez éclaircir", "help": "Une ou deux phrases ; précisez la décision que cette recherche doit éclairer.", "required": true, "example": "Vaut-il la peine d'ouvrir un atelier de réparation de vélos électriques à Lausanne ?" },
+        { "key": "zone_geographique", "label": "Zone géographique", "help": "Pays, région ou ville concernés. Sans précision, Amina pose une hypothèse étiquetée.", "required": false, "example": "Suisse romande" },
+        { "key": "horizon_temps", "label": "Période à couvrir", "help": "Années ou mois à regarder.", "required": false, "example": "Les 3 dernières années et les perspectives à 2 ans" },
+        { "key": "format_souhaite", "label": "Format du livrable", "help": "Note courte dans la conversation ou rapport Word à télécharger.", "required": false, "example": "Rapport Word de 5 pages" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-recherche", "label": "Chercher et lire des sources publiques", "examples": ["Lancer des recherches web sur le sujet", "Ouvrir la page d'origine d'un chiffre pour le vérifier"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "redaction", "label": "Rédiger la note et le rapport Word", "examples": ["Rédiger le résumé exécutif et les constats sourcés", "Produire un rapport .docx avec la liste numérotée des sources"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "contact-externe", "label": "Contacter des sources ou des entreprises", "examples": ["Écrire à un expert ou à une entreprise pour confirmer un chiffre"], "risk": "medium", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Fais-moi une note de synthèse sur le marché de la réparation de vélos électriques en Suisse romande : 5 constats chiffrés avec leur source ouverte et datée, les contradictions entre sources et une recommandation. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Chaque chiffre porte un lien réel, une date et le nom de l'éditeur, ou la mention « à confirmer »",
+          "Les faits clés sont recoupés sur deux sources indépendantes, ou le manque est signalé",
+          "Les hypothèses sont étiquetées comme telles et la liste de sources est numérotée"
+        ]
+      },
+      "recommendedLevel": "approfondi"
+    },
+    {
+      "id": "veille-concurrentielle",
+      "label": "Veille concurrentielle : qui sont vos concurrents et que font-ils",
+      "description": "Amina identifie 3 à 6 vrais concurrents sur votre marché, lit leurs sites, relève offre, prix affichés (avec la date du relevé), positionnement et mouvements récents, puis les classe par pertinence pour vous dans une matrice comparative. Elle peut la refaire chaque mois.",
+      "skills": ["COMPETITIVE_INTELLIGENCE", "BENCHMARK_ANALYSIS", "INDUSTRY_TREND_MONITORING"],
+      "requiredConnectors": [],
+      "optionalConnectors": [],
+      "channels": ["web", "schedule"],
+      "suggestedFrequencyMinutes": 43200,
+      "knowledgeFields": [
+        { "key": "site_web", "label": "Adresse de votre site", "help": "Amina s'en sert pour comprendre votre offre et choisir les bons concurrents.", "required": true, "example": "https://www.atelier-martin.example" },
+        { "key": "marche_et_zone", "label": "Votre marché et votre zone", "help": "Ce que vous vendez et où.", "required": true, "example": "Réparation de vélos électriques, canton de Vaud" },
+        { "key": "concurrents_connus", "label": "Concurrents que vous connaissez déjà", "help": "Noms ou sites ; Amina en cherche d'autres.", "required": false, "example": "Atelier Rapide SA, VéloService" },
+        { "key": "criteres_comparaison", "label": "Ce qui compte pour vous dans la comparaison", "help": "Prix, délais, garanties, zone couverte...", "required": false, "example": "Prix de la révision et délai de prise en charge" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-recherche", "label": "Lire les sites et actualités des concurrents", "examples": ["Relever les offres et prix affichés sur les sites concurrents", "Chercher leurs annonces et actualités récentes"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "redaction", "label": "Construire la matrice et le rapport", "examples": ["Produire la matrice comparative avec colonnes Source et Date du relevé", "Rédiger la synthèse « ce que cela change pour vous »"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "contact-externe", "label": "Se faire passer pour un client auprès d'un concurrent", "examples": ["Demander un devis à un concurrent sous une autre identité"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Identifie 4 vrais concurrents de mon activité, relève pour chacun l'offre, le prix affiché avec la date du relevé et un mouvement récent, et classe-les par pertinence pour moi. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Les concurrents sont de vraies entreprises, jamais « Acteur A »",
+          "Chaque prix a une URL et une date de relevé, sinon « non vérifié »",
+          "Le classement est justifié par rapport à votre activité"
+        ]
+      },
+      "recommendedLevel": "approfondi"
+    },
+    {
+      "id": "benchmark-prix",
+      "label": "Benchmark de prix daté et sourcé (fichier Excel)",
+      "description": "Amina relève les prix publics de vos concurrents ou d'offres comparables et livre un tableur : une ligne par acteur ou critère, une colonne Source, une colonne Date du relevé et un onglet listant toutes les adresses consultées. Un prix qu'elle n'a pas pu lire est marqué « non vérifié ».",
+      "skills": ["BENCHMARK_ANALYSIS", "COMPETITIVE_INTELLIGENCE", "DATA_SOURCING"],
+      "requiredConnectors": [],
+      "optionalConnectors": [],
+      "channels": ["web", "schedule"],
+      "suggestedFrequencyMinutes": 43200,
+      "knowledgeFields": [
+        { "key": "offre_a_comparer", "label": "L'offre dont vous voulez comparer le prix", "help": "Décrivez le produit ou service précisément (durée, périmètre, volume).", "required": true, "example": "Révision complète d'un vélo électrique, hors pièces" },
+        { "key": "zone_geographique", "label": "Zone géographique", "help": "Les prix varient selon le pays et la région.", "required": true, "example": "Suisse romande, en francs suisses" },
+        { "key": "concurrents_connus", "label": "Concurrents à inclure", "help": "Noms ou sites ; Amina en ajoute si besoin.", "required": false, "example": "Atelier Rapide SA, VéloService" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-recherche", "label": "Relever les prix publics", "examples": ["Lire les pages de tarifs des concurrents", "Noter la date de chaque relevé"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "redaction", "label": "Produire le tableur de benchmark", "examples": ["Créer le fichier .xlsx avec colonnes Source et Date du relevé", "Rédiger la lecture du benchmark en 5 lignes"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "engagement-commercial", "label": "Fixer vos prix", "examples": ["Décider du nouveau tarif de votre offre"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
+      ],
+      "testScenario": {
+        "objective": "Fais un benchmark des prix affichés de 4 concurrents pour mon offre principale, en francs suisses, dans un fichier Excel avec les colonnes Source et Date du relevé. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Le fichier .xlsx est proposé en téléchargement avec un onglet de sources",
+          "Aucune cellule de prix sans lien et sans date",
+          "Les prix introuvables sont marqués « non vérifié », pas estimés"
+        ]
+      },
+      "recommendedLevel": "approfondi"
+    },
+    {
+      "id": "revue-de-marche",
+      "label": "Revue de marché et tendances",
+      "description": "Amina rassemble la taille du marché, sa croissance, ses moteurs, ses freins et ses acteurs, chaque chiffre avec sa source, sa date et sa méthode quand elle est connue. Elle distingue toujours la donnée publiée de sa propre inférence et peut livrer un rapport Word ou un tableur.",
+      "skills": ["MARKET_RESEARCH", "INDUSTRY_TREND_MONITORING", "REPORT_SYNTHESIS"],
+      "requiredConnectors": [],
+      "optionalConnectors": [],
+      "channels": ["web", "schedule"],
+      "suggestedFrequencyMinutes": 43200,
+      "knowledgeFields": [
+        { "key": "marche_et_segment", "label": "Marché et segment à étudier", "help": "Le secteur et la clientèle visée.", "required": true, "example": "Réparation de vélos électriques pour particuliers, Suisse romande" },
+        { "key": "horizon_temps", "label": "Période à couvrir", "help": "Historique et perspectives à regarder.", "required": false, "example": "2022 à 2027" },
+        { "key": "decision_a_eclairer", "label": "La décision derrière cette étude", "help": "Permet à Amina d'aller droit à l'utile.", "required": false, "example": "Décider d'ouvrir un second atelier l'an prochain" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-recherche", "label": "Chercher chiffres et études publiques", "examples": ["Chercher la taille et la croissance du marché", "Remonter un chiffre cité par la presse jusqu'à l'étude d'origine"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "redaction", "label": "Rédiger la revue de marché", "examples": ["Rédiger le rapport en séparant données publiées et inférences", "Produire le rapport .docx avec sources numérotées"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 }
+      ],
+      "testScenario": {
+        "objective": "Fais une revue de marché de la réparation de vélos électriques en Suisse romande : taille, croissance, moteurs, freins et principaux acteurs, avec la source et la date de chaque chiffre. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Les données publiées et les inférences sont séparées visiblement",
+          "Chaque chiffre a une source, une date et un niveau de confiance",
+          "Une section « à confirmer » liste ce qui n'a pas pu être ouvert"
+        ]
+      },
+      "recommendedLevel": "approfondi"
+    },
+    {
+      "id": "verification-de-fait",
+      "label": "Vérification d'une affirmation ou d'un chiffre",
+      "description": "Vous collez une affirmation (« +30 % de croissance », « la loi impose X »). Amina remonte à la source primaire, la recoupe sur deux sources indépendantes et tranche : vrai, faux, imprécis ou invérifiable, avec la preuve datée.",
+      "skills": ["DATA_SOURCING", "LITERATURE_REVIEW"],
+      "requiredConnectors": [],
+      "optionalConnectors": [],
+      "channels": ["web"],
+      "knowledgeFields": [
+        { "key": "affirmation_a_verifier", "label": "L'affirmation à vérifier", "help": "Collez la phrase exacte et, si possible, l'endroit où vous l'avez lue.", "required": true, "example": "Le marché du vélo électrique a crû de 30 % l'an dernier en Suisse." },
+        { "key": "contexte_usage", "label": "Ce que vous voulez en faire", "help": "Utile pour savoir quel niveau de preuve est nécessaire.", "required": false, "example": "Je veux le citer dans un dossier de banque" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-recherche", "label": "Remonter à la source et recouper", "examples": ["Retrouver l'étude d'origine d'un chiffre", "Comparer deux sources indépendantes"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 30 },
+        { "category": "redaction", "label": "Rendre le verdict motivé", "examples": ["Rédiger le verdict vrai / faux / imprécis / invérifiable avec la preuve datée"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 30 }
+      ],
+      "testScenario": {
+        "objective": "Vérifie cette affirmation : « le marché du vélo électrique a crû de 30 % l'an dernier en Suisse ». Remonte à la source primaire et donne ton verdict. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Le verdict est l'un de : vrai, faux, imprécis, invérifiable",
+          "La source primaire est citée avec sa date, ou son absence est signalée",
+          "Une source secondaire seule n'est jamais présentée comme preuve suffisante"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    },
+    {
+      "id": "fiche-persona",
+      "label": "Fiche persona documentée de vos clients",
+      "description": "Amina construit à partir de sources publiques le portrait de votre client type : profil, besoins, freins, lieux où il s'informe, vocabulaire. Chaque élément est sourcé, et ce qui relève de son hypothèse est étiqueté. Elle ne constitue aucun fichier de personnes réelles.",
+      "skills": ["PERSONA_RESEARCH", "SURVEY_DESIGN", "MARKET_RESEARCH"],
+      "requiredConnectors": [],
+      "optionalConnectors": [],
+      "channels": ["web"],
+      "knowledgeFields": [
+        { "key": "offre_description", "label": "Ce que vous vendez", "help": "Le produit ou service pour lequel vous cherchez le client type.", "required": true, "example": "Réparation et entretien de vélos électriques pour particuliers" },
+        { "key": "clients_actuels", "label": "Ce que vous savez de vos meilleurs clients", "help": "Âge, métier, motivation d'achat, comment ils vous ont trouvé (sans noms).", "required": false, "example": "Actifs de 35 à 55 ans qui font du vélo pour aller travailler" },
+        { "key": "zone_geographique", "label": "Zone géographique", "help": "Pour adapter les usages et les canaux.", "required": false, "example": "Lausanne et alentours" }
+      ],
+      "autonomyRules": [
+        { "category": "lecture-recherche", "label": "Chercher des études et forums publics", "examples": ["Lire des études publiques sur les usagers du vélo électrique", "Relever le vocabulaire utilisé dans les avis publics"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 },
+        { "category": "redaction", "label": "Rédiger la fiche persona et un questionnaire", "examples": ["Rédiger la fiche persona avec sources et hypothèses étiquetées", "Concevoir un questionnaire de 8 questions pour valider le persona"], "risk": "low", "defaultMode": "auto", "maxAutoPerDay": 20 }
+      ],
+      "testScenario": {
+        "objective": "Construis la fiche persona de mon client type pour mon offre principale, avec les sources de chaque affirmation, et propose un questionnaire de 8 questions pour la valider auprès de mes clients. Essai : rien n'est envoyé, publié ni modifié.",
+        "expectedChecks": [
+          "Chaque élément du persona est sourcé ou étiqueté « hypothèse »",
+          "Aucune personne réelle n'est nommée ni fichée",
+          "Le questionnaire est prêt à être diffusé par vous"
+        ]
+      },
+      "recommendedLevel": "equilibre"
+    }
+  ],
+  "channelSupport": {
+    "email": "planned",
+    "phone": "no",
+    "whatsapp": "planned",
+    "web": "available",
+    "schedule": "available"
+  },
+  "plannedCapabilities": [
+    "Dépôt de vos propres documents (rapports internes, études) dans la conversation pour les croiser avec les sources publiques",
+    "Réception d'une demande de recherche par email ou WhatsApp et envoi du rapport en retour, après votre validation",
+    "Alerte automatique quand un concurrent change ses prix ou lance une offre",
+    "Connexion à Google Analytics pour croiser la veille avec votre trafic"
+  ],
+  "installationSteps": [
+    "Ajoutez Amina à votre équipe depuis le catalogue des Workers.",
+    "Indiquez l'adresse de votre site, votre marché et votre zone géographique dans la fiche d'entreprise.",
+    "Listez les concurrents que vous connaissez déjà : Amina s'en sert comme point de départ.",
+    "Gardez les réglages par défaut : Amina cherche et rédige seule, elle ne contacte personne et ne publie rien.",
+    "Lancez le scénario d'essai « Note de synthèse » et vérifiez que chaque chiffre a son lien et sa date.",
+    "Téléchargez le rapport ou le tableur, puis posez votre vraie question.",
+    "Programmez une automatisation mensuelle pour rafraîchir la veille concurrentielle ou le benchmark de prix."
+  ]
+}
