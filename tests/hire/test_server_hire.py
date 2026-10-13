@@ -181,6 +181,39 @@ class SubmitTaskLock(Fixture):
         server.submit_task("Fais un devis", worker_id="chloe", client_id=A)           # Chloe (Trio) : meme liste, c'est elle qui s'y limite
         self.assertEqual(self.calls[1][1].get("BK_ALLOWED_WORKERS"), "alex,nora")
 
+    def test_chloe_receives_a_cap_on_how_many_workers_she_can_call(self):
+        # Revue du 2026-10-13 : le controle de quota ne regardait que le cout d'UNE mission alors que Chloe en lance une par Worker.
+        write_billing(A, "equipe")                                                          # 900 credits
+        os.makedirs(server.TASKS_DIR, exist_ok=True)
+
+        def spend(n):
+            with open(os.path.join(server.TASKS_DIR, "TASK-" + "%032X" % (len(os.listdir(server.TASKS_DIR)) + 1) + ".json"), "w", encoding="utf-8") as f:
+                json.dump({"ClientId": A, "Credits": n, "CreatedAtUtc": "2026-10-20T00:00:00Z", "Status": "EXECUTED"}, f)
+        spend(894)                                                                           # reste 6 credits
+        server._utcnow = lambda: datetime.datetime(2026, 10, 21)
+        self.addCleanup(setattr, server, "_utcnow", datetime.datetime.utcnow)
+        server.submit_task("Prospection et marketing", worker_id="chloe", client_id=A, level="equilibre")
+        self.assertEqual(self.calls[-1][1].get("BK_MAX_WORKERS"), "1")                      # 6 // 6 : un seul Worker
+        server.submit_task("Prospection et marketing", worker_id="chloe", client_id=A, level="rapide")
+        self.assertEqual(self.calls[-1][1].get("BK_MAX_WORKERS"), "6")
+        server.submit_task("Prospection et marketing", worker_id="chloe", client_id=A, level="approfondi")
+        self.assertEqual(self.calls[-1][1].get("BK_MAX_WORKERS"), "1")                      # jamais 0 : la porte d'entree a deja verifie qu'une mission passe
+        shutil.rmtree(server.TASKS_DIR)
+        os.makedirs(server.TASKS_DIR)
+        spend(870)                                                                           # reste 30 credits
+        server.submit_task("Prospection et marketing", worker_id="chloe", client_id=A, level="equilibre")
+        self.assertEqual(self.calls[-1][1].get("BK_MAX_WORKERS"), "5")
+        server.submit_task("Fais un devis", worker_id="alex", client_id=A, level="equilibre")      # un Worker seul n'appelle personne d'autre
+        self.assertNotIn("BK_MAX_WORKERS", self.calls[-1][1])
+        os.environ["BK_MAX_WORKERS"] = "2"                                                   # une valeur heritee du serveur n'est jamais transmise telle quelle
+        self.addCleanup(os.environ.pop, "BK_MAX_WORKERS", None)
+        server.submit_task("Fais un devis", worker_id="alex", client_id=A)
+        self.assertNotIn("BK_MAX_WORKERS", self.calls[-1][1])
+        for owner_like in ("CLI-DASHBOARD", "CLI-TRIAL-PUBLIC"):
+            server.submit_task("Prospection et marketing", worker_id="chloe", client_id=owner_like)
+            self.assertNotIn("BK_MAX_WORKERS", self.calls[-1][1], owner_like)
+        self.assertIsNone(server.chloe_worker_cap("CLI-DASHBOARD"))
+
     def test_unrestricted_clients_get_no_list_even_if_the_server_environment_has_one(self):
         write_billing(B, "essai")
         os.environ["BK_ALLOWED_WORKERS"] = "alex"

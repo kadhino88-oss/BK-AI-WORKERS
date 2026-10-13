@@ -240,8 +240,11 @@ class AutomationLevel(unittest.TestCase):
         with open(os.path.join(self.root, "chloe", "Invoke-Chloe-Orchestration.ps1"), "w", encoding="utf-8-sig") as f:
             f.write(CHLOE_STUB.replace('FinalSynthesis = "ok" }', 'FinalSynthesis = ("cap=" + [string]$env:BK_MAX_WORKERS) }'))
         res, p = self.run_automation(worker="chloe")
-        self.assertEqual(res["status"], "EXECUTED", p.stdout[-300:] + p.stderr[-300:])
-        self.assertEqual(res["detail"]["FinalSynthesis"], "cap=1")
+        self.assertEqual(res["status"], "SUCCESS", p.stdout[-300:] + p.stderr[-300:])
+        run_files = glob.glob(os.path.join(self.root, "core", "automation", "data", "runs", "AUTO-TEST000001", "run-*.json"))
+        self.assertEqual(len(run_files), 1)
+        with open(run_files[0], encoding="utf-8-sig") as f:
+            self.assertEqual(json.load(f)["detail"]["FinalSynthesis"], "cap=1")
 
     def test_pausing_a_worker_also_stops_chloe_from_calling_it_on_schedule(self):
         # Revue du 2026-10-13 : seul le Worker de l'automatisation etait verifie ; une automatisation de Chloe continuait d'appeler le Worker en pause.
