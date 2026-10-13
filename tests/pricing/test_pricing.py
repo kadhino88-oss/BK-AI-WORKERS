@@ -36,19 +36,33 @@ class Fixture(unittest.TestCase):
         server.run_stripe_bridge = self.fake_bridge
         self.bridge_calls = []
         self.stripe_configured = True
+        self.stripe_error = False                # le pont echoue (erreur PowerShell, delai depasse) au lieu de repondre Configured true / false
         self.cancelled = []
+        self.cancel_calls = []
         self.cancel_ok = True
+        self.period_end = "2026-11-02T08:00:00Z"   # fin de periode que « Stripe » renvoie pour une resiliation en fin de periode
 
     def fake_bridge(self, action, **kw):
         self.bridge_calls.append((action, kw))
         if action == "status":
+            if self.stripe_error:
+                return {"Status": "ERROR", "Detail": "STRIPE_BRIDGE_TIMEOUT"}
             return {"Configured": self.stripe_configured}
         if action == "create-checkout":
             return {"Status": "SUCCESS", "CheckoutUrl": "https://checkout.example/test", "SessionId": "cs_test_1"}
         if action == "cancel-subscription":
             self.cancelled.append(kw.get("subscription_id"))
-            return {"Status": "SUCCESS"} if self.cancel_ok else {"Status": "ERROR", "Detail": "boom"}
+            self.cancel_calls.append(kw)
+            if not self.cancel_ok:
+                return {"Status": "ERROR", "Detail": "boom"}
+            return {"Status": "SUCCESS", "CurrentPeriodEnd": self.period_end} if kw.get("at_period_end") else {"Status": "SUCCESS"}
         return {"Status": "ERROR"}
+
+
+def confirmation(plan, sub, session, client=A, status="active", interval="month"):
+    """Ce que Stripe-Bridge.ps1 -Action confirm renvoie (apres relecture de la Checkout Session chez Stripe), augmente du SessionId par la route."""
+    return {"Status": "SUCCESS", "Paid": True, "PlanId": plan, "ClientId": client, "SubscriptionId": sub, "SubscriptionStatus": status,
+            "SessionId": session, "Interval": interval, "PaymentStatus": "paid"}
 
 
 class Catalog(Fixture):
@@ -393,17 +407,39 @@ class Checkout(Fixture):
                 self.assertIn("{CHECKOUT_SESSION_ID}", kw["success_url"])
         self.assertEqual(server._billing_load(A)["planId"], "essai")        # rien n'est active avant le paiement confirme
 
-    def test_without_stripe_solo_trio_equipe_never_switch_for_free(self):
+    def test_without_stripe_no_paid_plan_ever_switches_for_free(self):
+        # Revue du 2026-10-13 : Pro et Scale gardaient la simulation locale, donc n'importe quel client a l'e-mail confirme prenait Scale (4000
+        # credits) pour rien. Sans Stripe, TOUS les forfaits payants passent par le proprietaire apres facture reglee.
         self.stripe_configured = False
-        for pid in ("solo", "trio", "equipe"):
+        for pid in ("solo", "trio", "equipe", "pro", "scale"):
             payload, status = server.select_billing_plan(A, pid, "month")
             self.assertEqual((status, payload["error"]), (403, "PLAN_BY_INVOICE"), pid)
             self.assertEqual(server._billing_load(A)["planId"], "essai", pid)
+            self.assertEqual(server.get_billing(A)["creditsIncluded"], 15, pid)
         payload, status = server.select_billing_plan(B, "solo", "month")     # meme pour un e-mail non confirme : la reponse reste « sur facture »
         self.assertEqual((status, payload["error"]), (403, "PLAN_BY_INVOICE"))
-        # Pro et Scale gardent la simulation locale d'origine (aucun changement silencieux pour le parcours existant)
-        payload, status = server.select_billing_plan(A, "pro", "month")
+        self.assertIn(server.CONTACT_EMAIL, server.select_billing_plan(A, "scale", "month")[0]["detail"])
+        self.assertNotIn("Embaucher", server.select_billing_plan(A, "solo", "month")[0]["detail"])    # la fiche d'un client en essai n'a pas de bouton « Embaucher »
+        self.assertIn("Garder seulement ce Worker", server.select_billing_plan(A, "solo", "month")[0]["detail"])
+        # seul le compte du proprietaire peut simuler un changement (essayer le parcours sur son propre compte)
+        payload, status = server.select_billing_plan(server.DASHBOARD_CLIENT_ID, "pro", "month")
         self.assertEqual((status, payload["planId"]), (200, "pro"))
+        self.assertFalse([c for c in self.bridge_calls if c[0] == "create-checkout"])
+
+    def test_a_failing_stripe_bridge_never_opens_a_paid_plan(self):
+        # Revue du 2026-10-13 : un pont en erreur ou en delai depasse (Status ERROR, aucun champ Configured) laissait Pro et Scale se simuler.
+        self.stripe_error = True
+        for pid in ("solo", "trio", "equipe", "pro", "scale"):
+            payload, status = server.select_billing_plan(A, pid, "month")
+            self.assertEqual((status, payload["error"]), (503, "STRIPE_UNAVAILABLE"), pid)
+            self.assertEqual(server._billing_load(A)["planId"], "essai", pid)
+            self.assertEqual(server.get_billing(A)["creditsIncluded"], 15, pid)
+        payload, status = server.select_billing_plan(server.DASHBOARD_CLIENT_ID, "scale", "month")      # meme le proprietaire : on ne devine pas
+        self.assertEqual((status, payload["error"]), (503, "STRIPE_UNAVAILABLE"))
+        self.assertFalse([c for c in self.bridge_calls if c[0] == "create-checkout"])
+        self.stripe_error = False
+        payload, status = server.select_billing_plan(A, "scale", "month")      # et ca repart des que Stripe repond
+        self.assertEqual((status, payload.get("checkoutUrl")), (200, "https://checkout.example/test"))
 
     def test_unverified_email_cannot_start_a_payment(self):
         payload, status = server.select_billing_plan(B, "pro", "month")
@@ -425,19 +461,22 @@ class Checkout(Fixture):
 
     def test_paying_a_new_plan_cancels_the_old_stripe_subscription_once(self):
         write_billing(server, A, "solo", stripeSubscriptionId="sub_old", hiredWorkers=["alex"])
-        confirmation = {"Paid": True, "PlanId": "trio", "ClientId": A, "SubscriptionId": "sub_new"}
-        payload, status = server.activate_checkout_plan(confirmation)
+        conf = confirmation("trio", "sub_new", "cs_new")
+        payload, status = server.activate_checkout_plan(conf)
         self.assertEqual((status, payload["planId"], payload["creditsIncluded"]), (200, "trio", 500))
         self.assertEqual(self.cancelled, ["sub_old"])
+        self.assertTrue(self.cancel_calls[0].get("prorate"))                 # le temps deja paye de l'ancien abonnement est credite chez Stripe
+        self.assertFalse(self.cancel_calls[0].get("at_period_end"))
         state = server._billing_load(A)
         self.assertEqual(state["stripeSubscriptionId"], "sub_new")
         self.assertTrue(any("Ancien abonnement Stripe annulé" in h["event"] for h in state["history"]))
-        server.activate_checkout_plan(confirmation)                          # la page de retour recharge : aucune annulation de plus
+        payload, status = server.activate_checkout_plan(conf)                # la page de retour recharge : aucune annulation de plus
+        self.assertEqual((status, payload.get("alreadyConfirmed")), (200, True))
         self.assertEqual(self.cancelled, ["sub_old"])
         # echec de l'annulation : le client est prevenu dans l'historique, rien n'est cache
         write_billing(server, B, "trio", stripeSubscriptionId="sub_b_old")
         self.cancel_ok = False
-        server.activate_checkout_plan({"Paid": True, "PlanId": "equipe", "ClientId": B, "SubscriptionId": "sub_b_new"})
+        server.activate_checkout_plan(confirmation("equipe", "sub_b_new", "cs_b_new", client=B))
         self.assertTrue(any("ECHEC annulation de l'ancien abonnement Stripe" in h["event"] for h in server._billing_load(B)["history"]))
 
     def test_an_unpaid_or_unknown_session_activates_nothing(self):

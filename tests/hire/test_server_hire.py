@@ -34,7 +34,7 @@ A, B, C = "CLI-CUST-AAAAAAAA", "CLI-CUST-BBBBBBBB", "CLI-CUST-CCCCCCCC"
 
 
 def write_billing(client, plan, hired=None, **extra):
-    state = {"planId": plan, "cycleStartUtc": "2026-10-01T00:00:00Z", "extraCredits": 0, "history": []}
+    state = {"planId": plan, "gridVersion": 2, "cycleStartUtc": "2026-10-01T00:00:00Z", "extraCredits": 0, "history": []}
     if hired is not None:
         state["hiredWorkers"] = hired
     state.update(extra)

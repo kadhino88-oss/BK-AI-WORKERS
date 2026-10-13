@@ -35,7 +35,8 @@ def load_server(name="bk_server_pricing"):
 
 
 def write_billing(server, client, plan, cycle_start="2026-10-01T00:00:00Z", **extra):
-    state = {"planId": plan, "cycleStartUtc": cycle_start, "extraCredits": 0, "history": []}
+    # gridVersion 2 = etat ecrit avec la grille du 2026-10-12 ; sans lui, un Pro / Scale est un ancien abonne (credits d'origine, niveau Rapide).
+    state = {"planId": plan, "gridVersion": 2, "cycleStartUtc": cycle_start, "extraCredits": 0, "history": []}
     state.update(extra)
     os.makedirs(server.BILLING_DATA_DIR, exist_ok=True)
     with open(server._billing_path(client), "w", encoding="utf-8") as f:

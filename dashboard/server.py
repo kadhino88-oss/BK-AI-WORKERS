@@ -847,7 +847,10 @@ def _client_plan(client_id):
     if not _is_customer_id(client_id):
         return {}
     state = _billing_state_readonly(client_id)
-    return PLAN_CATALOG.get((state or {}).get("planId") or "essai") or PLAN_CATALOG["essai"]
+    plan = PLAN_CATALOG.get((state or {}).get("planId") or "essai") or PLAN_CATALOG["essai"]
+    if _grandfathered(state):
+        plan = dict(plan, defaultLevel=GRANDFATHERED_PLANS[state["planId"]]["defaultLevel"])      # ancien abonne : mission par defaut a 1 credit
+    return plan
 
 
 def plan_level_lock(client_id):
@@ -1364,6 +1367,10 @@ def run_stripe_bridge(action, **kwargs):
             cmd += ["-AmountCents", str(int(kwargs["amount_cents"]))]
         if kwargs.get("plan_name"):
             cmd += ["-PlanName", kwargs["plan_name"]]
+        if kwargs.get("at_period_end"):
+            cmd += ["-AtPeriodEnd"]          # resilier l'abonnement a la fin de la periode deja payee (et non tout de suite)
+        if kwargs.get("prorate"):
+            cmd += ["-Prorate"]              # resiliation immediate avec credit du temps deja paye (remplacement par un forfait superieur)
 
         proc = subprocess.run(cmd, capture_output=True, timeout=30)
         stderr = (proc.stderr or b"").decode("utf-8", errors="replace")
@@ -2567,6 +2574,8 @@ def get_admin_overview():
             "automationsActive": analytics["automationsActive"],
             "planId": billing["planId"],
             "planName": billing["planName"],
+            "paidUntilUtc": None if c["isOwner"] else billing["paidUntilUtc"],        # forfait sur facture ou resilie : fin de la periode payee (a reconduire)
+            "cancelAtPeriodEnd": False if c["isOwner"] else billing["cancelAtPeriodEnd"],
             "creditsUsed": billing["creditsUsed"],
             # Le proprietaire n'est jamais soumis a un quota (voir
             # subscription_blocks_mission, bypass CLI-DASHBOARD) : le
@@ -2668,6 +2677,20 @@ INVOICE_ONLY_PLANS = {pid for pid, p in PLAN_CATALOG.items() if p.get("byInvoice
 STRIPE_AMOUNT_MIN_CENTS = 100             # garde-fou sur le montant envoye a Stripe : de CHF 1 ...
 STRIPE_AMOUNT_MAX_CENTS = 10000000        # ... a CHF 100'000
 
+# ---- PERIODE PAYEE ET ANCIENS ABONNES (2026-10-13, revue de la branche ws/hire-final)
+# Un forfait active SUR FACTURE (grant_workers, set_client_plan) n'a ni webhook ni renouvellement automatique : il porte une date de fin de
+# periode payee (paidUntilUtc = activation + les mois factures, 1 par defaut) et retombe a l'Essai une fois cette date passee (plus
+# INVOICE_GRACE_DAYS jours de grace), sauf si le proprietaire le reconduit. Un abonnement Stripe resilie en fin de periode (cancelAtPeriodEnd)
+# garde son forfait jusqu'a la fin de la periode DEJA payee puis retombe a l'Essai de la meme facon, sans grace. Un forfait sans date de fin
+# (abonnement Stripe en cours, ou etat ecrit avant cette version) ne se termine jamais tout seul.
+INVOICE_GRACE_DAYS = 5
+INVOICE_MONTHS_MAX = 24
+# Grille de prix du 2026-10-12 : tout forfait activee depuis porte gridVersion. Un abonne Pro ou Scale dont l'etat n'en a pas date d'AVANT :
+# il garde ses credits d'origine et le niveau Rapide par defaut (1 credit par mission) tant qu'il ne change pas de forfait (CGV : les
+# conditions applicables sont celles du moment de la souscription ; voir docs/PRICING.md, « Abonnes existants »).
+GRID_VERSION = 2
+GRANDFATHERED_PLANS = {"pro": {"credits": 1500, "defaultLevel": "rapide"}, "scale": {"credits": 4000, "defaultLevel": "rapide"}}
+
 
 def plan_price_cents(plan_id, interval="month"):
     """Montant d'une Checkout Session Stripe, en centimes de franc suisse : prix du catalogue (annuel = 10 mois). None si le forfait n'a pas
@@ -2680,12 +2703,22 @@ def plan_price_cents(plan_id, interval="month"):
     return cents if STRIPE_AMOUNT_MIN_CENTS <= cents <= STRIPE_AMOUNT_MAX_CENTS else None
 
 
+def _grandfathered(state, plan_id=None):
+    """True pour un abonne Pro ou Scale dont l'etat de facturation date d'AVANT la grille du 2026-10-12 (pas de gridVersion) : il garde les
+    credits et le niveau par defaut d'origine (GRANDFATHERED_PLANS). Jamais pour un etat vide (compte sans fichier) ni pour un autre forfait."""
+    if not isinstance(state, dict) or not state:
+        return False
+    return (plan_id or state.get("planId")) in GRANDFATHERED_PLANS and not state.get("gridVersion")
+
+
 def plan_monthly_credits(plan_id, state=None):
     """Credits inclus PAR MOIS par ce forfait pour CE client : toujours un entier fini. Il n'existe pas de forfait sans plafond : un
     plafond absent, negatif ou illisible vaut 0 (la mission est alors refusee), jamais "illimite". Enterprise : plafond contractuel fixe
     par le proprietaire (billing["contractCredits"]), sinon ENTERPRISE_DEFAULT_CREDITS."""
     plan = PLAN_CATALOG.get(plan_id) or PLAN_CATALOG["essai"]
     credits = plan.get("credits")
+    if _grandfathered(state, plan_id):
+        credits = GRANDFATHERED_PLANS[plan_id]["credits"]
     if plan.get("contractual"):
         custom = (state or {}).get("contractCredits")
         if isinstance(custom, int) and not isinstance(custom, bool) and 1 <= custom <= ENTERPRISE_MAX_CREDITS:
@@ -2775,7 +2808,7 @@ def upgrade_payload(billing):
         return None
     return {"planId": pid, "planName": plan["name"], "creditsIncluded": billing.get("creditsIncluded"),
             "renews": bool(billing.get("renewsAtUtc")), "renewsAtUtc": billing.get("renewsAtUtc"), "next": next_plan_info(pid),
-            "contactEmail": CONTACT_EMAIL}
+            "interval": billing.get("billingInterval") or "month", "contactEmail": CONTACT_EMAIL}
 
 
 def _upgrade_sentence(billing):
@@ -2799,7 +2832,10 @@ def quota_reached_message(billing):
         return "Votre quota est épuisé. Souscrivez un abonnement pour continuer à confier des missions."
     plan = PLAN_CATALOG[up["planId"]]
     included = _fr_int(up["creditsIncluded"] or 0)
-    if plan.get("renews", True):
+    if billing.get("cancelAtPeriodEnd"):
+        base = (f"Votre quota est épuisé : le forfait {plan['name']} inclut {included} crédits par mois, mais votre résiliation y met fin le "
+                f"{_fr_date(billing.get('paidUntilUtc'))}, sans renouvellement.")
+    elif plan.get("renews", True):
         when = _fr_date(up["renewsAtUtc"])
         base = (f"Votre quota est épuisé : le forfait {plan['name']} inclut {included} crédits par mois"
                 + (f", renouvelés le {when}." if when else ", renouvelés chaque mois."))
@@ -2813,12 +2849,57 @@ def _billing_default_state():
     now = _utcnow().isoformat() + "Z"
     return {
         "planId": "essai",
+        "gridVersion": GRID_VERSION,
         "cycleStartUtc": now,
         "extraCredits": 0,
         "history": [
             {"dateUtc": now, "event": "Compte cree — plan Essai (3 jours, gratuit, sans carte)."},
         ],
     }
+
+
+def _lapse_due(state, now=None):
+    """True quand la periode payee de ce forfait est terminee (voir le bloc PERIODE PAYEE) : le forfait retombe alors a l'Essai. Faux pour l'Essai,
+    pour un forfait sans date de fin et tant que la date n'est pas passee (plus la grace d'un forfait sur facture non resilie)."""
+    if not isinstance(state, dict) or state.get("planId", "essai") == "essai":
+        return False
+    until = _parse_utc(state.get("paidUntilUtc"))
+    if until is None:
+        return False
+    grace = 0 if (state.get("stripeSubscriptionId") or state.get("cancelAtPeriodEnd")) else INVOICE_GRACE_DAYS
+    return (now or _utcnow()) > until + datetime.timedelta(days=grace)
+
+
+def _apply_lapse(state, now=None):
+    """Fin de periode payee : retour a l'Essai. La fenetre mensuelle en cours est conservee (l'essai n'est pas renouvelable : s'abonner puis
+    laisser expirer ne redonne pas 15 credits neufs), les Workers embauches et le plafond contractuel tombent avec le forfait."""
+    now = now or _utcnow()
+    old_plan = PLAN_CATALOG.get(state.get("planId") or "essai", PLAN_CATALOG["essai"])
+    until = state.get("paidUntilUtc")
+    # La fenetre gardee est la DERNIERE fenetre payee (celle qui contient la veille de la fin de periode), pas celle qui commence a l'echeance :
+    # ses missions comptent sur les 15 credits de l'Essai, qui n'est pas renouvelable.
+    last_paid_day = (_parse_utc(until) or now) - datetime.timedelta(seconds=1)
+    state["cycleStartUtc"] = billing_cycle(state.get("cycleStartUtc", now.isoformat() + "Z"), old_plan.get("renews", True), min(now, last_paid_day))[0]
+    state["planId"] = "essai"
+    state["extraCredits"] = 0
+    for key in ("contractCredits", "paidUntilUtc", "cancelAtPeriodEnd", "billingInterval"):
+        state.pop(key, None)
+    state["stripeSubscriptionId"] = None
+    inst.adapt_hired_to_plan(state)
+    state.setdefault("history", []).append({
+        "dateUtc": now.isoformat() + "Z",
+        "event": f"Forfait {old_plan['name']} arrivé à échéance le {_fr_date(until)} : retour au plan Essai. Pour le reprendre, réglez la facture suivante "
+                 f"et demandez sa réactivation à BK Entreprise.",
+    })
+
+
+def _lapsed_view(state):
+    """Copie de l'etat avec la fin de periode appliquee, sans rien ecrire : pour les controles d'acces qui lisent le fichier sans le verrouiller."""
+    if not _lapse_due(state):
+        return state
+    view = json.loads(json.dumps(state))
+    _apply_lapse(view)
+    return view
 
 
 @_state_locked
@@ -2831,6 +2912,9 @@ def _billing_load(client_id=DASHBOARD_CLIENT_ID):
         state = load_json(BILLING_DATA_LEGACY_PATH)
     if not state or "planId" not in state:
         state = _billing_default_state()
+        _billing_save(state, client_id)
+    elif _lapse_due(state):
+        _apply_lapse(state)
         _billing_save(state, client_id)
     return state
 
@@ -2854,12 +2938,38 @@ def _picker_plans(current_plan_id, state):
     return out
 
 
+# Une mission refusee ou n'ayant rien produit ne coute aucun credit : refusee par la securite, Worker non embauche, verification de Chloe
+# demandee, ou traitee par le repli local parce que le fournisseur d'IA etait indisponible (Result.Degraded : le client n'a pas eu de vraie reponse).
+NON_BILLABLE_TASK_STATUSES = {"BLOCKED", "SECURITY_BLOCKED", "NEEDS_CHLOE_VERIFICATION", "WORKER_NOT_INCLUDED"}
+
+
+def task_credits(data):
+    """Credits consommes par une trace de mission (runtime/tasks/TASK-*.json) : le cout de son niveau (champ Credits), 0 si la mission est refusee
+    ou degradee (voir NON_BILLABLE_TASK_STATUSES), 1 pour une trace ecrite avant les niveaux (sans champ Credits) ou au champ illisible."""
+    if str(data.get("Status") or "").upper() in NON_BILLABLE_TASK_STATUSES:
+        return 0
+    result = data.get("Result")
+    if isinstance(result, dict) and result.get("Degraded") is True:
+        return 0
+    raw = data.get("Credits")
+    if raw is None or isinstance(raw, bool):
+        return 1
+    try:
+        return max(0, int(raw))
+    except (TypeError, ValueError):
+        return 1
+
+
 def get_billing(client_id=DASHBOARD_CLIENT_ID):
     state = _billing_load(client_id)
     plan_id = state.get("planId", "essai")
     plan = PLAN_CATALOG.get(plan_id, PLAN_CATALOG["essai"])
     cycle_anchor = state.get("cycleStartUtc", "")
     cycle_start, renews_at = billing_cycle(cycle_anchor, plan.get("renews", True))
+    paid_until = state.get("paidUntilUtc") if _parse_utc(state.get("paidUntilUtc")) else None
+    cancel_pending = bool(state.get("cancelAtPeriodEnd")) and paid_until is not None
+    if cancel_pending and renews_at and _parse_utc(renews_at) >= _parse_utc(paid_until):
+        renews_at = None       # resilie : rien ne se renouvelle au-dela de la periode deja payee
 
     used = 0
     if os.path.isdir(TASKS_DIR):
@@ -2876,10 +2986,7 @@ def get_billing(client_id=DASHBOARD_CLIENT_ID):
             created = data.get("CreatedAtUtc", "")
             if cycle_start and created and created < cycle_start:
                 continue
-            try:
-                used += max(1, int(data.get("Credits") or 1))
-            except (TypeError, ValueError):
-                used += 1
+            used += task_credits(data)
 
     # Quota MENSUEL FIXE : toujours un entier, jamais "illimite" (voir PLAN_CATALOG). extraCredits = credits accordes par le proprietaire.
     included = plan_monthly_credits(plan_id, state)
@@ -2907,6 +3014,12 @@ def get_billing(client_id=DASHBOARD_CLIENT_ID):
         "unlimited": False,     # conserve pour les anciens clients de l'API : il n'y a plus de forfait illimite
         "priceChf": plan.get("priceChf"),
         "legacy": bool(plan.get("legacy")),
+        # Periode payee : billingInterval = rythme de paiement de l'abonnement Stripe (la montee en gamme propose le meme) ; paidUntilUtc /
+        # cancelAtPeriodEnd = forfait resilie ou active sur facture, actif jusqu'a cette date ; grandfathered = ancien abonne Pro / Scale.
+        "billingInterval": state.get("billingInterval") if state.get("billingInterval") in ("month", "year") else None,
+        "paidUntilUtc": paid_until,
+        "cancelAtPeriodEnd": cancel_pending,
+        "grandfathered": _grandfathered(state),
         "trialDays": plan.get("trialDays"),
         "history": list(reversed(state.get("history", [])))[:20],
         # Choix de forfait du client (voir _picker_plans) ; workerPlans : le detail de Solo/Trio (emplacements, Chloe, prix).
@@ -2925,27 +3038,44 @@ def get_billing(client_id=DASHBOARD_CLIENT_ID):
     return out
 
 
+STRIPE_SESSIONS_KEPT = 50      # Checkout Sessions deja confirmees dont on garde l'identifiant (rejeu impossible, voir activate_checkout_plan)
+
+
 @_state_locked
-def set_billing_plan(plan_id, via_stripe=False, stripe_subscription_id=None, client_id=DASHBOARD_CLIENT_ID):
+def set_billing_plan(plan_id, via_stripe=False, stripe_subscription_id=None, client_id=DASHBOARD_CLIENT_ID, session_id=None, interval=None):
     if plan_id not in PLAN_CATALOG:
         return {"error": "UNKNOWN_PLAN"}
     state = _billing_load(client_id)
-    if state.get("planId", "essai") == plan_id and not via_stripe:
+    old_plan_id = state.get("planId", "essai")
+    if old_plan_id == plan_id and not via_stripe:
         # Redemander le forfait qu'on a deja ne doit JAMAIS repartir sur un nouveau cycle : ce serait un quota mensuel gratuit en plus.
         return get_billing(client_id)
-    old_name = PLAN_CATALOG.get(state.get("planId", "essai"), PLAN_CATALOG["essai"])["name"]
+    if via_stripe and old_plan_id == plan_id and stripe_subscription_id and state.get("stripeSubscriptionId") == stripe_subscription_id:
+        return get_billing(client_id)      # meme forfait, meme abonnement Stripe : une confirmation rejouee ne repart jamais sur un nouveau cycle
+    old_name = PLAN_CATALOG.get(old_plan_id, PLAN_CATALOG["essai"])["name"]
     new_name = PLAN_CATALOG[plan_id]["name"]
     now = _utcnow().isoformat() + "Z"
     state["planId"] = plan_id
+    state["gridVersion"] = GRID_VERSION
     state["cycleStartUtc"] = now
     state["extraCredits"] = 0
     state.pop("contractCredits", None)   # le plafond contractuel d'Enterprise est propre a un contrat : il ne suit pas un changement de forfait
-    inst.adapt_hired_to_plan(state)   # forfait restreint (solo/trio) : liste tronquee aux emplacements ; autre forfait : liste vidée
+    # Stripe renouvelle lui-meme l'abonnement : pas de date de fin de periode payee (elle n'existe que pour une resiliation ou une facture).
+    state.pop("paidUntilUtc", None)
+    state.pop("cancelAtPeriodEnd", None)
+    if via_stripe and interval in ("month", "year"):
+        state["billingInterval"] = interval         # l'interface propose la montee en gamme avec le MEME rythme de paiement
+    else:
+        state.pop("billingInterval", None)
+    # Le delai d'echange de Worker (1 par 30 jours) ne repart de zero que si le forfait CHANGE vraiment, jamais pour un meme forfait repaye.
+    inst.adapt_hired_to_plan(state, plan_changed=old_plan_id != plan_id)   # forfait restreint (solo/trio) : liste tronquee aux emplacements ; autre forfait : liste vidée
     # Un changement simule (ou vers Essai/Enterprise) n'a pas de vrai
     # abonnement Stripe derriere : on efface toute reference precedente
     # pour ne jamais tenter d'annuler un abonnement qui n'est plus le
     # plan actif.
     state["stripeSubscriptionId"] = stripe_subscription_id if via_stripe else None
+    if via_stripe and session_id:
+        state["stripeSessions"] = (list(state.get("stripeSessions") or []) + [session_id])[-STRIPE_SESSIONS_KEPT:]
     label = "paiement Stripe confirme" if via_stripe else "simulation, aucun paiement reel"
     state.setdefault("history", []).append({
         "dateUtc": now,
@@ -2955,18 +3085,41 @@ def set_billing_plan(plan_id, via_stripe=False, stripe_subscription_id=None, cli
     return get_billing(client_id)
 
 
+def _period_end_fallback(state):
+    """Fin de la periode DEJA payee quand Stripe ne la donne pas : prochain renouvellement de la fenetre ancree sur l'activation, au pas de
+    l'intervalle souscrit (1 mois, 12 pour un abonnement annuel). None si l'ancre est illisible."""
+    anchor = _parse_utc(state.get("cycleStartUtc"))
+    if anchor is None:
+        return None
+    now = _utcnow()
+    step = 12 if state.get("billingInterval") == "year" else 1
+    n = step
+    while _add_months(anchor, n) <= now and n < 1200:
+        n += step
+    return _add_months(anchor, n).isoformat() + "Z"
+
+
 def cancel_billing_plan(client_id=DASHBOARD_CLIENT_ID):
-    # L'annulation Stripe (appel reseau de plusieurs secondes) se fait HORS
-    # du verrou ; seule la mise a jour du fichier de facturation est verrouillee.
-    subscription_id = _billing_load(client_id).get("stripeSubscriptionId")
+    """POST /api/billing/cancel. CGV article 6 : la resiliation prend effet a la FIN de la periode en cours. Le forfait paye reste donc actif
+    jusqu'a la fin de la periode deja payee (cancelAtPeriodEnd + paidUntilUtc), puis retombe a l'Essai (_apply_lapse) ; l'abonnement Stripe est
+    resilie en fin de periode (cancel_at_period_end : plus aucun renouvellement, et rien a rembourser). Sans periode payee connue (simulation,
+    etat ecrit avant cette version), ou si Stripe ne repond pas, le retour a l'Essai est immediat et l'historique le dit."""
+    # L'appel Stripe (reseau, plusieurs secondes) se fait HORS du verrou ; seule la mise a jour du fichier de facturation est verrouillee.
+    first = _billing_load(client_id)
+    subscription_id = first.get("stripeSubscriptionId")
+    if first.get("cancelAtPeriodEnd"):
+        return get_billing(client_id)          # deja resilie : on ne refait rien (ni second appel a Stripe, ni nouvelle date)
     label = "simulation, aucun paiement reel"
+    stripe_period_end = None
+    stripe_ok = False
     if subscription_id:
-        # Un vrai abonnement Stripe est derriere ce plan : "annuler"
-        # doit reellement l'annuler cote Stripe, pas seulement basculer
-        # l'affichage local — sinon Stripe continuerait a le renouveler.
-        cancellation = run_stripe_bridge("cancel-subscription", subscription_id=subscription_id)
+        # Un vrai abonnement Stripe est derriere ce plan : "annuler" doit reellement le resilier cote Stripe, pas seulement changer l'affichage
+        # local — sinon Stripe continuerait a le renouveler et a le facturer.
+        cancellation = run_stripe_bridge("cancel-subscription", subscription_id=subscription_id, at_period_end=True)
         if cancellation.get("Status") == "SUCCESS":
-            label = "abonnement Stripe reellement annule"
+            stripe_ok = True
+            stripe_period_end = cancellation.get("CurrentPeriodEnd") or None
+            label = "abonnement Stripe résilié en fin de période, plus aucun renouvellement"
         else:
             label = f"ECHEC annulation Stripe ({cancellation.get('Detail') or cancellation.get('Status')}) — verifier manuellement dans le dashboard Stripe"
 
@@ -2976,13 +3129,31 @@ def cancel_billing_plan(client_id=DASHBOARD_CLIENT_ID):
             return get_billing(client_id)      # deja a l'essai : « annuler » ne redonne pas 15 credits gratuits
         old_plan = PLAN_CATALOG.get(state.get("planId", "essai"), PLAN_CATALOG["essai"])
         old_name = old_plan["name"]
-        now = _utcnow().isoformat() + "Z"
+        now_dt = _utcnow()
+        now = now_dt.isoformat() + "Z"
+        # Fin de la periode deja payee : donnee par Stripe, sinon deduite de la fenetre (abonnement Stripe) ; pour un forfait sur facture, la date
+        # saisie a l'activation. Passee ou inconnue : retour immediat a l'Essai.
+        until = None
+        if stripe_ok:
+            until = stripe_period_end if _parse_utc(stripe_period_end) else _period_end_fallback(state)
+        elif not subscription_id and _parse_utc(state.get("paidUntilUtc")):
+            until = state["paidUntilUtc"]
+        if until and _parse_utc(until) > now_dt:
+            state["cancelAtPeriodEnd"] = True
+            state["paidUntilUtc"] = until
+            state.setdefault("history", []).append({
+                "dateUtc": now,
+                "event": f"Résiliation enregistrée ({old_name}) : le forfait reste actif jusqu'au {_fr_date(until)}, sans renouvellement ({label}).",
+            })
+            _billing_save(state, client_id)
+            return get_billing(client_id)
         state["planId"] = "essai"
         # Le cycle n'est PAS remis a zero : la fenetre mensuelle en cours est conservee et ses missions restent comptees, sinon
         # s'abonner puis annuler redonnerait 15 credits d'essai gratuits a chaque fois (l'essai n'est pas renouvelable).
         state["cycleStartUtc"] = billing_cycle(state.get("cycleStartUtc", now), old_plan.get("renews", True))[0]
         state["extraCredits"] = 0
-        state.pop("contractCredits", None)
+        for key in ("contractCredits", "paidUntilUtc", "cancelAtPeriodEnd", "billingInterval"):
+            state.pop(key, None)
         state["stripeSubscriptionId"] = None
         inst.adapt_hired_to_plan(state)
         state.setdefault("history", []).append({
@@ -3007,13 +3178,17 @@ def select_billing_plan(client_id, plan_id, interval="month"):
       vendu, sauf pour celui qui l'a deja (rien ne change pour lui) ; le forfait qu'on a deja : aucun effet (pas de nouveau cycle).
     - Stripe configure : une vraie Checkout Session (montant du catalogue en centimes de CHF), le forfait n'est active qu'APRES le
       paiement verifie cote serveur (/api/billing/stripe-confirm). Aucun prelevement ici.
-    - Stripe non configure : Solo, Trio et Equipe ne basculent JAMAIS gratuitement (PLAN_BY_INVOICE : le proprietaire les active apres
-      facture reglee) ; Pro et Scale gardent la simulation locale d'origine."""
+    - Stripe NON configure : aucun forfait payant (Solo, Trio, Equipe, Pro, Scale) ne bascule jamais gratuitement pour un client
+      (PLAN_BY_INVOICE : le proprietaire les active apres facture reglee, voir grant_workers et set_client_plan) ; seul le compte du proprietaire
+      peut simuler un changement pour tester le parcours.
+    - Stripe configure mais injoignable (pont en erreur ou delai depasse) : 503 STRIPE_UNAVAILABLE et RIEN ne change, jamais de bascule
+      gratuite faute de reponse."""
     if plan_id not in PLAN_CATALOG:
         return {"error": "UNKNOWN_PLAN"}, 400
     plan = PLAN_CATALOG[plan_id]
     owner = client_id == DASHBOARD_CLIENT_ID
-    current = ((_billing_state_readonly(client_id) or {}).get("planId") or "essai") if _is_customer_id(client_id) else None
+    current_state = (_billing_state_readonly(client_id) or {}) if _is_customer_id(client_id) else {}
+    current = (current_state.get("planId") or "essai") if _is_customer_id(client_id) else None
     if not owner:
         if plan_id == "essai":
             return {"error": "PLAN_NOT_SELECTABLE", "detail": "On ne revient pas à l'essai en le choisissant : utilisez « Annuler l'abonnement »."}, 403
@@ -3022,21 +3197,23 @@ def select_billing_plan(client_id, plan_id, interval="month"):
                     "detail": f"{plan['name']} se fait sur devis, avec un plafond de crédits mensuel fixé au contrat. Écrivez-nous à {CONTACT_EMAIL}."}, 403
         if plan.get("legacy") and current != plan_id:
             return {"error": "PLAN_NOT_SOLD", "detail": f"Le forfait {plan['name']} n'est plus proposé. Choisissez l'un des forfaits de la page Tarifs."}, 403
-        if current == plan_id:
-            return get_billing(client_id), 200
+        if current == plan_id and not current_state.get("cancelAtPeriodEnd"):
+            return get_billing(client_id), 200      # un forfait resilie (encore actif jusqu'a son terme) peut etre repris par un nouveau paiement
     stripe_status = None
-    if plan_id in INVOICE_ONLY_PLANS and not owner:
+    if plan_id in PAID_PLANS_WITH_CHECKOUT:
         stripe_status = run_stripe_bridge("status")
-        if not stripe_status.get("Configured"):
-            what = ("Les forfaits Solo et Trio sont activés par BK Entreprise après règlement de la facture. "
-                    "Demandez-le depuis la fiche du Worker (« Embaucher »).") if plan.get("workerSlots") else (
+        if stripe_status.get("Configured") is not True and stripe_status.get("Configured") is not False:
+            # Le pont a echoue (erreur PowerShell, delai de 30 s depasse...) : on ne sait pas si Stripe est configure -> on refuse, on n'offre rien.
+            return {"error": "STRIPE_UNAVAILABLE", "detail": "Le paiement est momentanément indisponible. Aucun changement n'a été fait : réessayez dans quelques minutes."}, 503
+        if stripe_status.get("Configured") is False and not owner:
+            what = ("Les forfaits Solo et Trio sont activés par BK Entreprise après règlement de la facture. Pour garder un Worker, ouvrez sa fiche "
+                    f"et utilisez « Garder seulement ce Worker après l'essai », ou écrivez-nous à {CONTACT_EMAIL}.") if plan.get("workerSlots") else (
                     f"Le forfait {plan['name']} est activé par BK Entreprise après règlement de la facture. Écrivez-nous à {CONTACT_EMAIL}.")
             return {"error": "PLAN_BY_INVOICE", "detail": what}, 403
     if plan_id in PAID_PLANS_WITH_CHECKOUT and client_id != DASHBOARD_CLIENT_ID and not account_email_verified(client_id):
         return {"error": "EMAIL_NOT_VERIFIED"}, 403
     # Forfaits payants : si Stripe est configure, vraie Checkout Session hebergee par Stripe ; Essai et Enterprise restent hors paiement.
     if plan_id in PAID_PLANS_WITH_CHECKOUT:
-        stripe_status = stripe_status or run_stripe_bridge("status")
         if stripe_status.get("Configured"):
             checkout = run_stripe_bridge(
                 "create-checkout", plan_id=plan_id, plan_name=plan["name"], amount_cents=plan_price_cents(plan_id, interval) or 0,
@@ -3045,26 +3222,47 @@ def select_billing_plan(client_id, plan_id, interval="month"):
             if checkout.get("Status") == "SUCCESS":
                 return {"checkoutUrl": checkout["CheckoutUrl"], "sessionId": checkout["SessionId"]}, 200
             return {"error": "STRIPE_CHECKOUT_FAILED", "detail": checkout.get("Detail") or checkout.get("Status")}, 400
-    result = set_billing_plan(plan_id, client_id=client_id)
+    result = set_billing_plan(plan_id, client_id=client_id)       # Essai / Enterprise (proprietaire), ou simulation du proprietaire sans Stripe
     return result, 400 if "error" in result else 200
 
 
 def activate_checkout_plan(confirmation, fallback_client_id=None):
-    """POST /api/billing/stripe-confirm, une fois la session relue chez Stripe (Paid, PlanId, ClientId, SubscriptionId). Active le forfait paye.
-    Un client qui change de forfait par une NOUVELLE Checkout Session (montee en gamme) a deja un abonnement Stripe : on l'annule une fois le
-    nouveau confirme, sinon il serait facture deux fois. Renvoie (corps, statut HTTP)."""
+    """POST /api/billing/stripe-confirm, une fois la session relue chez Stripe (Paid, PlanId, ClientId, SubscriptionId, SubscriptionStatus,
+    SessionId, Interval). Active le forfait paye. Renvoie (corps, statut HTTP).
+    - IDEMPOTENT : une Checkout Session ne peut activer un forfait qu'UNE fois (son identifiant est garde dans l'etat de facturation, et un meme
+      abonnement deja actif ne change rien). Sans cela, rejouer la confirmation (payment_status reste « paid » a vie) redonnait un quota neuf,
+      effacait le delai d'echange de Worker et ressuscitait un forfait resilie. Un rejeu renvoie l'etat courant, sans rien modifier.
+    - L'abonnement doit etre encore actif chez Stripe (active ou en essai), sinon rien n'est active.
+    - Le ClientId vient des metadata de la session ; un compte connecte DIFFERENT (fallback_client_id) est refuse.
+    - Un client qui change de forfait par une NOUVELLE Checkout Session (montee en gamme) a deja un abonnement Stripe : on l'annule une fois le
+      nouveau confirme, avec le prorata du temps deja paye (credit chez Stripe), sinon il serait facture deux fois."""
     if not confirmation.get("Paid") or confirmation.get("PlanId") not in PLAN_CATALOG:
         return {"error": "PAYMENT_NOT_CONFIRMED", "detail": confirmation.get("PaymentStatus")}, 400
-    client_id = confirmation.get("ClientId") or fallback_client_id
+    meta_client = confirmation.get("ClientId")
+    if meta_client and fallback_client_id and meta_client != fallback_client_id:
+        return {"error": "SESSION_CLIENT_MISMATCH",
+                "detail": "Ce paiement a été fait depuis un autre compte. Reconnectez-vous au compte qui a payé pour le confirmer."}, 403
+    client_id = meta_client or fallback_client_id
     if not client_id:
         return {"error": "ACCOUNT_REQUIRED"}, 401
-    previous = (_billing_state_readonly(client_id) or {}).get("stripeSubscriptionId") if _is_customer_id(client_id) else None
+    plan_id = confirmation["PlanId"]
     new_sub = confirmation.get("SubscriptionId")
-    result = set_billing_plan(confirmation["PlanId"], via_stripe=True, stripe_subscription_id=new_sub, client_id=client_id)
+    session_id = str(confirmation.get("SessionId") or "").strip() or None
+    with _STATE_LOCK:
+        state = _billing_load(client_id)
+        if (session_id and session_id in (state.get("stripeSessions") or [])) or (
+                new_sub and state.get("stripeSubscriptionId") == new_sub and state.get("planId") == plan_id):
+            return dict(get_billing(client_id), alreadyConfirmed=True), 200
+        if confirmation.get("SubscriptionStatus") not in ("active", "trialing"):
+            return {"error": "SUBSCRIPTION_NOT_ACTIVE",
+                    "detail": "L'abonnement lié à ce paiement n'est plus actif chez Stripe : aucun forfait n'a été activé."}, 409
+        previous = state.get("stripeSubscriptionId") if _is_customer_id(client_id) else None
+        result = set_billing_plan(plan_id, via_stripe=True, stripe_subscription_id=new_sub, client_id=client_id,
+                                  session_id=session_id, interval=confirmation.get("Interval"))
     if previous and new_sub and previous != new_sub and "error" not in result:
-        cancellation = run_stripe_bridge("cancel-subscription", subscription_id=previous)
+        cancellation = run_stripe_bridge("cancel-subscription", subscription_id=previous, prorate=True)
         if cancellation.get("Status") == "SUCCESS":
-            _billing_note(client_id, "Ancien abonnement Stripe annulé : le nouveau forfait le remplace (aucune double facturation).")
+            _billing_note(client_id, "Ancien abonnement Stripe annulé : le nouveau forfait le remplace (aucune double facturation, le temps déjà payé est crédité chez Stripe).")
         else:
             _billing_note(client_id, "ECHEC annulation de l'ancien abonnement Stripe (" + str(cancellation.get("Detail") or cancellation.get("Status"))
                           + ") — à annuler à la main dans le tableau de bord Stripe pour éviter une double facturation.")
@@ -3072,11 +3270,32 @@ def activate_checkout_plan(confirmation, fallback_client_id=None):
     return result, 400 if "error" in result else 200
 
 
+def _paid_months(value):
+    """Nombre de mois couverts par la facture reglee (1 par defaut) : entier de 1 a INVOICE_MONTHS_MAX, sinon None."""
+    if value is None:
+        return 1
+    if isinstance(value, bool) or not isinstance(value, int) or not 1 <= value <= INVOICE_MONTHS_MAX:
+        return None
+    return value
+
+
+def _set_invoice_period(state, now_dt, months):
+    """Forfait active sur facture : actif pendant les mois factures (paidUntilUtc), puis retour a l'Essai si le proprietaire ne le reconduit pas."""
+    state["paidUntilUtc"] = _add_months(now_dt, months).isoformat() + "Z"
+    state.pop("cancelAtPeriodEnd", None)
+    state.pop("billingInterval", None)
+
+
 @_state_locked
-def set_client_plan(client_id, plan_id, contract_credits=None):
+def set_client_plan(client_id, plan_id, contract_credits=None, paid_months=1):
     """Proprietaire, apres facture reglee ou devis signe : active un forfait SANS liste de Workers (Equipe, Pro, Scale, Enterprise ; Solo et
     Trio passent par grant_workers). Pour Enterprise, contract_credits fixe le plafond mensuel CONTRACTUEL du client (entier de 1 a
-    ENTERPRISE_MAX_CREDITS, sinon ENTERPRISE_DEFAULT_CREDITS) : il n'existe aucun forfait illimite. Renvoie (corps, statut HTTP)."""
+    ENTERPRISE_MAX_CREDITS, sinon ENTERPRISE_DEFAULT_CREDITS) : il n'existe aucun forfait illimite. paid_months = mois couverts par la facture
+    (1 a INVOICE_MONTHS_MAX) : au-dela, le forfait retombe a l'Essai (periode payee, voir plus haut) tant que le proprietaire ne le reconduit pas.
+    Renvoie (corps, statut HTTP)."""
+    months = _paid_months(paid_months)
+    if months is None:
+        return {"error": "INVALID_PERIOD", "detail": f"Mois facturés attendus : un entier de 1 à {INVOICE_MONTHS_MAX}."}, 400
     if not _is_customer_id(client_id) or not any(a.get("clientId") == client_id for a in _load_accounts()):
         return {"error": "CLIENT_NOT_FOUND", "detail": "Aucun compte client avec cet identifiant."}, 404
     plan = PLAN_CATALOG.get(plan_id)
@@ -3091,23 +3310,29 @@ def set_client_plan(client_id, plan_id, contract_credits=None):
     state = _billing_load(client_id)
     if state.get("stripeSubscriptionId"):
         return {"error": "ACTIVE_SUBSCRIPTION", "detail": "Ce client a un abonnement Stripe actif : annulez-le avant d'attribuer un forfait sur facture."}, 409
-    old_name = PLAN_CATALOG.get(state.get("planId") or "essai", PLAN_CATALOG["essai"])["name"]
-    now = _utcnow().isoformat() + "Z"
+    old_plan_id = state.get("planId") or "essai"
+    old_name = PLAN_CATALOG.get(old_plan_id, PLAN_CATALOG["essai"])["name"]
+    now_dt = _utcnow()
+    now = now_dt.isoformat() + "Z"
     state["planId"] = plan_id
+    state["gridVersion"] = GRID_VERSION
     state["cycleStartUtc"] = now
     state["extraCredits"] = 0
     if plan.get("contractual"):
         state["contractCredits"] = contract_credits if contract_credits is not None else ENTERPRISE_DEFAULT_CREDITS
     else:
         state.pop("contractCredits", None)
-    inst.adapt_hired_to_plan(state)
+    _set_invoice_period(state, now_dt, months)
+    inst.adapt_hired_to_plan(state, plan_changed=old_plan_id != plan_id)
     cap = f", plafond contractuel de {_fr_int(state['contractCredits'])} crédits par mois" if plan.get("contractual") else ""
-    state.setdefault("history", []).append({"dateUtc": now, "event": f"Forfait {plan['name']} activé par BK Entreprise{cap}, ancien forfait : {old_name}."})
+    state.setdefault("history", []).append({
+        "dateUtc": now, "event": f"Forfait {plan['name']} activé par BK Entreprise{cap} pour {months} mois (jusqu'au {_fr_date(state['paidUntilUtc'])}), "
+                                 f"ancien forfait : {old_name}."})
     _billing_save(state, client_id)
-    log_activity("set_plan", clientId=client_id, planId=plan_id, contractCredits=state.get("contractCredits"))
+    log_activity("set_plan", clientId=client_id, planId=plan_id, contractCredits=state.get("contractCredits"), paidMonths=months)
     billing = get_billing(client_id)
     return {"ok": True, "clientId": client_id, "planId": plan_id, "planName": plan["name"], "credits": billing["creditsIncluded"],
-            "renewsAtUtc": billing["renewsAtUtc"]}, 200
+            "renewsAtUtc": billing["renewsAtUtc"], "paidUntilUtc": billing["paidUntilUtc"]}, 200
 
 
 def subscription_blocks_mission(client_id, level=None):
@@ -3183,7 +3408,7 @@ def _billing_state_readonly(client_id):
     for _ in range(2):          # un lecteur peut tomber pile pendant un remplacement de fichier : un second essai
         state = load_json(path, None)
         if isinstance(state, dict):
-            return state
+            return _lapsed_view(state)       # periode payee terminee : les controles d'acces voient deja l'Essai (rien n'est ecrit ici)
         time.sleep(0.05)
     return None
 
@@ -3334,8 +3559,13 @@ def hire_worker(client_id, worker_id, replace_id=None):
 
 
 @_state_locked
-def grant_workers(client_id, plan_id, workers, new_cycle=True):
-    """Proprietaire, apres facture reglee : active le forfait Solo/Trio d'un client et fixe la liste de ses Workers. (payload, statut)."""
+def grant_workers(client_id, plan_id, workers, new_cycle=True, paid_months=1):
+    """Proprietaire, apres facture reglee : active le forfait Solo/Trio d'un client et fixe la liste de ses Workers. paid_months = mois couverts
+    par la facture (1 a INVOICE_MONTHS_MAX) : le forfait retombe a l'Essai au-dela si le proprietaire ne le reconduit pas (rappeler cette route
+    avec la facture suivante). newCycle=False ne change que la liste des Workers : la periode payee en cours n'est pas touchee. (payload, statut)."""
+    months = _paid_months(paid_months)
+    if months is None:
+        return {"error": "INVALID_PERIOD", "detail": f"Mois facturés attendus : un entier de 1 à {INVOICE_MONTHS_MAX}."}, 400
     if not _is_customer_id(client_id) or not any(a.get("clientId") == client_id for a in _load_accounts()):
         return {"error": "CLIENT_NOT_FOUND", "detail": "Aucun compte client avec cet identifiant."}, 404
     if plan_id not in inst.PLAN_WORKER_SLOTS:
@@ -3345,11 +3575,16 @@ def grant_workers(client_id, plan_id, workers, new_cycle=True):
         return {"error": "ACTIVE_SUBSCRIPTION", "detail": "Ce client a un abonnement Stripe actif : annulez-le avant d'attribuer un forfait sur facture."}, 409
     old_plan, old_hired = state.get("planId"), inst.hired_workers(state)
     plan_changed = old_plan != plan_id
-    now = _utcnow().isoformat() + "Z"
+    now_dt = _utcnow()
+    now = now_dt.isoformat() + "Z"
     state["planId"] = plan_id
+    state["gridVersion"] = GRID_VERSION
     if plan_changed or new_cycle:
         state["cycleStartUtc"] = now
         state["extraCredits"] = 0
+        _set_invoice_period(state, now_dt, months)
+    elif not state.get("paidUntilUtc"):
+        _set_invoice_period(state, now_dt, months)
     old_name = PLAN_CATALOG.get(old_plan or "essai", PLAN_CATALOG["essai"])["name"]
     state.setdefault("history", []).append({
         "dateUtc": now, "event": f"Forfait {PLAN_CATALOG[plan_id]['name']} activé par BK Entreprise (facture réglée), ancien forfait : {old_name}."})
@@ -3366,7 +3601,7 @@ def grant_workers(client_id, plan_id, workers, new_cycle=True):
     log_activity("grant_workers", clientId=client_id, planId=plan_id, workers=clean)
     plan = PLAN_CATALOG[plan_id]
     return {"ok": True, "clientId": client_id, "planId": plan_id, "planName": plan["name"], "credits": plan["credits"],
-            "newCycle": bool(plan_changed or new_cycle), "hire": inst.hire_summary(state)}, 200
+            "newCycle": bool(plan_changed or new_cycle), "paidUntilUtc": state.get("paidUntilUtc"), "hire": inst.hire_summary(state)}, 200
 
 
 def _connected_connector_ids(client_id, profile):
@@ -4886,7 +5121,7 @@ class Handler(BaseHTTPRequestHandler):
             if body is None:
                 return
             payload, status = grant_workers(str(body.get("clientId") or "").strip(), str(body.get("planId") or "").strip().lower(),
-                                            body.get("workers"), new_cycle=body.get("newCycle") is not False)
+                                            body.get("workers"), new_cycle=body.get("newCycle") is not False, paid_months=body.get("paidMonths"))
             self._send_json(payload, status)
         elif path == "/api/admin/set-plan":
             # Proprietaire uniquement : active Equipe, Pro, Scale ou Enterprise (devis signe : plafond de credits MENSUEL contractuel) pour un
@@ -4901,7 +5136,7 @@ class Handler(BaseHTTPRequestHandler):
             if body is None:
                 return
             payload, status = set_client_plan(str(body.get("clientId") or "").strip(), str(body.get("planId") or "").strip().lower(),
-                                              contract_credits=body.get("contractCredits"))
+                                              contract_credits=body.get("contractCredits"), paid_months=body.get("paidMonths"))
             self._send_json(payload, status)
         elif path == "/api/installations":
             client_id = self._resolve_client_id()
@@ -5287,6 +5522,7 @@ class Handler(BaseHTTPRequestHandler):
                 return
             # Le ClientId qui a paye vient des metadata Stripe (fiable, pose a la creation de la session) — le cookie de session encore
             # present sert seulement de repli pour d'anciennes sessions creees avant ce champ.
+            confirmation["SessionId"] = session_id
             payload, status = activate_checkout_plan(confirmation, self._resolve_client_id())
             self._send_json(payload, status)
         elif path == "/api/profile":
