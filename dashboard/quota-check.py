@@ -19,7 +19,10 @@
 #   - code INSTALLATION_PAUSED  : (appel "scheduled", donc automatique) le client a mis ce Worker en pause : interrupteur d'arret,
 #                                 plus aucune mission automatique ; "Executer maintenant" (manuel) reste possible.
 # Quand la mission est autorisee, "allowedWorkers" vaut la liste des Workers embauches separee par des virgules (variable
-# BK_ALLOWED_WORKERS a transmettre a Submit-Task.ps1), "-" pour aucun, ou null pour "tous".
+# BK_ALLOWED_WORKERS a transmettre a Submit-Task.ps1), "-" pour aucun, ou null pour "tous". Pour un appel "scheduled", les Workers que le client a
+# mis en pause en sont retires (une automatisation de Chloe ne doit jamais appeler un Worker en pause : null devient alors la liste explicite des
+# autres Workers) ; si tous sont en pause, la mission est bloquee (INSTALLATION_PAUSED). Pour Chloe, "maxWorkers" = nombre maximal de Workers qu'elle
+# peut appeler avec le solde de credits restant (variable BK_MAX_WORKERS) : chaque Worker appele coute le niveau de la mission.
 # Les automatisations (missions recurrentes) tournent TOUJOURS au niveau Rapide, 1 credit (server.automation_level) : le quota est controle a
 # ce niveau-la, et "level" (« rapide », ou « » quand les niveaux sont coupes par BK_LEVELS=0) est a transmettre a Submit-Task.ps1 via
 # BK_MISSION_LEVEL pour que la mission tourne reellement a ce niveau et soit comptee 1 credit.
@@ -56,7 +59,19 @@ def main():
             print(json.dumps({"blocked": True, "code": "INSTALLATION_PAUSED",
                               "detail": "L'installation de ce Worker est en pause : aucune mission automatique tant que vous ne la reprenez pas."}, ensure_ascii=False))
             return 0
-        print(json.dumps({"blocked": False, "allowedWorkers": server.allowed_workers_env(client_id), "level": level}))
+        allowed = server.allowed_workers_env(client_id)
+        if scheduled:
+            allowed, none_left = server.scheduled_allowed_workers_env(client_id)
+            if none_left:
+                print(json.dumps({"blocked": True, "code": "INSTALLATION_PAUSED",
+                                  "detail": "Tous vos Workers sont en pause : aucune mission automatique tant que vous n'en reprenez pas un."}, ensure_ascii=False))
+                return 0
+        verdict = {"blocked": False, "allowedWorkers": allowed, "level": level}
+        if worker_id == "chloe":
+            cap = server.chloe_worker_cap(client_id, level)
+            if cap is not None:
+                verdict["maxWorkers"] = cap
+        print(json.dumps(verdict))
     except Exception as exc:  # noqa: BLE001
         print(json.dumps({"blocked": False, "error": repr(exc)}))
     return 0

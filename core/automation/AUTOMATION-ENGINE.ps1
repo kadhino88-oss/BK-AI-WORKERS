@@ -186,6 +186,9 @@ function Invoke-AutomationRun {
     # parlant (une mission recurrente ne doit jamais couter 6 ou 12 credits). Vide = niveaux coupes (BK_LEVELS=0) ou verificateur absent :
     # ancien comportement (modele leger, 1 credit). La valeur vient de dashboard/quota-check.py (server.automation_level).
     $MissionLevelEnv = $null
+    # Plafond du nombre de Workers qu'une automatisation de Chloe peut appeler (BK_MAX_WORKERS) : solde de credits // cout du niveau, donne par
+    # dashboard/quota-check.py (server.chloe_worker_cap). Absent = pas de plafond.
+    $MaxWorkersEnv = $null
 
     # -----------------------------------------------------------------
     # Garde-fou quota (correctif securite).
@@ -216,6 +219,9 @@ function Invoke-AutomationRun {
                 }
                 if (-not $QuotaVerdict.blocked -and $QuotaVerdict.PSObject.Properties.Name -contains "level" -and $QuotaVerdict.level) {
                     $MissionLevelEnv = [string]$QuotaVerdict.level
+                }
+                if (-not $QuotaVerdict.blocked -and $QuotaVerdict.PSObject.Properties.Name -contains "maxWorkers" -and $QuotaVerdict.maxWorkers) {
+                    $MaxWorkersEnv = [string]$QuotaVerdict.maxWorkers
                 }
                 if ($QuotaVerdict.blocked) {
                     $SkipStatus = switch ([string]$QuotaVerdict.code) {
@@ -308,6 +314,9 @@ function Invoke-AutomationRun {
     # (ancien comportement) ; une valeur heritee du processus appelant n'est jamais utilisee.
     $PreviousMissionLevel = $env:BK_MISSION_LEVEL
     if ($MissionLevelEnv -match '^[a-z]{3,20}$') { $env:BK_MISSION_LEVEL = $MissionLevelEnv } else { Remove-Item Env:BK_MISSION_LEVEL -ErrorAction SilentlyContinue }
+    # Plafond de Workers pour Chloe (voir plus haut) : meme principe, jamais de valeur heritee.
+    $PreviousMaxWorkers = $env:BK_MAX_WORKERS
+    if ($MaxWorkersEnv -match '^[0-9]{1,4}$') { $env:BK_MAX_WORKERS = $MaxWorkersEnv } else { Remove-Item Env:BK_MAX_WORKERS -ErrorAction SilentlyContinue }
     try {
         $Proc = Start-Process -FilePath $PsExe -ArgumentList $ArgLine -NoNewWindow -Wait -PassThru `
             -RedirectStandardOutput $StdOutFile `
@@ -335,6 +344,7 @@ function Invoke-AutomationRun {
     finally {
         if ($null -ne $PreviousAllowedWorkers) { $env:BK_ALLOWED_WORKERS = $PreviousAllowedWorkers } else { Remove-Item Env:BK_ALLOWED_WORKERS -ErrorAction SilentlyContinue }
         if ($null -ne $PreviousMissionLevel) { $env:BK_MISSION_LEVEL = $PreviousMissionLevel } else { Remove-Item Env:BK_MISSION_LEVEL -ErrorAction SilentlyContinue }
+        if ($null -ne $PreviousMaxWorkers) { $env:BK_MAX_WORKERS = $PreviousMaxWorkers } else { Remove-Item Env:BK_MAX_WORKERS -ErrorAction SilentlyContinue }
         if (Test-Path -LiteralPath $OutFile -PathType Leaf) { Remove-Item -LiteralPath $OutFile -Force -ErrorAction SilentlyContinue }
         Remove-Item -LiteralPath $StdOutFile -Force -ErrorAction SilentlyContinue
         Remove-Item -LiteralPath $StdErrFile -Force -ErrorAction SilentlyContinue

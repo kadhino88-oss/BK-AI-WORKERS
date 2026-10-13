@@ -55,6 +55,8 @@ if (-not [string]::IsNullOrWhiteSpace($AllowedRaw)) {
 # Niveau de la mission et son cout en credits (core/ai/LEVELS.json : Rapide 1 / Equilibre 6 / Approfondi 12) : sans niveau (BK_LEVELS=0, ou
 # mission lancee sans variable) = ancien comportement, 1 credit. Valable pour un Worker comme pour CHACUN des Workers appeles par Chloe :
 # chaque appel de Worker tourne a ce niveau, donc coute ce niveau (sinon une mission Approfondi de Chloe ne couterait qu'un credit par Worker).
+# Seule une mission LIVREE coute ce cout (Get-BKMissionCredits) : refusee par la securite ou traitee par le repli local parce que le fournisseur d'IA
+# etait indisponible (Result.Degraded), elle est tracee a 0 credit.
 $MissionLevelName = [string]$env:BK_MISSION_LEVEL
 $MissionCredits = 1
 if ($MissionLevelName -match '^[a-z]{3,20}$') {
@@ -62,6 +64,15 @@ if ($MissionLevelName -match '^[a-z]{3,20}$') {
         $LvProp = (Get-Content -LiteralPath (Join-Path $Root "core/ai/LEVELS.json") -Raw -Encoding UTF8 | ConvertFrom-Json).levels.PSObject.Properties[$MissionLevelName]
         if ($LvProp -and [int]$LvProp.Value.credits -gt 0) { $MissionCredits = [int]$LvProp.Value.credits }
     } catch { }
+}
+
+function Get-BKMissionCredits {
+    # Credits a facturer pour UNE trace de mission : le cout du niveau si le Worker a reellement repondu, 0 sinon.
+    param([int]$LevelCost, $WorkerResult, [bool]$Succeeded)
+    if (-not $Succeeded -or $null -eq $WorkerResult) { return 0 }
+    $DegradedProp = $WorkerResult.PSObject.Properties["Degraded"]
+    if ($null -ne $DegradedProp -and [bool]$DegradedProp.Value) { return 0 }
+    return $LevelCost
 }
 
 . (Join-Path $Root "core/security/identity-auth/runtime.ps1")
@@ -155,7 +166,7 @@ if ($WorkerId.ToLowerInvariant() -eq "chloe") {
                 Result = $Item.Result
                 CreatedAtUtc = [DateTime]::UtcNow.ToString("o")
                 Level = $MissionLevelName
-                Credits = $MissionCredits
+                Credits = (Get-BKMissionCredits -LevelCost $MissionCredits -WorkerResult $Item.Result -Succeeded ($Item.Status -eq "SUCCESS"))
             }
             [System.IO.File]::WriteAllText(
                 (Join-Path $ChloeRuntimeDir ("$($Item.TaskId).json")),
@@ -251,7 +262,7 @@ elseif (-not [string]::IsNullOrWhiteSpace($WorkerId)) {
         Result = $WorkerResult
         CreatedAtUtc = [DateTime]::UtcNow.ToString("o")
         Level = $MissionLevelName
-        Credits = $MissionCredits
+        Credits = (Get-BKMissionCredits -LevelCost $MissionCredits -WorkerResult $WorkerResult -Succeeded ($null -ne $WorkerResult -and $WorkerResult.Status -eq "SUCCESS"))
     }
 
     # Enregistre aussi une trace dans runtime/tasks/ pour que ce Worker

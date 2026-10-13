@@ -148,6 +148,71 @@ class StripeFields(unittest.TestCase):
         self.assertEqual(self.f("empty-name")["line_items[0][price_data][product_data][name]"], "BK-AI-WORKERS - solo (mensuel)")      # nom vide : repli sur l'id
 
 
+SUB_SCRIPT = r'''
+$ErrorActionPreference = "Stop"
+. (Join-Path $env:BK_ROOT "core/integrations/Stripe-Adapter.ps1")
+$subs = Get-Content -LiteralPath $env:T_SUBS -Raw -Encoding UTF8 | ConvertFrom-Json
+$out = [ordered]@{}
+foreach ($prop in $subs.PSObject.Properties) {
+    $out["summary-" + $prop.Name] = ConvertTo-StripeSubscriptionSummary -Subscription $prop.Value
+}
+$out["summary-null"] = ConvertTo-StripeSubscriptionSummary -Subscription $null
+$out["cancel-end"] = Get-StripeCancelFields -AtPeriodEnd
+$out["cancel-end-body"] = ConvertTo-StripeFormBody -Fields (Get-StripeCancelFields -AtPeriodEnd)
+$out["cancel-prorate"] = Get-StripeCancelFields -Prorate
+$out["cancel-prorate-body"] = ConvertTo-StripeFormBody -Fields (Get-StripeCancelFields -Prorate)
+$out["cancel-both"] = Get-StripeCancelFields -AtPeriodEnd -Prorate
+$out["cancel-plain-count"] = (Get-StripeCancelFields).Count
+[System.IO.File]::WriteAllText($env:T_OUT, ($out | ConvertTo-Json -Depth 6), [System.Text.UTF8Encoding]::new($false))
+'''
+
+# 2026-12-02T08:00:00Z = 1796198400 (secondes Unix) ; 2026-11-02T08:00:00Z = 1793606400
+SUBSCRIPTIONS = {
+    "legacy-api": {"id": "sub_legacy_1", "status": "active", "cancel_at_period_end": False, "current_period_end": 1793606400},
+    "items-api": {"id": "sub_items_1", "status": "active", "cancel_at_period_end": True,
+                  "items": {"data": [{"id": "si_1", "current_period_end": 1796198400}]}},
+    "canceled": {"id": "sub_gone_1", "status": "canceled", "cancel_at_period_end": False},
+    "id-only": "sub_text_only_1",
+}
+
+
+@unittest.skipUnless(PWSH, "pwsh (PowerShell 7) not installed")
+class StripeSubscriptionHelpers(unittest.TestCase):
+    """Relecture de l'abonnement et resiliation (revue du 2026-10-13) : fonctions PURES, sans reseau ni secret."""
+
+    @classmethod
+    def setUpClass(cls):
+        tmp = tempfile.mkdtemp(prefix="bkstripe-sub-")
+        cls.addClassCleanup(shutil.rmtree, tmp, True)
+        subs_path, out_path = os.path.join(tmp, "subs.json"), os.path.join(tmp, "out.json")
+        with open(subs_path, "w", encoding="utf-8") as f:
+            json.dump(SUBSCRIPTIONS, f)
+        env = {k: v for k, v in os.environ.items() if not k.startswith("BK_SECRET") and k != "BK_SECRETS_DIR"}
+        env.update(BK_ROOT=REPO, T_SUBS=subs_path, T_OUT=out_path)
+        p = subprocess.run([PWSH, "-NoProfile", "-NonInteractive", "-Command", SUB_SCRIPT], capture_output=True, text=True, encoding="utf-8",
+                           errors="replace", env=env, timeout=300)
+        assert os.path.isfile(out_path), p.stderr[-800:] + p.stdout[-300:]
+        with open(out_path, encoding="utf-8") as f:
+            cls.r = json.load(f)
+
+    def test_the_period_end_is_read_from_either_api_shape_as_iso_utc(self):
+        self.assertEqual(self.r["summary-legacy-api"], {"Id": "sub_legacy_1", "Status": "active", "CancelAtPeriodEnd": False, "CurrentPeriodEnd": "2026-11-02T08:00:00Z"})
+        self.assertEqual(self.r["summary-items-api"], {"Id": "sub_items_1", "Status": "active", "CancelAtPeriodEnd": True, "CurrentPeriodEnd": "2026-12-02T08:00:00Z"})
+
+    def test_a_canceled_or_unexpanded_subscription_is_reported_as_such(self):
+        self.assertEqual((self.r["summary-canceled"]["Status"], self.r["summary-canceled"]["CurrentPeriodEnd"]), ("canceled", None))
+        self.assertEqual(self.r["summary-id-only"], {"Id": "sub_text_only_1", "Status": None, "CancelAtPeriodEnd": False, "CurrentPeriodEnd": None})
+        self.assertEqual(self.r["summary-null"], {"Id": None, "Status": None, "CancelAtPeriodEnd": False, "CurrentPeriodEnd": None})
+
+    def test_cancelling_at_period_end_never_deletes_and_a_replacement_credits_the_unused_time(self):
+        self.assertEqual(self.r["cancel-end"], {"cancel_at_period_end": "true"})
+        self.assertEqual(self.r["cancel-end-body"], "cancel_at_period_end=true")
+        self.assertEqual(self.r["cancel-prorate"], {"prorate": "true", "invoice_now": "true"})
+        self.assertEqual(self.r["cancel-prorate-body"], "prorate=true&invoice_now=true")
+        self.assertEqual(self.r["cancel-both"], {"cancel_at_period_end": "true"})      # la resiliation de fin de periode l'emporte : rien n'est supprime
+        self.assertEqual(self.r["cancel-plain-count"], 0)
+
+
 if __name__ == "__main__":
     ok = unittest.main(verbosity=2, exit=False).result.wasSuccessful()
     sys.exit(0 if ok else 1)

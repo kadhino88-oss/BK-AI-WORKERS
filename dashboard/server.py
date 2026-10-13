@@ -578,6 +578,12 @@ def submit_task(worker_hint_text, worker_id="", plan_only=False, client_id="", l
             child_env["BK_ALLOWED_WORKERS"] = allowed_env
         else:
             child_env.pop("BK_ALLOWED_WORKERS", None)
+        # Chloe appelle PLUSIEURS Workers et chacun coute le niveau de la mission : on plafonne leur nombre au solde de credits du client.
+        max_workers = chloe_worker_cap(client_id, lvl) if str(worker_id or "").lower() == "chloe" else None
+        if max_workers is not None:
+            child_env["BK_MAX_WORKERS"] = str(max_workers)
+        else:
+            child_env.pop("BK_MAX_WORKERS", None)
         proc = subprocess.run(
             cmd,
             capture_output=True, timeout=600, env=child_env
@@ -3361,6 +3367,19 @@ def subscription_blocks_mission(client_id, level=None):
     return quota_reached_message(billing)
 
 
+def chloe_worker_cap(client_id, level=None):
+    """Nombre maximal de Workers que Chloe peut appeler pour UNE mission de ce client : chaque Worker appele est trace (et facture) au niveau de
+    la mission, donc solde de credits // cout du niveau. Au moins 1 (subscription_blocks_mission a deja verifie qu'une mission de ce niveau est
+    payable). Sans cela, une mission de Chloe qui rassemble 5 ou 17 Workers depassait le quota de plusieurs dizaines de credits. None = pas de
+    plafond (proprietaire, essai public, identifiant qui n'est pas un compte client). `level` est le niveau tel que normalize_level le donne."""
+    if not _is_customer_id(client_id):
+        return None
+    remaining = get_billing(client_id).get("creditsRemaining")
+    remaining = remaining if isinstance(remaining, int) and not isinstance(remaining, bool) and remaining > 0 else 0
+    cost = level_credits(level) if level else 1
+    return max(1, remaining // max(1, cost))
+
+
 def subscription_required_payload(client_id, detail):
     """Corps de la reponse 402 : le message, plus de quoi afficher le bouton de montee en gamme (forfait actuel, credits inclus, date de
     renouvellement, forfait suivant avec ses credits et son prix)."""
@@ -3716,6 +3735,28 @@ def refused_for_hiring(result):
         if result.get("Status") == "WORKER_NOT_INCLUDED":
             return str(result.get("FinalSynthesis") or "Ce Worker ne fait pas partie de votre forfait.")
     return None
+
+
+def paused_workers(client_id):
+    """Workers dont le client a mis l'installation en pause (interrupteur d'arret), en minuscules."""
+    try:
+        records = INSTALLS.list(client_id)
+    except Exception:
+        return set()
+    return {str(r.get("workerId") or "").lower() for r in records if r.get("status") == "paused"}
+
+
+def scheduled_allowed_workers_env(client_id):
+    """BK_ALLOWED_WORKERS d'une mission AUTOMATIQUE (planifiee) : celui d'allowed_workers_env, sans les Workers que le client a mis en pause. Sans
+    cela, une automatisation de Chloe continuait d'appeler un Worker en pause (l'interrupteur ne regardait que le Worker de l'automatisation, ici
+    Chloe). Renvoie (valeur, aucun_worker_restant) : valeur None = tous les Workers, "-" = aucun."""
+    base = allowed_workers_env(client_id)
+    paused = paused_workers(client_id) if _is_customer_id(client_id) else set()
+    if not paused or base == "-":
+        return base, False
+    universe = [w for w in (get_worker_ids() if base is None else base.split(",")) if w]
+    kept = [w for w in universe if w.lower() not in paused]
+    return (",".join(kept) or "-"), not kept
 
 
 def installation_paused(client_id, worker_id):

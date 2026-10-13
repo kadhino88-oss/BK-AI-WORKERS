@@ -65,12 +65,12 @@ class AllowedWorkers(unittest.TestCase):
         self.router_log = os.path.join(self.root, "router-request.json")
 
     def env(self, **extra):
-        env = {k: v for k, v in os.environ.items() if not k.startswith("BK_SECRET") and k not in ("BK_SECRETS_DIR", "BK_ALLOWED_WORKERS")}
+        env = {k: v for k, v in os.environ.items() if not k.startswith("BK_SECRET") and k not in ("BK_SECRETS_DIR", "BK_ALLOWED_WORKERS", "BK_MAX_WORKERS")}
         env.update(BK_ROOT=self.root, STUB_LOG=self.log, OUT_FILE=self.out, BK_REPLY_LANG="")
         env.update(extra)
         return env
 
-    def chloe(self, request, allowed=None, plan=False, fake_router=None):
+    def chloe(self, request, allowed=None, plan=False, fake_router=None, max_workers=None):
         for p in (self.log, self.out, self.router_log):
             if os.path.exists(p):
                 os.remove(p)
@@ -79,6 +79,8 @@ class AllowedWorkers(unittest.TestCase):
             extra.update(T_FAKE_ROUTER=fake_router, BK_SECRET_ANTHROPIC="cle-factice-pour-les-tests", ROUTER_LOG=self.router_log)
         if allowed is not None:
             extra["BK_ALLOWED_WORKERS"] = allowed
+        if max_workers is not None:
+            extra["BK_MAX_WORKERS"] = max_workers
         drv = os.path.join(self.root, "driver.ps1")
         with open(drv, "w", encoding="utf-8") as f:
             f.write(CHLOE_DRIVER)
@@ -142,6 +144,40 @@ class AllowedWorkers(unittest.TestCase):
         self.assertEqual(as_list(r["NotIncludedWorkers"]), ["MAYA"])
         r, _ = self.chloe(REQUEST_TWO, allowed="nora", plan=True)
         self.assertEqual(r["Status"], "WORKER_NOT_INCLUDED")
+
+    def test_the_credit_cap_limits_how_many_workers_chloe_calls_and_names_the_skipped_ones(self):
+        # Revue du 2026-10-13 : chaque Worker appele par Chloe coute le niveau de la mission ; avec un seul credit de niveau restant, une mission qui
+        # rassemble plusieurs Workers depassait le quota. BK_MAX_WORKERS (solde // cout du niveau) plafonne leur nombre.
+        r, called = self.chloe(REQUEST_TWO, max_workers="1")
+        self.assertEqual(called, ["ALEX"], "un seul Worker execute, donc un seul cout de niveau")
+        self.assertEqual(r["Status"], "SUCCESS")
+        self.assertEqual(as_list(r["SelectedWorkers"]), ["ALEX"])
+        self.assertEqual(as_list(r["QuotaSkippedWorkers"]), ["MAYA"])
+        self.assertEqual([x["Worker"] for x in as_list(r["Results"])], ["ALEX"])
+        self.assertIn("Faute de crédits suffisants", r["FinalSynthesis"])
+        self.assertIn("Maya", r["FinalSynthesis"].split("Faute de crédits")[1])
+        self.assertIn("Reponse de ALEX", r["FinalSynthesis"])
+        self.assertNotIn("Non inclus", r["FinalSynthesis"])
+        r, called = self.chloe(REQUEST_TWO, max_workers="2")
+        self.assertEqual(sorted(called), ["ALEX", "MAYA"])
+        self.assertEqual(as_list(r["QuotaSkippedWorkers"]), [])
+        self.assertNotIn("Faute de crédits", r["FinalSynthesis"])
+        r, called = self.chloe(REQUEST_TWO, max_workers="40")
+        self.assertEqual(sorted(called), ["ALEX", "MAYA"])
+
+    def test_a_missing_or_invalid_cap_means_no_cap(self):
+        for junk in ("", "0", "-3", "abc", "1; rm -rf", "1.5"):
+            r, called = self.chloe(REQUEST_TWO, max_workers=junk)
+            self.assertEqual(sorted(called), ["ALEX", "MAYA"], repr(junk))
+            self.assertEqual(as_list(r["QuotaSkippedWorkers"]), [], repr(junk))
+
+    def test_the_cap_applies_after_the_hired_filter_and_to_the_plan(self):
+        r, called = self.chloe(REQUEST_TWO, allowed="alex,maya", max_workers="1")
+        self.assertEqual((called, as_list(r["QuotaSkippedWorkers"]), as_list(r["NotIncludedWorkers"])), (["ALEX"], ["MAYA"], []))
+        r, called = self.chloe(REQUEST_TWO, allowed="maya", max_workers="1")                 # Alex n'est pas embauche : Maya reste, aucun saut pour credits
+        self.assertEqual((called, as_list(r["QuotaSkippedWorkers"]), as_list(r["NotIncludedWorkers"])), (["MAYA"], [], ["ALEX"]))
+        r, called = self.chloe(REQUEST_TWO, plan=True, max_workers="1")
+        self.assertEqual((called, r["Status"], as_list(r["SelectedWorkers"]), as_list(r["QuotaSkippedWorkers"])), ([], "PLANNED", ["ALEX"], ["MAYA"]))
 
     VAGUE = "Peux-tu m'aider avec mon projet de la semaine prochaine ?"      # aucun mot-cle : le routeur IA est appele
 

@@ -20,14 +20,16 @@ import tempfile
 import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from common import A, REPO  # noqa: E402
+from common import A, REPO, load_server  # noqa: E402
 
 PWSH = os.environ.get("BK_PWSH") or shutil.which("pwsh")
 
 WORKER_STUB = r'''
 param([string]$WorkerId, [string]$TaskId, [string]$Objective, [string]$TenantId, [string]$ClientId, [string]$ProjectId, [string]$ExecutionId,
       [string]$UserId, [string]$SessionId, [string]$TokenId, [string]$Token, [string]$Environment, [string]$Mode, [string]$Provider, [string]$Model)
-@{ Status = "SUCCESS"; Answer = ("Reponse de " + $WorkerId); WorkerId = $WorkerId; LevelSeen = [string]$env:BK_MISSION_LEVEL } | ConvertTo-Json -Compress
+# STUB_DEGRADED=1 : le fournisseur d'IA est indisponible (repli local, Degraded) ; STUB_STATUS : un autre statut que SUCCESS (mission refusee).
+$status = if ($env:STUB_STATUS) { $env:STUB_STATUS } else { "SUCCESS" }
+@{ Status = $status; Answer = ("Reponse de " + $WorkerId); WorkerId = $WorkerId; LevelSeen = [string]$env:BK_MISSION_LEVEL; Degraded = ($env:STUB_DEGRADED -eq "1") } | ConvertTo-Json -Compress
 '''
 
 CHLOE_STUB = r'''
@@ -35,7 +37,10 @@ param([string]$Request, [string]$TenantId, [string]$ClientId, [string]$ProjectId
       [string]$TokenId, [string]$Token, [string]$Mode, [string]$Environment, [string]$CollaborationMode, [switch]$PlanOnly)
 $items = @()
 foreach ($w in @("ALEX", "MAYA")) {
-    $items += [pscustomobject]@{ TaskId = ("TASK-" + $w.PadRight(32, "C")); Worker = $w; Status = "SUCCESS"; Result = [pscustomobject]@{ Status = "SUCCESS"; Answer = "ok" } }
+    # STUB_DEGRADED_WORKER=MAYA : ce Worker n'a eu que la reponse de repli (fournisseur d'IA indisponible) ; STUB_BLOCKED_WORKER : refuse par la securite.
+    $degraded = ($env:STUB_DEGRADED_WORKER -eq $w)
+    $st = if ($env:STUB_BLOCKED_WORKER -eq $w) { "BLOCKED" } else { "SUCCESS" }
+    $items += [pscustomobject]@{ TaskId = ("TASK-" + $w.PadRight(32, "C")); Worker = $w; Status = $st; Result = [pscustomobject]@{ Status = $st; Answer = "ok"; Degraded = $degraded } }
 }
 [pscustomobject]@{ Status = "SUCCESS"; SelectedWorkers = @("alex", "maya"); Results = $items; FinalSynthesis = "ok" }
 '''
@@ -85,7 +90,7 @@ class AutomationLevel(unittest.TestCase):
                    {"planId": "solo", "cycleStartUtc": "2026-10-01T00:00:00Z", "extraCredits": 0, "history": [], "hiredWorkers": ["alex"]})
 
     def env(self, **extra):
-        env = {k: v for k, v in os.environ.items() if not k.startswith("BK_SECRET") and k not in ("BK_SECRETS_DIR", "BK_LEVELS", "BK_MISSION_LEVEL", "BK_ALLOWED_WORKERS")}
+        env = {k: v for k, v in os.environ.items() if not k.startswith("BK_SECRET") and k not in ("BK_SECRETS_DIR", "BK_LEVELS", "BK_MISSION_LEVEL", "BK_ALLOWED_WORKERS", "BK_MAX_WORKERS")}
         env.update(BK_ROOT=self.root, BK_PYTHON=sys.executable, PYTHONIOENCODING="utf-8", BK_PWSH=PWSH)
         env.update(extra)
         return env
@@ -186,6 +191,85 @@ class AutomationLevel(unittest.TestCase):
         shutil.rmtree(os.path.join(self.root, "runtime", "tasks"), ignore_errors=True)
         self.submit("chloe")                                                    # sans niveau (BK_LEVELS=0) : ancien comportement, 1 credit par Worker
         self.assertEqual([(t["Level"], t["Credits"]) for t in self.tasks()], [("", 1), ("", 1)])
+
+    def test_a_provider_outage_or_a_refused_mission_is_recorded_without_credits(self):
+        # Revue du 2026-10-13 : toute trace portait le cout du niveau, meme quand le fournisseur d'IA etait indisponible (reponse de repli) ou que la
+        # mission avait ete refusee : 6 ou 12 credits pour rien. Seule une mission livree coute son niveau.
+        self.submit("alex", BK_MISSION_LEVEL="equilibre", BK_ALLOWED_WORKERS="alex", STUB_DEGRADED="1")
+        task = self.tasks()[0]
+        self.assertEqual((task["Status"], task["Level"], task["Credits"], task["Result"]["Degraded"]), ("EXECUTED", "equilibre", 0, True))
+        shutil.rmtree(os.path.join(self.root, "runtime", "tasks"), ignore_errors=True)
+        self.submit("alex", BK_MISSION_LEVEL="approfondi", BK_ALLOWED_WORKERS="alex", STUB_STATUS="BLOCKED")
+        task = self.tasks()[0]
+        self.assertEqual((task["Status"], task["Authorized"], task["Credits"]), ("SECURITY_BLOCKED", False, 0))
+        shutil.rmtree(os.path.join(self.root, "runtime", "tasks"), ignore_errors=True)
+        self.submit("alex", BK_MISSION_LEVEL="equilibre", BK_ALLOWED_WORKERS="alex")                      # une mission livree : le cout normal
+        self.assertEqual(self.tasks()[0]["Credits"], 6)
+
+    def test_chloe_records_zero_credits_for_a_worker_that_was_degraded_or_refused(self):
+        self.submit("chloe", BK_MISSION_LEVEL="equilibre", STUB_DEGRADED_WORKER="MAYA")
+        self.assertEqual([(t["Worker"], t["Credits"]) for t in self.tasks()], [("ALEX", 6), ("MAYA", 0)])
+        shutil.rmtree(os.path.join(self.root, "runtime", "tasks"), ignore_errors=True)
+        self.submit("chloe", BK_MISSION_LEVEL="approfondi", STUB_BLOCKED_WORKER="ALEX")
+        self.assertEqual([(t["Worker"], t["Status"], t["Credits"]) for t in self.tasks()], [("ALEX", "SECURITY_BLOCKED", 0), ("MAYA", "EXECUTED", 12)])
+
+    def test_the_server_counts_those_traces_as_zero_credits(self):
+        # le meme calcul que get_billing : les traces d'une panne du fournisseur ne consomment pas le quota
+        self.submit("alex", BK_MISSION_LEVEL="equilibre", BK_ALLOWED_WORKERS="alex", STUB_DEGRADED="1")
+        self.submit("alex", BK_MISSION_LEVEL="equilibre", BK_ALLOWED_WORKERS="alex")
+        srv, _ = load_server("bk_server_credits_probe")                       # la fonction de calcul du serveur, appliquee aux traces ecrites par Submit-Task.ps1
+        self.assertEqual([srv.task_credits(t) for t in self.tasks()], [0, 6])
+
+    # ------------------------------------------------------------------------------------------------------ plafond de Workers pour Chloe, pause
+    def test_quota_check_caps_the_workers_chloe_can_call_with_the_remaining_credits(self):
+        write_json(os.path.join(self.root, "core", "billing", "data", A + ".json"),
+                   {"planId": "trio", "gridVersion": 2, "cycleStartUtc": "2026-10-01T00:00:00Z", "extraCredits": 0, "history": [], "hiredWorkers": ["alex", "maya"]})
+        write_json(os.path.join(self.root, "runtime", "tasks", "TASK-" + "3" * 32 + ".json"),
+                   {"TaskId": "TASK-" + "3" * 32, "ClientId": A, "Credits": 497, "CreatedAtUtc": "2999-01-01T00:00:00Z", "Status": "EXECUTED"})      # reste 3 credits sur 500
+        v = self.quota(A, "chloe", "scheduled")
+        self.assertEqual((v["blocked"], v["level"], v["maxWorkers"]), (False, "rapide", 3))               # une automatisation = niveau Rapide, 1 credit par Worker
+        self.assertNotIn("maxWorkers", self.quota(A, "alex", "scheduled"))                               # un Worker seul n'appelle personne d'autre
+        self.assertEqual(self.quota("CLI-DASHBOARD", "chloe", "scheduled").get("maxWorkers"), None)       # le proprietaire n'a pas de quota
+
+    def test_the_engine_hands_the_cap_to_chloe(self):
+        write_json(os.path.join(self.root, "core", "billing", "data", A + ".json"),
+                   {"planId": "trio", "gridVersion": 2, "cycleStartUtc": "2026-10-01T00:00:00Z", "extraCredits": 0, "history": [], "hiredWorkers": ["alex", "maya"]})
+        write_json(os.path.join(self.root, "runtime", "tasks", "TASK-" + "4" * 32 + ".json"),
+                   {"TaskId": "TASK-" + "4" * 32, "ClientId": A, "Credits": 499, "CreatedAtUtc": "2999-01-01T00:00:00Z", "Status": "EXECUTED"})      # reste 1 credit
+        # le faux Chloe de ce test ecrit la valeur qu'il a recue dans son resultat
+        with open(os.path.join(self.root, "chloe", "Invoke-Chloe-Orchestration.ps1"), "w", encoding="utf-8-sig") as f:
+            f.write(CHLOE_STUB.replace('FinalSynthesis = "ok" }', 'FinalSynthesis = ("cap=" + [string]$env:BK_MAX_WORKERS) }'))
+        res, p = self.run_automation(worker="chloe")
+        self.assertEqual(res["status"], "EXECUTED", p.stdout[-300:] + p.stderr[-300:])
+        self.assertEqual(res["detail"]["FinalSynthesis"], "cap=1")
+
+    def test_pausing_a_worker_also_stops_chloe_from_calling_it_on_schedule(self):
+        # Revue du 2026-10-13 : seul le Worker de l'automatisation etait verifie ; une automatisation de Chloe continuait d'appeler le Worker en pause.
+        write_json(os.path.join(self.root, "core", "billing", "data", A + ".json"),
+                   {"planId": "trio", "gridVersion": 2, "cycleStartUtc": "2026-10-01T00:00:00Z", "extraCredits": 0, "history": [], "hiredWorkers": ["alex", "maya", "nora"]})
+        for wid, status in (("ALEX", "paused"), ("MAYA", "active")):
+            write_json(os.path.join(self.root, "runtime", "installations", A, wid + ".json"),
+                       {"workerId": wid.lower(), "clientId": A, "status": status, "services": {}, "notes": ""})
+        v = self.quota(A, "chloe", "scheduled")
+        self.assertEqual((v["blocked"], sorted(v["allowedWorkers"].split(","))), (False, ["maya", "nora"]))
+        self.assertEqual(self.quota(A, "alex", "scheduled")["code"], "INSTALLATION_PAUSED")               # le Worker en pause lui-meme : toujours bloque
+        manual = self.quota(A, "chloe", "manual")                                                         # « Executer maintenant » reste manuel : aucun retrait
+        self.assertEqual(sorted(manual["allowedWorkers"].split(",")), ["alex", "maya", "nora"])
+        for wid in ("MAYA", "NORA"):
+            write_json(os.path.join(self.root, "runtime", "installations", A, wid + ".json"),
+                       {"workerId": wid.lower(), "clientId": A, "status": "paused", "services": {}, "notes": ""})
+        v = self.quota(A, "chloe", "scheduled")                                                           # tous les Workers sont en pause
+        self.assertEqual((v["blocked"], v["code"]), (True, "INSTALLATION_PAUSED"))
+
+    def test_pausing_a_worker_on_an_unrestricted_plan_gives_chloe_the_explicit_list_of_the_others(self):
+        write_json(os.path.join(self.root, "core", "billing", "data", A + ".json"),
+                   {"planId": "pro", "gridVersion": 2, "cycleStartUtc": "2026-10-01T00:00:00Z", "extraCredits": 0, "history": []})
+        self.assertIsNone(self.quota(A, "chloe", "scheduled")["allowedWorkers"])                          # rien en pause : tous les Workers, comme avant
+        write_json(os.path.join(self.root, "runtime", "installations", A, "ALEX.json"),
+                   {"workerId": "alex", "clientId": A, "status": "paused", "services": {}, "notes": ""})
+        allowed = self.quota(A, "chloe", "scheduled")["allowedWorkers"].split(",")
+        self.assertNotIn("alex", allowed)
+        self.assertIn("maya", allowed)
 
 
 if __name__ == "__main__":

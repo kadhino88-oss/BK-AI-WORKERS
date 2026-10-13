@@ -18,6 +18,10 @@ param(
     # Montant du catalogue du serveur (centimes de CHF) et nom du forfait, pour les forfaits sans Price ID Stripe (voir Stripe-Adapter.ps1).
     [long]$AmountCents = 0,
     [string]$PlanName = "",
+    # cancel-subscription : -AtPeriodEnd = resilier a la fin de la periode deja payee (clic client) ; -Prorate = resiliation immediate avec credit du
+    # temps non utilise (remplacement par un forfait superieur). Sans option : resiliation immediate simple.
+    [switch]$AtPeriodEnd,
+    [switch]$Prorate,
     [Parameter(Mandatory=$true)][string]$OutFile
 )
 
@@ -42,7 +46,7 @@ $Result = switch ($Action) {
     }
     "create-checkout"     { New-StripeCheckoutSession -PlanId $PlanId -SuccessUrl $SuccessUrl -CancelUrl $CancelUrl -Interval $Interval -ClientId $ClientId -AmountCents $AmountCents -PlanName $PlanName }
     "confirm"             { Get-StripeCheckoutSession -SessionId $SessionId }
-    "cancel-subscription" { Remove-StripeSubscription -SubscriptionId $SubscriptionId }
+    "cancel-subscription" { Remove-StripeSubscription -SubscriptionId $SubscriptionId -AtPeriodEnd:$AtPeriodEnd -Prorate:$Prorate }
 }
 
 [System.IO.File]::WriteAllText(

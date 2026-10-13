@@ -305,12 +305,30 @@ if ($NotIncludedWorkers.Count -gt 0) {
     $NotIncludedNote = "`n`nNon inclus dans votre forfait, donc non traités : " + (@($NotIncludedWorkers | ForEach-Object { Format-BKWorkerName ([string]$_) }) -join ", ") + "."
 }
 
+# =================================================
+# PLAFOND DE CREDITS : chaque Worker appele coute le niveau de la mission (Submit-Task.ps1). BK_MAX_WORKERS (pose par dashboard/server.py et
+# dashboard/quota-check.py) = solde de credits // cout du niveau : Chloe n'appelle jamais plus de Workers que le client n'a de credits pour en
+# payer (sinon une seule mission peut depasser le quota de plusieurs dizaines de credits). Les Workers retenus sont les premiers dans l'ordre
+# de selection ; les autres sont signales a la fin de la synthese. Absente ou invalide = pas de plafond (proprietaire, essai public).
+# =================================================
+$QuotaSkippedWorkers = @()
+$MaxWorkers = 0
+if ([int]::TryParse([string]$env:BK_MAX_WORKERS, [ref]$MaxWorkers) -and $MaxWorkers -ge 1 -and @($SelectedWorkers).Count -gt $MaxWorkers) {
+    $QuotaSkippedWorkers = @($SelectedWorkers | Select-Object -Skip $MaxWorkers)
+    $SelectedWorkers = @($SelectedWorkers | Select-Object -First $MaxWorkers)
+}
+$QuotaNote = ""
+if ($QuotaSkippedWorkers.Count -gt 0) {
+    $QuotaNote = "`n`nFaute de crédits suffisants ce mois-ci pour tous les Workers, non traités : " + (@($QuotaSkippedWorkers | ForEach-Object { Format-BKWorkerName ([string]$_) }) -join ", ") + ". Relancez-les séparément, avec un niveau plus rapide ou au forfait supérieur."
+}
+
 if ($PlanOnly) {
     return [pscustomobject]@{
         Orchestrator       = "CHLOE"
         Request            = $Request
         SelectedWorkers    = $SelectedWorkers
         NotIncludedWorkers = $NotIncludedWorkers
+        QuotaSkippedWorkers = $QuotaSkippedWorkers
         Status             = "PLANNED"
         NextAction         = "AWAITING_VALIDATION"
     }
@@ -461,7 +479,7 @@ $FinalSynthesis = if ($SynthesisParts.Count -gt 0) {
 } else {
     "Aucun resultat verifie a livrer pour cette demande."
 }
-$FinalSynthesis = $FinalSynthesis + $NotIncludedNote
+$FinalSynthesis = $FinalSynthesis + $NotIncludedNote + $QuotaNote
 
 # =================================================
 # LEARN : depose un resume de la mission dans la memoire
@@ -508,6 +526,7 @@ return [pscustomobject]@{
     CollaborationMode = $CollaborationMode
     SelectedWorkers   = $SelectedWorkers
     NotIncludedWorkers = $NotIncludedWorkers
+    QuotaSkippedWorkers = $QuotaSkippedWorkers
     Status            = $OverallStatus
     NextAction        = if ($OverallStatus -eq "SUCCESS") { "REVIEW_RESULT" } else { "HUMAN_REVIEW_REQUIRED" }
     Results           = $Results

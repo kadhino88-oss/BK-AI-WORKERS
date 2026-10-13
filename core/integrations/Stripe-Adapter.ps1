@@ -171,34 +171,78 @@ function New-StripeCheckoutSession {
     }
 }
 
+function ConvertTo-StripeSubscriptionSummary {
+    <#
+    Fonction PURE (aucun appel reseau, testable sans Stripe : tests/pricing/test_stripe_fields.py) : resume l'objet "subscription" de l'API Stripe
+    (ou son simple identifiant texte quand il n'est pas deplie, ou $null). CurrentPeriodEnd = fin de la periode DEJA payee, en texte ISO 8601 UTC :
+    selon la version de l'API Stripe elle est sur l'abonnement (current_period_end) ou sur ses lignes (items.data[0].current_period_end).
+    #>
+    param($Subscription)
+
+    $Summary = [ordered]@{ Id = $null; Status = $null; CancelAtPeriodEnd = $false; CurrentPeriodEnd = $null }
+    if ($null -eq $Subscription) { return [pscustomobject]$Summary }
+    if ($Subscription -is [string]) {
+        $Summary.Id = $Subscription
+        return [pscustomobject]$Summary
+    }
+    $Props = $Subscription.PSObject.Properties
+    if ($Props["id"]) { $Summary.Id = [string]$Props["id"].Value }
+    if ($Props["status"]) { $Summary.Status = [string]$Props["status"].Value }
+    if ($Props["cancel_at_period_end"]) { $Summary.CancelAtPeriodEnd = [bool]$Props["cancel_at_period_end"].Value }
+    $Raw = $null
+    if ($Props["current_period_end"] -and $Props["current_period_end"].Value) { $Raw = $Props["current_period_end"].Value }
+    if (-not $Raw -and $Props["items"] -and $Props["items"].Value -and $Props["items"].Value.PSObject.Properties["data"]) {
+        $First = @($Props["items"].Value.data) | Select-Object -First 1
+        if ($First -and $First.PSObject.Properties["current_period_end"]) { $Raw = $First.current_period_end }
+    }
+    if ($Raw) {
+        try { $Summary.CurrentPeriodEnd = [DateTimeOffset]::FromUnixTimeSeconds([long]$Raw).UtcDateTime.ToString("yyyy-MM-ddTHH:mm:ssZ") } catch { }
+    }
+    return [pscustomobject]$Summary
+}
+
 function Get-StripeCheckoutSession {
     <#
     Relit une Checkout Session existante DIRECTEMENT DEPUIS STRIPE (pas
     depuis un parametre d'URL client, jamais fiable seul) pour verifier
     cote serveur si elle est reellement payee avant d'activer un plan.
+    L'abonnement est relu avec elle (expand) : SubscriptionStatus dit s'il
+    est TOUJOURS actif (payment_status reste "paid" a vie, meme apres une
+    resiliation, il ne suffit donc jamais a lui seul) ; le serveur
+    (dashboard/server.py, activate_checkout_plan) refuse tout abonnement
+    qui n'est plus actif et n'active une session qu'une seule fois.
     #>
     param([Parameter(Mandatory=$true)][string]$SessionId)
 
     if (-not (Test-StripeConfigured)) {
         return [pscustomobject]@{ Status = "NOT_CONFIGURED" }
     }
+    # L'identifiant vient du navigateur du client : il ne doit jamais pouvoir changer le chemin de l'appel (cs_test_..., cs_live_...).
+    if ($SessionId -notmatch '^cs_[A-Za-z0-9_]{6,250}$') {
+        return [pscustomobject]@{ Status = "ERROR"; Detail = "INVALID_SESSION_ID" }
+    }
 
     try {
         $Secret = Get-StripeSecret
-        $Response = Invoke-RestMethod -Uri "https://api.stripe.com/v1/checkout/sessions/$SessionId" `
+        $Response = Invoke-RestMethod -Uri "https://api.stripe.com/v1/checkout/sessions/${SessionId}?expand%5B%5D=subscription" `
             -Method GET `
             -Headers @{ Authorization = "Bearer $($Secret.secret_key)" } `
             -TimeoutSec 20
 
+        $Sub = ConvertTo-StripeSubscriptionSummary -Subscription $Response.subscription
         return [pscustomobject]@{
-            Status         = "SUCCESS"
-            PaymentStatus  = $Response.payment_status
-            SessionStatus  = $Response.status
-            PlanId         = $Response.metadata.bk_plan_id
-            ClientId       = $Response.metadata.bk_client_id
-            CustomerEmail  = $Response.customer_details.email
-            Paid           = ($Response.payment_status -eq "paid")
-            SubscriptionId = $Response.subscription
+            Status             = "SUCCESS"
+            SessionId          = $Response.id
+            PaymentStatus      = $Response.payment_status
+            SessionStatus      = $Response.status
+            PlanId             = $Response.metadata.bk_plan_id
+            ClientId           = $Response.metadata.bk_client_id
+            Interval           = $Response.metadata.bk_interval
+            CustomerEmail      = $Response.customer_details.email
+            Paid               = ($Response.payment_status -eq "paid")
+            SubscriptionId     = $Sub.Id
+            SubscriptionStatus = $Sub.Status
+            CurrentPeriodEnd   = $Sub.CurrentPeriodEnd
         }
     }
     catch {
@@ -206,31 +250,67 @@ function Get-StripeCheckoutSession {
     }
 }
 
+function Get-StripeCancelFields {
+    <#
+    Champs d'une resiliation (fonction PURE, testable sans Stripe) :
+      - -AtPeriodEnd : cancel_at_period_end=true, l'abonnement reste actif jusqu'a la fin de la periode DEJA payee puis s'arrete, sans nouveau
+        prelevement (CGV article 6 : la resiliation prend effet a la fin de la periode en cours) ;
+      - -Prorate     : resiliation immediate qui credite le temps deja paye mais non utilise (prorate + invoice_now), pour remplacer un abonnement par
+        un forfait superieur sans perdre les mois payes d'avance ;
+      - sinon        : aucun champ, resiliation immediate simple.
+    #>
+    param([switch]$AtPeriodEnd, [switch]$Prorate)
+
+    $Fields = [ordered]@{}
+    if ($AtPeriodEnd) {
+        $Fields["cancel_at_period_end"] = "true"
+    }
+    elseif ($Prorate) {
+        $Fields["prorate"]     = "true"
+        $Fields["invoice_now"] = "true"
+    }
+    return $Fields
+}
+
 function Remove-StripeSubscription {
     <#
-    Annule REELLEMENT un abonnement Stripe (immediat — pas d'attente de
-    fin de periode). Appele quand l'utilisateur clique "Annuler
-    l'abonnement" sur un plan active via un vrai paiement Stripe, pour
-    que "annuler" annule vraiment cote Stripe et pas seulement
-    l'affichage local.
+    Resilie REELLEMENT un abonnement Stripe, pour que "annuler" annule vraiment cote Stripe et pas seulement l'affichage local.
+    - -AtPeriodEnd (clic client sur "Annuler l'abonnement") : l'abonnement va jusqu'au bout de la periode payee puis s'arrete ; renvoie
+      CurrentPeriodEnd, la date de fin, que le serveur garde pour laisser le forfait actif jusque-la.
+    - -Prorate (remplacement par un forfait superieur apres un nouveau paiement) : resiliation immediate, temps non utilise credite.
+    - sans option : resiliation immediate simple.
     #>
-    param([Parameter(Mandatory=$true)][string]$SubscriptionId)
+    param([Parameter(Mandatory=$true)][string]$SubscriptionId, [switch]$AtPeriodEnd, [switch]$Prorate)
 
     if (-not (Test-StripeConfigured)) {
         return [pscustomobject]@{ Status = "NOT_CONFIGURED" }
     }
+    if ($SubscriptionId -notmatch '^sub_[A-Za-z0-9_]{1,200}$') {
+        return [pscustomobject]@{ Status = "ERROR"; Detail = "INVALID_SUBSCRIPTION_ID" }
+    }
 
     try {
         $Secret = Get-StripeSecret
-        $Response = Invoke-RestMethod -Uri "https://api.stripe.com/v1/subscriptions/$SubscriptionId" `
-            -Method DELETE `
-            -Headers @{ Authorization = "Bearer $($Secret.secret_key)" } `
-            -TimeoutSec 20
+        $Fields = Get-StripeCancelFields -AtPeriodEnd:$AtPeriodEnd -Prorate:$Prorate
+        $Params = @{
+            Uri        = "https://api.stripe.com/v1/subscriptions/$SubscriptionId"
+            Method     = if ($AtPeriodEnd) { "POST" } else { "DELETE" }
+            Headers    = @{ Authorization = "Bearer $($Secret.secret_key)" }
+            TimeoutSec = 20
+        }
+        if ($Fields.Count -gt 0) {
+            $Params["ContentType"] = "application/x-www-form-urlencoded"
+            $Params["Body"] = ConvertTo-StripeFormBody -Fields $Fields
+        }
+        $Response = Invoke-RestMethod @Params
 
+        $Sub = ConvertTo-StripeSubscriptionSummary -Subscription $Response
         return [pscustomobject]@{
-            Status           = "SUCCESS"
-            SubscriptionId   = $Response.id
-            SubscriptionStatus = $Response.status
+            Status             = "SUCCESS"
+            SubscriptionId     = $Sub.Id
+            SubscriptionStatus = $Sub.Status
+            CancelAtPeriodEnd  = $Sub.CancelAtPeriodEnd
+            CurrentPeriodEnd   = $Sub.CurrentPeriodEnd
         }
     }
     catch {
