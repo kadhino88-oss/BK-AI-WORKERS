@@ -344,6 +344,40 @@ class Hiring(Fixture):
         server.grant_workers(A, "solo", ["nora"], new_cycle=False)
         self.assertEqual(server.INSTALLS.get(A, "alex")["status"], "paused")
 
+    def test_installations_made_during_the_trial_are_paused_when_the_client_moves_to_a_worker_plan(self):
+        # Revue du 2026-10-13 : seules les installations des Workers de l'ANCIENNE liste etaient pausees ; celles du temps de l'essai restaient « Actif »
+        # (donc « Hors forfait » avec un interrupteur vivant) et reprenaient d'elles-memes si le Worker etait embauche plus tard.
+        add_account(A)
+        write_billing(A, "essai")
+        server.INSTALLS.upsert(A, "alex", {"services": {}})
+        server.INSTALLS.upsert(A, "nora", {"services": {}})
+        server.INSTALLS.upsert(A, "maya", {"services": {}})
+        server.INSTALLS.set_status(A, "maya", "paused")
+        server.grant_workers(A, "solo", ["nora"])
+        status = {w: server.INSTALLS.get(A, w)["status"] for w in ("alex", "nora", "maya")}
+        self.assertEqual(status, {"alex": "paused", "nora": "draft", "maya": "paused"})
+        self.assertEqual(server.INSTALLS.get(A, "alex")["pausedFrom"], "draft")
+        self.assertEqual(server.INSTALLS.get(A, "maya")["pausedFrom"], "draft")                                  # deja en pause : intact
+        server.hire_worker(A, "alex", "nora")                                      # echange : Nora (embauchee) est remplacee par Alex, Nora est mise en pause
+        self.assertEqual(server.INSTALLS.get(A, "nora")["status"], "paused")
+        self.assertEqual(server.INSTALLS.get(A, "alex")["status"], "paused")      # Alex est embauche mais reste en pause tant que le client ne la reprend pas
+        # un forfait sans liste de Workers (Equipe) ne touche a rien
+        write_billing(B, "essai")
+        add_account(B)
+        server.INSTALLS.upsert(B, "alex", {"services": {}})
+        server.set_client_plan(B, "equipe")
+        self.assertEqual(server.INSTALLS.get(B, "alex")["status"], "draft")
+
+    def test_the_installation_route_never_drops_the_connection_on_a_mistyped_body(self):
+        add_account(A)
+        write_billing(A, "solo", ["alex"])
+        for junk in ({"knowledge": "abc"}, {"knowledge": ["a"]}, {"autonomy": ["x"]}, {"autonomy": "auto"}):
+            cfg = {"services": {"prospection-sortante": dict({"enabled": True}, **junk)}}
+            p, s = server.save_installation(A, "alex", cfg)
+            self.assertEqual((s, p["error"]), (400, "INSTALLATION_INVALID"), junk)
+            self.assertTrue(p["errors"], junk)
+        self.assertIsNone(server.INSTALLS.get(A, "alex"))
+
 
 class InstallationApi(Fixture):
     def setUp(self):

@@ -274,5 +274,57 @@ class Isolation(StoreCase):
         self.assertEqual([r["clientId"] for r in self.store.list(A)], [A])
 
 
+class ReviewFixes(StoreCase):
+    """Revue du 2026-10-13 (branche ws/hire-final)."""
+
+    def test_a_pause_remembers_where_it_came_from_and_nothing_but_an_explicit_status_lifts_it(self):
+        self.store.upsert(A, "alex", good_alex())
+        rec = self.store.set_status(A, "alex", "paused")                    # un BROUILLON se met en pause lui aussi : il recoit la fiche et ses automatisations tournent
+        self.assertEqual((rec["status"], rec["pausedFrom"]), ("paused", "draft"))
+        self.assertEqual(self.store.set_status(A, "alex", "paused")["pausedFrom"], "draft")           # re-pause : l'origine ne change pas
+        self.assertEqual(self.store.upsert(A, "alex", good_alex())["status"], "paused")                # modifier la fiche ne leve jamais la pause
+        broken = good_alex()
+        broken["services"]["prospection-sortante"]["knowledge"]["site_web"] = ""
+        rec = self.store.upsert(A, "alex", broken)
+        self.assertEqual((rec["status"], rec["pausedFrom"]), ("paused", "draft"))
+        rec = self.store.set_status(A, "alex", "draft")
+        self.assertNotIn("pausedFrom", rec)
+        self.store.upsert(A, "alex", good_alex())
+        self.store.set_status(A, "alex", "active")
+        rec = self.store.set_status(A, "alex", "paused")
+        self.assertEqual((rec["status"], rec["pausedFrom"]), ("paused", "active"))
+        rec = self.store.set_status(A, "alex", "active")
+        self.assertEqual(rec["status"], "active")
+        self.assertNotIn("pausedFrom", rec)
+
+    def test_a_mistyped_knowledge_or_autonomy_is_a_validation_error_not_a_crash(self):
+        for field, junk in (("knowledge", "abc"), ("knowledge", ["a"]), ("knowledge", 3), ("autonomy", ["x"]), ("autonomy", "auto"), ("autonomy", 5)):
+            bad = good_alex()
+            bad["services"]["prospection-sortante"][field] = junk
+            e = self.errors(bad)
+            self.assertTrue(any("prospection-sortante" in m and "invalide" in m for m in e), (field, junk, e))
+        self.assertIsNone(self.store.get(A, "alex"))
+        ok = good_alex()
+        ok["services"]["prospection-sortante"]["knowledge"] = None            # absent ou null : une fiche vide, comme avant
+        ok["services"]["prospection-sortante"]["autonomy"] = None
+        self.assertEqual(self.store.upsert(A, "alex", ok)["services"]["prospection-sortante"]["autonomy"], {})
+
+    def test_auto_is_refused_for_any_rule_that_writes_into_a_tool(self):
+        # Le profil classe ces regles en risque faible, mais elles gouvernent une ECRITURE dans un outil (tache CRM, brouillon de message, carte...) :
+        # elles restent ask / draft / off (docs/INSTALL-PROFILES.md).
+        profile = inst.load_profile(self.root, "alex")
+        writers = [(svc["id"], r["category"]) for svc in profile["services"] for r in svc["autonomyRules"] if r.get("operations") and r["risk"] == "low"]
+        self.assertGreater(len(writers), 3)
+        self.assertIn("ecriture-crm", [c for _, c in writers])
+        for sid, cat in writers:
+            e = self.errors({"services": {sid: {"enabled": True, "autonomy": {cat: "auto"}}}})
+            self.assertTrue(any("validation du client obligatoire" in m for m in e), (sid, cat, e))
+            for mode in ("off", "ask", "draft"):
+                self.store.upsert(A, "alex", {"services": {sid: {"enabled": True, "autonomy": {cat: mode}}}})
+        reads = [(svc["id"], r["category"]) for svc in profile["services"] for r in svc["autonomyRules"] if not r.get("operations") and r["risk"] == "low"]
+        self.assertIn("lecture-recherche", [c for _, c in reads])
+        for sid, cat in reads[:6]:
+            self.store.upsert(A, "alex", {"services": {sid: {"enabled": True, "autonomy": {cat: "auto"}}}})      # lire, analyser, rediger : toujours possible
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

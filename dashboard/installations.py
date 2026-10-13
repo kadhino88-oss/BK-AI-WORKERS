@@ -177,7 +177,11 @@ class InstallationStore:
             knowledge_defs = {k.get("key"): k for k in d.get("knowledgeFields", []) if isinstance(k, dict)}
             autonomy_defs = {a.get("category"): a for a in d.get("autonomyRules", []) if isinstance(a, dict)}
             knowledge = {}
-            for key, value in (cfg.get("knowledge") or {}).items():
+            raw_knowledge = cfg.get("knowledge")
+            if raw_knowledge is not None and not isinstance(raw_knowledge, dict):
+                errors.append(f"{sid} : fiche de connaissances invalide")
+                raw_knowledge = {}
+            for key, value in (raw_knowledge or {}).items():
                 if not SLUG_RE.match(str(key).replace("_", "-").lower()):
                     errors.append(f"{sid} : champ invalide {str(key)[:40]}")
                     continue
@@ -192,7 +196,11 @@ class InstallationStore:
                 else:
                     knowledge[key] = text
             autonomy = {}
-            for cat, mode in (cfg.get("autonomy") or {}).items():
+            raw_autonomy = cfg.get("autonomy")
+            if raw_autonomy is not None and not isinstance(raw_autonomy, dict):
+                errors.append(f"{sid} : reglages d'autonomie invalides")
+                raw_autonomy = {}
+            for cat, mode in (raw_autonomy or {}).items():
                 if not SLUG_RE.match(str(cat)):
                     errors.append(f"{sid} : categorie invalide {str(cat)[:40]}")
                     continue
@@ -204,7 +212,9 @@ class InstallationStore:
                     errors.append(f"{sid} : categorie non prevue {cat}")
                     continue
                 # Loi de la plateforme : "auto" seulement pour un risque faible ; tout ce qui envoie/publie/paie/supprime/appelle reste valide par le client.
-                if mode == "auto" and (adef is None or adef.get("risk") != "low"):
+                # Une regle qui gouverne une ECRITURE dans un outil (champ "operations" : brouillon de message, tache CRM, carte Trello, brouillon
+                # WordPress...) n'est jamais en "auto" non plus : elle reste ask / draft / off (docs/INSTALL-PROFILES.md).
+                if mode == "auto" and (adef is None or adef.get("risk") != "low" or adef.get("operations")):
                     errors.append(f"{sid}.{cat} : l'autonomie complete n'est pas autorisee pour cette action (validation du client obligatoire)")
                     continue
                 autonomy[cat] = mode
@@ -275,6 +285,13 @@ class InstallationStore:
                 if missing:
                     raise InstallationError(missing)
                 rec["installedAtUtc"] = rec.get("installedAtUtc") or _now()
+            # Pause : on retient d'ou l'on vient (brouillon ou actif) pour que la reprise remette l'installation dans le meme etat ; toute autre
+            # sortie de la pause l'efface. Une simple modification de la fiche (upsert) ne touche jamais a un statut « paused ».
+            if status == "paused":
+                if rec.get("status") != "paused":
+                    rec["pausedFrom"] = "draft" if rec.get("status") == "draft" else "active"
+            else:
+                rec.pop("pausedFrom", None)
             rec["status"] = status
             rec["updatedAtUtc"] = _now()
             _atomic_write(self._path(client_id, worker_id), rec)

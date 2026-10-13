@@ -3088,6 +3088,8 @@ def set_billing_plan(plan_id, via_stripe=False, stripe_subscription_id=None, cli
         "event": f"Changement de plan : {old_name} -> {new_name} ({label}).",
     })
     _billing_save(state, client_id)
+    if _is_customer_id(client_id):
+        _pause_unhired_installations(client_id, state)
     return get_billing(client_id)
 
 
@@ -3480,6 +3482,22 @@ def _pause_installation(client_id, worker_id):
         pass
 
 
+def _pause_unhired_installations(client_id, state):
+    """Forfait Solo / Trio : met en pause TOUTE installation d'un Worker que le client n'a pas (ou plus) embauche, pas seulement celles de la liste
+    precedente. Pendant l'essai le client a pu en installer plusieurs : sans cela elles restaient « Actif » (et « Hors forfait »), et reprenaient
+    d'elles-memes si le Worker etait embauche plus tard. Hors forfait restreint, tous les Workers sont autorises : rien a faire."""
+    allowed = inst.allowed_workers(state)
+    if allowed is None:
+        return
+    try:
+        for rec in INSTALLS.list(client_id):
+            wid = str(rec.get("workerId") or "").lower()
+            if wid and wid not in allowed and rec.get("status") != "paused":
+                INSTALLS.set_status(client_id, wid, "paused")
+    except inst.InstallationError:
+        pass
+
+
 def _read_hire_requests():
     rows = load_json(HIRE_REQUESTS_PATH, []) or []
     return [r for r in rows if isinstance(r, dict)]
@@ -3572,6 +3590,7 @@ def hire_worker(client_id, worker_id, replace_id=None):
         _billing_save(state, client_id)
         if res["replaced"]:
             _pause_installation(client_id, res["replaced"])
+        _pause_unhired_installations(client_id, state)
         _close_hire_requests(client_id, {res["hired"]}, "hired")
         log_activity("hire", clientId=client_id, hired=res["hired"], replaced=res["replaced"])
     return dict(res, ok=True, hire=inst.hire_summary(state)), 200
@@ -3616,6 +3635,7 @@ def grant_workers(client_id, plan_id, workers, new_cycle=True, paid_months=1):
     for removed in old_hired:
         if removed not in clean:
             _pause_installation(client_id, removed)
+    _pause_unhired_installations(client_id, state)
     _close_hire_requests(client_id, set(clean), "granted")
     log_activity("grant_workers", clientId=client_id, planId=plan_id, workers=clean)
     plan = PLAN_CATALOG[plan_id]
@@ -5190,7 +5210,11 @@ class Handler(BaseHTTPRequestHandler):
             body = self._read_json_limited(HIRE_BODY_LIMITS["install-write"])
             if body is None:
                 return
-            payload, status = save_installation(client_id, str(body.get("workerId") or "").strip().lower(), body)
+            try:
+                payload, status = save_installation(client_id, str(body.get("workerId") or "").strip().lower(), body)
+            except Exception as e:  # noqa: BLE001 - une requete mal formee ne doit jamais couper la connexion sans reponse
+                print(f"[installations] enregistrement impossible : {type(e).__name__}", flush=True)
+                payload, status = {"error": "INSTALLATION_FAILED", "detail": "Cette configuration n'a pas pu être enregistrée. Vérifiez les champs et réessayez."}, 500
             self._send_json(payload, status)
         elif path == "/api/installations/status":
             client_id = self._resolve_client_id()
