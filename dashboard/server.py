@@ -2676,10 +2676,11 @@ PLAN_CATALOG = {
 }
 
 # Forfaits qui passent par une vraie Checkout Session Stripe quand Stripe est configure (Essai = gratuit, Enterprise = sur devis, forfaits
-# heritages = plus vendus -> jamais de checkout pour ceux-la). Quand Stripe n'est PAS configure, les forfaits byInvoice ne basculent jamais
-# gratuitement : ils sont actives par le proprietaire apres facture reglee (INVOICE_ONLY_PLANS) ; Pro et Scale gardent la simulation locale.
+# heritages = plus vendus -> jamais de checkout pour ceux-la). Quand Stripe n'est PAS configure (ou injoignable), AUCUN de ces cinq forfaits ne
+# bascule gratuitement pour un client : le proprietaire les active apres facture reglee (grant_workers, set_client_plan ; revue du 2026-10-13, Pro et
+# Scale restaient une simulation gratuite). Seul le compte du proprietaire peut simuler un changement.
 PAID_PLANS_WITH_CHECKOUT = {"solo", "trio", "equipe", "pro", "scale"}
-INVOICE_ONLY_PLANS = {pid for pid, p in PLAN_CATALOG.items() if p.get("byInvoice")}   # solo, trio, equipe
+INVOICE_ONLY_PLANS = {pid for pid, p in PLAN_CATALOG.items() if p.get("byInvoice")}   # solo, trio, equipe : sans Price ID Stripe, le montant du catalogue est envoye
 STRIPE_AMOUNT_MIN_CENTS = 100             # garde-fou sur le montant envoye a Stripe : de CHF 1 ...
 STRIPE_AMOUNT_MAX_CENTS = 10000000        # ... a CHF 100'000
 
@@ -2886,6 +2887,7 @@ def _apply_lapse(state, now=None):
     # ses missions comptent sur les 15 credits de l'Essai, qui n'est pas renouvelable.
     last_paid_day = (_parse_utc(until) or now) - datetime.timedelta(seconds=1)
     state["cycleStartUtc"] = billing_cycle(state.get("cycleStartUtc", now.isoformat() + "Z"), old_plan.get("renews", True), min(now, last_paid_day))[0]
+    cancelled = bool(state.get("cancelAtPeriodEnd"))
     state["planId"] = "essai"
     state["extraCredits"] = 0
     for key in ("contractCredits", "paidUntilUtc", "cancelAtPeriodEnd", "billingInterval"):
@@ -2894,8 +2896,9 @@ def _apply_lapse(state, now=None):
     inst.adapt_hired_to_plan(state)
     state.setdefault("history", []).append({
         "dateUtc": now.isoformat() + "Z",
-        "event": f"Forfait {old_plan['name']} arrivé à échéance le {_fr_date(until)} : retour au plan Essai. Pour le reprendre, réglez la facture suivante "
-                 f"et demandez sa réactivation à BK Entreprise.",
+        "event": (f"Forfait {old_plan['name']} arrivé à échéance le {_fr_date(until)} : retour au plan Essai (résiliation arrivée à son terme)." if cancelled else
+                  f"Forfait {old_plan['name']} arrivé à échéance le {_fr_date(until)} : retour au plan Essai. Pour le reprendre, réglez la facture suivante "
+                  f"et demandez sa réactivation à BK Entreprise."),
     })
 
 
