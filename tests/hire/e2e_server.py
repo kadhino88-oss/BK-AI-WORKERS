@@ -188,11 +188,14 @@ def main():
                 (dict(grant, workers=["chloe"]), "CHLOE_NOT_HIRABLE", 400)):
             st, out = owner.post("/api/admin/grant-workers", body)
             check(f"attribution invalide {json.dumps(body)[:80]} -> {code}", st == status and out.get("error") == code, (st, out))
+        for months in (0, 25, "3", True):
+            st, out = owner.post("/api/admin/grant-workers", dict(grant, paidMonths=months))
+            check(f"mois factures invalides ({months!r}) -> 400 INVALID_PERIOD", st == 400 and out.get("error") == "INVALID_PERIOD", (st, out))
         st, out = owner.json("POST", "/api/admin/grant-workers", raw_body=b"x" * 6000)
         check("corps trop gros : 413 TOO_LARGE", st == 413 and out.get("error") == "TOO_LARGE", (st, out))
         st, out = owner.post("/api/admin/grant-workers", grant)
-        check("proprietaire : Solo + Alex accordes", st == 200 and out.get("ok") and out["planId"] == "solo" and out["credits"] == 250
-              and out["hire"]["hiredWorkers"] == ["alex"] and out["hire"]["slotsLeft"] == 0, (st, out))
+        check("proprietaire : Solo + Alex accordes, pour un mois facture (fin de periode payee donnee)", st == 200 and out.get("ok") and out["planId"] == "solo" and out["credits"] == 250
+              and out["hire"]["hiredWorkers"] == ["alex"] and out["hire"]["slotsLeft"] == 0 and out.get("paidUntilUtc"), (st, out))
         st, out = owner.post("/api/admin/grant-workers", {"clientId": c_id, "planId": "trio", "workers": ["alex"]})
         check("proprietaire : Trio accorde a un autre client avec 1 Worker sur 3", st == 200 and out["credits"] == 500 and out["hire"]["slotsLeft"] == 2, (st, out))
 
@@ -456,8 +459,34 @@ def main():
         st, out = bob.post("/api/installations/status", {"workerId": "alex", "status": "active"})
         check("Bob ne peut pas toucher l'installation d'Alice (404, scope = son propre compte)", st == 404 and out["error"] == "NO_INSTALLATION", (st, out))
         check("... et celle d'Alice est inchangee", read_json(os.path.join(app, "runtime", "installations", a_id, "ALEX.json"))["status"] == "paused")
+        check("... la pause se souvient d'ou elle vient", read_json(os.path.join(app, "runtime", "installations", a_id, "ALEX.json")).get("pausedFrom") == "active")
         st, out = alice.post("/api/installations/status", {"workerId": "alex", "status": "active"})
-        check("reprise de l'installation", st == 200 and out["installation"]["status"] == "active", (st, out))
+        check("reprise de l'installation", st == 200 and out["installation"]["status"] == "active" and "pausedFrom" not in out["installation"], (st, out))
+        # Revue du 2026-10-13 : un BROUILLON recoit la fiche et ses automatisations tournent, il doit pouvoir s'arreter lui aussi, et la pause ne se leve jamais
+        # toute seule (ni en enregistrant la fiche, ni en la rendant incomplete).
+        st, out = alice.post("/api/installations", incomplete)
+        check("une modification qui laisse un champ obligatoire vide repasse l'installation active en brouillon", st == 200 and out["installation"]["status"] == "draft", (st, out))
+        st, out = alice.post("/api/installations/status", {"workerId": "alex", "status": "paused"})
+        check("un brouillon se met en pause (interrupteur d'arret) et retient d'ou il vient", st == 200 and out["installation"]["status"] == "paused"
+              and out["installation"]["pausedFrom"] == "draft", (st, out))
+        st, out = alice.post("/api/installations", good_alex())
+        check("enregistrer la fiche ne leve pas la pause", st == 200 and out["installation"]["status"] == "paused", (st, out))
+        st, out = alice.post("/api/installations", incomplete)
+        check("... meme si la fiche devient incomplete", st == 200 and out["installation"]["status"] == "paused", (st, out))
+        st, out = alice.post("/api/installations/status", {"workerId": "alex", "status": "draft"})
+        check("reprise explicite : retour au brouillon, sans marque de pause", st == 200 and out["installation"]["status"] == "draft" and "pausedFrom" not in out["installation"], (st, out))
+        st, out = alice.post("/api/installations", good_alex())
+        st, out = alice.post("/api/installations/status", {"workerId": "alex", "status": "active"})
+        check("... puis activation de nouveau", st == 200 and out["installation"]["status"] == "active", (st, out))
+        for junk in ({"knowledge": "abc"}, {"autonomy": ["x"]}):
+            typed = good_alex()
+            typed["services"]["prospection-sortante"].update(junk)
+            st, out = alice.post("/api/installations", typed)
+            check(f"corps mal type {list(junk)[0]} : 400 propre, la connexion n'est pas coupee", st == 400 and out.get("error") == "INSTALLATION_INVALID", (st, out))
+        wr = good_alex()
+        wr["services"]["relances-reactivation"] = {"enabled": True, "knowledge": {}, "autonomy": {"ecriture-crm": "auto"}}
+        st, out = alice.post("/api/installations", wr)
+        check("'auto' sur une ecriture dans un outil (tache CRM) est refuse aussi", st == 400 and any("validation du client obligatoire" in m for m in out["errors"]), (st, out))
 
         print("\n== le proprietaire utilise l'API pour lui-meme ==")
         st, out = owner.post("/api/installations", good_alex())

@@ -553,6 +553,51 @@ class WhatsApp(Fixture):
         self.assertNotIn("Réessayez", sent[0])
 
 
+class ChloePlanRoute(Fixture):
+    """POST /api/chloe/plan par la vraie route HTTP (dans ce processus, submit_task remplace). Revue du 2026-10-13 : le plan d'une demande qui releve d'un
+    Worker non embauche revenait en 200 avec une synthese vide d'action ; /api/chloe/task, lui, repondait 403."""
+
+    def setUp(self):
+        super().setUp()
+        import threading
+        import urllib.error
+        import urllib.request
+        from http.server import ThreadingHTTPServer
+        self._urllib = (urllib.request, urllib.error)
+        add_account(A)
+        write_billing(A, "trio", ["nora"])
+        self.httpd = ThreadingHTTPServer(("127.0.0.1", 0), server.Handler)
+        threading.Thread(target=self.httpd.serve_forever, daemon=True).start()
+        self.addCleanup(self.httpd.server_close)
+        self.addCleanup(self.httpd.shutdown)
+        self.token = server.account_create_session({"clientId": A, "email": "a@mail-test.example"})
+        orig = server.submit_task
+        self.addCleanup(setattr, server, "submit_task", orig)
+
+    def post(self, path, body):
+        request, error = self._urllib
+        req = request.Request(f"http://127.0.0.1:{self.httpd.server_address[1]}{path}", data=json.dumps(body).encode(), method="POST",
+                              headers={"Content-Type": "application/json", "Cookie": "bk_account=" + self.token, "X-Forwarded-For": "198.51.100.8"})
+        try:
+            with request.urlopen(req, timeout=30) as r:
+                return r.status, json.loads(r.read().decode("utf-8"))
+        except error.HTTPError as e:
+            return e.code, json.loads(e.read().decode("utf-8"))
+
+    def test_the_plan_of_a_request_for_a_worker_that_is_not_hired_is_a_clear_403(self):
+        refused = {"Orchestrator": "CHLOE", "SelectedWorkers": [], "NotIncludedWorkers": ["ALEX"], "Status": "WORKER_NOT_INCLUDED", "NextAction": "HIRE_WORKER",
+                   "FinalSynthesis": "Cette demande relève de Alex, qui ne fait pas partie de vos Workers embauchés. Embauchez-le."}
+        server.submit_task = lambda *a, **kw: dict(refused)
+        st, out = self.post("/api/chloe/plan", {"objective": "Fais ma prospection commerciale"})
+        self.assertEqual((st, out["error"], out["notIncludedWorkers"]), (403, "WORKER_NOT_INCLUDED", ["ALEX"]))
+        self.assertIn("Embauchez-le", out["detail"])
+        st, out = self.post("/api/chloe/task", {"objective": "Fais ma prospection commerciale", "level": "rapide"})      # et la route de mission : la meme reponse
+        self.assertEqual((st, out["error"]), (403, "WORKER_NOT_INCLUDED"))
+        server.submit_task = lambda *a, **kw: {"Orchestrator": "CHLOE", "SelectedWorkers": ["NORA"], "Status": "PLANNED"}
+        st, out = self.post("/api/chloe/plan", {"objective": "Reponds a mes clients"})
+        self.assertEqual((st, out["Status"], out["SelectedWorkers"]), (200, "PLANNED", ["NORA"]))                   # un vrai plan reste un 200
+
+
 class RateLimits(Fixture):
     def test_limits_are_per_action_and_per_key(self):
         for _ in range(20):

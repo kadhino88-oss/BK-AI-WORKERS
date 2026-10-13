@@ -194,6 +194,9 @@ def main():
               st == 200 and [(l["id"], l["credits"]) for l in lv["levels"]] == [("rapide", 1), ("equilibre", 6), ("approfondi", 12)] and lv["default"] == "equilibre", lv)
         st, lv = alice.get("/api/mission-levels")
         check("compte a l'essai : seul Rapide est propose (verrouille)", [l["id"] for l in lv["levels"]] == ["rapide"] and lv["locked"] is True, lv)
+        st, lv = alice.get("/api/mission-levels?scale=public")
+        check("... mais la page Tarifs lit l'echelle publique complete (1 / 6 / 12), meme connecte a l'essai",
+              st == 200 and [(l["id"], l["credits"]) for l in lv["levels"]] == [("rapide", 1), ("equilibre", 6), ("approfondi", 12)], lv)
         st, bill = alice.get("/api/billing")
         check("essai : 15 credits, pas de renouvellement, jamais illimite, niveaux verrouilles",
               st == 200 and bill["planId"] == "essai" and bill["creditsTotal"] == 15 and bill["renewsAtUtc"] is None and bill["unlimited"] is False
@@ -208,6 +211,7 @@ def main():
 
         print("\n== POST /api/billing/plan : aucune bascule gratuite ==")
         for plan, status, code in (("solo", 403, "PLAN_BY_INVOICE"), ("trio", 403, "PLAN_BY_INVOICE"), ("equipe", 403, "PLAN_BY_INVOICE"),
+                                   ("pro", 403, "PLAN_BY_INVOICE"), ("scale", 403, "PLAN_BY_INVOICE"),       # revue du 2026-10-13 : plus de simulation gratuite
                                    ("enterprise", 403, "PLAN_ON_QUOTE"), ("starter", 403, "PLAN_NOT_SOLD"), ("business", 403, "PLAN_NOT_SOLD"),
                                    ("essai", 403, "PLAN_NOT_SELECTABLE"), ("gratuit", 400, "UNKNOWN_PLAN")):
             st, out = alice.post("/api/billing/plan", {"planId": plan})
@@ -240,7 +244,10 @@ def main():
             st, out = owner.post("/api/admin/set-plan", payload)
             check(f"set-plan invalide {json.dumps(payload)[:70]} -> {code}", st == status and out.get("error") == code, (st, out))
         st, out = owner.post("/api/admin/set-plan", body)
-        check("proprietaire : Equipe accordee a alice (900 credits, renouvellement date)", st == 200 and out["credits"] == 900 and out["renewsAtUtc"], (st, out))
+        check("proprietaire : Equipe accordee a alice (900 credits, renouvellement date, periode payee d'un mois)",
+              st == 200 and out["credits"] == 900 and out["renewsAtUtc"] and out["paidUntilUtc"], (st, out))
+        st, out = owner.post("/api/admin/set-plan", {"clientId": a_id, "planId": "equipe", "paidMonths": 0})
+        check("mois factures invalides : 400 INVALID_PERIOD, rien ne change", st == 400 and out.get("error") == "INVALID_PERIOD", (st, out))
         st, bill = alice.get("/api/billing")
         check("alice voit Equipe, 900 credits, le forfait suivant Pro (1250 credits, CHF 139), niveaux libres",
               bill["planId"] == "equipe" and bill["creditsTotal"] == 900 and bill["upgrade"]["next"]["planId"] == "pro" and bill["upgrade"]["next"]["credits"] == 1250

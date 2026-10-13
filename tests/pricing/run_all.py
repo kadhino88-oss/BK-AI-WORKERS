@@ -14,7 +14,7 @@ import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PS_SUITES = {"test_automation_level.py", "test_stripe_fields.py"}
-SUITES = ["test_pricing.py", "test_site_consistency.py", "test_stripe_fields.py", "test_automation_level.py", "e2e_server.py"]
+SUITES = ["test_pricing.py", "test_billing_review.py", "test_site_consistency.py", "test_stripe_fields.py", "test_automation_level.py", "e2e_server.py"]
 
 
 def main():

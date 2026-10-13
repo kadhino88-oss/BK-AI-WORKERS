@@ -15,7 +15,11 @@ import datetime
 import json
 import os
 import sys
+import threading
 import unittest
+import urllib.error
+import urllib.request
+from http.server import ThreadingHTTPServer
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from common import A, B, C, NOW, add_account, load_server, reset, write_billing  # noqa: E402
@@ -420,6 +424,92 @@ class CreditsOnlyForDeliveredMissions(Fixture):
         write_task_record(A, 6, "2026-10-05T00:00:00Z", Result={"Degraded": False, "Answer": "ok"})
         write_task_record(A, None, "2026-10-05T00:00:00Z")
         self.assertEqual(server.get_billing(A)["creditsUsed"], 7)                # une vraie mission (6) + une ancienne trace sans niveau (1)
+
+
+class OverHttp(Fixture):
+    """Le meme rejeu, mais par les vraies routes HTTP du serveur (dans ce processus, pont Stripe remplace) : POST /api/billing/stripe-confirm n'exige
+    aucune connexion, c'est ce que la revue du 2026-10-13 a exploite pour rejouer une session payee."""
+
+    def setUp(self):
+        super().setUp()
+        self.httpd = ThreadingHTTPServer(("127.0.0.1", 0), server.Handler)
+        self.port = self.httpd.server_address[1]
+        threading.Thread(target=self.httpd.serve_forever, daemon=True).start()
+        self.addCleanup(self.httpd.server_close)
+        self.addCleanup(self.httpd.shutdown)
+        self.sessions = {"cs_test_X": confirmation("scale", "sub_X", "cs_test_X", client=A)}
+        self.token_a = server.account_create_session({"clientId": A, "email": "a@mail-test.example"})
+        self.token_b = server.account_create_session({"clientId": B, "email": "b@mail-test.example"})
+
+    def fake_bridge(self, action, **kw):
+        if action == "confirm":
+            return dict(self.sessions[kw["session_id"]]) if kw.get("session_id") in self.sessions else {"Status": "ERROR", "Detail": "No such session"}
+        return super().fake_bridge(action, **kw)
+
+    def http(self, method, path, body=None, token=None):
+        headers = {"Content-Type": "application/json", "X-Forwarded-For": "198.51.100.7"}
+        if token:
+            headers["Cookie"] = "bk_account=" + token
+        req = urllib.request.Request(f"http://127.0.0.1:{self.port}{path}", data=json.dumps(body).encode() if body is not None else None, method=method, headers=headers)
+        try:
+            with urllib.request.urlopen(req, timeout=30) as r:
+                return r.status, json.loads(r.read().decode("utf-8"))
+        except urllib.error.HTTPError as e:
+            return e.code, json.loads(e.read().decode("utf-8"))
+
+    def test_replaying_stripe_confirm_without_any_cookie_gives_no_second_quota(self):
+        st, out = self.http("POST", "/api/billing/stripe-confirm", {"sessionId": "cs_test_X"})
+        self.assertEqual((st, out["planId"], out["creditsRemaining"], out.get("alreadyConfirmed")), (200, "scale", 4000, None))
+        write_task_record(A, 4000, "2026-10-12T12:00:01Z")                             # le quota est consomme
+        st, out = self.http("GET", "/api/billing", token=self.token_a)
+        self.assertEqual((st, out["creditsRemaining"]), (200, 0))
+        self.assertIsNotNone(server.subscription_blocks_mission(A))
+        for _ in range(3):
+            st, out = self.http("POST", "/api/billing/stripe-confirm", {"sessionId": "cs_test_X"})      # aucun cookie, aucun paiement
+            self.assertEqual((st, out["planId"], out["creditsRemaining"], out["alreadyConfirmed"]), (200, "scale", 0, True))
+        self.assertIsNotNone(server.subscription_blocks_mission(A))
+        # abonnement resilie puis rejeu : pas de resurrection
+        st, out = self.http("POST", "/api/billing/cancel", token=self.token_a)
+        self.assertEqual((st, out["planId"], out["cancelAtPeriodEnd"]), (200, "scale", True))
+        server._utcnow = lambda: at(days=45)
+        st, out = self.http("POST", "/api/billing/stripe-confirm", {"sessionId": "cs_test_X"})
+        self.assertEqual((st, out["planId"], out["alreadyConfirmed"]), (200, "essai", True))
+
+    def test_a_logged_in_stranger_cannot_confirm_someone_elses_session(self):
+        st, out = self.http("POST", "/api/billing/stripe-confirm", {"sessionId": "cs_test_X"}, token=self.token_b)
+        self.assertEqual((st, out["error"]), (403, "SESSION_CLIENT_MISMATCH"))
+        self.assertEqual(server._billing_load(A)["planId"], "essai")
+        st, out = self.http("POST", "/api/billing/stripe-confirm", {"sessionId": "cs_test_X"}, token=self.token_a)
+        self.assertEqual((st, out["planId"]), (200, "scale"))
+        st, out = self.http("POST", "/api/billing/stripe-confirm", {"sessionId": "cs_inconnue"})
+        self.assertEqual((st, out["error"]), (400, "STRIPE_CONFIRM_FAILED"))
+
+    def test_the_cancelled_subscription_at_stripe_is_refused_over_http(self):
+        self.sessions["cs_test_X"]["SubscriptionStatus"] = "canceled"
+        st, out = self.http("POST", "/api/billing/stripe-confirm", {"sessionId": "cs_test_X"})
+        self.assertEqual((st, out["error"]), (409, "SUBSCRIPTION_NOT_ACTIVE"))
+        self.assertEqual(server._billing_load(A)["planId"], "essai")
+
+    def test_the_public_scale_is_complete_for_a_trial_account_while_its_own_view_stays_locked(self):
+        st, own = self.http("GET", "/api/mission-levels", token=self.token_a)
+        self.assertEqual([l["id"] for l in own["levels"]], ["rapide"])                      # un compte a l'essai ne PEUT choisir que Rapide
+        st, public = self.http("GET", "/api/mission-levels?scale=public", token=self.token_a)
+        self.assertEqual([(l["id"], l["credits"]) for l in public["levels"]], [("rapide", 1), ("equilibre", 6), ("approfondi", 12)])
+        self.assertNotIn("locked", [k for k, v in public.items() if v is True])
+        st, anon = self.http("GET", "/api/mission-levels?scale=public")
+        self.assertEqual(anon["levels"], public["levels"])                                  # la meme echelle pour tous, aucune donnee de compte
+
+    def test_stripe_down_over_http_never_opens_a_plan(self):
+        self.stripe_configured = True
+        orig = self.fake_bridge
+
+        def failing(action, **kw):
+            return {"Status": "ERROR", "Detail": "STRIPE_BRIDGE_TIMEOUT"} if action == "status" else orig(action, **kw)
+        server.run_stripe_bridge = failing
+        for plan in ("equipe", "pro", "scale"):
+            st, out = self.http("POST", "/api/billing/plan", {"planId": plan}, token=self.token_a)
+            self.assertEqual((st, out["error"]), (503, "STRIPE_UNAVAILABLE"), plan)
+        self.assertEqual(self.http("GET", "/api/billing", token=self.token_a)[1]["planId"], "essai")
 
 
 if __name__ == "__main__":
