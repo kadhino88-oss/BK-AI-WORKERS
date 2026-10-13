@@ -109,6 +109,8 @@ HOSTS = {
     "json-schema.org": NO_CALL, "www.sitemaps.org": NO_CALL, "schema.org": NO_CALL, "www.MonSite.com": NO_CALL,
     # exemple de champ de fiche d'installation (workers/alex/install-profile.json) : texte d'aide, jamais appele
     "www.atelier-martin.example": NO_CALL,
+    # espace de noms XML des fichiers Office (dashboard/file_preview.py) : identifiant dans un document, jamais appele
+    "schemas.openxmlformats.org": NO_CALL,
 }
 SCAN_DIRS = ("dashboard", "core", "workers", "chloe", "orchestrator")
 SCAN_EXT = (".py", ".ps1", ".js", ".html", ".json")

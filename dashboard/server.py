@@ -3503,9 +3503,18 @@ def _read_hire_requests():
     return [r for r in rows if isinstance(r, dict)]
 
 
+HIRE_REQUESTS_KEPT = 500
+
+
 def _write_hire_requests(rows):
+    if len(rows) > HIRE_REQUESTS_KEPT:
+        # Une demande OUVERTE n'est jamais supprimee pour faire de la place (quelques comptes gratuits pouvaient sinon en chasser des legitimes de la
+        # vue du proprietaire) : seules les demandes deja traitees les plus anciennes partent.
+        closed = [i for i, r in enumerate(rows) if r.get("status") != "open"]
+        drop = set(closed[:len(rows) - HIRE_REQUESTS_KEPT])
+        rows = [r for i, r in enumerate(rows) if i not in drop]
     os.makedirs(os.path.dirname(HIRE_REQUESTS_PATH), exist_ok=True)
-    _write_json_atomic(HIRE_REQUESTS_PATH, rows[-500:], ensure_ascii=False, indent=2)
+    _write_json_atomic(HIRE_REQUESTS_PATH, rows, ensure_ascii=False, indent=2)
 
 
 @_state_locked
@@ -5041,6 +5050,10 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json({"error": "OBJECTIVE_REQUIRED"}, 400)
                 return
             result = submit_task(objective, worker_id="chloe", plan_only=True, client_id=client_id)
+            refused = refused_for_hiring(result)       # comme /api/chloe/task : la demande d'un Worker non embauche est un 403 clair, pas un plan vide
+            if refused:
+                self._send_json({"error": "WORKER_NOT_INCLUDED", "detail": refused, "notIncludedWorkers": result.get("NotIncludedWorkers") or []}, 403)
+                return
             self._send_json(result)
         elif path.startswith("/api/workers/") and path.endswith("/task"):
             wid = path.split("/")[3]

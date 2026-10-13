@@ -344,6 +344,21 @@ class Hiring(Fixture):
         server.grant_workers(A, "solo", ["nora"], new_cycle=False)
         self.assertEqual(server.INSTALLS.get(A, "alex")["status"], "paused")
 
+    def test_open_hire_requests_are_never_dropped_to_make_room(self):
+        # Revue du 2026-10-13 : le fichier gardait les 500 dernieres lignes quel que soit leur statut ; des comptes gratuits pouvaient chasser des demandes
+        # ouvertes de la vue du proprietaire.
+        rows = [{"id": f"HRQ-{i:04d}", "clientId": A, "workerId": "alex", "status": "open" if i % 2 == 0 else "granted"} for i in range(520)]
+        server._write_hire_requests(rows)
+        kept = server._read_hire_requests()
+        self.assertEqual(len(kept), 500)
+        self.assertEqual(sum(1 for r in kept if r["status"] == "open"), 260)             # toutes les ouvertes sont la
+        self.assertEqual([r["id"] for r in kept if r["status"] == "granted"][0], "HRQ-0041")      # les 20 plus anciennes demandes traitees sont parties
+        flood = [{"id": f"HRQ-{i:04d}", "clientId": A, "workerId": "alex", "status": "open"} for i in range(510)]
+        server._write_hire_requests(flood)
+        self.assertEqual(len(server._read_hire_requests()), 510)                          # que des ouvertes : on ne perd rien
+        server._write_hire_requests(flood[:3])
+        self.assertEqual(len(server._read_hire_requests()), 3)
+
     def test_installations_made_during_the_trial_are_paused_when_the_client_moves_to_a_worker_plan(self):
         # Revue du 2026-10-13 : seules les installations des Workers de l'ANCIENNE liste etaient pausees ; celles du temps de l'essai restaient « Actif »
         # (donc « Hors forfait » avec un interrupteur vivant) et reprenaient d'elles-memes si le Worker etait embauche plus tard.

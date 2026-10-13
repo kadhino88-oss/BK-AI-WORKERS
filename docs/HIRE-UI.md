@@ -14,7 +14,11 @@ Complète `docs/HIRE-API.md` (le serveur). Tout le code de l'interface est dans 
 
 ## Règles que l'interface ne contourne pas
 
-- « Autonome » n'est proposé que pour les actions que le profil classe en risque faible ; la règle « envoyer, publier, payer, supprimer, appeler : toujours votre validation » est affichée à l'étape 3 et dans le récapitulatif d'activation.
+- « Autonome » n'est proposé que pour les actions que le profil classe en risque faible et qui n'écrivent pas dans un outil (pas de champ `operations`) ; la règle « envoyer, publier, payer, supprimer, appeler : toujours votre validation » est affichée à l'étape 3 et dans le récapitulatif d'activation.
+- Les réglages d'autonomie sont présentés comme des **consignes données au Worker** (« Consigne donnée au Worker : … »), jamais comme une garantie de la plateforme : rien ne les fait respecter techniquement catégorie par catégorie (voir `docs/HIRE-API.md`).
+- L'interrupteur d'arrêt est offert pour un brouillon comme pour une installation active ; la pause ne se lève que par un geste explicite. Enregistrer une modification qui laisserait un élément obligatoire vide d'une installation active demande confirmation (elle repasse en brouillon) et le dit après.
+- Le piège du focus (`iwTabTarget`) ramène dans la fenêtre Maj+Tab depuis le titre comme un focus échappé dans la page (test : `tests/hire-ui/test_pure_logic.js`).
+- Embaucher et remplacer un Worker demandent une confirmation qui nomme la conséquence (emplacement pris, Worker remplacé mis en pause, 30 jours sans nouveau remplacement).
 - Seuls les canaux réellement disponibles (`liveChannels` et `channelSupport == "available"`) sont envoyés au serveur ; téléphone, WhatsApp et e-mail apparaissent « bientôt ». Aucune promesse de numéro de téléphone, de WhatsApp ou de boîte e-mail pour les propres clients du client.
 - Aucun prix dans l'assistant ni dans le parcours d'embauche : le bloc `HIRE-UI` ne lit pas `priceChf`, parle de « tarif communiqué avant toute facture » et n'effectue aucun paiement. Les prix de Solo et Trio ne s'affichent que sur la page Tarifs et dans Facturation (grille de prix, `docs/PRICING.md`), qui les lisent dans le catalogue du serveur (`priceChf` de `availablePlans`) ; le paiement passe par `POST /api/billing/plan` (Stripe Checkout), jamais par l'assistant.
 - L'essai à blanc est une vraie mission (`submitMissionAndWait`, le chemin de la fiche) : elle compte dans le quota, et l'interface le dit. Les actions vers l'extérieur restent validées par le client.

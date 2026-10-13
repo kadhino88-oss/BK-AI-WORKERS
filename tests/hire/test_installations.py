@@ -297,6 +297,22 @@ class ReviewFixes(StoreCase):
         self.assertEqual(rec["status"], "active")
         self.assertNotIn("pausedFrom", rec)
 
+    def test_common_credentials_are_refused_and_a_siret_is_not_taken_for_a_card(self):
+        for secret in ("sk_live_51HabcdefghijklmnopqrstuvwxYZ", "rk_live_abcdefghijklmnop", "pk_live_abcdefghijklmnop", "AKIAIOSFODNN7EXAMPLE",
+                       "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.abcdefghijk", "Bearer abcdefghijklmnopqrstuvwx1234567890",
+                       "authorization: bearer ABCDEFGHIJKLMNOPQRSTUVWXYZ012345", "carte 4111 1111 1111 1111", "4111111111111111", "3782 822463 10005"):
+            bad = good_alex()
+            bad["services"]["prospection-sortante"]["knowledge"]["offre_description"] = "Texte. " + secret
+            e = self.errors(bad)
+            self.assertTrue(any("ne saisissez jamais" in m for m in e), (secret, e))
+        for fine in ("SIRET 123 456 789 00012", "SIRET 552 081 317 00026", "Commande 20261012123456781", "Tel +41 21 123 45 67 89 00",
+                     "Le bearer du pont etait court", "sk-court", "Pro : 1250 credits"):
+            ok = good_alex()
+            ok["services"]["prospection-sortante"]["knowledge"]["offre_description"] = fine
+            self.store.upsert(A, "alex", ok)
+        self.assertTrue(inst.contains_secret("pk_live_abcdefghijklmnop"))
+        self.assertFalse(inst.contains_secret(None))
+
     def test_a_mistyped_knowledge_or_autonomy_is_a_validation_error_not_a_crash(self):
         for field, junk in (("knowledge", "abc"), ("knowledge", ["a"]), ("knowledge", 3), ("autonomy", ["x"]), ("autonomy", "auto"), ("autonomy", 5)):
             bad = good_alex()

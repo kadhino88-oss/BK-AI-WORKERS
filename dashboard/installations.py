@@ -36,9 +36,38 @@ MAX_VALUE_CHARS = 2000
 MAX_NOTES_CHARS = 2000
 SECRET_RE = re.compile(
     r"sk-[A-Za-z0-9_-]{16,}|AIza[0-9A-Za-z_-]{20,}|-----BEGIN [A-Z ]*PRIVATE KEY-----|xox[abp]-[0-9A-Za-z-]{10,}|ghp_[A-Za-z0-9]{20,}"
-    r"|(?i:(?:password|mot de passe|mdp|api[ _-]?key|cl[eé] api|secret|token|iban))\s*[:=]\s*\S{6,}|\b(?:\d[ -]?){13,19}\b"
+    r"|[sr]k_live_[0-9A-Za-z]{10,}|pk_live_[0-9A-Za-z]{10,}|\bAKIA[0-9A-Z]{16}\b|\beyJ[0-9A-Za-z_-]{8,}\.[0-9A-Za-z_-]{8,}\.[0-9A-Za-z_-]{8,}"
+    r"|(?i:\bbearer\s+[0-9A-Za-z._~+/=-]{20,})"
+    r"|(?i:(?:password|mot de passe|mdp|api[ _-]?key|cl[eé] api|secret|token|iban))\s*[:=]\s*\S{6,}"
     r"|\b[A-Z]{2}\d{2} ?(?:[A-Z0-9]{4} ?){3,7}[A-Z0-9]{1,4}\b")
+# Numero de carte : 13 a 19 chiffres ET somme de Luhn valide (sinon un numero de commande ou de telephone etait refuse). Un SIRET ecrit dans son
+# groupement officiel (3-3-3-5 chiffres) n'est pas une carte non plus.
+_CARD_CANDIDATE_RE = re.compile(r"\b(?:\d[ -]?){13,19}\b")
+_SIRET_GROUPING_RE = re.compile(r"^\d{3} \d{3} \d{3} \d{5}$")
 _LOCK = threading.Lock()
+
+
+def _luhn_ok(digits):
+    total = 0
+    for i, ch in enumerate(reversed(digits)):
+        n = int(ch)
+        if i % 2:
+            n = n * 2 - 9 if n > 4 else n * 2
+        total += n
+    return total % 10 == 0
+
+
+def contains_secret(text):
+    """True si le texte ressemble a un secret (mot de passe, cle d'API, jeton, cle privee, IBAN) ou a un numero de carte bancaire."""
+    text = str(text or "")
+    if SECRET_RE.search(text):
+        return True
+    for m in _CARD_CANDIDATE_RE.finditer(text):
+        raw = m.group().strip()
+        digits = re.sub(r"\D", "", raw)
+        if 13 <= len(digits) <= 19 and not _SIRET_GROUPING_RE.match(raw) and _luhn_ok(digits):
+            return True
+    return False
 
 
 def _now():
@@ -191,7 +220,7 @@ class InstallationStore:
                 text = "" if value is None else str(value).strip()
                 if len(text) > MAX_VALUE_CHARS:
                     errors.append(f"{sid}.{key} : {MAX_VALUE_CHARS} caracteres maximum")
-                elif SECRET_RE.search(text):
+                elif contains_secret(text):
                     errors.append(f"{sid}.{key} : ne saisissez jamais de mot de passe, cle ou numero de carte")
                 else:
                     knowledge[key] = text
@@ -233,7 +262,7 @@ class InstallationStore:
         notes = str(payload.get("notes") or "").strip()
         if len(notes) > MAX_NOTES_CHARS:
             errors.append(f"notes : {MAX_NOTES_CHARS} caracteres maximum")
-        elif SECRET_RE.search(notes):
+        elif contains_secret(notes):
             errors.append("notes : ne saisissez jamais de mot de passe, cle ou numero de carte")
         if errors:
             raise InstallationError(errors)
