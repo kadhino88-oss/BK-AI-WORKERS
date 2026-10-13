@@ -12,7 +12,8 @@ const a = src.indexOf("// BK-PURE-BEGIN");
 const b = src.indexOf("// BK-PURE-END");
 assert(a > 0 && b > a, "bloc BK-PURE introuvable dans dashboard/app.js");
 const names = ["IW_MODES", "IW_RISK", "IW_CHANNEL_LABELS", "IW_STEP_LABELS", "IW_STATUS_LABELS", "IW_FIELD_MAX", "iwModesFor", "iwDefaultMode", "iwInitialState",
-  "iwEnabledDefs", "iwLiveChannelsOf", "iwChannelChips", "iwBuildPayload", "iwMissing", "iwToolsOf", "iwAutonomySummary", "iwFriendlyError", "iwParseErrors"];
+  "iwEnabledDefs", "iwLiveChannelsOf", "iwChannelChips", "iwBuildPayload", "iwMissing", "iwToolsOf", "iwAutonomySummary", "iwFriendlyError", "iwParseErrors",
+  "iwTabTarget"];
 const ctx = vm.createContext({});
 vm.runInContext(src.slice(a, b) + "\nthis.__api = {" + names.join(",") + "};", ctx);
 const api = ctx.__api;
@@ -50,6 +51,39 @@ test("autonome n'est propose que pour une action de risque faible", () => {
   assert.deepStrictEqual(ids("high"), ["off", "ask", "draft"]);
   assert.deepStrictEqual(ids(undefined), ["off", "ask", "draft"]);
   assert.deepStrictEqual(ids("LOW"), ["off", "ask", "draft"], "pas de tolerance sur la casse : le serveur compare avec 'low'");
+});
+
+test("autonome n'est jamais propose pour une regle qui ecrit dans un outil (champ operations), meme a risque faible", () => {
+  const ids = (rule) => json(api.iwModesFor(rule).map((m) => m.id));
+  assert.deepStrictEqual(ids({ risk: "low", operations: ["hubspot.controlled:CREATE_TASK"] }), ["off", "ask", "draft"]);
+  assert.deepStrictEqual(ids({ risk: "low", operations: ["gmail.controlled:DRAFT_MESSAGE"] }), ["off", "ask", "draft"]);
+  assert.deepStrictEqual(ids({ risk: "low", operations: [] }), ["off", "ask", "draft", "auto"]);
+  assert.deepStrictEqual(ids({ risk: "low" }), ["off", "ask", "draft", "auto"]);
+  assert.strictEqual(api.iwDefaultMode({ risk: "low", defaultMode: "auto", operations: ["hubspot.controlled:CREATE_TASK"] }), "ask");
+});
+
+test("les consignes d'autonomie ne se presentent pas comme une garantie de la plateforme", () => {
+  const text = JSON.stringify(api.IW_MODES);
+  assert(!/sans vous demander|ne fait jamais|le fait seul/i.test(text), text);
+  api.IW_MODES.forEach((m) => assert(/^Consigne donnée au Worker/.test(m.help), m.id));
+});
+
+test("piege du focus : Maj+Tab depuis le titre ou depuis la page derriere ramene dans la fenetre", () => {
+  const mk = (id) => ({ id });
+  const first = mk("first"), mid = mk("mid"), last = mk("last"), title = mk("title"), outside = mk("outside");
+  const items = [first, mid, last];
+  const box = { contains: (el) => el === title || items.includes(el) };
+  assert.strictEqual(api.iwTabTarget(items, title, box, true), "last", "Maj+Tab depuis le titre (tabindex -1) boucle sur le dernier");
+  assert.strictEqual(api.iwTabTarget(items, first, box, true), "last");
+  assert.strictEqual(api.iwTabTarget(items, mid, box, true), null);
+  assert.strictEqual(api.iwTabTarget(items, last, box, true), null);
+  assert.strictEqual(api.iwTabTarget(items, last, box, false), "first");
+  assert.strictEqual(api.iwTabTarget(items, mid, box, false), null);
+  assert.strictEqual(api.iwTabTarget(items, title, box, false), null, "Tab depuis le titre va naturellement au premier element");
+  assert.strictEqual(api.iwTabTarget(items, outside, box, true), "last", "focus echappe dans la page : Maj+Tab le ramene dans la fenetre");
+  assert.strictEqual(api.iwTabTarget(items, outside, box, false), "first", "focus echappe dans la page : Tab le ramene dans la fenetre");
+  assert.strictEqual(api.iwTabTarget(items, title, null, true), "last");
+  assert.strictEqual(api.iwTabTarget([], title, box, true), null);
 });
 
 test("le mode par defaut d'un profil incoherent (auto sur risque eleve) n'est jamais auto", () => {

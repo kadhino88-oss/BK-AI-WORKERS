@@ -4567,7 +4567,10 @@ class Handler(BaseHTTPRequestHandler):
                 return
             self._send_json({"notes": list_client_memory(client_id)})
         elif path == "/api/mission-levels":
-            self._send_json(public_mission_levels(self._resolve_client_id() or ""))     # un compte a l'essai ne voit que Rapide
+            if (parse_qs(parsed.query).get("scale") or [""])[0] == "public":
+                self._send_json(public_mission_levels(""))     # l'echelle complete, la meme pour tous (page Tarifs) : aucune donnee de compte
+            else:
+                self._send_json(public_mission_levels(self._resolve_client_id() or ""))     # un compte a l'essai ne voit que Rapide
         elif path == "/api/fx":
             self._send_json(get_fx_rates())
         elif path == "/webhooks/whatsapp":

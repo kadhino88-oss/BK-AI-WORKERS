@@ -273,3 +273,40 @@ Object.assign(window.BK_EN, {
   "Je confirme que la facture de ce client est réglée": "I confirm this customer's invoice has been paid",
   "Annuler": "Cancel"
 });
+
+/* Revue du 2026-10-13 : consignes d'autonomie, interrupteur d'arret pour tout statut, mois factures, confirmations d'embauche */
+Object.assign(window.BK_EN, {
+  "Consigne donnée au Worker : ne jamais faire cette action.": "Instruction given to the Worker: never do this action.",
+  "Consigne donnée au Worker : vous demander avant d'agir et attendre votre réponse.": "Instruction given to the Worker: ask you before acting and wait for your answer.",
+  "Consigne donnée au Worker : préparer le résultat (brouillon, fichier) et attendre votre accord.": "Instruction given to the Worker: prepare the result (draft, file) and wait for your approval.",
+  "Consigne donnée au Worker : le faire, puis vous le dire. Réservé aux actions sans risque (lire, analyser, rédiger).": "Instruction given to the Worker: do it, then tell you. Reserved for risk-free actions (reading, analysing, drafting).",
+  "Quelles consignes donner au Worker ?": "What instructions should the Worker get?",
+  "Ces réglages sont des consignes que le Worker suit dans son travail. Elles ne remplacent pas la validation que la plateforme exige pour agir vers l'extérieur.": "These settings are instructions the Worker follows in its work. They do not replace the approval the platform requires before acting outside.",
+  "action(s) sans risque que le Worker a pour consigne de faire seul": "risk-free action(s) the Worker is instructed to do on its own",
+  "action(s) qu'il a pour consigne de préparer ou de demander avant de continuer": "action(s) it is instructed to prepare or ask about before going on",
+  "action(s) qu'il a pour consigne de ne jamais faire": "action(s) it is instructed never to do",
+  "En marche": "Running", "Ce Worker n'est plus en pause.": "This Worker is no longer paused.",
+  "En pause : la fiche n'est plus transmise au Worker, ses automatisations planifiées sont suspendues (y compris celles de Chloé qui l'appelleraient) et rien n'est validé automatiquement. Vos missions lancées à la main fonctionnent toujours.": "Paused: the sheet is no longer passed to the Worker, its scheduled automations are suspended (including those of Chloé that would call it) and nothing is approved automatically. Missions you start by hand still work.",
+  "L'installation est en pause : sa fiche n'est pas transmise au Worker. Pour faire l'essai, levez la pause : l'installation repasse en brouillon et le Worker peut de nouveau agir de lui-même.": "The setup is paused: its sheet is not passed to the Worker. To run the test, lift the pause: the setup goes back to draft and the Worker can act on its own again.",
+  "Lever la pause (repasser en brouillon)": "Lift the pause (back to draft)",
+  "Cette modification laisse un élément obligatoire vide : l'installation repassera en brouillon et ne sera plus marquée « Actif » tant que vous ne l'aurez pas complétée. Enregistrer quand même ?": "This change leaves a required item empty: the setup will go back to draft and will no longer be marked “Active” until you complete it. Save anyway?",
+  "Cette installation n'est plus complète : elle repasse en brouillon. Complétez-la pour la réactiver.": "This setup is no longer complete: it goes back to draft. Complete it to reactivate it.",
+  "aucun pour le moment": "none yet",
+  "Embaucher {name} ? Il prend l'un de vos emplacements.": "Hire {name}? They take one of your slots.",
+  "Remplacer {old} par {name} ? {old} sera mis en pause et vous ne pourrez plus changer de Worker pendant 30 jours.": "Replace {old} with {name}? {old} will be paused and you will not be able to change Worker for 30 days.",
+  "Mois couverts par cette facture": "Months covered by this invoice",
+  "Au-delà, le forfait retombe à l'Essai (5 jours de grâce) tant que vous ne l'avez pas reconduit avec la facture suivante.": "After that, the plan falls back to the trial (5 days of grace) until you renew it with the next invoice."
+});
+
+Object.assign(window.BK_EN, {
+  "Résilier l'abonnement ? Votre forfait reste actif jusqu'à la fin de la période déjà payée, puis votre compte repasse à l'essai. Aucun nouveau prélèvement.": "Cancel the subscription? Your plan stays active until the end of the period already paid, then your account goes back to the trial. No further charge.",
+  "Résiliation enregistrée : votre forfait reste actif jusqu'au": "Cancellation recorded: your plan stays active until",
+  "Recommandé pour une PME": "Recommended for an SMB", "Étape {n} : {label}": "Step {n}: {label}", "Cet essai sera lancé au niveau {level} : {n} crédit(s) de votre quota.": "This test will run at the {level} level: {n} credit(s) from your quota.",
+  "non lancée : Worker en pause": "not started: Worker paused", "non lancée : Worker hors de votre forfait": "not started: Worker outside your plan",
+  "non lancée : quota de crédits atteint": "not started: credit quota reached", "Suspendue (Worker en pause)": "Suspended (Worker paused)"
+});
+(window.BK_EN_FRAG = window.BK_EN_FRAG || []).push(
+  [" — résilié : le forfait reste actif jusqu'au ", " — cancelled: the plan stays active until "],
+  [", sans renouvellement.", ", with no renewal."],
+  [" crédits par mois, mais votre résiliation y met fin le ", " credits per month, but your cancellation ends it on "]
+);

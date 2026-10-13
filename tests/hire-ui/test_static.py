@@ -195,7 +195,13 @@ for word in ("téléphone", "whatsapp"):
             check(f"« {word} » n'apparait que dans une phrase « pas encore disponible » ou comme libelle de canal « bientôt »", ok, raw[:120])
 check("un canal prevu est toujours marque « bientôt » (jamais present comme disponible)", "iw-chip-soon" in BLOCK and "<em>bientôt</em>" in BLOCK)
 check("seuls les canaux reellement disponibles sont envoyes au serveur", "iwLiveChannelsOf(def, profile, liveChannels)" in BLOCK and 'support[c] === "available"' in BLOCK)
-check("« Autonome » (auto) est filtre sur le risque faible", 'm.id !== "auto" || (rule && rule.risk === "low")' in BLOCK)
+check("« Autonome » (auto) est filtre sur le risque faible et refuse pour une regle qui ecrit dans un outil",
+      'm.id !== "auto" || (rule && rule.risk === "low" && !(Array.isArray(rule.operations) && rule.operations.length))' in BLOCK)
+check("les reglages d'autonomie sont presentes comme des CONSIGNES donnees au Worker, jamais comme une garantie de la plateforme",
+      "Consigne donnée au Worker" in BLOCK and "sans vous demander" not in BLOCK and "Le Worker ne fait jamais" not in BLOCK and "Le Worker le fait seul" not in BLOCK)
+check("l'interrupteur d'arret est offert pour un brouillon aussi (pas seulement actif / en pause)",
+      'rec.status === "active" || rec.status === "paused"' not in BLOCK and "IW_RUN_LABELS" in BLOCK and 'current.pausedFrom === "draft"' in BLOCK)
+check("le piege du focus de l'assistant passe par iwTabTarget (Maj+Tab depuis le titre ne sort plus de la fenetre)", "iwTabTarget(items, document.activeElement, box, e.shiftKey)" in BLOCK)
 check("l'interface affiche la regle de la plateforme (envoyer, publier, payer, supprimer, appeler)", "envoyer, publier, payer, supprimer et appeler demandent toujours votre validation" in BLOCK)
 check("l'interface ne promet pas de reponse du proprietaire (« recontacte », « revient vers vous »)", not re.search(r"recontacte|revient vers vous|sous 24|rapidement", BLOCK))
 check("aucun mot de certification (garde-fou tests/trust)", not re.search(r"certifi|audité|conforme (?:au|à) (?:rgpd|iso|soc)|ISO ?27001|SOC ?2", BLOCK, re.I))
@@ -293,6 +299,20 @@ check("la barre du haut ne deborde plus a 375 px une fois connecte (libelle du c
 check("accessibilite : boite de dialogue, titre, etapes, annonces", all(s in BLOCK for s in ('role="dialog"', 'aria-modal="true"', 'aria-labelledby="iw-title"', 'aria-current="step"', 'role="alert"', 'aria-live="polite"')))
 check("accessibilite : fermeture au clavier (Echap), piege du focus, focus rendu a la fermeture", all(s in BLOCK for s in ('e.key === "Escape"', 'e.key !== "Tab"', "target.focus()")))
 check("accessibilite : champs relies a leur etiquette, aide et erreur", all(s in BLOCK for s in ('for="${id}"', "aria-describedby", "aria-invalid", 'aria-required="true"')))
+
+# ------------------------------------------------------------------ 8. revue du 2026-10-13
+check("les boutons d'etape de l'assistant ont un nom accessible meme quand leur libelle est masque (375 px)", 'aria-label="${escapeHtml(iwTf("Étape {n} : {label}"' in BLOCK)
+check("l'essai a blanc annonce le niveau et le cout en credits", 'iwTf("Cet essai sera lancé au niveau {level}' in BLOCK)
+check("embaucher et remplacer un Worker demandent une confirmation qui nomme la consequence", BLOCK.count("confirm(iwTf(") >= 2)
+check("enregistrer une modification qui repasserait une installation active en brouillon est annonce avant et apres",
+      'iwT("Cette modification laisse un élément obligatoire vide' in BLOCK and "elle repasse en brouillon" in BLOCK)
+check("la session expiree remet le drapeau local a faux avant de rouvrir la connexion (sinon la connexion ne s'ouvre jamais)",
+      re.search(r"accountAuthenticated = false;\s+iwClose\(\{ skipSave: true \}\);\s+requireAccount", BLOCK) is not None)
+check("la page Tarifs lit l'echelle publique complete, pas celle du forfait du visiteur", "/api/mission-levels?scale=public" in APP)
+check("la montee en gamme propose le rythme de paiement de l'abonne (annuel ou mensuel)", "up && up.interval) || billingInterval" in APP and "nxt.priceChf.year" in APP)
+check("l'annulation d'un abonnement demande une confirmation et annonce la fin de periode", "Résilier l'abonnement ?" in APP and "cancelAtPeriodEnd" in APP)
+check("aucune popularite non mesuree (« Le plus choisi ») sur la page Tarifs", "Le plus choisi" not in APP)
+check("les statuts « installation_paused » et « worker_not_included » ont un libelle francais", "AUTOMATION_STATUS_LABELS" in APP and "non lancée : Worker en pause" in APP)
 
 print("\n" + ("TOUT PASSE" if not failures else f"{len(failures)} ECHEC(S)"))
 sys.exit(0 if not failures else 1)

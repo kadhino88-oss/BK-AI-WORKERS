@@ -817,14 +817,17 @@ function startUpgrade(up) {
     window.location.href = `mailto:${(up && up.contactEmail) || BK_CONTACT_EMAIL}?subject=${subject}`;
     return;
   }
-  switchBillingPlan(nxt.planId, billingInterval);
+  // Le client paie au meme rythme que son abonnement (mensuel ou annuel, donne par le serveur) : un abonne annuel ne se voit pas proposer un
+  // forfait mensuel qui annulerait ses mois deja payes.
+  switchBillingPlan(nxt.planId, (up && up.interval) || billingInterval);
 }
 
 function upgradeNextHtml(up) {
   const nxt = up && up.next;
   if (!nxt) return "Votre plafond de crédits est fixé par votre contrat : écrivez-nous pour le relever.";
   if (nxt.onQuote) return `<span>Prochaine formule :</span> <strong>${escapeHtml(nxt.name)}</strong> — <span>sur devis (plafond de crédits fixé par contrat)</span>`;
-  const price = nxt.priceChf ? ` <strong>${formatPrice(nxt.priceChf.month)}</strong>/mois` : "";
+  const yearly = up.interval === "year";
+  const price = nxt.priceChf ? ` <strong>${formatPrice(yearly ? nxt.priceChf.year : nxt.priceChf.month)}</strong>${yearly ? "/an" : "/mois"}` : "";
   return `<span>Prochaine formule :</span> <strong>${escapeHtml(nxt.name)}</strong> — <strong>${Number(nxt.credits).toLocaleString(BK_LOCALE())}</strong> <span>crédits par mois</span>,${price}`;
 }
 
@@ -838,7 +841,7 @@ function subscribeCtaHtml(result) {
     ? `<button type="button" class="btn btn-gold subscribe-upgrade-btn">Relever mon plafond</button>`
     : nxt.onQuote
       ? `<button type="button" class="btn btn-gold subscribe-upgrade-btn">Passer à <strong>${escapeHtml(nxt.name)}</strong> (sur devis)</button>`
-      : `<button type="button" class="btn btn-gold subscribe-upgrade-btn">Passer à <strong>${escapeHtml(nxt.name)}</strong>${nxt.priceChf ? ` (${formatPrice(nxt.priceChf.month)}/mois)` : ""}</button>`;
+      : `<button type="button" class="btn btn-gold subscribe-upgrade-btn">Passer à <strong>${escapeHtml(nxt.name)}</strong>${nxt.priceChf ? ` (${formatPrice(up.interval === "year" ? nxt.priceChf.year : nxt.priceChf.month)}${up.interval === "year" ? "/an" : "/mois"})` : ""}</button>`;
   return `<div class="subscribe-cta-row" style="margin-top:10px">${main} <button type="button" class="btn btn-ghost subscribe-cta-btn">Voir tous les forfaits</button></div>`;
 }
 
@@ -898,7 +901,8 @@ async function loadBilling() {
   // Credits utilises / inclus ce mois-ci + date de renouvellement (quota mensuel fixe ; l'essai ne se renouvelle pas).
   const line = document.getElementById("billing-usage-line");
   const nf = (n) => Number(n).toLocaleString(BK_LOCALE());
-  const renews = data.renewsAtUtc ? ` — renouvelé le ${billingDate(data.renewsAtUtc)}.` : " — l'essai ne se renouvelle pas.";
+  const renews = data.cancelAtPeriodEnd && data.paidUntilUtc ? ` — résilié : le forfait reste actif jusqu'au ${billingDate(data.paidUntilUtc)}, sans renouvellement.`
+    : (data.renewsAtUtc ? ` — renouvelé le ${billingDate(data.renewsAtUtc)}.` : (data.planId === "essai" ? " — l'essai ne se renouvelle pas." : "."));
   line.textContent = `${nf(data.creditsUsed)} / ${nf(data.creditsTotal)} crédits consommés (${nf(data.creditsRemaining)} restants)${renews}`;
 
   document.getElementById("billing-alert").hidden = !data.alertThresholdReached;
@@ -922,13 +926,13 @@ async function loadBilling() {
     hireBox.hidden = !(h && h.restricted);
     if (!hireBox.hidden) {
       const names = (h.hiredWorkers || []).map((id) => { const w = allWorkers.find((x) => x.id === id); return escapeHtml(w ? w.name : id); });
-      hireBox.innerHTML = `<span>Workers de votre forfait :</span> <strong>${names.length ? names.join(", ") : "—"}</strong>`
+      hireBox.innerHTML = `<span>Workers de votre forfait :</span> <strong>${names.length ? names.join(", ") : "aucun pour le moment"}</strong>`
         + (h.slotsLeft > 0 ? ` <span>— il vous reste</span> <strong>${h.slotsLeft}</strong> <span>emplacement(s) : ouvrez la fiche d'un Worker pour l'embaucher.</span>` : "");
     }
   }
 
   const cancelBtn = document.getElementById("billing-cancel-btn");
-  cancelBtn.hidden = data.planId === "essai";
+  cancelBtn.hidden = data.planId === "essai" || !!data.cancelAtPeriodEnd;        // deja resilie : rien a annuler de plus
 
   const grid = document.getElementById("billing-plans-grid");
   grid.innerHTML = "";
@@ -1036,11 +1040,23 @@ async function handleStripeCheckoutReturn() {
 }
 
 async function cancelBillingPlan() {
-  await fetchJson("/api/billing/cancel", { method: "POST" });
+  // CGV article 6 : la resiliation prend effet a la fin de la periode en cours ; le forfait paye reste actif jusque-la.
+  if (!confirm(iwT("Résilier l'abonnement ? Votre forfait reste actif jusqu'à la fin de la période déjà payée, puis votre compte repasse à l'essai. Aucun nouveau prélèvement."))) return;
+  const result = await fetchJson("/api/billing/cancel", { method: "POST" });
+  if (result && result.cancelAtPeriodEnd && result.paidUntilUtc) {
+    showToast(`${iwT("Résiliation enregistrée : votre forfait reste actif jusqu'au")} ${billingDate(result.paidUntilUtc)}.`);
+  }
   await loadBilling();
 }
 
 // ---------- AUTOMATISATIONS (missions recurrentes, vrai pipeline) ----------
+
+// Statuts du dernier passage ecrits par le moteur (core/automation/AUTOMATION-ENGINE.ps1) quand la mission n'a pas ete lancee.
+const AUTOMATION_STATUS_LABELS = {
+  installation_paused: "non lancée : Worker en pause",
+  worker_not_included: "non lancée : Worker hors de votre forfait",
+  quota_exceeded: "non lancée : quota de crédits atteint",
+};
 
 const FREQUENCY_LABELS = {
   60: "Toutes les heures",
@@ -1141,12 +1157,15 @@ async function loadAutomations() {
     const freqLabel = FREQUENCY_LABELS[a.frequencyMinutes] || `Toutes les ${a.frequencyMinutes} min`;
     const lastRun = a.lastRunAtUtc ? new Date(a.lastRunAtUtc).toLocaleString(BK_LOCALE()) : "pas encore — vérifiée toutes les 15 min, ou cliquez Exécuter maintenant";
     const slackNote = a.notifySlack ? " · 🔔 notifie Slack" : "";
+    // Dernier passage non execute parce que le Worker est en pause : la carte le dit (et ne reste pas « Active » en apparence).
+    const suspended = a.enabled && a.lastRunStatus === "installation_paused";
+    const statusLabel = AUTOMATION_STATUS_LABELS[a.lastRunStatus] || a.lastRunStatus;
     card.innerHTML = `
       <div class="automation-card-main">
         <div class="automation-card-objective">${workerNameById(a.workerId)} — ${a.objective}</div>
-        <div class="automation-card-meta">${freqLabel}${slackNote} · dernière exécution : ${lastRun}${a.lastRunStatus ? " · " + a.lastRunStatus : ""}${a.enabled && a.nextRunAtUtc ? " · prochaine : " + new Date(a.nextRunAtUtc).toLocaleString(BK_LOCALE()) : ""}</div>
+        <div class="automation-card-meta">${freqLabel}${slackNote} · dernière exécution : ${lastRun}${a.lastRunStatus ? " · " + statusLabel : ""}${a.enabled && a.nextRunAtUtc ? " · prochaine : " + new Date(a.nextRunAtUtc).toLocaleString(BK_LOCALE()) : ""}</div>
       </div>
-      <span class="automation-card-status ${a.enabled ? "on" : "off"}">${a.enabled ? "Active" : "En pause"}</span>
+      <span class="automation-card-status ${a.enabled && !suspended ? "on" : "off"}">${suspended ? "Suspendue (Worker en pause)" : (a.enabled ? "Active" : "En pause")}</span>
       <div class="automation-card-actions">
         <button type="button" data-action="results">Voir les résultats${a.runCount ? " (" + a.runCount + ")" : ""}</button>
         <button type="button" data-action="run">Exécuter maintenant</button>
@@ -1844,7 +1863,7 @@ function renderPricing() {
     const ctaLabel = plan.cta || (plan.price === null ? "Nous contacter" : "Discuter avec Chloé");
 
     card.innerHTML = `
-      ${plan.popular ? '<div class="plan-badge">Le plus choisi</div>' : ""}
+      ${plan.popular ? '<div class="plan-badge">Recommandé pour une PME</div>' : ""}
       <div class="plan-name">${plan.name}</div>
       <div class="plan-audience">${plan.audience}</div>
       ${priceHtml}
@@ -1870,7 +1889,9 @@ async function renderPricingScale() {
   const box = document.getElementById("pricing-scale");
   if (!box) return;
   let levels = [];
-  try { levels = ((await fetchJson("/api/mission-levels")).levels || []).filter((l) => Number(l.credits) > 0); } catch (e) { /* page statique : texte generique */ }
+  // ?scale=public : l'echelle complete (Rapide, Equilibre, Approfondi), la meme pour tous. Sans cela un visiteur connecte a l'essai (verrouille sur
+  // Rapide) ne voyait que « 250 missions Rapide » pour Solo, alors que le niveau par defaut de Solo coute 6 credits.
+  try { levels = ((await fetchJson("/api/mission-levels?scale=public")).levels || []).filter((l) => Number(l.credits) > 0); } catch (e) { /* page statique : texte generique */ }
   const noRecharge = "Chaque forfait est un quota mensuel fixe, renouvelé chaque mois : il n'y a ni missions illimitées, ni recharge de crédits, ni paiement à l'usage. Quand le quota est atteint, vous passez au forfait supérieur, qui a son propre quota.";
   if (!levels.length) {
     box.innerHTML = `<h2>Combien de missions pour mes crédits ?</h2><p>Une mission réellement traitée consomme un crédit.</p><p>${noRecharge}</p>`;
@@ -3441,24 +3462,42 @@ document.getElementById("chloe-fab-form").addEventListener("submit", (e) => {
 //    appeler demandent toujours la validation du client ;
 //  - seuls les canaux reellement disponibles (liveChannels) sont presentes comme disponibles : telephone, WhatsApp et e-mail = « bientot » ;
 //  - tout texte venant du serveur ou du client passe par escapeHtml ; aucun secret n'est jamais demande ni conserve ici ;
-//  - aucun prix n'est affiche pour Solo/Trio (la page Tarifs n'en montre pas) : la demande part chez BK Entreprise, rien n'est debite ici.
+//  - aucun prix n'est affiche par cette interface (les prix sont sur la page Tarifs et dans Facturation) : la demande part chez BK Entreprise,
+//    rien n'est debite ici ;
+//  - les reglages d'autonomie sont des CONSIGNES donnees au Worker (injectees dans son prompt, voir Client-Installation.ps1), jamais presentes
+//    comme une garantie de la plateforme : la validation des envois, publications, paiements, suppressions et appels est technique, a part.
 
 // BK-PURE-BEGIN (fonctions sans acces au DOM : testees telles quelles par tests/hire-ui/test_pure_logic.js)
 const IW_MODES = [
-  { id: "off", label: "Ne jamais", help: "Le Worker ne fait jamais cette action." },
-  { id: "ask", label: "Demander d'abord", help: "Le Worker vous demande avant d'agir et attend votre réponse." },
-  { id: "draft", label: "Préparer et attendre ma validation", help: "Le Worker prépare le résultat (brouillon, fichier) ; rien n'est appliqué sans votre accord." },
-  { id: "auto", label: "Autonome", help: "Le Worker le fait seul, sans vous demander : réservé aux actions sans risque (lire, analyser, rédiger)." },
+  { id: "off", label: "Ne jamais", help: "Consigne donnée au Worker : ne jamais faire cette action." },
+  { id: "ask", label: "Demander d'abord", help: "Consigne donnée au Worker : vous demander avant d'agir et attendre votre réponse." },
+  { id: "draft", label: "Préparer et attendre ma validation", help: "Consigne donnée au Worker : préparer le résultat (brouillon, fichier) et attendre votre accord." },
+  { id: "auto", label: "Autonome", help: "Consigne donnée au Worker : le faire, puis vous le dire. Réservé aux actions sans risque (lire, analyser, rédiger)." },
 ];
 const IW_RISK = { low: "Risque faible", medium: "Risque moyen", high: "Risque élevé" };
 const IW_CHANNEL_LABELS = { web: "Dans l'application", schedule: "Mission récurrente", email: "E-mail", phone: "Téléphone", whatsapp: "WhatsApp" };
 const IW_STEP_LABELS = ["Services", "Fiche", "Autonomie", "Outils", "Essai"];
 const IW_STATUS_LABELS = { draft: "Brouillon", active: "Actif", paused: "En pause" };
+// Texte de l'interrupteur d'arret : un brouillon reste « en marche » (il recoit la fiche et ses automatisations tournent) tant qu'on ne l'arrete pas.
+const IW_RUN_LABELS = { draft: "En marche", active: "Actif", paused: "En pause" };
 const IW_FIELD_MAX = 2000;
 
-// "Autonome" n'existe que pour une action de risque faible : le serveur le refuse sinon (400 INSTALLATION_INVALID).
+// "Autonome" n'existe que pour une action de risque faible qui n'ecrit pas dans un outil (une regle avec « operations » gouverne une ecriture :
+// tache CRM, brouillon de message, carte...) : le serveur le refuse sinon (400 INSTALLATION_INVALID).
 function iwModesFor(rule) {
-  return IW_MODES.filter((m) => m.id !== "auto" || (rule && rule.risk === "low"));
+  return IW_MODES.filter((m) => m.id !== "auto" || (rule && rule.risk === "low" && !(Array.isArray(rule.operations) && rule.operations.length)));
+}
+
+// Piege du focus de l'assistant : renvoie "first" ou "last" quand la touche Tab doit boucler (ou ramener le focus dans la fenetre), sinon null.
+// `items` = elements focalisables de la fenetre, `active` = element qui a le focus, `box` = la fenetre. Un element qui n'est pas dans la liste
+// (le titre qui recoit le focus a l'ouverture, ou la page derriere quand le focus s'est echappe) compte comme « avant le premier » pour Maj+Tab.
+function iwTabTarget(items, active, box, shift) {
+  if (!items || !items.length) return null;
+  const first = items[0];
+  const last = items[items.length - 1];
+  if (!box || !box.contains(active)) return shift ? "last" : "first";
+  if (shift) return (active === first || active === box || items.indexOf(active) < 0) ? "last" : null;
+  return active === last ? "first" : null;
 }
 
 function iwDefaultMode(rule) {
@@ -3762,11 +3801,11 @@ function iwOnKeydown(e) {
   if (!box) return;
   const items = Array.from(box.querySelectorAll("button, [href], input, select, textarea, summary, [tabindex]:not([tabindex='-1'])"))
     .filter((el) => !el.disabled && el.offsetParent !== null);
-  if (!items.length) return;
-  const first = items[0];
-  const last = items[items.length - 1];
-  if (e.shiftKey && (document.activeElement === first || document.activeElement === box)) { e.preventDefault(); last.focus(); }
-  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  // Maj+Tab depuis le titre (tabindex -1, focus a l'ouverture) ou depuis la page derriere la fenetre ramene dans la fenetre, jamais dehors.
+  const target = iwTabTarget(items, document.activeElement, box, e.shiftKey);
+  if (!target) return;
+  e.preventDefault();
+  (target === "last" ? items[items.length - 1] : items[0]).focus();
 }
 
 // Fermer ne perd jamais la saisie : elle est enregistree en brouillon ; si le serveur refuse (champ invalide, reseau, session expiree), elle est
@@ -3823,6 +3862,11 @@ function iwMarkDirty() {
 async function iwSave(opts) {
   if (!iw || iw.saving) return false;
   const quiet = !!(opts && opts.quiet);
+  const statusBefore = iw.installation ? iw.installation.status : null;
+  if (!quiet && statusBefore === "active" && iwMissing(iw.profile, iw.state, iw.connectorStatus).some((m) => m.kind === "service" || m.kind === "field")) {
+    // Le serveur repasse une installation active en brouillon des qu'il manque un service ou un champ obligatoire : on le dit AVANT.
+    if (!confirm(iwT("Cette modification laisse un élément obligatoire vide : l'installation repassera en brouillon et ne sera plus marquée « Actif » tant que vous ne l'aurez pas complétée. Enregistrer quand même ?"))) return false;
+  }
   iw.saving = true;
   iwSetSaveState("saving");
   const saveBtn = document.getElementById("iw-save");
@@ -3835,8 +3879,11 @@ async function iwSave(opts) {
     });
     if (r.error === "ACCOUNT_REQUIRED") {
       // Session expiree : on ferme l'assistant en gardant la saisie, la connexion se fait par-dessus, puis on rouvre a la meme etape.
+      // Le drapeau local est perime (la session est finie cote serveur) : sans le remettre a faux, requireAccount relancerait l'action au lieu
+      // d'ouvrir la fenetre de connexion.
       const { workerId, step } = iw;
       iw.saving = false;
+      accountAuthenticated = false;
       iwClose({ skipSave: true });
       requireAccount(() => openInstallWizard(workerId, step));
       return false;
@@ -3868,6 +3915,9 @@ async function iwSave(opts) {
     iwSetSaveState("saved");
     iwRenderStatusPill();
     iwClearErrors();
+    if (statusBefore === "active" && r.installation.status === "draft") {
+      showToast("Cette installation n'est plus complète : elle repasse en brouillon. Complétez-la pour la réactiver.", false);
+    }
     return true;
   } catch (e) {
     iw.errors = { fields: {}, general: ["Enregistrement impossible pour le moment (réseau ou serveur). Ce que vous avez saisi est conservé."], items: [] };
@@ -3966,7 +4016,7 @@ function iwRender() {
   const steps = document.getElementById("iw-steps");
   steps.innerHTML = IW_STEP_LABELS.map((label, i) => {
     const cls = i === iw.step ? "is-current" : (i < iw.step ? "is-done" : "");
-    return `<li class="iw-step-item ${cls}"><button type="button" class="iw-step-btn" data-step="${i}"${i === iw.step ? ' aria-current="step"' : ""}><span class="iw-step-num" aria-hidden="true">${i + 1}</span><span class="iw-step-label">${escapeHtml(label)}</span></button></li>`;
+    return `<li class="iw-step-item ${cls}"><button type="button" class="iw-step-btn" data-step="${i}" aria-label="${escapeHtml(iwTf("Étape {n} : {label}", { n: i + 1, label: iwT(label) }))}"${i === iw.step ? ' aria-current="step"' : ""}><span class="iw-step-num" aria-hidden="true">${i + 1}</span><span class="iw-step-label">${escapeHtml(label)}</span></button></li>`;
   }).join("");
   steps.querySelectorAll(".iw-step-btn").forEach((b) => b.addEventListener("click", () => iwGo(Number(b.dataset.step))));
   document.getElementById("iw-prev").hidden = iw.step === 0;
@@ -4124,8 +4174,9 @@ function iwRenderAutonomy(content) {
     return `<section class="iw-svc" aria-labelledby="iw-au-t-${si}"><h3 class="iw-svc-title" id="iw-au-t-${si}">${escapeHtml(def.label)}</h3>${rules || '<p class="iw-hint">Aucun réglage pour ce service.</p>'}</section>`;
   }).join("");
   content.innerHTML = `
-    <h3 class="iw-h">Jusqu'où le Worker peut-il aller seul ?</h3>
+    <h3 class="iw-h">Quelles consignes donner au Worker ?</h3>
     <div class="iw-law" role="note"><strong>Règle de la plateforme :</strong> envoyer, publier, payer, supprimer et appeler demandent toujours votre validation, quel que soit le réglage choisi. « Autonome » n'est proposé que pour des actions sans risque, comme lire, analyser ou rédiger.</div>
+    <p class="iw-hint">Ces réglages sont des consignes que le Worker suit dans son travail. Elles ne remplacent pas la validation que la plateforme exige pour agir vers l'extérieur.</p>
     <ul class="iw-legend">${legend}</ul>
     ${sections}`;
   content.querySelectorAll(".iw-rule").forEach((fs) => fs.addEventListener("change", (e) => {
@@ -4255,10 +4306,14 @@ function iwRenderTrial(content) {
   const fieldsMissingForTrial = missing.filter((m) => m.kind === "field" && m.svcId === def.id);
   const options = defs.map((d) => `<option value="${escapeHtml(d.id)}"${d.id === def.id ? " selected" : ""}>${escapeHtml(d.label)}</option>`).join("");
   const paused = status === "paused";
+  // L'essai est une vraie mission au niveau choisi pour vos missions : on dit combien de credits il consomme.
+  const trialLevel = (missionLevels.levels || []).find((l) => l.id === currentMissionLevel());
+  const trialCost = trialLevel ? `<p class="iw-hint">${escapeHtml(iwTf("Cet essai sera lancé au niveau {level} : {n} crédit(s) de votre quota.", { level: trialLevel.label, n: trialLevel.credits }))}</p>` : "";
   content.innerHTML = `
     <h3 class="iw-h">Essai à blanc</h3>
     <p class="iw-hint">Avant d'activer, le Worker traite un exercice avec votre fiche. C'est une vraie mission : elle compte dans votre quota comme une mission normale. Le Worker prépare le travail ; toute action vers l'extérieur reste à valider par vous.</p>
-    ${paused ? '<div class="iw-alert iw-alert-info">L\'installation est en pause : sa fiche n\'est pas transmise au Worker. Repassez-la en brouillon pour faire l\'essai.</div>' : ""}
+    ${trialCost}
+    ${paused ? '<div class="iw-alert iw-alert-info">L\'installation est en pause : sa fiche n\'est pas transmise au Worker. Pour faire l\'essai, levez la pause : l\'installation repasse en brouillon et le Worker peut de nouveau agir de lui-même.</div>' : ""}
     <div class="iw-field">
       <label class="iw-label" for="iw-trial-svc"><span>Service à essayer</span></label>
       <select id="iw-trial-svc">${options}</select>
@@ -4268,7 +4323,7 @@ function iwRenderTrial(content) {
     ${fieldsMissingForTrial.length ? `<div class="iw-alert iw-alert-info">Remplissez d'abord les champs obligatoires de ce service (étape « Fiche »), sinon l'essai ne vous dira rien d'utile.</div>` : ""}
     <div class="iw-trial-actions">
       <button type="button" class="btn btn-gold" id="iw-trial-run"${scenario.objective && !fieldsMissingForTrial.length && !paused ? "" : " disabled"}>Lancer l'essai à blanc</button>
-      ${paused ? '<button type="button" class="btn btn-ghost" id="iw-to-draft">Repasser en brouillon</button>' : ""}
+      ${paused ? '<button type="button" class="btn btn-ghost" id="iw-to-draft">Lever la pause (repasser en brouillon)</button>' : ""}
     </div>
     <div id="iw-trial-result" class="iw-trial-result" aria-live="polite"></div>
 
@@ -4290,9 +4345,9 @@ function iwRenderActivation() {
   const sum = iwAutonomySummary(iw.profile, iw.state);
   const recap = `<ul class="iw-recap">
       <li><strong>${iwEnabledDefs(iw.profile, iw.state).length}</strong> <span>service(s) choisi(s)</span></li>
-      <li><strong>${sum.auto}</strong> <span>action(s) en autonomie (sans risque)</span></li>
-      <li><strong>${sum.draft + sum.ask}</strong> <span>action(s) préparée(s) ou demandée(s) avant de continuer</span></li>
-      <li><strong>${sum.off}</strong> <span>action(s) jamais faite(s)</span></li>
+      <li><strong>${sum.auto}</strong> <span>action(s) sans risque que le Worker a pour consigne de faire seul</span></li>
+      <li><strong>${sum.draft + sum.ask}</strong> <span>action(s) qu'il a pour consigne de préparer ou de demander avant de continuer</span></li>
+      <li><strong>${sum.off}</strong> <span>action(s) qu'il a pour consigne de ne jamais faire</span></li>
     </ul>
     <p class="iw-note">Envoyer, publier, payer, supprimer et appeler restent toujours soumis à votre validation. Vous pouvez mettre ce Worker en pause à tout moment : depuis cette fenêtre, depuis sa fiche ou depuis la page Facturation.</p>`;
   if (status === "active") {
@@ -4489,24 +4544,29 @@ function iwServiceChips(rec) {
   return labels.map((l) => `<span class="iw-chip">${escapeHtml(l)}</span>`).join("");
 }
 
-// Interrupteur d'arret (kill switch) : coche = actif ; decocher = pause immediate. Utilise sur la fiche du Worker et dans Facturation.
+// Interrupteur d'arret (kill switch) : coche = en marche ; decocher = pause immediate. Offert pour TOUT statut : un brouillon recoit la fiche et ses
+// automatisations tournent, il doit donc pouvoir etre arrete lui aussi. La reprise remet l'installation la ou la pause l'a prise (pausedFrom : brouillon
+// ou actif). Utilise sur la fiche du Worker et dans Facturation.
 function iwPauseSwitchEl(rec, workerName, opts) {
   const label = document.createElement("label");
   label.className = "switch iw-pause";
   label.title = "Interrupteur d'arrêt : met ce Worker en pause tout de suite";
-  const active = rec.status === "active";
-  const blocked = !active && rec.entitled === false;
-  label.innerHTML = `<input type="checkbox" role="switch" class="iw-pause-input"${active ? " checked" : ""}${blocked ? " disabled" : ""}><span class="switch-track"></span><span class="iw-sr">${escapeHtml(workerName)} : </span><span class="switch-label iw-pause-text">${active ? "Actif" : "En pause"}</span>`;
+  let current = rec;
+  const running = rec.status !== "paused";
+  const blocked = !running && rec.entitled === false;
+  label.innerHTML = `<input type="checkbox" role="switch" class="iw-pause-input"${running ? " checked" : ""}${blocked ? " disabled" : ""}><span class="switch-track"></span><span class="iw-sr">${escapeHtml(workerName)} : </span><span class="switch-label iw-pause-text">${IW_RUN_LABELS[rec.status] || IW_RUN_LABELS.paused}</span>`;
   const input = label.querySelector("input");
   input.addEventListener("change", async () => {
-    const want = input.checked ? "active" : "paused";
+    const want = input.checked ? (current.pausedFrom === "draft" ? "draft" : "active") : "paused";
     input.disabled = true;
     const r = await iwSetStatus(rec.workerId, want);
     input.disabled = false;
     if (r.ok) {
-      label.querySelector(".iw-pause-text").textContent = r.installation.status === "active" ? "Actif" : "En pause";
+      current = Object.assign({}, current, r.installation);
+      label.querySelector(".iw-pause-text").textContent = IW_RUN_LABELS[r.installation.status] || IW_RUN_LABELS.paused;
       if (opts && opts.onChange) opts.onChange(r.installation);
-      showToast(want === "paused" ? "Ce Worker est en pause : il n'agit plus de lui-même." : "Ce Worker est de nouveau actif.");
+      showToast(want === "paused" ? "Ce Worker est en pause : il n'agit plus de lui-même."
+        : (want === "draft" ? "Ce Worker n'est plus en pause." : "Ce Worker est de nouveau actif."));
     } else {
       input.checked = !input.checked;                       // l'interrupteur reste fidele a l'etat reel du serveur
       const lines = (r.errors && r.errors.length ? r.errors : [r.message]).filter(Boolean);
@@ -4522,7 +4582,7 @@ async function loadInstallPanel(workerId) {
   const panel = document.getElementById("install-panel");
   const title = document.getElementById("install-title");
   if (!block || !panel) return;
-  if (!workerId || workerId === "chloe") { block.hidden = true; panel.dataset.rendered = ""; return; }       // Chloe n'est ni embauchee ni installee
+  if (!workerId || workerId === "chloe") { block.hidden = true; panel.dataset.rendered = ""; panel.dataset.worker = workerId || ""; return; }       // Chloe n'est ni embauchee ni installee ; une reponse tardive du Worker precedent ne reaffiche rien
   panel.dataset.worker = workerId;
   if (!accountAuthenticated) {
     block.hidden = false;
@@ -4577,7 +4637,7 @@ function iwRenderInstallPanel(panel, title, workerId, data, hired) {
         <div class="iw-state-line"><span class="iw-meta-key">Services</span><span class="iw-chips">${iwServiceChips(rec)}</span></div>
         <div class="iw-state-line"><span class="iw-meta-key">Dernière modification</span><time>${escapeHtml(iwDate(rec.updatedAtUtc))}</time></div>
         ${missing}
-        ${rec.status === "paused" ? '<p class="iw-note">En pause : la fiche n\'est plus transmise au Worker, ses automatisations planifiées sont suspendues et rien n\'est validé automatiquement. Vos missions lancées à la main fonctionnent toujours.</p>' : ""}
+        ${rec.status === "paused" ? '<p class="iw-note">En pause : la fiche n\'est plus transmise au Worker, ses automatisations planifiées sont suspendues (y compris celles de Chloé qui l\'appelleraient) et rien n\'est validé automatiquement. Vos missions lancées à la main fonctionnent toujours.</p>' : ""}
         <div class="iw-state-actions" id="iw-state-actions"></div>
         <div class="iw-field-err" id="iw-panel-err" role="alert" hidden></div>
       </div>`;
@@ -4597,7 +4657,8 @@ function iwRenderInstallPanel(panel, title, workerId, data, hired) {
   if (rec) {
     const actions = panel.querySelector("#iw-state-actions");
     const err = panel.querySelector("#iw-panel-err");
-    if (rec.status === "active" || rec.status === "paused") {
+    // Interrupteur d'arret offert pour tout statut (brouillon, actif, en pause).
+    {
       actions.appendChild(iwPauseSwitchEl(Object.assign({ entitled: data.entitled }, rec), data.workerName, {
         onChange: async () => {
           await loadInstallPanel(workerId);
@@ -4733,7 +4794,9 @@ function iwRenderHirePanel(panel, title, workerId, data, hired) {
       <div class="iw-confirm" id="iw-hire-box"><button type="button" class="btn btn-gold" id="iw-hire-btn"><span>Embaucher</span> <strong>${escapeHtml(name)}</strong></button>
       <div class="iw-field-err" role="alert" hidden></div></div>`;
     const box = actions.querySelector("#iw-hire-box");
-    box.querySelector("#iw-hire-btn").addEventListener("click", () => hireNow(null, box));
+    box.querySelector("#iw-hire-btn").addEventListener("click", () => {
+      if (confirm(iwTf("Embaucher {name} ? Il prend l'un de vos emplacements.", { name }))) hireNow(null, box);
+    });
   } else if (hire.workerSlots && hire.canSwapNow) {
     actions.innerHTML = `<fieldset class="iw-swap"><legend>Remplacer l'un de vos Workers par celui-ci</legend>
       <p class="iw-note">Le Worker remplacé est mis en pause (son installation est conservée). Un remplacement est possible une fois tous les 30 jours.</p>
@@ -4743,7 +4806,7 @@ function iwRenderHirePanel(panel, title, workerId, data, hired) {
     const box = actions.querySelector("#iw-hire-box");
     box.querySelector("#iw-swap-btn").addEventListener("click", () => {
       const sel = actions.querySelector("input[name='iw-swap']:checked");
-      if (sel) hireNow(sel.value, box);
+      if (sel && confirm(iwTf("Remplacer {old} par {name} ? {old} sera mis en pause et vous ne pourrez plus changer de Worker pendant 30 jours.", { name, old: workerNameById(sel.value) }))) hireNow(sel.value, box);
     });
   } else if (hire.workerSlots) {
     actions.appendChild(msg("iw-note", "Tous vos emplacements sont pris et vous avez déjà remplacé un Worker récemment."));
@@ -4862,7 +4925,8 @@ async function loadInstalledWorkers() {
       <div class="iw-card-actions"></div>`;
     const actions = card.querySelector(".iw-card-actions");
     const msg = card.querySelector(".iw-card-msg");
-    if (rec.status === "active" || rec.status === "paused") {
+    // Interrupteur d'arret offert pour tout statut (brouillon, actif, en pause).
+    {
       actions.appendChild(iwPauseSwitchEl(rec, name, {
         onChange: (updated) => {
           // Mise a jour sur place (pas de redessin) : le focus reste sur l'interrupteur.
@@ -4942,6 +5006,9 @@ function openGrantForm(clientId, clientLabel, presetWorker) {
     <fieldset class="iw-grant-workers"><legend>Workers du forfait <span class="iw-grant-count"></span></legend>
       ${workers.map((w) => `<label class="iw-mode"><input type="checkbox" value="${escapeHtml(w.id)}"${chosen.has(w.id) ? " checked" : ""}><span>${escapeHtml(w.name)}</span></label>`).join("")}</fieldset>
     <label class="iw-check"><input type="checkbox" id="iw-grant-cycle" checked> <span>Nouveau cycle de crédits (facture réglée)</span></label>
+    <div class="iw-field"><label class="iw-label" for="iw-grant-months"><span>Mois couverts par cette facture</span></label>
+      <input type="number" id="iw-grant-months" min="1" max="24" step="1" value="1" aria-describedby="iw-grant-months-h">
+      <div class="iw-hint" id="iw-grant-months-h">Au-delà, le forfait retombe à l'Essai (5 jours de grâce) tant que vous ne l'avez pas reconduit avec la facture suivante.</div></div>
     <label class="iw-check"><input type="checkbox" id="iw-grant-paid"> <span>Je confirme que la facture de ce client est réglée</span></label>
     <div class="iw-trial-actions"><button type="button" class="btn btn-gold" id="iw-grant-go" disabled>Attribuer</button><button type="button" class="btn btn-ghost" id="iw-grant-cancel">Annuler</button></div>
     <div class="iw-field-err" id="iw-grant-msg" role="alert" hidden></div>`;
@@ -4966,7 +5033,8 @@ function openGrantForm(clientId, clientLabel, presetWorker) {
       const r = await fetchJson("/api/admin/grant-workers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clientId, planId: plan.value, workers: picked, newCycle: card.querySelector("#iw-grant-cycle").checked }),
+        body: JSON.stringify({ clientId, planId: plan.value, workers: picked, newCycle: card.querySelector("#iw-grant-cycle").checked,
+          paidMonths: Math.max(1, Math.min(24, parseInt(card.querySelector("#iw-grant-months").value, 10) || 1)) }),
       });
       if (r.error) {
         msg.textContent = r.detail || r.error;
