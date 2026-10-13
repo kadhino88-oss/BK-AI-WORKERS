@@ -308,6 +308,10 @@ check("enregistrer une modification qui repasserait une installation active en b
       'iwT("Cette modification laisse un élément obligatoire vide' in BLOCK and "elle repasse en brouillon" in BLOCK)
 check("la session expiree remet le drapeau local a faux avant de rouvrir la connexion (sinon la connexion ne s'ouvre jamais)",
       re.search(r"accountAuthenticated = false;\s+iwClose\(\{ skipSave: true \}\);\s+requireAccount", BLOCK) is not None)
+check("toute reponse ACCOUNT_REQUIRED de l'assistant passe par iwSessionLost (session finie : la connexion s'ouvre vraiment)",
+      "function iwSessionLost(action)" in BLOCK and BLOCK.count("iwSessionLost(") >= 5 and "ACCOUNT_REQUIRED\") { requireAccount(" not in BLOCK
+      and "ACCOUNT_REQUIRED\") { btn.disabled = false; requireAccount(" not in BLOCK)
+check("l'essai a blanc propose le forfait suivant quand le quota est atteint (comme les autres cartes « quota atteint »)", 'id="iw-upgrade-now"' in BLOCK and "startUpgrade(up)" in BLOCK)
 check("la page Tarifs lit l'echelle publique complete, pas celle du forfait du visiteur", "/api/mission-levels?scale=public" in APP)
 check("la montee en gamme propose le rythme de paiement de l'abonne (annuel ou mensuel)", "up && up.interval) || billingInterval" in APP and "nxt.priceChf.year" in APP)
 check("l'annulation d'un abonnement demande une confirmation et annonce la fin de periode", "Résilier l'abonnement ?" in APP and "cancelAtPeriodEnd" in APP)

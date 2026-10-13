@@ -3720,7 +3720,7 @@ async function iwOpenNow(workerId, startStep) {
     showToast(e.message || "Impossible d'ouvrir l'installation pour le moment. Réessayez.", false);
     return;
   }
-  if (data.error === "ACCOUNT_REQUIRED") { requireAccount(() => openInstallWizard(workerId, startStep)); return; }
+  if (data.error === "ACCOUNT_REQUIRED") { iwSessionLost(() => openInstallWizard(workerId, startStep)); return; }
   if (data.error) { showToast(data.detail || "Ce Worker n'a pas encore de fiche d'installation.", false); return; }
   if (!data.entitled) {
     showToast("Ce Worker ne fait pas partie de votre forfait : embauchez-le d'abord.", false);
@@ -3783,6 +3783,13 @@ async function iwOpenNow(workerId, startStep) {
   iwSetSaveState(iw.dirty ? "dirty" : (iw.installation ? "saved-before" : "none"));
   const title = document.getElementById("iw-title");
   if (title) title.focus();
+}
+
+// Reponse ACCOUNT_REQUIRED du serveur = la session est finie (30 jours, ou deconnexion dans un autre onglet). Le drapeau local est perime : sans le
+// remettre a faux, requireAccount relancerait l'action au lieu d'ouvrir la fenetre de connexion, et le bouton ne ferait rien.
+function iwSessionLost(action) {
+  accountAuthenticated = false;
+  requireAccount(action);
 }
 
 function iwBeforeUnload(e) {
@@ -4394,7 +4401,7 @@ async function iwRunTrial() {
   if (!box) return;
   if (outcome.accountRequired) {
     iwClose({ skipSave: true });
-    requireAccount(() => openInstallWizard(workerId, 4));
+    iwSessionLost(() => openInstallWizard(workerId, 4));
     return;
   }
   if (outcome.timedOut) {
@@ -4403,8 +4410,13 @@ async function iwRunTrial() {
   }
   const result = outcome.result || {};
   if (result.error === "SUBSCRIPTION_REQUIRED") {
-    box.innerHTML = `<div class="iw-alert iw-alert-warn"><div class="iw-alert-title">Abonnement requis</div><p>${escapeHtml(result.detail || "Votre quota est épuisé.")}</p><button type="button" class="btn btn-gold" id="iw-to-billing">Voir les abonnements</button></div>`;
+    // Comme toutes les cartes « quota atteint » : le forfait suivant (avec le rythme de paiement du client) en plus du lien vers tous les forfaits.
+    const up = result.upgrade && result.upgrade.next && !result.upgrade.next.onQuote ? result.upgrade : null;
+    const upgradeBtn = up ? `<button type="button" class="btn btn-gold" id="iw-upgrade-now">${escapeHtml(iwTf("Passer à {name}", { name: up.next.name }))}</button> ` : "";
+    box.innerHTML = `<div class="iw-alert iw-alert-warn"><div class="iw-alert-title">Abonnement requis</div><p>${escapeHtml(result.detail || "Votre quota est épuisé.")}</p>${upgradeBtn}<button type="button" class="btn ${up ? "btn-ghost" : "btn-gold"}" id="iw-to-billing">Voir les abonnements</button></div>`;
     box.querySelector("#iw-to-billing").addEventListener("click", async () => { await iwClose(); showView("billing"); });
+    const upgradeNow = box.querySelector("#iw-upgrade-now");
+    if (upgradeNow) upgradeNow.addEventListener("click", async () => { await iwClose(); showView("billing"); startUpgrade(up); });
     return;
   }
   if (result.error === "WORKER_NOT_INCLUDED") {
@@ -4721,7 +4733,7 @@ function iwRenderRequestForm(slot, workerId, workerName, hired) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: slot.querySelector("#iw-req-msg").value.trim() }),
       });
-      if (r.error === "ACCOUNT_REQUIRED") { btn.disabled = false; requireAccount(() => loadInstallPanel(workerId)); return; }
+      if (r.error === "ACCOUNT_REQUIRED") { btn.disabled = false; iwSessionLost(() => loadInstallPanel(workerId)); return; }
       if (r.error) {
         err.textContent = r.error === "ALREADY_INCLUDED" ? "Ce Worker fait déjà partie de votre forfait. Rechargez la page." : (r.detail || "Demande impossible pour le moment. Réessayez plus tard.");
         err.hidden = false;
@@ -4768,7 +4780,7 @@ function iwRenderHirePanel(panel, title, workerId, data, hired) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(replaceId ? { workerId, replaceWorkerId: replaceId } : { workerId }),
       });
-      if (r.error === "ACCOUNT_REQUIRED") { requireAccount(() => loadInstallPanel(workerId)); return; }
+      if (r.error === "ACCOUNT_REQUIRED") { iwSessionLost(() => loadInstallPanel(workerId)); return; }
       if (r.error) {
         let text = r.detail || "Embauche impossible pour le moment.";
         if (r.error === "SWAP_COOLDOWN" && r.nextSwapAtUtc) text += " Prochain remplacement possible le " + iwDate(r.nextSwapAtUtc) + ".";

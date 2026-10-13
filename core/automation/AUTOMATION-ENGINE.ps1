@@ -190,6 +190,39 @@ function Invoke-AutomationRun {
     # dashboard/quota-check.py (server.chloe_worker_cap). Absent = pas de plafond.
     $MaxWorkersEnv = $null
 
+    # Saute cette execution SANS lancer de mission : trace le saut comme une execution normale (meme forme de RunRecord, meme dossier runs/<id>/, lu par
+    # Get-AutomationRuns), avance l'echeance, et renvoie l'enregistrement (le pont lira son statut).
+    function Write-AutomationSkip([string]$SkipStatus, $SkipDetail) {
+        $SkipRecord = [ordered]@{
+            automationId = $Automation.id
+            ranAtUtc     = [DateTime]::UtcNow.ToString("o")
+            status       = $SkipStatus
+            detail       = $SkipDetail
+        }
+        $SkipDir = Join-Path $Script:AutomationRunsDir $Automation.id
+        if (-not (Test-Path -LiteralPath $SkipDir -PathType Container)) {
+            New-Item -ItemType Directory -Path $SkipDir -Force | Out-Null
+        }
+        $SkipFile = Join-Path $SkipDir ("run-" + [DateTime]::UtcNow.ToString("yyyyMMdd-HHmmss") + ".json")
+        ($SkipRecord | ConvertTo-Json -Depth 20) | Set-Content -LiteralPath $SkipFile -Encoding UTF8
+
+        Invoke-BKStateLocked {
+            $Automations = @(Get-Automations)
+            foreach ($A in $Automations) {
+                if ($A.id -eq $Automation.id) {
+                    $A.lastRunAtUtc  = $SkipRecord.ranAtUtc
+                    $A.lastRunStatus = $SkipStatus
+                    $A.nextRunAtUtc  = [DateTime]::UtcNow.AddMinutes($A.frequencyMinutes).ToString("o")
+                    $A.runCount      = [int]$A.runCount + 1
+                }
+            }
+            Save-Automations -Automations $Automations
+        } | Out-Null
+
+        return $SkipRecord
+    }
+    $VerdictObtained = $false
+
     # -----------------------------------------------------------------
     # Garde-fou quota (correctif securite).
     # Le controle de quota subscription_blocks_mission ne vivait QUE dans
@@ -213,6 +246,7 @@ function Invoke-AutomationRun {
             $QuotaLine = & $PyCmd $QuotaScript $QuotaClientId ([string]$Automation.workerId) $QuotaMode 2>$null | Select-Object -Last 1
             if ($QuotaLine) {
                 $QuotaVerdict = $QuotaLine | ConvertFrom-Json
+                $VerdictObtained = $true
                 if (-not $QuotaVerdict.blocked -and $QuotaVerdict.PSObject.Properties.Name -contains "allowedWorkers" -and $QuotaVerdict.allowedWorkers) {
                     # Offre "Worker a l'unite" : liste des Workers embauches, relue par Submit-Task.ps1 et Chloe (BK_ALLOWED_WORKERS).
                     $AllowedWorkersEnv = [string]$QuotaVerdict.allowedWorkers
@@ -229,40 +263,10 @@ function Invoke-AutomationRun {
                         "INSTALLATION_PAUSED" { "installation_paused" }
                         default { "quota_exceeded" }
                     }
-                    # Quota epuise : on NE soumet PAS la tache. On trace le
-                    # saut avec le MEME mecanisme de persistance qu'un run
-                    # normal (meme forme de RunRecord + meme dossier runs/<id>/,
-                    # lu par Get-AutomationRuns), au statut quota_exceeded, on
-                    # avance l'echeance comme un passage normal, puis on
-                    # retourne tot un objet de la meme forme que le retour
-                    # habituel (le pont lira $RunResult.status = "quota_exceeded").
-                    $SkipRecord = [ordered]@{
-                        automationId = $Automation.id
-                        ranAtUtc     = [DateTime]::UtcNow.ToString("o")
-                        status       = $SkipStatus
-                        detail       = $QuotaVerdict.detail
-                    }
-                    $SkipDir = Join-Path $Script:AutomationRunsDir $Automation.id
-                    if (-not (Test-Path -LiteralPath $SkipDir -PathType Container)) {
-                        New-Item -ItemType Directory -Path $SkipDir -Force | Out-Null
-                    }
-                    $SkipFile = Join-Path $SkipDir ("run-" + [DateTime]::UtcNow.ToString("yyyyMMdd-HHmmss") + ".json")
-                    ($SkipRecord | ConvertTo-Json -Depth 20) | Set-Content -LiteralPath $SkipFile -Encoding UTF8
-
-                    Invoke-BKStateLocked {
-                        $Automations = @(Get-Automations)
-                        foreach ($A in $Automations) {
-                            if ($A.id -eq $Automation.id) {
-                                $A.lastRunAtUtc  = $SkipRecord.ranAtUtc
-                                $A.lastRunStatus = $SkipStatus
-                                $A.nextRunAtUtc  = [DateTime]::UtcNow.AddMinutes($A.frequencyMinutes).ToString("o")
-                                $A.runCount      = [int]$A.runCount + 1
-                            }
-                        }
-                        Save-Automations -Automations $Automations
-                    } | Out-Null
-
-                    return $SkipRecord
+                    # Quota epuise, Worker non embauche ou en pause : on NE soumet PAS la tache. On trace le saut avec le MEME mecanisme de
+                    # persistance qu'un run normal (statut quota_exceeded / worker_not_included / installation_paused), on avance l'echeance comme
+                    # un passage normal, puis on retourne tot un objet de la meme forme que le retour habituel.
+                    return (Write-AutomationSkip $SkipStatus $QuotaVerdict.detail)
                 }
             }
         }
@@ -273,6 +277,30 @@ function Invoke-AutomationRun {
         # echouer l'automatisation — le quota est indicatif. On laisse
         # passer et on execute normalement.
         Write-Verbose "Verification de quota ignoree (echec non bloquant) : $($_.Exception.Message)"
+    }
+
+    # Le QUOTA reste indicatif (fail-open ci-dessus), mais les DROITS d'acces d'un forfait restreint (Solo, Trio : seuls les Workers embauches) ne
+    # s'ouvrent jamais par defaut. Sans verdict du verificateur (python absent, import impossible, sortie vide...), on lit directement l'etat de
+    # facturation du client : forfait restreint, ou fichier illisible -> l'execution est sautee (worker_not_included) au lieu de lancer un Worker
+    # qui n'est peut-etre pas embauche. Aucun fichier de facturation (compte a l'essai) ou forfait classique : on continue comme avant.
+    if (-not $VerdictObtained) {
+        $RestrictedReason = $null
+        try {
+            $BillingClientId = Get-AutomationClientId $Automation
+            if ($BillingClientId -match '^CLI-CUST-[A-F0-9]{8}$') {
+                $BillingFile = Join-Path $Script:AutomationRoot ("core/billing/data/" + $BillingClientId + ".json")
+                if (Test-Path -LiteralPath $BillingFile -PathType Leaf) {
+                    $BillingState = Get-Content -LiteralPath $BillingFile -Raw -Encoding UTF8 | ConvertFrom-Json
+                    if (@("solo", "trio") -contains [string]$BillingState.planId) { $RestrictedReason = "forfait " + [string]$BillingState.planId }
+                }
+            }
+        }
+        catch {
+            $RestrictedReason = "etat de facturation illisible"
+        }
+        if ($RestrictedReason) {
+            return (Write-AutomationSkip "worker_not_included" ("Les droits d'acces aux Workers n'ont pas pu etre verifies ($RestrictedReason) : l'execution est sautee par prudence, elle reprendra au prochain passage."))
+        }
     }
 
     $OutFile = Join-Path $Script:AutomationRunsDir ("tmp-" + [guid]::NewGuid().ToString("N") + ".json")

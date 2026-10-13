@@ -274,6 +274,55 @@ class AutomationLevel(unittest.TestCase):
         self.assertNotIn("alex", allowed)
         self.assertIn("maya", allowed)
 
+    # ------------------------------------------------------------------------------------------------------ verificateur casse : droits fermes
+    def test_a_broken_checker_never_opens_the_workers_of_a_restricted_plan(self):
+        # Revue du 2026-10-13 : le quota est indicatif (fail-open), mais sans verdict du verificateur (python absent, import impossible) une automatisation
+        # d'un Worker NON embauche d'un client Solo se lancait quand meme.
+        write_json(os.path.join(self.root, "core", "billing", "data", A + ".json"),
+                   {"planId": "solo", "gridVersion": 2, "cycleStartUtc": "2026-10-01T00:00:00Z", "extraCredits": 0, "history": [], "hiredWorkers": ["nora"]})
+        res, p = self.run_automation(worker="alex", BK_PYTHON=os.path.join(self.tmp, "no-such-python.exe"))
+        self.assertEqual(res["status"], "worker_not_included", p.stdout[-300:] + p.stderr[-300:])
+        self.assertEqual(self.tasks(), [], "aucune mission lancee, donc aucun credit")
+        run_files = glob.glob(os.path.join(self.root, "core", "automation", "data", "runs", "AUTO-TEST000001", "run-*.json"))
+        self.assertEqual(len(run_files), 1)
+        with open(run_files[0], encoding="utf-8-sig") as f:
+            self.assertIn("pas pu etre verifies", json.load(f)["detail"])
+        # un fichier de facturation illisible : on ne devine pas non plus
+        with open(os.path.join(self.root, "core", "billing", "data", A + ".json"), "w", encoding="utf-8") as f:
+            f.write("{ illisible")
+        res, p = self.run_automation(worker="alex", BK_PYTHON=os.path.join(self.tmp, "no-such-python.exe"))
+        self.assertEqual(res["status"], "worker_not_included")
+        self.assertEqual(self.tasks(), [])
+
+    def test_a_broken_checker_still_lets_the_other_plans_run_because_the_quota_is_indicative(self):
+        for plan in ("pro", "essai"):
+            shutil.rmtree(os.path.join(self.root, "runtime"), ignore_errors=True)
+            shutil.rmtree(os.path.join(self.root, "core", "automation", "data"), ignore_errors=True)
+            write_json(os.path.join(self.root, "core", "billing", "data", A + ".json"),
+                       {"planId": plan, "gridVersion": 2, "cycleStartUtc": "2026-10-01T00:00:00Z", "extraCredits": 0, "history": []})
+            res, p = self.run_automation(worker="alex", BK_PYTHON=os.path.join(self.tmp, "no-such-python.exe"))
+            self.assertEqual(len(self.tasks()), 1, (plan, p.stdout[-300:] + p.stderr[-300:]))
+        shutil.rmtree(os.path.join(self.root, "runtime"), ignore_errors=True)
+        shutil.rmtree(os.path.join(self.root, "core", "billing", "data"), ignore_errors=True)           # compte sans fichier de facturation : comme avant
+        shutil.rmtree(os.path.join(self.root, "core", "automation", "data"), ignore_errors=True)
+        res, p = self.run_automation(worker="alex", BK_PYTHON=os.path.join(self.tmp, "no-such-python.exe"))
+        self.assertEqual(len(self.tasks()), 1, p.stdout[-300:] + p.stderr[-300:])
+
+    def test_the_skip_of_a_paused_or_unhired_worker_is_still_recorded_and_the_next_run_moves_on(self):
+        write_json(os.path.join(self.root, "runtime", "installations", A, "ALEX.json"), {"workerId": "alex", "clientId": A, "status": "paused", "services": {}, "notes": ""})
+        autos_path = os.path.join(self.root, "core", "automation", "data", "automations.json")
+        write_json(autos_path, [{"id": "AUTO-TEST000001", "clientId": A, "workerId": "alex", "objective": "Rapport hebdomadaire", "frequencyMinutes": 60, "enabled": True,
+                                 "notifySlack": False, "createdAtUtc": "2026-10-01T00:00:00.0000000Z", "lastRunAtUtc": None, "lastRunStatus": None,
+                                 "nextRunAtUtc": "2026-10-01T00:00:00.0000000Z", "runCount": 0}])
+        out_file = os.path.join(self.tmp, "tick-out.json")
+        p = subprocess.run([PWSH, "-NoProfile", "-NonInteractive", "-File", os.path.join(self.root, "dashboard", "Automation-Bridge.ps1"), "-Action", "tick", "-ClientId", A,
+                            "-OutFile", out_file], capture_output=True, text=True, encoding="utf-8", errors="replace", env=self.env(), timeout=600, cwd=self.root)
+        self.assertTrue(os.path.isfile(out_file), p.stdout[-300:] + p.stderr[-300:])
+        self.assertEqual(self.tasks(), [])
+        autos = json.load(open(autos_path, encoding="utf-8-sig"))
+        self.assertEqual((autos[0]["lastRunStatus"], autos[0]["runCount"]), ("installation_paused", 1))
+        self.assertGreater(autos[0]["nextRunAtUtc"], "2026-10-02")                                      # l'echeance avance comme pour une execution normale
+
 
 if __name__ == "__main__":
     ok = unittest.main(verbosity=2, exit=False).result.wasSuccessful()

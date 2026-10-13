@@ -301,7 +301,7 @@ Object.assign(window.BK_EN, {
 Object.assign(window.BK_EN, {
   "Résilier l'abonnement ? Votre forfait reste actif jusqu'à la fin de la période déjà payée, puis votre compte repasse à l'essai. Aucun nouveau prélèvement.": "Cancel the subscription? Your plan stays active until the end of the period already paid, then your account goes back to the trial. No further charge.",
   "Résiliation enregistrée : votre forfait reste actif jusqu'au": "Cancellation recorded: your plan stays active until",
-  "Recommandé pour une PME": "Recommended for an SMB", "Étape {n} : {label}": "Step {n}: {label}", "Cet essai sera lancé au niveau {level} : {n} crédit(s) de votre quota.": "This test will run at the {level} level: {n} credit(s) from your quota.",
+  "Recommandé pour une PME": "Recommended for an SMB", "Étape {n} : {label}": "Step {n}: {label}", "Passer à {name}": "Move up to {name}", "Cet essai sera lancé au niveau {level} : {n} crédit(s) de votre quota.": "This test will run at the {level} level: {n} credit(s) from your quota.",
   "non lancée : Worker en pause": "not started: Worker paused", "non lancée : Worker hors de votre forfait": "not started: Worker outside your plan",
   "non lancée : quota de crédits atteint": "not started: credit quota reached", "Suspendue (Worker en pause)": "Suspended (Worker paused)"
 });
