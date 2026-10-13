@@ -218,7 +218,7 @@ class AutomationLevel(unittest.TestCase):
         self.submit("alex", BK_MISSION_LEVEL="equilibre", BK_ALLOWED_WORKERS="alex", STUB_DEGRADED="1")
         self.submit("alex", BK_MISSION_LEVEL="equilibre", BK_ALLOWED_WORKERS="alex")
         srv, _ = load_server("bk_server_credits_probe")                       # la fonction de calcul du serveur, appliquee aux traces ecrites par Submit-Task.ps1
-        self.assertEqual([srv.task_credits(t) for t in self.tasks()], [0, 6])
+        self.assertEqual(sorted(srv.task_credits(t) for t in self.tasks()), [0, 6])       # l'ordre des fichiers est aleatoire (identifiants de tache)
 
     # ------------------------------------------------------------------------------------------------------ plafond de Workers pour Chloe, pause
     def test_quota_check_caps_the_workers_chloe_can_call_with_the_remaining_credits(self):
