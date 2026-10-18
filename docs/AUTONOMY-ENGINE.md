@@ -521,7 +521,74 @@ Un vérificateur complaisant est pire que pas de vérificateur. Le jeu de tests 
 
 ## 5. Validation humaine sans fatigue
 
-*(à approfondir)* Articles d'approbation, lots, classes de risque, expiration, notifications (réutilise `mailer.send_email`).
+### 5.1 Principe
+
+La loi de la plateforme ne change pas : toute action SORTANTE (envoi, publication, paiement, suppression, appel, dépense publicitaire, modification du site en ligne d'un client) exige la validation explicite du client. Ce qui change : la mission actuelle **s'arrête** à la première action ; le projet **la met en file et continue**. Le Worker prépare tout ; le client valide en lots ; le moteur exécute par le chemin existant.
+
+### 5.2 L'article d'approbation (`approvals.json`)
+
+```json
+{
+  "id": "APR-7c41e9b2",
+  "batchId": "BAT-S5-gmail-DRAFT_MESSAGE",
+  "projectId": "PRJ-9F1C…", "stepId": "S5", "worker": "alex",
+  "createdUtc": "2026-10-20T09:14:00Z", "expiresUtc": "2026-10-27T09:14:00Z", "validUntilUtc": null,
+  "kind": "connector_action",
+  "connectorId": "gmail", "operation": "DRAFT_MESSAGE",
+  "params": {"To": "marie.dupont@exemple.ch", "Subject": "…", "Body": "…"},
+  "display": {"title": "E-mail de prospection à Marie Dupont (Atelier Dupont SA)",
+              "what": "Dépose un brouillon dans votre boîte Gmail ; rien n'est envoyé.",
+              "why": "Prospect qualifié 8/10 : PME de 12 personnes, recrute un commercial (source : offre d'emploi du 2026-10-14).",
+              "recipients": 1, "spendChf": null},
+  "risk": "low", "reversible": true, "supersedes": null,
+  "status": "PENDING",
+  "decision": null, "decidedUtc": null, "editedParams": null,
+  "execution": null, "idempotencyKey": "9a0c…",
+  "dedupKey": "S5|gmail|DRAFT_MESSAGE|3b7e…"
+}
+```
+
+`status` ∈ `PENDING` → `APPROVED` → `EXECUTING` → `EXECUTED` | `FAILED` | `UNKNOWN_CHECK_MANUALLY` ; ou `REJECTED`, `EXPIRED`, `SUPERSEDED`. `execution` = `{"startedUtc","finishedUtc","connectorStatus","detail"(sans secret)}`. `display` est ce que le client voit : titre, ce que ça fait réellement (un brouillon n'est pas un envoi), pourquoi, nombre de destinataires, montant. Les paramètres affichés passent par `_safe_action_params` (masquage des clés `token/secret/password/…`, troncature 2 000 caractères), comme `attach_pending_action` aujourd'hui.
+
+**Création** : le lanceur écrit une ligne par article dans `spool/approvals-<StepId>.jsonl` (il génère l'`id` pour pouvoir répondre `QUEUED:APR-xxxx` au modèle) ; à la fin de l'étape (et toutes les 10 s pendant l'étape, pour que le client voie arriver les articles), `projects.py` **valide et ingère** : le connecteur est activé pour CE client et l'opération existe dans `$Script:OperationTable` (liste servie par `Connector-Dispatch.ps1`), `params` ≤ 8 Ko, aucun motif de secret (`Test-BKSecretLike`), `dedupKey` inconnu, au plus **50 articles `PENDING` par projet** et 200 par client (au-delà : l'outil répond `APPROVAL_QUEUE_FULL` et le Worker regroupe ou s'arrête), `display.what` obligatoire. Un article invalide est écarté et journalisé (`approval_rejected_by_engine`), jamais exécuté.
+
+### 5.3 Classes de risque et lots
+
+| Risque | Opérations (par défaut ; table `core/projects/APPROVAL-RISK.json`, le propriétaire peut durcir) | Interface |
+|---|---|---|
+| `low` | vrais brouillons (`gmail/outlook_mail DRAFT_MESSAGE`, `wordpress CREATE_DRAFT/UPDATE_DRAFT`, `zendesk/intercom DRAFT_REPLY`), tâches et fiches (`CREATE_TASK`, `CREATE_CARD`, `CREATE_ITEM`), notes CRM | approbation par **lot** en un clic |
+| `medium` | tout ce qui part vraiment chez un tiers ou se publie : `*:CREATE_DRAFT_POST` (publie sur LinkedIn/Facebook/X/TikTok/Instagram), `slack:POST_MESSAGE`, `teams/whatsapp_business:DRAFT_MESSAGE` (envoient), `*:CREATE_EVENT` avec invités, `webflow:UPDATE_DRAFT`, mise à jour de CRM existant | lot en un clic, **3 exemples tirés au hasard affichés en entier** avant de pouvoir valider un lot de plus de 10 |
+| `high` | `twilio:PLACE_CALL`, tout `CREATE_REFUND/CREATE_PAYOUT/CREATE_PAYMENT`, `meta_ads` et tout connecteur qui dépense (création ou activation de campagne), suppression, publication du site, envoi à plus de 20 destinataires | **article par article** (pas de lot), confirmation saisie « J'autorise » ; montant et destinataires en gras ; le compte propriétaire `CLI-DASHBOARD` garde la règle existante (sorties d'argent toujours manuelles) |
+| inconnu | toute écriture absente de la table | traité `medium` |
+
+**Lot** (`batchId`) : articles de la **même étape**, du même connecteur et de la même opération ; l'interface propose « Approuver les 12 brouillons », « Tout rejeter », « Passer en revue un par un ». Une décision de lot porte au plus 50 identifiants (`POST …/approvals/batch`). Le client peut modifier un article avant de l'approuver (`editedParams`: tout paramètre sauf les clés de secret, conservé avec différence).
+
+**Pré-autorisation du client** (« Laisser mes Workers agir seuls ») : elle reste limitée aux vrais brouillons (`$AutoApproveSafeOps`), même dans un projet ; l'article est alors créé avec `status: EXECUTED`, `autoApproved: true`, visible au journal. `BK_AUTOAPPROVE_DRAFTS_ONLY=0` est **ignoré** pour les projets (pas de retour à l'ancien comportement, plus dangereux, dans le mode autonome). Une installation de Worker en pause (`Test-BKInstallationPaused`) désactive aussi l'auto-approbation, comme aujourd'hui.
+
+### 5.4 Le projet continue ; il ne s'arrête que s'il le faut
+
+- L'étape qui crée des articles se termine normalement (`DONE`) : son livrable est « les actions préparées ».
+- Une étape ultérieure déclare `requiresApprovalsFrom: ["S5"]` quand elle a besoin que ces actions soient **exécutées** (ex. « relancer les prospects dont l'e-mail a été envoyé »). Elle reste `BLOCKED/APPROVAL` tant que ces articles ne sont pas `EXECUTED` ou `REJECTED`/`EXPIRED` ; toutes les autres étapes continuent.
+- Statut projet `WAITING_APPROVAL` seulement quand **aucune** étape ne peut avancer et qu'au moins une attend une approbation. L'approbation, le rejet ou l'expiration donnent un coup de coude au superviseur.
+- Cas fréquent de fin de projet : tout est terminé sauf des articles en attente → le projet est `DONE` avec « 12 actions en attente de votre validation » **seulement si** le plan marque ces actions comme non nécessaires aux critères ; sinon `WAITING_APPROVAL`.
+
+### 5.5 Exécution (chemin existant, une seule fois)
+
+`POST …/approvals/<id>/approve` (ou le lot) : sous le verrou du projet, `PENDING → APPROVED → EXECUTING` (écrit sur disque **avant** l'appel), puis `run_connector_dispatch_bridge(connectorId, operation, params, clientId)` — la fonction de `server.py` qui lance `Confirm-Connector-Action.ps1` (délai 30 s) et qui sert déjà `/api/connector-action/confirm` — puis `EXECUTED` ou `FAILED` avec `Status`/`Detail` du connecteur. Les articles d'un lot sont exécutés **un par un** par un thread d'exécution (jamais dans le thread HTTP), espacés de 1 s, au plus 25 par minute et par client. Un échec n'arrête pas le lot ; il est affiché, et son motif est ajouté à `inbox.jsonl` (`kind: "approval_feedback"`) pour que le Worker propriétaire le traite à sa prochaine étape. `idempotencyKey` empêche le double clic ; un `EXECUTING` trouvé au redémarrage devient `UNKNOWN_CHECK_MANUALLY` (2.7). L'ancienne route `/api/connector-action/confirm` et les fichiers `PENDING-ACTION-<TaskId>.json` des missions **ne sont pas modifiés** : un projet n'en écrit jamais.
+
+### 5.6 Rejet, modification, retour au Worker
+
+- `reject {reason?}` : l'article passe `REJECTED` ; le motif devient un message `approval_feedback` pour le Worker propriétaire (« le client n'a pas voulu : trop insistant »). Le Worker produit au besoin un article de remplacement (`supersedes: "APR-…"`), jamais deux fois le même contenu refusé (le moteur compare `dedupKey`).
+- `approve` avec `params` modifiés : exécuté avec les valeurs du client ; la différence est consignée et le Worker en est informé (apprentissage : une note `feedback` est proposée à la mémoire du client).
+- Un message libre du client (`POST …/messages`) peut aussi rejeter implicitement : le Worker le lit au prochain contexte ; le client garde la main avec les boutons.
+
+### 5.7 Expiration
+
+Un article expire **7 jours** après sa création (`approvalTtlDays`, réglable) ou à `validUntilUtc` s'il est plus proche (le Worker le pose pour un contenu daté : promotion, événement). Rappels : par e-mail à J+1 et J+3 (résumé groupé, section 5.8). À l'expiration : `EXPIRED`, non exécuté ; les étapes qui en dépendaient passent `BLOCKED/APPROVAL_EXPIRED` ; le projet passe `WAITING_INPUT` avec trois choix : *renouveler* (le Worker représente l'article à jour), *ignorer* (les étapes dépendantes sont `SKIPPED`, le critère concerné est expliqué), *annuler*.
+
+### 5.8 Notifications (aucun tiers nouveau)
+
+Le serveur injecte une fonction `notify(client_id, kind, subject, html, text)` (même modèle que `_notify_pilot_email`) basée sur `mailer.send_email(to, subject, html, text, gmail_bridge=run_mailer_bridge)`. L'adresse est celle du compte (`_load_accounts()`), vérifiée (`account_email_verified`). Événements : `approval_needed` (au plus un e-mail par projet toutes les **30 min**, avec le nombre d'articles et leurs titres, jamais le contenu), `input_needed`, `quota_waiting` (avec l'heure de reprise et le lien de montée en gamme), `budget_reached`, `done`, `failed`, `approval_reminder`. Limites : 1 e-mail par type et par projet et par heure, 10 par client et par jour ; désactivable (`notifyProjects: false` dans le profil, défaut vrai). Chaque e-mail renvoie vers `PUBLIC_BASE_URL/#projet/<ProjectId>` ; aucune donnée sensible dans l'objet ou le corps (pas de texte de brouillon, pas d'adresse tierce). Les envois sont journalisés (`log_activity("project_notification", …)`) et un échec d'envoi n'interrompt jamais le projet.
 
 ## 6. Budget et sécurité
 
