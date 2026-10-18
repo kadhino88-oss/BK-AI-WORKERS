@@ -792,7 +792,7 @@ Atomicité : le verrou du grand livre est un `threading.RLock` **par client** (d
 - **Échéance d'une réservation** (`reservationTtlSec`) : une réservation `HELD` plus vieille que son délai est examinée par le *reaper* d'usage (appelé à chaque `reserve` et au démarrage) : si `ref` désigne une mission, on regarde le `TASK-<id>.json` (écrit → on règle sur son `Credits` via `task_credits`) ; sinon la réservation est **libérée à 0** (une mission qui n'a rien livré ne coûte rien, règle existante, `NON_BILLABLE_TASK_STATUSES`) ; pour une étape de projet, on règle d'après `steps/<id>/<n>/cost.json` (le coût dépensé auprès d'Anthropic existe même si le processus est mort).
 - **Source de vérité** : les traces (`runtime/tasks/TASK-*.json` avec `Credits`, et `runtime/projects/<ClientId>/<ProjectId>/cost-ledger.jsonl`) font foi ; le grand livre est un cache O(1). `usage.reconcile(client_id)` (au plus toutes les 6 h par client actif, et à la demande de l'administration) recalcule `month.used` (somme des `task_credits` du cycle + règlements de projets du cycle) et la consommation de la session et de la semaine courantes (champ `CreatedAtUtc` des traces), consigne l'écart (`drift`) et **corrige le cache**, jamais les traces.
 - `get_billing` : `creditsUsed` = `month.used` du grand livre (plus de balayage à chaque appel) ; le balayage ne subsiste que dans `reconcile` et dans un test de non-régression qui compare les deux sur un jeu de traces. **Sans cette règle, les crédits des projets (qui ne sont pas des fichiers `TASK-*.json`) échapperaient au quota mensuel.**
-- **Chemins de consommation** : (1) `submit_task` (point d'entrée UNIQUE des missions : routes, WhatsApp, API publique) réserve `level_credits × nombre de Workers autorisés à Chloé` puis règle sur les `Credits` des traces écrites ; (2) étapes de projet (6.3) ; (3) automatisations : `quota-check.py` appelle `usage.charge(client, 1, kind="automation")` (réservation + règlement immédiats, 1 crédit, niveau Rapide) et la tâche est sautée, sans erreur, si une fenêtre est atteinte (elle sera retentée au tick suivant) ; (4) essai public et propriétaire : exemptés.
+- **Chemins de consommation** : (1) `submit_task` (point d'entrée UNIQUE des missions : routes, WhatsApp, API publique ; rien n'est réservé pour `plan_only=True`, qui ne coûte aucun crédit) réserve `level_credits × nombre de Workers autorisés à Chloé` puis règle sur les `Credits` des traces écrites ; (2) étapes de projet (6.3) ; (3) automatisations : `quota-check.py` appelle `usage.charge(client, 1, kind="automation")` (réservation + règlement immédiats, 1 crédit, niveau Rapide) et la tâche est sautée, sans erreur, si une fenêtre est atteinte (elle sera retentée au tick suivant) ; (4) essai public et propriétaire : exemptés.
 
 ### 6b.7 Changements de forfait en cours de fenêtre, forfaits hérités
 
@@ -846,7 +846,7 @@ Refus d'une mission (`402`), nouveau code `USAGE_LIMIT_REACHED` pour session/sem
 ```json
 {"error": "USAGE_LIMIT_REACHED", "limit": "session", "needed": 6, "remaining": 2, "resetsAtUtc": "2026-10-20T12:12:00Z",
  "detail": "Vous avez utilisé votre quota de session (83 crédits). Il se renouvelle à 14:12 (dans 1 h 12). Pour continuer sans attendre, passez au forfait Pro (115 crédits par session).",
- "usage": { … comme GET /api/usage … }, "upgrade": { … }}
+ "usage": {"…": "comme GET /api/usage"}, "upgrade": {"…": "comme GET /api/usage"}}
 ```
 
 ### 6b.10 Comportement exact d'un projet : `WAITING_QUOTA` et reprise automatique
