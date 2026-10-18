@@ -933,7 +933,148 @@ Le client écrit depuis la page du projet (`POST …/messages`) en choisissant u
 
 ## 7. Contrat d'API
 
-*(à approfondir)* Routes `/api/projects/...`, JSON, codes d'erreur, limites de débit ; interface du lanceur PowerShell.
+### 7.1 Conventions (alignées sur `server.py` existant)
+
+Authentification : `self._resolve_client_id()` (cookie `bk_account` ou porte propriétaire → `CLI-DASHBOARD`) ; absent → `401 {"error":"ACCOUNT_REQUIRED"}`. Un projet d'un autre client → `404 NOT_FOUND` (jamais 403). Corps JSON ≤ 64 Ko sauf création (≤ 8 Mo avec fichiers) via `_read_json_limited` ; réponses `application/json; charset=utf-8` ; dates ISO 8601 UTC avec `Z` ; identifiants `PRJ-…`, `APR-…`, `S<n>`, `C<n>` ; messages `detail` en français (la langue est celle de l'interface ; clé stable `error` pour le code). Routes qui modifient : si l'en-tête `Origin` est présent et diffère de l'origine de `PUBLIC_BASE_URL` → `403 BAD_ORIGIN` (défense en profondeur en plus de `SameSite=Lax`). Tout est derrière `BK_PROJECTS=1` (sinon `503 PROJECTS_DISABLED`).
+
+### 7.2 Routes
+
+| Méthode et chemin | Corps / paramètres | Réponse (succès) |
+|---|---|---|
+| `GET /api/usage` | — | vue d'usage (6b.9) |
+| `GET /api/recipes?workerId=lucas` | — | `{"recipes":[{"id","title","description","workerId","typicalCredits":[70,140],"typicalHours":[1.5,4],"deliverables":["Site 5 pages FR/EN"],"needsFromClient":[…]}]}` (fourni par `recipes.py`) |
+| `POST /api/chloe/triage` | `{"objective"}` | `{"mode":"mission\|project","why","scope":{…},"estimate":{…}\|null}` ; appel Haiku, **non facturé en crédits**, 20 par heure (constructeur Chloé) |
+| `GET /api/projects` | `?status=RUNNING,WAITING_APPROVAL&limit=25&cursor=` | `{"projects":[ProjectSummary],"nextCursor"}` |
+| `POST /api/projects` | `{"goal","workerId":"chloe\|<worker>","recipeId?","level?":"standard\|approfondi","creditsCap?","autoStart?","language?","inputs?":[{"name","text"\|"contentBase64"}]}` | `201 {"projectId","status":"PLANNING\|QUEUED","queuePosition"}` |
+| `GET /api/projects/{id}` | — | `ProjectDetail` (7.3) |
+| `GET /api/projects/{id}/progress` | `?since=<seq>` | `Progress` (7.4), ETag/304 |
+| `POST /api/projects/{id}/plan/approve` | `{"creditsCap?","level?","removeSteps?":["S7"],"autoStart?"}` | `{"ok":true,"status":"RUNNING\|QUEUED"}` |
+| `POST /api/projects/{id}/plan/reject` | `{"feedback"}` | `{"ok":true,"status":"PLANNING"}` (replan, compte 1 sur 3) |
+| `POST /api/projects/{id}/messages` | `{"type":"note\|change\|question","text","stepId?"}` | `202 {"messageId","willReplan":bool}` |
+| `GET /api/projects/{id}/messages` | `?since=<seq>` | `{"messages":[{"id","ts","from":"client\|chloe\|<worker>","type","text"}]}` |
+| `POST /api/projects/{id}/input` | `{"questionId","answer"}` | `{"ok":true,"status":"RUNNING\|QUEUED"}` |
+| `GET /api/projects/{id}/approvals` | `?status=PENDING&limit=50` | `{"approvals":[Approval],"counts":{"PENDING":3,…}}` |
+| `POST /api/projects/{id}/approvals/{aid}/approve` | `{"params?":{…éditions},"confirm?":"J'autorise"}` (`confirm` obligatoire si `risk=high`) | `{"ok":true,"status":"EXECUTING"}` (exécution asynchrone) |
+| `POST /api/projects/{id}/approvals/{aid}/reject` | `{"reason?"}` | `{"ok":true,"status":"REJECTED"}` |
+| `POST /api/projects/{id}/approvals/batch` | `{"ids":[≤50],"decision":"approve\|reject","reason?"}` | `{"results":[{"id","status","error?"}]}` ; refuse `risk=high` (`BATCH_NOT_ALLOWED`) |
+| `POST /api/projects/{id}/pause` · `/resume` | — | `{"ok":true,"status"}` |
+| `POST /api/projects/{id}/cancel` | `{"reason?"}` | `{"ok":true,"status":"CANCELLED"}` |
+| `POST /api/projects/{id}/retry-step` | `{"stepId"}` | `{"ok":true}` (étape `FAILED/PARTIAL/BLOCKED` → `READY`) |
+| `POST /api/projects/{id}/accept-gaps` | `{"criteriaIds?":["C3"]}` | `{"ok":true,"status":"DONE"}` (depuis `WAITING_INPUT/CRITERIA_FAILED` ou `BUDGET_REACHED`) |
+| `POST /api/projects/{id}/budget` | `{"creditsCap"}` | `{"ok":true,"creditsCap","status"}` (refuse au-delà du solde mensuel : `PROJECT_EXCEEDS_QUOTA`) |
+| `DELETE /api/projects/{id}` | `?confirm=1` | `{"ok":true}` (états terminaux seulement) |
+| `GET /api/projects/{id}/deliverables` | — | `{"deliverables":[{"path","title","kind","bytes","stepId","worker","createdUtc","previewable":bool}]}` |
+| `GET /api/projects/{id}/files/{path}` | `?inline=1` | octets ; `Content-Disposition: attachment` (inline seulement images/PDF), `X-Content-Type-Options: nosniff`, `Content-Security-Policy: default-src 'none'; sandbox`, chemin confiné (3.4) |
+| `GET /api/projects/{id}/files/{path}/preview` | — | aperçu JSON de `file_preview.build_preview` (xlsx, docx, pptx, texte) |
+| `GET /api/projects/{id}/export.zip` | `?scope=deliverables\|workspace` | zip en flux (≤ 200 Mo) |
+| `GET /api/projects/{id}/log` | `?since=0&limit=200` | événements bruts paginés |
+| `POST /api/projects/{id}/site/preview` · `DELETE …/site/preview` | `{"ttlHours?":72}` | `{"url":"/preview/<jeton>/","expiresUtc"}` · révocation (section 8) |
+| `GET /api/projects/{id}/site/export.zip` · `POST …/site/publish` | `{"target":"wordpress\|webflow\|manual"}` | zip du site · `{"approvalIds":[…],"guide":"deliverables/PUBLISH-GUIDE.md"}` (section 8) |
+| `GET /api/admin/projects` | porte propriétaire | liste de tous les projets (sans contenu) + compteurs, coûts du jour |
+| `POST /api/admin/projects/pause-client` · `/kill-all` · `/{id}/kill` | `{"clientId","paused"}` · `{"on"}` · — | `{"ok":true}` |
+
+### 7.3 Objets
+
+`ProjectSummary` : `{"projectId","title","goal"(200 car.),"status","waitingFor","statusReason","leadWorker","workers":["lucas","lea"],"percent":42,"currentStep":{"id","title","worker"}|null,"createdUtc","updatedUtc","creditsCharged","creditsCap","approvalsPending":3,"inputsPending":0,"resumeAtUtc":null,"queuePosition":null}`. `percent` = somme des `estimateCredits` des étapes `DONE` ÷ somme totale (étapes sans estimation : poids 1) ; plafonné à 95 tant que la vérification finale n'a pas réussi, 100 à `DONE`.
+
+`ProjectDetail` = `ProjectSummary` + `plan` (objectif, hypothèses, `criteria[]` avec dernier `verdict` et résumé de preuves, `steps[]` avec `status`, `attempts`, `worker`, `dependsOn`, `summary`, `handoffNote`, `credits`, `deliverables[]`) + `workers[]` (6c.10) + `budget` + `usage` (extrait de 6b.9) + `deliverables[]` + `approvals.counts` + `questions[]` (questions ouvertes de `request_input` : `{"id","question","why","blocking","choices","default"}`) + `verification` (dernier tour) + `events` (30 derniers) + `site` (`{"previewActive","expiresUtc"}` si atelier de sites) + `capabilities` (`{"canPause":…, "canResume":…, "canCancel":…, "canApprove":…}` pour griser les boutons sans logique côté interface).
+
+`Approval` : `display`, `status`, `risk`, `reversible`, `batchId`, `recipients`, `spendChf`, `params` masqués (`_safe_action_params`), `editableFields` (clés modifiables), `createdUtc`, `expiresUtc`, `worker`, `stepId`.
+
+### 7.4 `GET /api/projects/{id}/progress?since=<seq>` (interrogation)
+
+```json
+{"seq": 192, "status": "RUNNING", "waitingFor": null, "percent": 45,
+ "currentStep": {"id": "S5", "title": "Traduction EN", "worker": "emma", "startedUtc": "…"},
+ "stepsRunning": 1, "queuePosition": null, "resumeAtUtc": null,
+ "approvalsPending": 2, "inputsPending": 0,
+ "creditsCharged": 47, "creditsCap": 180,
+ "usage": {"binding": "session", "allowedNow": 36, "nextRenewalUtc": "2026-10-20T12:12:00Z"},
+ "etaMinutes": 55,
+ "events": [{"seq": 188, "ts": "…", "type": "step_started", "stepId": "S5", "worker": "emma", "text": "Emma rédige la version anglaise"}],
+ "hasMore": false, "reset": false}
+```
+
+- `since` omis = 0. `reset:true` si `since` est plus ancien que les événements conservés (les 500 derniers) : l'interface recharge `GET /api/projects/{id}`.
+- `ETag: "p<id>-<seq>"` ; `If-None-Match` correspondant → `304` sans corps. `Cache-Control: no-store`.
+- Fréquence conseillée : 3 s si `PLANNING|RUNNING|VERIFYING`, 10 s si `WAITING_*|QUEUED`, 30 s onglet masqué (`document.hidden`), arrêt si terminal. Route peu coûteuse (lit `state.json` et la fin de `events.jsonl`), limite 120 par minute et par client.
+- Types d'événements : `project_created, plan_ready, plan_approved, plan_rejected, status_changed, step_started, step_finished, step_failed, step_retry, step_cost, deliverable_added, approval_created, approval_decided, approval_executed, approval_failed, input_requested, message_received, assistant_message, quota_wait, quota_resume, budget_reached, verification_started, verification_result, replan, notification_sent, done, failed, cancelled`. Chaque événement porte `text` (français, prêt à afficher) et des champs structurés ; **jamais** de contenu d'article d'approbation ni de secret.
+
+### 7.5 Codes d'erreur (corps `{"error": CODE, "detail": "…", …}`)
+
+| HTTP | `error` | Quand |
+|---|---|---|
+| 400 | `INVALID_INPUT` (+`field`), `GOAL_REQUIRED`, `GOAL_TOO_LONG`, `INVALID_PATH` | validation |
+| 401 | `ACCOUNT_REQUIRED` | pas de session |
+| 402 | `SUBSCRIPTION_REQUIRED` (+`upgrade`) | mois épuisé |
+| 402 | `USAGE_LIMIT_REACHED` (+`limit`,`resetsAtUtc`,`usage`,`upgrade`) | session ou semaine atteinte (création, message coûteux) |
+| 402 | `PROJECT_EXCEEDS_QUOTA` (+`estimate`,`remaining`,`options`) | l'estimation dépasse le solde ou le plafond demandé |
+| 403 | `WORKER_NOT_INCLUDED` (+`hire`), `PROJECT_NOT_IN_PLAN` (+`upgrade`), `BAD_ORIGIN`, `GATE_REQUIRED` | droits |
+| 404 | `NOT_FOUND` | inconnu **ou appartenant à un autre client** |
+| 409 | `INVALID_STATE` (+`status`), `APPROVAL_NOT_PENDING`, `APPROVAL_EXPIRED`, `BATCH_NOT_ALLOWED`, `CONFIRM_REQUIRED` | transition ou décision impossible |
+| 413 | `TOO_LARGE`, `WORKSPACE_FULL` | tailles |
+| 429 | `RATE_LIMITED` (+`Retry-After`), `PROJECT_LIMIT_REACHED` (+`queued`,`limit`,`upgrade`) | débit, projets en file |
+| 500 | `INTERNAL` | jamais de trace brute ; journalisée côté serveur |
+| 503 | `PROJECTS_DISABLED` | `BK_PROJECTS=0` ou `killAll` |
+
+### 7.6 Limites de débit (par client ; `hire_rate_ok`-like, `_recent`)
+
+`POST /api/projects` 6/h · `messages` 60/h · décisions d'approbation 300/h (lots comptés pour leur nombre d'éléments) · `pause/resume/cancel/retry-step/budget/accept-gaps` 60/h · `GET progress` 120/min · `GET` autres 120/min · téléchargements et zip 120/h et 10 zip/h · `site/preview` 20/h · `POST /api/chloe/triage` 20/h · routes administration : `hire_rate_ok("grant","owner")` existant. Dépassement → `429 RATE_LIMITED` avec `Retry-After`.
+
+### 7.7 Interface du lanceur d'étape (PowerShell) — pour le constructeur « moteur »
+
+```
+pwsh -NoProfile -File core/ai/adapters/Project-StepRunner.ps1 -InFile <steps/S4/1/input.json> -OutFile <steps/S4/1/result.json>
+Environnement : BK_ROOT, BK_PYTHON (interpréteur Python, défaut "python3"/"python"), BK_REPLY_LANG (déjà géré) ; la clé Anthropic est lue en mémoire (Get-BKSecretValue) ; AUCUN secret dans input.json.
+Codes de sortie : 0 = result.json écrit (lire son champ status) ; 10 = INPUT_INVALID ; 11 = CREDENTIAL_NOT_CONFIGURED ; 12 = API_UNAVAILABLE après réessais (result.json status RETRY_LATER) ; 20 = erreur interne (result.json peut manquer : tentative comptée comme échec).
+```
+
+`input.json` (`BK-STEP-INPUT-V1`, écrit par Python) :
+
+```json
+{"schema": "BK-STEP-INPUT-V1", "projectId": "PRJ-…", "clientId": "CLI-CUST-…", "stepId": "S4", "attempt": 1,
+ "kind": "execute", "worker": "lucas", "phase": "execute",
+ "model": "claude-sonnet-5-5", "effort": "medium", "maxIterations": 24, "webMaxUses": 8, "callTimeoutSec": 300,
+ "ceilingChf": 0.52, "deadlineUtc": "2026-10-20T09:08:00Z", "hardDeadlineUtc": "2026-10-20T09:09:00Z",
+ "paths": {"projectDir": "…/runtime/projects/CLI-…/PRJ-…", "workspace": "…/workspace", "stepDir": "…/steps/S4/1", "spool": "…/spool", "context": "…/steps/S4/1/context.md"},
+ "tools": ["project_plan", "workspace_list", "workspace_read", "workspace_write", "workspace_search", "deliverable_register", "request_input", "note_decision", "step_complete", "step_blocked", "use_connector", "memory", "site_check"],
+ "connectors": ["wordpress"], "inputFiles": [{"path": "data/prospects.csv", "as": "container_upload"}],
+ "recipeBlock": "…", "resumeNote": null, "contextShrink": false, "language": "fr",
+ "autoApproveSafeOps": true, "installationPaused": false}
+```
+
+`result.json` (`BK-STEP-RESULT-V1`, écrit par le lanceur) :
+
+```json
+{"schema": "BK-STEP-RESULT-V1", "status": "DONE", "exitReason": "step_complete",
+ "report": { "…comme 3.11…" }, "answerText": "",
+ "usage": { "input_tokens": 0, "output_tokens": 0, "estimated_cost_usd": 0.0, "estimated_cost_chf": 0.0, "cost_capped": false, "api_calls": 0 },
+ "model": "claude-sonnet-5-5", "iterations": 14, "filesImported": [{"path": "site/assets/hero.webp", "bytes": 48211}],
+ "error": null, "retryAfterSec": null, "startedUtc": "…", "finishedUtc": "…"}
+```
+
+`status` ∈ `DONE | PARTIAL | NEEDS_INPUT | BLOCKED | FAILED | RETRY_LATER` ; `exitReason` ∈ `step_complete | step_blocked | deadline | cost_ceiling | iterations | refusal | api_unavailable | invalid_input`. Le champ `usage` reprend exactement `Get-BKCostUsageFields` (Mission-Cost.ps1). Le lanceur n'écrit **jamais** `state.json`.
+
+Outils fichiers : `python dashboard/project-tool.py <outil>` ; entrée standard `{"projectDir","stepDir","stepId","kind","worker","input":{…}}`, sortie standard `{"ok":true,"result":{…}}` ou `{"ok":false,"error":"PATH_INVALID","detail":"…"}` ; code de sortie 0 (2 si usage invalide). Outils : `workspace_list|read|write|append|search|delete|view_image`, `deliverable_register`, `import_file` (`{"srcPath","destName"}`, pour les fichiers du bac à sable), `project_plan`, `request_input`, `request_approval`, `note_decision`, `check_run`, `preview_fetch`, `site_*`. Les outils d'écriture d'état n'écrivent que dans `spool/` ; Python les ingère.
+
+### 7.8 Interface Python (injectée, pour que `projects.py` ne dépende pas de `server.py`)
+
+```python
+class ProjectService:
+    def __init__(self, root, ps_cmd, *, resolve_scope, usage, notify, run_connector, log_activity,
+                 write_json, lock, plan_view, account_email, worker_summary, now=time.time): ...
+    # resolve_scope(client_id) -> {"chloe":bool,"allowed":[ids],"denied":[{workerId,reason}],"hireOffer":bool}   (chloe_scope.py)
+    # usage: UsageService (6b.8) ; notify(client_id, kind, subject, html, text) ; run_connector(connector_id, operation, params, client_id) -> dict
+    # plan_view(client_id) -> {"planId","projectsAllowed","limits":{…PROJECT-LIMITS…}} ; account_email(client_id) -> str|None
+    def start_supervisor(self) -> None ; def reap(self, boot=False) -> None
+class ProjectsAPI:
+    def __init__(self, service, resolve_client_id, send_json, read_json_limited, rate_ok): ...
+    def handle_get(self, handler, path, parsed) -> bool       # True si la route lui appartient (réponse envoyée)
+    def handle_post(self, handler, path, parsed) -> bool
+    def handle_delete(self, handler, path, parsed) -> bool
+```
+
+`server.py` n'a que trois lignes à ajouter dans `do_GET`, `do_POST`, `do_DELETE` (`if PROJECTS_API.handle_x(self, path, parsed): return`) et un bloc d'instanciation (section 10).
 
 ## 8. Atelier de sites (contrat)
 
