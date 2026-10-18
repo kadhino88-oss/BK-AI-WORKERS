@@ -313,6 +313,20 @@ class ReviewFixes(StoreCase):
         self.assertTrue(inst.contains_secret("pk_live_abcdefghijklmnop"))
         self.assertFalse(inst.contains_secret(None))
 
+    def test_a_card_number_is_refused_even_with_other_digits_next_to_it(self):
+        # 2e revue : la fenetre gloutonne de 19 chiffres tombait sur la carte ET le cryptogramme / la date / un numero voisin, la somme de Luhn de cet
+        # ensemble echouait, et la vraie carte n'etait jamais testee. Chaque suite de groupes de chiffres entiers (13 a 19 chiffres) est maintenant testee.
+        for card in ("Carte 4111 1111 1111 1111 12/26", "4111111111111111 123", "4111 1111 1111 1111 123", "cvv 123 4111 1111 1111 1111",
+                     "Facture 2026 4111 1111 1111 1111", "378282246310005 1234", "4111-1111-1111-1111 exp 12 26", "5500 0000 0000 0004 987",
+                     "Ma carte 4111 1111 1111 1111", "n° 77 4111111111111111 78"):
+            self.assertTrue(inst.contains_secret(card), card)
+            bad = good_alex()
+            bad["services"]["prospection-sortante"]["knowledge"]["offre_description"] = card
+            self.assertTrue(any("ne saisissez jamais" in m for m in self.errors(bad)), card)
+        for fine in ("SIRET 44306184100047", "SIRET 443 061 841 00047", "SIREN/SIRET : 443061841-00047", "Notre SIRET : 35600000000048", "Tel +41 79 123 45 67",
+                     "Commande 123456789012", "Prix 1 200 000 CHF", "Le 2026-10-12 14:30", "Ref 1234 5678 9012 3456 7", "IDE CHE-123.456.789"):
+            self.assertFalse(inst.contains_secret(fine), fine)
+
     def test_a_mistyped_knowledge_or_autonomy_is_a_validation_error_not_a_crash(self):
         for field, junk in (("knowledge", "abc"), ("knowledge", ["a"]), ("knowledge", 3), ("autonomy", ["x"]), ("autonomy", "auto"), ("autonomy", 5)):
             bad = good_alex()

@@ -40,10 +40,13 @@ SECRET_RE = re.compile(
     r"|(?i:\bbearer\s+[0-9A-Za-z._~+/=-]{20,})"
     r"|(?i:(?:password|mot de passe|mdp|api[ _-]?key|cl[eé] api|secret|token|iban))\s*[:=]\s*\S{6,}"
     r"|\b[A-Z]{2}\d{2} ?(?:[A-Z0-9]{4} ?){3,7}[A-Z0-9]{1,4}\b")
-# Numero de carte : 13 a 19 chiffres ET somme de Luhn valide (sinon un numero de commande ou de telephone etait refuse). Un SIRET ecrit dans son
-# groupement officiel (3-3-3-5 chiffres) n'est pas une carte non plus.
-_CARD_CANDIDATE_RE = re.compile(r"\b(?:\d[ -]?){13,19}\b")
-_SIRET_GROUPING_RE = re.compile(r"^\d{3} \d{3} \d{3} \d{5}$")
+# Numero de carte : 13 a 19 chiffres ET somme de Luhn valide (sinon un numero de commande ou de telephone etait refuse). Le texte est lu par SUITES de
+# groupes de chiffres separes par un espace ou un tiret : chaque suite de groupes entiers qui totalise 13 a 19 chiffres est testee, pas seulement la
+# plus longue fenetre gloutonne (une carte suivie de son cryptogramme, de sa date d'expiration ou d'un numero de facture etait sinon acceptee : la
+# fenetre de 19 chiffres tombait sur la carte ET les chiffres voisins, et la somme de Luhn de cet ensemble echoue). Un SIRET (14 chiffres, valide
+# Luhn par construction) n'est pas une carte : ecrit en 3-3-3-5 chiffres, ou precede du mot SIRET.
+_DIGIT_RUN_RE = re.compile(r"(?<!\d)\d+(?:[ -]\d+)*(?!\d)")
+_DIGIT_GROUP_RE = re.compile(r"\d+")
 _LOCK = threading.Lock()
 
 
@@ -57,17 +60,34 @@ def _luhn_ok(digits):
     return total % 10 == 0
 
 
+def _card_number_in(text):
+    """True si une suite de groupes de chiffres entiers (13 a 19 chiffres au total) du texte passe la somme de Luhn."""
+    for run in _DIGIT_RUN_RE.finditer(text):
+        groups = list(_DIGIT_GROUP_RE.finditer(run.group()))
+        for i in range(len(groups)):
+            total = 0
+            for j in range(i, len(groups)):
+                total += len(groups[j].group())
+                if total > 19:
+                    break
+                if total < 13:
+                    continue
+                span = groups[i:j + 1]
+                if [len(g.group()) for g in span] in ([3, 3, 3, 5], [9, 5]):
+                    continue                                    # SIRET dans son groupement officiel (3-3-3-5) ou SIREN + NIC (9-5)
+                if total == 14:
+                    start = run.start() + span[0].start()
+                    if "sire" in text[max(0, start - 16):start].lower():
+                        continue                                # « SIRET 44306184100047 », « N° SIREN/SIRET : ... »
+                if _luhn_ok("".join(g.group() for g in span)):
+                    return True
+    return False
+
+
 def contains_secret(text):
     """True si le texte ressemble a un secret (mot de passe, cle d'API, jeton, cle privee, IBAN) ou a un numero de carte bancaire."""
     text = str(text or "")
-    if SECRET_RE.search(text):
-        return True
-    for m in _CARD_CANDIDATE_RE.finditer(text):
-        raw = m.group().strip()
-        digits = re.sub(r"\D", "", raw)
-        if 13 <= len(digits) <= 19 and not _SIRET_GROUPING_RE.match(raw) and _luhn_ok(digits):
-            return True
-    return False
+    return bool(SECRET_RE.search(text)) or _card_number_in(text)
 
 
 def _now():
