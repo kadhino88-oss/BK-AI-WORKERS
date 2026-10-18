@@ -235,7 +235,7 @@ Ces lanceurs sont **en plus** des 6 missions asynchrones (`ASYNC_MAX_GLOBAL`) : 
 
 ## 3. Comment une étape s'exécute
 
-### 3.1 Les six sortes d'étapes
+### 3.1 Les sept sortes d'étapes
 
 | `kind` | Phase (modèle) | Rôle | Écrit |
 |---|---|---|---|
@@ -245,6 +245,7 @@ Ces lanceurs sont **en plus** des 6 missions asynchrones (`ASYNC_MAX_GLOBAL`) : 
 | `verify` | `verify` (fort, contexte neuf) | applique critères et grilles aux livrables réels, rend des preuves | `verification/<round>/verification.json` |
 | `replan` | `plan` | refait le plan après un changement d'objectif, un blocage durable ou un échec | nouveau `plan.json` (version +1) |
 | `consolidate` | `execute` | rédige `final-report.md` et le message de livraison pour le client | `deliverables/`, `final-report.md` |
+| `answer` | `execute_bulk` (Haiku 5.5) | répond à une question du client (6c.11) en lecture seule, même projet en attente ou en pause ; 4 itérations au plus | un événement `assistant_message` |
 
 Chaque étape = **un appel** du lanceur `Project-StepRunner.ps1` (interface exacte en 7.7), donc un sous-processus qui se termine : pas de processus PowerShell longue durée (3,8 Go de mémoire, redémarrages de conteneur fréquents).
 
@@ -845,7 +846,90 @@ Fenêtre ouverte à la première réservation et refermée si libérée sans usa
 
 ## 6c. Chloé, déléguante et cheffe de projet
 
-*(à approfondir)* Plan multi-Workers, relais, droits du forfait, file d'attente, échecs partiels.
+### 6c.1 Rôle de Chloé
+
+Aujourd'hui (vérifié dans `chloe/Invoke-Chloe-Orchestration.ps1` et dans `chloe/identity/playbook.md`) : routage par mots-clés (`orchestrator/worker-routing.json`), repli IA Haiku qui renvoie des identifiants, tous les Workers retenus reçoivent **la même demande** en parallèle, aucun découpage, aucun relais, aucune synthèse rédigée, et un plafond `BK_MAX_WORKERS` qui **retire silencieusement** des Workers faute de crédits. Demain, deux modes coexistent :
+
+- **Mode mission** (inchangé) : demande courte, un ou deux Workers, réponse immédiate.
+- **Mode projet** : Chloé est **cheffe de projet**. Elle décompose, assigne chaque étape à un Worker (parmi les 17, sans restriction autre que le forfait et les limites d'usage), fait relayer les résultats, vérifie la cohérence entre Workers, rend compte. Le client voit et valide le plan avant le premier crédit dépensé.
+
+Aiguillage mission/projet : décidé par l'appel de planification (un seul appel, 6c.3) selon des critères écrits dans son prompt (plus d'un domaine de métier, plus d'un livrable, durée prévisible > 8 minutes, actions sortantes, mot « projet » / « de A à Z » / « complet ») ; **le client confirme toujours** (« Lancer comme projet » ou « juste une réponse rapide »). Un client en Solo voit l'option projet seulement sur la fiche de son Worker embauché.
+
+### 6c.2 Le registre des Workers que Chloé lit (cartes)
+
+Les `SKILLS-REGISTRY.json` actuels sont génériques (« Compétence X de LUCAS ») : inutilisables pour router. Les sources riches sont `identity.json` (rôle), `install-profile.json` (services : libellé, description, compétences, connecteurs requis), `worker-routing.json` (mots-clés) et les recettes (section 9). Le script `chloe/Build-WorkerCards.ps1` génère `core/projects/WORKER-CARDS.json` (régénéré par test si une source change, jamais écrit à la main) :
+
+```json
+{"id": "lucas", "name": "Lucas", "role": "Webmaster & Expert SEO",
+ "can": ["Sites vitrines et landing pages (HTML/CSS, WordPress, Webflow)", "SEO technique : crawl, sitemap, Core Web Vitals, redirections", "Maintenance et sécurité de sites"],
+ "notFor": ["rédaction éditoriale longue (emma)", "identité visuelle (lea)", "mots-clés et contenu SEO (seoya)"],
+ "connectors": ["wordpress", "webflow", "google_search_console"], "recipes": ["lucas/site-vitrine-pro"],
+ "keywords": ["site web", "landing page", "wordpress", "seo technique"], "typicalStepCredits": [4, 10]}
+```
+
+Une carte tient en ~120 jetons ; les 17 cartes (~2 000 jetons) sont ajoutées au prompt de planification. `notFor` vient du bloc « DÉPARTAGES » déjà écrit dans `chloe/identity/playbook.md` (pas de nouvelle invention). Atlas (trading personnel du propriétaire, `excluded_from_routing`) n'y figure jamais.
+
+### 6c.3 La décomposition (appel de planification de Chloé)
+
+`chloe/Chloe-Planner.ps1` (`Invoke-BKChloePlan`) : exécuté comme l'étape `plan` du moteur (phase `plan`, Opus 5.5, effort élevé, ≤ 8 itérations ; 0,25 à 0,60 CHF). Entrées : objectif, langue, profil et mémoire du client, **portée** (6c.4), cartes, recettes candidates, **vue d'usage** (crédits restants du mois, de la semaine, de la session : un planificateur qui sait qu'il reste 80 crédits ne propose pas un plan de 400) et consignes. Règles dans son prompt :
+
+1. le **moins de Workers possible** qui satisfait les critères ; une étape = un seul propriétaire ; chaque étape cite le critère qu'elle sert ;
+2. les étapes indépendantes sont déclarées indépendantes (`dependsOn` minimal) ; les étapes répétitives sont `effort:"bulk"` ; les étapes à jugement sont `effort:"deep"` seulement si nécessaire ;
+3. chaque affectation s'appuie sur une carte (`delegation.rationale`, 1 phrase) ; jamais un Worker hors portée ; ce qui relève d'un Worker non disponible est listé dans `unassignable[]` avec le Worker idéal et la raison ;
+4. coût : `estimateCredits` par étape à partir de `typicalStepCredits`, somme dans `estimate` ; si l'estimation dépasse le solde, proposer une variante « Essentiel » ;
+5. **jamais d'étape qui inclut une action sortante réelle sans article d'approbation** ; les étapes de publication sont toujours à la fin et dépendent des critères vérifiés ;
+6. des **critères d'acceptation** mesurables, typés (`auto` avec `check`) chaque fois que possible.
+
+Sortie : plan `BK-PROJECT-PLAN-V1` + `delegation` + `unassignable` + `triage: {"mode": "project", "why": "…"}`. Validation par le moteur (1.2, portée, graphe sans cycle) ; en cas d'erreur, **un** réessai avec la liste des erreurs. **Repli sur l'ancien routeur** : si le modèle est indisponible ou si le plan reste invalide, `Invoke-BKChloeAIRouting` puis le routage par mots-clés choisissent les Workers (comme aujourd'hui) et le moteur fabrique un plan minimal : une étape par Worker retenu, en parallèle (`dependsOn: []`) ou en chaîne si l'ordre de `worker-routing.json` s'impose (mode `CHAIN` actuel), critère unique `rubric` générique, `plan.fallback = true` (affiché : « plan simplifié »).
+
+### 6c.4 Droits : ce que Chloé peut déléguer (lecture par défaut, le propriétaire peut la changer)
+
+| Forfait | Chloé | Workers délégables dans un projet | Si une capacité manque |
+|---|---|---|---|
+| Essai | oui (mode mission, Rapide) | — (projets indisponibles, 6.7) | — |
+| Solo | **non** (`PLANS_WITH_CHLOE = ("trio",)`) | le Worker embauché, depuis sa fiche | proposer l'embauche ou Trio |
+| Trio | oui | les **3 Workers embauchés** | Chloé **dit lesquels lui manquent** (« cette partie relève de Clara, qui ne fait pas partie de vos Workers ») et propose de l'embaucher (`POST /api/workers/hire` ou demande) ; sinon, Trio vendrait toute l'équipe au prix de trois |
+| Équipe, Pro, Scale, Enterprise | oui | **les 17** | — |
+
+Implémentation : `dashboard/chloe_scope.py` fournit `project_scope(client_id) -> {"chloe": bool, "allowed": [...], "denied": [{"workerId","reason"}], "hireOffer": bool}` en s'appuyant sur les fonctions de `server.py` déjà en place (`allowed_workers_env`, `worker_block`, `installation_paused`, `inst.PLANS_WITH_CHLOE`), injectées (pas d'import circulaire). Le propriétaire change la règle à deux endroits seulement : `PLANS_WITH_CHLOE` (`dashboard/installations.py`) et la table `chloeDelegation` de `core/projects/PROJECT-LIMITS.json` (`"trio": "hired_only"`, défaut `"all"`).
+
+### 6c.5 Fin des plafonds accidentels (inventaire et remède)
+
+| Plafond actuel | Où | Remède dans le mode projet |
+|---|---|---|
+| Routage par mots-clés seul, premier appariement | `Invoke-Chloe-Orchestration.ps1` | planificateur à modèle ; mots-clés conservés seulement comme repli et comme indices des cartes |
+| Tous les Workers reçoivent la même demande | idem (`$Objective = $Request`) | chaque étape a son propre objectif, ses entrées et ses sorties |
+| `BK_MAX_WORKERS` retire des Workers en silence | `chloe_worker_cap`, `Submit-Task.ps1` | pour les projets : supprimé ; seules bornes = fenêtres d'usage et plafond du projet ; en mode mission, un nombre de Workers supérieur au solde **propose un projet** au lieu de retirer des Workers |
+| 6 à 20 itérations, 540 s, coupure à 600 s | adaptateur | étapes de 8 minutes en séquence (des dizaines d'étapes) |
+| 2 missions par client, 6 au total | `ASYNC_MAX_*` | plafonds propres aux étapes (2.5) + file d'attente, aucun refus |
+| Mode `PARALLEL` imposé par `Submit-Task.ps1` | `CollaborationMode = "PARALLEL"` | sans objet : le graphe `dependsOn` décide |
+| Un seul `PENDING-ACTION` par mission | adaptateur | file d'approbations (section 5) |
+
+### 6c.6 Parallèle, séquence et relais entre Workers
+
+Le plan est un **graphe orienté sans cycle** : les étapes dont les dépendances sont satisfaites sont `READY` ensemble et partent dans l'ordre de priorité, **bornées par le nombre de lanceurs du client** (2.5 : 1 pour Solo à Pro, 2 pour Scale/Enterprise). Pour la majorité des forfaits les étapes « parallèles » s'exécutent donc l'une après l'autre sur le chemin critique ; c'est une contrainte de capacité du serveur (2 vCPU), pas de conception, annoncée au client (« 2 travaux indépendants, traités à tour de rôle »).
+
+Relais : (1) l'espace de travail est **commun** à tous les Workers du projet ; (2) chaque étape termine par un rapport (`handoff/<StepId>.md`, 3.11) ; (3) le contexte d'une étape contient les rapports complets des étapes dont elle dépend (6 000 jetons) et le champ `handoffNote` laissé par l'étape précédente (« Pour Lucas : la charte est dans `site/assets/style.css`, variables CSS `--c1`…`--c4` ; ne pas changer la hiérarchie des titres ») ; (4) chaque étape tourne avec **le prompt, l'identité, le playbook et les recettes de SON Worker** (`Get-WorkerSystemPrompt -WorkerId`), pas ceux de Chloé : c'est Lea qui conçoit, Lucas qui code, Emma qui écrit, Seoya qui optimise.
+
+### 6c.7 Cohérence entre Workers
+
+Quand un plan fait produire à au moins deux Workers des contenus destinés au même public (site + réseaux sociaux + publicités), le moteur insère automatiquement l'étape `verify` de portée `consistency` (modèle fort, contexte neuf, lecture seule), avec le gabarit `chloe/prompts/consistency-review.md`. Elle extrait des fiches de faits de chaque livrable (nom de l'entreprise, adresse, téléphone, prix, offres, dates, promesses, ton, couleurs/typographie) puis **compare** : contradictions de faits (même prix différent), de ton, de promesses (une publicité promet « livraison 24 h » que le site ne mentionne pas), de marque. Sortie `verification/<round>/consistency.json` ; chaque écart devient une étape `fix` pour le Worker concerné. Critère implicite ajouté au plan : `C-coherence` (rubric).
+
+### 6c.8 File d'attente plutôt que refus
+
+Quand le serveur est occupé : l'étape (ou le projet) est `QUEUED` avec `queuePosition` (2.5) ; l'interface montre « Chloé a mis votre projet en file (n° 2) » ; aucun message d'erreur. Le seul refus restant : trop de projets déjà en file (`PROJECT_LIMIT_REACHED`, 429, avec le nombre de places et la montée en gamme). Le mode mission garde ses plafonds actuels (message « Réessayez dans une minute ») et propose « Lancer comme projet (mis en file) ».
+
+### 6c.9 Échecs partiels
+
+Étape `FAILED` après 3 tentatives : ses dépendantes passent `BLOCKED/DEPENDENCY_FAILED` ; le moteur déclenche une étape `replan` (modèle fort) qui choisit, dans l'ordre : réaffecter à un autre Worker plus adapté, simplifier le critère concerné (avec l'accord du client si cela change le livrable), ou laisser un trou **explicite**. Le rapport final liste ce qui n'est pas fait et pourquoi ; un projet n'est jamais `DONE` avec un trou caché. Un Worker dont la sortie est rejetée par la revue (vide, signalée `financial_actions/external_actions`, contenu fabriqué relevé par le vérificateur) reçoit une étape `fix`. Seul ce qui a tourné est facturé.
+
+### 6c.10 Données pour l'interface « résultats par Worker »
+
+`GET /api/projects/<id>` renvoie `workers: [{"id","name","portraitUrl","role","stepsDone","stepsTotal","status","creditsUsed","lastSummary","deliverables":[{"path","title","kind"}],"approvalsPending"}]`, et chaque étape son `worker`, ses dépendances et son `handoffNote` : l'interface peut afficher des couloirs par Worker (portraits existants `/portraits/<id>.jpg`), les relais (« Lea → Lucas »), les livrables et les approbations par Worker, le coût par Worker. Aucun calcul côté interface.
+
+### 6c.11 Parler à Chloé pendant le projet
+
+Le client écrit depuis la page du projet (`POST …/messages`) en choisissant un type : **précision** (jointe au contexte de la prochaine étape du Worker concerné ou de la prochaine étape prête), **modification du plan** (déclenche une étape `replan` visible : « ce que je change » avant/après) ou **question** (étape courte `answer`, Chloé sur Haiku 5.5, lecture seule, 4 itérations au plus, réponse en direct dans le fil ; elle s'exécute même si le projet est en attente ou en pause, pour environ 1 à 2 crédits). Aucune classification par IA : le choix du type est fait par le client (moins cher et sans ambiguïté). Le playbook de Chloé (`chloe/identity/playbook.md`) ne doit être mis à jour pour décrire le découpage, le relais et la synthèse qu'**à l'activation** de `BK_PROJECTS` (fichier `playbook-projects.md` choisi par `Get-WorkerSystemPrompt` quand l'interrupteur est actif) : rien n'est annoncé qui ne soit construit et testé.
 
 ## 7. Contrat d'API
 
