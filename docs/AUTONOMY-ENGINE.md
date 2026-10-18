@@ -28,6 +28,19 @@ Une mission actuelle = UNE requête bornée : boucle de 6 à 20 appels (`core/ai
 
 ---
 
+## Guide de lecture par constructeur
+
+Ce document est long parce qu'il est le contrat de six constructeurs : personne ne le lit en entier. Lire d'abord « Les 15 décisions » ci-dessus, puis :
+
+| Constructeur | Lit en priorité | Puis, au besoin |
+|---|---|---|
+| B1 moteur + API | 2, 3, 4, 5, 7, 10.2 | 1, 6, 6b.8, 6c.4 |
+| B2 limites d'usage | 6b (tout), 6.3, 7.5, 10.2 | 2.5, 6.1 |
+| B3 Chloé délégation | 6c (tout), 1.2, 6.7, 10.2 | 3.3, 3.11, 7.2 |
+| B4 interface Projet | 7 (tout), 2.3, 5.3, 6b.9, 6c.10, 10.2 | 4.4, 8.5 |
+| B5 atelier de sites | 8 (tout), 3.3, 3.4, 4.2, 10.2 | 5.3, 9.2 |
+| B6 recettes + évaluation | 9 (tout), 1.2, 4.2, 10.6 | 6.1, 8.4 |
+
 ## 1. Principes et définition de « terminé »
 
 ### 1.1 Ce que « terminé » veut dire
@@ -99,13 +112,13 @@ Règles du plan, appliquées par le moteur (pas par la bonne volonté du modèle
 
 | Mode | Défense | Section |
 |---|---|---|
-| Boucle infinie (dans une étape ou au niveau du projet) | détecteur d'appels d'outils identiques (3 fois = avertissement, puis arrêt de l'étape) ; au plus 3 tentatives par étape ; 120 étapes et 3 replanifications par projet ; détecteur « sans progrès » (3 étapes de suite sans changement de `workspace/` ni de plan = `PAUSED`, raison `NO_PROGRESS`) ; durée maximale par projet | 2.8, 3.8 |
+| Boucle infinie (dans une étape ou au niveau du projet) | détecteur d'appels d'outils identiques (3 fois = avertissement, puis arrêt de l'étape) ; au plus 3 tentatives par étape ; 120 étapes et 3 replanifications par projet ; détecteur « sans progrès » (3 étapes de suite sans changement de `workspace/` ni de plan = `PAUSED`, raison `NO_PROGRESS`) ; durée maximale par projet | 2.8, 3.10 |
 | Coût qui s'envole | plafond CHF par étape (`Mission-Cost.ps1` déjà existant), plafond de crédits par projet, passerelle de quota avant CHAQUE étape, réservation puis règlement | 6, 6b |
 | Perte d'état au redémarrage | état sur disque seul ; étapes idempotentes ; reaper au démarrage ; aucune donnée métier en mémoire | 2.7 |
 | Débordement de contexte | contexte frais par étape (≤ 60 000 jetons visés), fichiers lus par morceaux, résumé roulant, `clear_tool_uses` dans l'étape | 3.6 |
 | Fatigue d'approbation | articles groupés en lots, étapes indépendantes poursuivies, résumés par e-mail espacés, classes de risque | 5 |
 | Achèvement halluciné | `step_complete` exige des preuves ; seul le vérificateur passe un critère à `PASS` ; preuves résolues par le moteur | 4 |
-| Outils périmés | liste des connecteurs reconstruite à CHAQUE étape ; contrôle préalable `CONNECTOR_MISSING` ; une page ou un fichier de l'espace de travail relu reste une DONNÉE | 3.4, 3.9 |
+| Outils périmés | liste des connecteurs reconstruite à CHAQUE étape ; contrôle préalable `CONNECTOR_MISSING` ; une page ou un fichier de l'espace de travail relu reste une DONNÉE | 3.3, 3.5 |
 | Injection par contenu web / fichiers | règle `UNTRUSTED CONTENT` déjà dans le prompt commun ; outils d'écriture sans effet externe ; toute action sortante passe par une approbation humaine | 5, 6 |
 | Dérive de périmètre | les étapes ne peuvent ajouter que 8 étapes (`project_plan add_step`) ; tout changement d'objectif passe par une replanification visible du client | 3.3 |
 
@@ -182,7 +195,7 @@ runtime/projects/<ClientId>/<ProjectId>/          ProjectId = PRJ-<32 hex MAJUSC
 | `FAILED` | erreur non récupérable (3 tentatives d'une étape critique, plan impossible) ; état partiel conservé | superviseur | `RUNNING` (via « réessayer »), `CANCELLED` |
 | `CANCELLED` | annulé ; l'espace de travail reste téléchargeable 7 jours | client | terminal |
 
-Toute transition passe par **une seule fonction** `ProjectStore.transition(project_id, new_status, reason, **fields)` qui vérifie la table ci-dessus (transition interdite = `InvalidTransition`), incrémente `seq`, ajoute un événement à `events.jsonl` et déclenche les notifications (section 5.6).
+Toute transition passe par **une seule fonction** `ProjectStore.transition(project_id, new_status, reason, **fields)` qui vérifie la table ci-dessus (transition interdite = `InvalidTransition`), incrémente `seq`, ajoute un événement à `events.jsonl` et déclenche les notifications (section 5.8).
 
 ### 2.4 Statuts d'une étape
 
@@ -281,7 +294,7 @@ Les outils qui touchent des fichiers ou l'état sont implémentés **une seule f
 | `workspace_list` | `{"path":"site/","depth":2}` | renvoie nom, taille, date ; 500 entrées max |
 | `workspace_read` | `{"path","offset":0,"limit":20000}` | texte ≤ 20 000 caractères par appel ; renvoie `eof`, `totalBytes` ; pour `xlsx`/`docx`/`pptx`, renvoie l'aperçu texte de `file_preview.build_preview` (module existant, formules recalculées) ; refuse les autres binaires (images : `workspace_view_image`) |
 | `workspace_view_image` | `{"path"}` | PNG/JPEG/WebP/GIF ≤ 1,5 Mo, renvoyé comme bloc image (pour la revue visuelle) |
-| `workspace_write` | `{"path","content","mode":"create\|overwrite"}` | texte ≤ 2 Mo ; extensions autorisées (3.8) ; refuse d'écraser un fichier modifié par une autre étape sans `overwrite` |
+| `workspace_write` | `{"path","content","mode":"create\|overwrite"}` | texte ≤ 2 Mo ; extensions autorisées (3.4) ; refuse d'écraser un fichier modifié par une autre étape sans `overwrite` |
 | `workspace_append` | `{"path","content"}` | ajout (CSV, journaux) ; ≤ 2 Mo cumulés par appel |
 | `workspace_search` | `{"query","path":"","glob":"*.md","maxMatches":50}` | recherche littérale ou regex bornée (temps 2 s) |
 | `workspace_delete` | `{"path"}` | un fichier ou un dossier de l'espace, jamais `inputs/` du client sans `confirm:true` |
