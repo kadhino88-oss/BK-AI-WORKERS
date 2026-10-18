@@ -641,6 +641,7 @@ La réservation garantit qu'**aucun chevauchement** (deux étapes de deux projet
 | `BK_PROJECTS=0` (variable du serveur, défaut tant que non éprouvé) | les routes `/api/projects*` répondent `503 PROJECTS_DISABLED` ; le superviseur ne démarre pas ; les projets existants sont figés, rien n'est perdu. `BK_PROJECTS=1` l'active. |
 | `runtime/projects/_control.json` → `{"killAll": true}` | arrêt immédiat : le superviseur tue tous les lanceurs en cours (étapes `INTERRUPTED`, coûts réglés depuis `cost.json`) et ne lance plus rien. Fichier relu à chaque tick (pas de redémarrage nécessaire). |
 | `_control.json` → `{"pausedClients": ["CLI-CUST-…"]}` | pause par client : ses projets passent `PAUSED` (`OWNER_PAUSED`) ; reprise en retirant l'entrée. Routes propriétaire (porte historique) : `POST /api/admin/projects/pause-client`, `POST /api/admin/projects/<id>/kill`. |
+| `BK_PROJECTS_ALLOW` | liste blanche de `ClientId` (virgules) pendant le déploiement progressif (10.6) : un client absent reçoit `403 PROJECT_NOT_IN_PLAN` ; vide = tous quand `BK_PROJECTS=1` |
 | `BK_PROJECT_STEPS_GLOBAL`, `BK_PROJECT_STEPS_PER_CLIENT` | plafonds de concurrence (2.5) |
 | `BK_PROJECT_COMPACTION`, `BK_PROJECT_CONVO_CACHE` | options d'optimisation (3.2, 3.6) |
 
@@ -706,6 +707,7 @@ Comme les limites de Claude, en plus du prix et des crédits mensuels du forfait
 - Hebdomadaire = `round(mensuel / 4,35)` (4,35 semaines par mois en moyenne) ; session = `max(minSessionCredits, round(0,40 × hebdomadaire))`. Le plancher de 12 crédits garantit qu'une mission Approfondi (12 crédits, le plus gros prix unitaire de `LEVELS.json`) tient toujours dans une session vide.
 - `creditCostChf` : 6.1. `overridesByClient` : plafonds d'un contrat Enterprise (`{"CLI-CUST-…": {"sessionCredits": 1200, "weekCredits": 3000}}`), écrits par `POST /api/admin/set-plan`.
 - Essai : exempt des fenêtres (15 crédits uniques sur 3 jours : une fenêtre n'ajouterait rien) ; propriétaire et essai public : exempts. Un identifiant qui n'est pas un compte client reconnu n'est jamais exempté par défaut : il suit `exemptClients` seulement.
+- **Interrupteur** `BK_USAGE_WINDOWS` : `0` (défaut) = les fenêtres session et semaine sont ignorées, seul le mois borne (comportement actuel) ; `shadow` = le grand livre tourne, **rien n'est bloqué** et chaque refus qui aurait eu lieu est journalisé (`would_block`, avec la fenêtre et le forfait) pour calibrer les constantes avant d'imposer quoi que ce soit à un client ; `1` = actif. Les projets lus en `shadow` se comportent comme en `0`.
 
 ### 6b.3 Ce que ça donne (calculé avec les crédits actuels de `PLAN_CATALOG`)
 
@@ -1285,4 +1287,113 @@ Si le bras C est refusé, le plafond tombe à 19,6 USD. Journal de dépense : ta
 
 ## 10. Ordre de construction, frontières de modules, déploiement
 
-*(à approfondir)* Six constructeurs, fichiers par constructeur, régions de `server.py` / `app.js`, tests, déploiement dormant, risques, décisions du propriétaire.
+### 10.1 Vagues et dépendances
+
+```
+Vague 1 (en parallèle)                                   Vague 2 (en parallèle, après fusion de la vague 1)
+ B1 moteur + API ─────────────┐                           B4 interface Projet ──── lit : API 7, /api/usage 6b.9
+ B2 limites d'usage ──────────┼─► fusion ─► intégration ─► B5 atelier de sites ── lit : outils 3.3, registre de routes de B1
+ B3 Chloé délégation ─────────┘                           B6 recettes + évaluation ─ lit : recipes (9.1), moteur complet
+```
+
+Les constructeurs de la vague 1 ne s'attendent pas : B1 développe contre une **fausse** `UsageService` (interface 6b.8, toujours « oui ») et une fausse portée (`resolve_scope`) ; B2 contre un `plan_view` simulé ; B3 contre le schéma de plan (1.2) et la fonction `projects.validate_plan(plan, scope)` que B1 fournit dès son premier commit (squelette qui valide le schéma et le graphe). Tout désaccord se résout **dans ce document** : ce contrat est la seule source ; une modification d'interface s'accompagne, dans le même commit, de la correction de la section concernée et d'une ligne `CONTRACT-CHANGE:` dans le message de commit.
+
+### 10.2 Frontières : un fichier = un propriétaire
+
+Règle générale : **tout nouveau code va dans de nouveaux fichiers**. Les fichiers partagés (`dashboard/server.py`, `dashboard/app.js`, `dashboard/index.html`) ne reçoivent que des *crochets d'une à trois lignes*, à des ancres distinctes par constructeur (pour que les fusions ne se touchent pas). Aucun constructeur ne reformate, ne déplace ni ne renomme du code existant. Les fins de ligne et l'encodage sont conservés (Python et `server.py` en CRLF, PowerShell en UTF-8 avec BOM).
+
+| | Nouveaux fichiers (propriété exclusive) | Fichiers existants modifiés (régions exactes) | Ne touche jamais |
+|---|---|---|---|
+| **B1 moteur + API** (vague 1) | `dashboard/projects.py` (magasin, machine à états, superviseur, approbations, notifications, reaper) · `dashboard/projects_api.py` (routes, registre `register_route(method, regex, fn)`) · `dashboard/projects_wiring.py` (`build(server_module) -> (service, api)`) · `dashboard/project_tools.py` + `dashboard/project-tool.py` (outils, registre `register_tool(name, fn)`) · `dashboard/project_checks.py` (contrôles typés 4.2 hors site) · `core/ai/adapters/Adapter-Common.ps1`, `Project-Loop.ps1`, `Project-StepRunner.ps1`, `Project-Prompt.ps1` · `core/ai/PROJECT-PHASES.json` · `core/projects/PROJECT-LIMITS.json`, `APPROVAL-RISK.json`, `schemas/*.json` (plan, état, étape entrée/sortie, article, vérification : extraits de ce document dès le 1er commit) · `tests/projects/**` (hors `eval/`, `test_recipes.py`) | `core/ai/adapters/ANTHROPIC-ADAPTER.ps1` : **extraction seule** des lignes de fonctions 96-299 et du bloc de capture de fichiers 568-657 vers `Adapter-Common.ps1`, remplacées par `. Adapter-Common.ps1` et un appel `Save-BKCodeExecFiles` ; comportement identique, suites `tests/adapter-review`, `tests/levels`, `tests/async-missions`, `tests/file-preview` inchangées et vertes · `server.py` : (a) `do_GET` : 2 lignes **juste après** `if TRUST.handle_get(self, path): return` · (b) `do_POST` : 2 lignes **juste après** `if TRUST.handle_post(self, path): return` · (c) `do_DELETE` : 2 lignes juste après le contrôle de porte · (d) un bloc `PROJECTS, PROJECTS_API = projects_wiring.build(sys.modules[__name__])` **juste au-dessus de `class Handler(BaseHTTPRequestHandler):`** · (e) bloc `__main__` : `PROJECTS.reap(boot=True)` après `reap_async_jobs(boot=True)` et `PROJECTS.start_supervisor()` après `PHONE_AGENT.warm_up()` · (f) `_purge_client_mission_artifacts` (suppression de `runtime/projects/<ClientId>`) et `export_account_data` (bloc projets) · `.env.example` (variables de la section 10.7) | `Build-WorkerSystemPrompt.ps1`, `Mission-Cost.ps1` (utilisé tel quel), `LEVELS.json`, la logique de quota |
+| **B2 limites d'usage** (vague 1) | `dashboard/usage.py` · `dashboard/usage-cli.py` · `dashboard/usage_wiring.py` · `core/usage/USAGE-LIMITS.json` · `tests/usage/**` | `server.py` : `subscription_blocks_mission` (corps) · `get_billing` (`creditsUsed` depuis le grand livre, bloc `usage`) · `upgrade_payload` (limites du forfait suivant) · `submit_task` (réserver avant le sous-processus, régler dans `finally`) · `_billing_save` (1 ligne `USAGE.on_billing_saved`) · `set_client_plan` et la route `/api/admin/set-plan` (`usageOverride`) · nouvelle branche `elif path == "/api/usage":` **juste avant** `elif path == "/api/billing":` dans `do_GET` · une ligne d'instanciation **juste après** `def subscription_required_payload` · `dashboard/quota-check.py` (`usage.charge`) · `docs/PRICING.md` §6 (mise à jour au moment de l'activation) | `projects.py`, l'échelle de crédits 1/6/12, `PLAN_CATALOG` |
+| **B3 Chloé délégation** (vague 1) | `chloe/Chloe-Planner.ps1` · `chloe/Chloe-Triage.ps1` · `chloe/Build-WorkerCards.ps1` · `chloe/prompts/plan.md`, `triage.md`, `consistency-review.md` · `chloe/identity/playbook-projects.md` · `core/projects/WORKER-CARDS.json` (généré, versionné) · `dashboard/chloe_scope.py` · `tests/chloe-projects/**` | `chloe/Invoke-Chloe-Orchestration.ps1` (interrupteur `-EmitPlan` : renvoie les Workers choisis et l'ordre sans exécuter ; `BK_MAX_WORKERS` devient une suggestion `SuggestProject`, plus un retrait silencieux) · `core/ai/adapters/Build-WorkerSystemPrompt.ps1` : **uniquement** la ligne qui choisit `playbook.md` (→ `playbook-projects.md` pour Chloé quand `BK_PROJECTS=1`) · `server.py` : `chloe_worker_cap` (corps) · une ligne d'instanciation **juste après** `def installation_paused` · nouvelle branche `elif path == "/api/chloe/triage":` **juste avant** `elif path == "/api/chloe/plan":` | `projects.py`, `Project-*.ps1` |
+| **B4 interface Projet** (vague 2) | `dashboard/project_ui.js` (vue Projets, assistant de création, détail, centre de validation, jauges d'usage, fil de messages) · `dashboard/project.css` · `dashboard/i18n-en-projects.js` · `tests/projects-ui/**` | `dashboard/index.html` : `<link>` et `<script>` des trois fichiers, `<section id="projets-view" class="view page-wrap" hidden>`, lien `nav-projets` · `dashboard/app.js` : constante `ACCOUNT_GATED_VIEWS` (+ `"projets"`), `showView` (1 ligne `window.BKProjects?.onShowView(name)`), `syncActiveNavLink`, `openWorkerProfile` (1 appel : bouton « Lancer un projet »), `runTask` (branche `USAGE_LIMIT_REACHED` à côté de `SUBSCRIPTION_REQUIRED`, et offre « lancer comme projet » après la synthèse de Chloé via `/api/chloe/triage`), `loadBilling` (1 appel à la jauge) · `server.py` : branche statique `elif path in ("/project_ui.js", "/project.css", "/i18n-en-projects.js"):` **juste après** la branche `/app.js` · `dashboard/service-worker.js` (`CACHE_NAME` → `bk-shell-v3`) | la logique serveur, les contrats d'API |
+| **B5 atelier de sites** (vague 2) | `dashboard/site_factory.py` (construction, contrôles) · `dashboard/site_tools.py` (outils `site_*`, `register_tool`) · `dashboard/site_preview.py` (aperçu) · `dashboard/site_routes.py` (routes `…/site/*` via `register_route`) · `core/projects/site/templates/**`, `SITE-GUIDE.md`, `site-checks.json` · `core/integrations/Connector-Site-Publish.ps1` · `tests/site-factory/**` | `server.py` : 2 lignes **au tout début de `do_GET`**, avant `if route_requires_gate(path)` (`if SITE_PREVIEW.handle_get(self, path): return`) + instanciation dans le bloc d'ancre de B1 via `projects_wiring` (aucune ligne propre) · `core/integrations/Connector-Dispatch.ps1` : une ligne de chargement de `Connector-Site-Publish.ps1` et les entrées `wordpress` de `$Script:OperationTable` | `projects.py` (utilise le registre), `app.js` (l'interface de l'atelier est fournie par B4 à partir de `…/site/*`) |
+| **B6 recettes + évaluation** (vague 2) | `workers/*/recipes/*.json` · `chloe/recipes/*.json` · `core/projects/RECIPE-SCHEMA.json` · `dashboard/recipes.py` · `tests/projects/test_recipes.py` · `tests/projects/eval/**` (scénarios, juges, programme d'exécution, référence) · `docs/AUTONOMY-EVAL.md` | aucun fichier partagé ; seulement, en option, l'entrée `meta_ads` de `$Script:OperationTable` (`CREATE_CAMPAIGN_DRAFT`, doublures de test, jamais en réel sans compte d'essai) | tout le reste |
+
+Fichiers jamais modifiés par personne dans ce chantier : `core/ai/LEVELS.json` (échelle de crédits des missions), `core/ai/AI-PRICING.json`, `core/ai/adapters/Mission-Cost.ps1`, `Client-Memory.ps1`, `Client-Installation.ps1`, `dashboard/installations.py` (hors décision du propriétaire sur `PLANS_WITH_CHLOE`), `dashboard/file_preview.py` (réutilisé).
+
+### 10.3 Conventions de travail communes
+
+Commits fréquents (au plus toutes les 10 à 15 minutes), jamais de push sur `main`, une branche par constructeur (`ws/chantier-<module>`). Tests Python : `python tests/<dossier>/test_*.py` (Windows) ; tests PowerShell dans WSL avec `pwsh` 7, un à la fois, les essais de bout en bout (copie du dépôt, plusieurs minutes, 300 Mo à supprimer ensuite) en dernier. Aucun appel réel à l'API Anthropic en dehors des preuves prévues (B1 : un essai de fumée à 0,50 USD au plus avec Haiku 5.5 ; B6 : l'évaluation, sur approbation du propriétaire). Commentaires de code en français, dans le style du fichier voisin ; messages d'erreur destinés au client en français.
+
+### 10.4 Plan de tests par module
+
+| Module | Tests (Python, sauf mention) |
+|---|---|
+| B1 | machine à états (toutes les transitions autorisées/interdites) · écritures atomiques et verrou · reprise après redémarrage simulé (kill du lanceur, `cost.json` réglé) · plafonds de concurrence et file d'attente · ingestion des articles (validation, déduplication, plafonds, masquage des secrets) · exécution d'approbation avec `run_connector` simulé (une seule exécution, `EXECUTING` → `UNKNOWN_CHECK_MANUALLY`) · chemin sûr de `project_tools` (liens symboliques, `..`, encodages, tailles) · contrôles typés · validation du plan · **lanceur avec fausse API** (`tests/adapter-review/fake_api.ps1` réutilisé, PowerShell sous WSL) : fin par `step_complete`, échéance, plafond de coût, `pause_turn`, réessais, `container` renvoyé · routes (codes d'erreur, isolation entre clients : 404, limites de débit) · progression (`since`, ETag) · **boucle bout en bout avec un faux lanceur** : plan → étapes → vérification → `DONE`, et le chemin de défaillance (faux critère refusé par le vérificateur) · non-régression : `BK_PROJECTS=0` ne change aucune réponse existante |
+| B2 | voir 6b.11 |
+| B3 | génération des cartes (déterministe, aucune carte pour Atlas) · portée par forfait (Solo, Trio, Équipe, Essai, Worker en pause, Trio avec 3 embauchés) · plan : validation, repli sur l'ancien routeur quand le modèle est indisponible (fausse API), `unassignable` pour un Worker non embauché · `-EmitPlan` et `SuggestProject` (PowerShell sous WSL) · triage (fausse API) |
+| B4 | rendu des états (tous les statuts), jauges d'usage, centre de validation (lots, confirmation saisie pour `high`), interrogation (cadence, arrêt au statut terminal, onglet masqué), erreurs 402/403/429, anglais · test statique de chargement des fichiers (pas de `eval`, pas de `innerHTML` avec données non échappées : tout passe par `escapeHtml`, comme `app.js`) · essai manuel consigné dans un vrai navigateur (mobile compris) |
+| B5 | 8.7 |
+| B6 | intégrité des recettes (9.2) · sélection et injection (`candidates`, `render_*`) · sans appel réel : les scénarios, juges et programme d'évaluation sont testés avec de fausses réponses ; puis l'évaluation réelle sous plafond |
+
+### 10.5 Intégration (après la vague 1, avant la vague 2)
+
+L'orchestrateur fusionne B1, B2, B3 ; puis une **recette d'intégration** (tests croisés, `tests/projects/test_integration.py`) : un projet complet avec fausse API et fausse `UsageService` réelle, qui traverse `WAITING_QUOTA` puis reprend ; un projet Chloé multi-Workers avec un Worker non embauché (Trio) ; l'arrêt `BK_PROJECTS=0` ; les suites existantes du dépôt (levels, hire, pricing, async-missions, adapter-review, file-preview, client-memory, orchestrator) toutes vertes.
+
+### 10.6 Déploiement : dormant jusqu'à la preuve
+
+| Étape | État | Condition pour passer à la suivante |
+|---|---|---|
+| **0. Fusion dormante** | `BK_PROJECTS=0`, `BK_USAGE_WINDOWS=0` ; aucun changement de comportement (tests de non-régression) ; aucune annonce | suites vertes ; revue de sécurité (`security-review`) des chemins de fichiers, de l'aperçu et des outils |
+| **1. Ombre des fenêtres** | `BK_USAGE_WINDOWS=shadow` : le grand livre tourne, **rien n'est bloqué**, chaque refus qui aurait eu lieu est journalisé (`would_block`) | 7 jours de données ; le propriétaire valide les constantes (4 h, 40 %, 4,35) d'après le nombre de clients qui auraient été freinés |
+| **2. Projets pour le propriétaire seul** | `BK_PROJECTS=1`, `BK_PROJECTS_ALLOW=CLI-DASHBOARD` ; évaluation des 8 scénarios sous plafond de 25 USD **après approbation du propriétaire** ; revue manuelle des livrables (site vu dans un navigateur) | critères de décision de 9.5 atteints, coût réel ≤ 0,0375 CHF par crédit, redémarrage forcé sans perte |
+| **3. Pilote** | `BK_PROJECTS_ALLOW` étendu à ≤ 5 clients du programme pilote (`pilot_program.py`), forfaits Équipe et plus ; fenêtres d'usage activées pour les **nouveaux** abonnements | 14 jours sans incident, aucun dépassement de plafond, retours des pilotes |
+| **4. Équipe, Pro, Scale** | liste blanche supprimée pour ces forfaits ; playbook de Chloé mis à jour ; page Tarifs et FAQ (texte validé par le propriétaire) | stabilité, coût, capacité du serveur (décision VPS-2, 10.9) |
+| **5. Solo et Trio** | ouverture avec leurs limites propres | idem |
+
+Retour arrière à tout moment : `BK_PROJECTS=0` (puis `docker compose up -d`) ou `{"killAll": true}` sans redémarrage ; `BK_USAGE_WINDOWS=0`. Aucune donnée n'est perdue. Rien n'est annoncé (site, FAQ, Chloé) avant l'étape où c'est construit **et** testé. Les fenêtres d'usage modifient les conditions des abonnés existants : les CGV prévoient 30 jours de préavis effectif au renouvellement suivant (`docs/PRICING.md`, abonnés existants) ; l'étape 3 les applique d'abord aux nouveaux abonnements, et le propriétaire décide du préavis pour les autres.
+
+### 10.7 Variables d'environnement et fichiers de réglage
+
+| Nom | Défaut | Rôle |
+|---|---|---|
+| `BK_PROJECTS` | `0` | interrupteur général (503 `PROJECTS_DISABLED`, superviseur arrêté) |
+| `BK_PROJECTS_ALLOW` | vide | liste blanche de `ClientId` pendant les étapes 2 et 3 (vide = tous si `BK_PROJECTS=1`) |
+| `BK_USAGE_WINDOWS` | `0` | `0` désactivé, `shadow` ombre, `1` actif |
+| `BK_PROJECT_STEPS_GLOBAL`, `BK_PROJECT_STEPS_PER_CLIENT` | `2`, `1` | concurrence des lanceurs |
+| `BK_PROJECT_COMPACTION`, `BK_PROJECT_CONVO_CACHE` | `0`, `1` | options 3.6 et 3.2 |
+| `BK_PREVIEW_BANNER`, `BK_PREVIEW_BASE_URL` | `1`, vide | bandeau et domaine d'aperçu (8.5) |
+| `BK_PYTHON` | `python3` (Linux) / `python` (Windows) | interpréteur appelé par le lanceur |
+
+Fichiers de réglage versionnés : `core/usage/USAGE-LIMITS.json`, `core/ai/PROJECT-PHASES.json`, `core/projects/PROJECT-LIMITS.json`, `core/projects/APPROVAL-RISK.json`, `core/projects/site/site-checks.json`.
+
+### 10.8 Risques
+
+| Risque | Gravité | Parade |
+|---|---|---|
+| L'estimation de coût d'un projet est fausse (les chiffres du 6.1 sont des hypothèses) | haute | plafond par étape, par projet, fenêtres ; facturation au coût mesuré ; étape 1 (ombre) et 2 (mesure) avant tout client ; coefficient `actual/estimated` réinjecté dans les estimations |
+| Le vérificateur est complaisant → faux « terminé » | haute | contrôles typés indépendants du modèle, preuves résolues par le moteur, défauts injectés (4.7), critères de décision |
+| Capacité : 2 vCPU / 3,8 Go, jusqu'à 8 `pwsh` | haute | 2 lanceurs globaux, garde mémoire, file d'attente ; VPS-2 (4 vCPU / 8 Go, environ 8,50 USD par mois selon l'étude) recommandé avant le pilote |
+| Fonctions Anthropic en préversion (`context-management-2025-06-27`, compaction) | moyenne | optionnelles, repli sans elles testé, aucune dépendance de correction |
+| Fichiers et conteneurs Anthropic partagés entre tous les clients (même espace de travail de la clé) | moyenne | l'espace de travail du projet est sur NOTRE disque ; identifiants jamais exposés ; suppression immédiate ; conteneur seulement à l'intérieur d'une étape |
+| Injection par le contenu web / fichiers / sites générés | haute | données jamais ordres ; outils d'écriture sans effet externe ; toute action sortante validée ; aperçu en `sandbox` sans `allow-same-origin` ; `abuse.credential_form` |
+| Hameçonnage via l'aperçu | moyenne | jeton à durée limitée, `noindex`, bandeau, refus des formulaires de mot de passe/carte, aucune page publique |
+| Régression du chemin critique des missions (extraction de l'adaptateur, réservation dans `submit_task`) | haute | extraction sans changement de comportement + suites existantes ; B2 réserve avec repli « laisser passer et journaliser » si le grand livre est illisible (le quota mensuel d'origine reste le garde-fou) |
+| Corruption d'état sous concurrence (incident du 2026-09-28) | haute | un écrivain par fichier, verrou par projet, écriture atomique, tests de concurrence |
+| Données personnelles de prospects (nLPD / RGPD) | moyenne | sources publiques d'entreprise seulement, source citée par ligne, aucune coordonnée privée, mention de désinscription dans les brouillons, rétention 90 jours, suppression sur demande |
+| Le client attend « un niveau Claude » sur tout | moyenne | estimation et critères montrés avant de commencer ; rapport honnête (« ce que je n'ai pas pu vérifier ») ; aucune promesse non mesurée |
+| Interruptions de l'agent par la limite d'usage du propriétaire pendant la construction | moyenne | commits fréquents, un fichier = un propriétaire, contrat unique dans ce document |
+| Opérations de connecteur absentes (campagnes publicitaires, médias WordPress) | faible | options hors chemin critique ; livrables prêts à importer |
+
+### 10.9 Décisions ouvertes du propriétaire (avec ma recommandation)
+
+1. **Constantes des fenêtres** (4 h, 7 jours, 0,40, 4,35) et **préavis** pour les abonnés existants → *recommandé : étape « ombre » 7 jours, nouveaux abonnements d'abord.*
+2. **Essai** : projets indisponibles (défaut) ou « mini-projet » plafonné à 12 crédits → *recommandé : indisponibles ; Chloé en mode mission.*
+3. **Droits de Chloé** : Trio = 3 Workers embauchés (défaut) ; Solo sans Chloé ; tous les autres = 17 → *recommandé tel quel* (modifiable à `PLANS_WITH_CHLOE` et `chloeDelegation`).
+4. **`creditCostChf` = 0,0375** (règle des 35 %) → *recommandé ; à recaler après 30 jours de coûts réels.*
+5. **Plafond d'évaluation** : 25 USD (19,6 sans la référence externe) → *à approuver avant toute dépense.*
+6. **Aperçu** : CSP `sandbox` sur notre origine (v1, sans infrastructure) ou sous-domaine dédié dès le départ (DNS + `Caddyfile.docker` + certificat) → *recommandé : v1 sandbox, sous-domaine à l'étape 4.*
+7. **Hébergement public de sites** : jamais sur notre domaine ; un domaine séparé plus tard ? → *recommandé : non en 2026.*
+8. **Publicités Meta** : construire `CREATE_CAMPAIGN_DRAFT` (campagne en pause) et le tester sur un compte d'essai du propriétaire ? → *recommandé : plus tard ; fichiers prêts à importer d'abord.*
+9. **Niveau d'exécution par défaut d'un projet** : Standard (Sonnet 5.5) ; Approfondi (Opus 5.5) sur choix → *recommandé tel quel* ; plafonds absolus par projet (Solo 8, Trio 12, Équipe 20, Pro 30, Scale 120 CHF).
+10. **Rétention** des espaces de travail : 90 jours ; journaux 12 mois → *à confirmer avec l'avis juridique.*
+11. **Expiration des approbations** : 7 jours, rappels J+1 et J+3 ; e-mails de projet activés par défaut.
+12. **Capacité** : passer au VPS-2 avant le pilote (coût marginal faible face au risque de saturation).
+13. **Textes juridiques et FAQ** : projets, fenêtres d'usage, aperçu privé, conservation des fichiers ; à rédiger/valider avant l'étape 3 (non modifiés ici).
+14. **Nom en interface** : « Projet » (retenu dans ce document) ou « Chantier ».
+
+### 10.10 Ce que ce contrat n'inclut pas (honnêtement)
+
+Pas de génération d'images (les visuels sont du SVG ou des fichiers fournis ; Canva/Figma restent des connecteurs séparés), pas d'hébergement public, pas de navigateur sans tête pour des captures d'écran (le serveur de 2 vCPU ne le permet pas ; le vérificateur lit le HTML/CSS et les rapports de contrôle), pas de notifications push (e-mail seulement), pas de parallélisme réel au-delà des plafonds de lanceurs, pas de reprise d'un projet d'un compte à un autre, pas d'application mobile dédiée. Chacun de ces points est un ajout possible, jamais une promesse.
