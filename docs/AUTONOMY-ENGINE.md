@@ -67,7 +67,7 @@ Un projet est `DONE` si et seulement si, simultanément :
   "assumptions": [{"id": "A1", "text": "5 pages : accueil, soins, équipe, tarifs, contact (hypothèse la plus courante pour un cabinet)"}],
   "criteria": [
     {"id": "C1", "text": "Le site contient les 5 pages en FR et EN, sans lien cassé", "kind": "auto",
-     "check": {"type": "site_check", "profile": "vitrine", "must": ["links", "lang_parity", "meta"]}},
+     "check": {"type": "site_check", "profile": "vitrine", "must": ["links", "i18n", "meta"]}},
     {"id": "C2", "text": "Chaque page a un titre (30-60 car.) et une description (70-160 car.)", "kind": "auto",
      "check": {"type": "site_check", "must": ["meta"]}},
     {"id": "C3", "text": "Le ton est professionnel et rassurant, sans promesse médicale non étayée", "kind": "rubric",
@@ -451,7 +451,7 @@ Quand : (a) **contrôles continus** après chaque étape `DONE` qui revendique d
 |---|---|---|
 | `file_exists` | `path`, `minBytes` | présent, taille minimale |
 | `file_contains` | `path`, `mustContain[]`, `mustNotContain[]` (littéral ou `re:`) | contenu |
-| `site_check` | `profile`, `must[]` (section 8.3), `path:"site/"` | HTML, liens, méta, accessibilité, poids, traceurs, parité de langues |
+| `site_check` | `profile`, `must[]` (section 8.4), `path:"site/"` | HTML, liens, méta, accessibilité, poids, traceurs, parité de langues |
 | `xlsx_check` | `path`, `minFormulas`, `sheets[]`, `noErrors:true` | classeur lisible, formules (pas de valeurs figées), pas de `#REF!`/`#DIV/0!` après recalcul de `file_preview` |
 | `docx_check` | `path`, `minWords`, `headings[]` | document lisible, plan attendu |
 | `csv_check` | `path`, `columns[]`, `minRows`, `unique:"colonne"`, `noEmpty[]` | table de prospects, calendrier, etc. |
@@ -1078,7 +1078,82 @@ class ProjectsAPI:
 
 ## 8. Atelier de sites (contrat)
 
-*(à approfondir)* Outils, contrôles, aperçu isolé, zip, publication.
+### 8.1 Périmètre et acteurs
+
+Objectif : un site **statique multi-pages**, professionnel, bilingue FR/EN, fabriqué de bout en bout dans `workspace/site/`, vérifié automatiquement, visible en **aperçu privé**, exportable en zip, publiable seulement via les connecteurs du client (après approbation) ou par un guide de mise en ligne manuelle. Acteurs typiques d'un projet « site vitrine » : Chloé (cheffe de projet), Lucas (structure, code, SEO technique), Lea (charte, SVG), Emma (textes FR/EN), Seoya (SEO éditorial). L'atelier est une extension du moteur : il enregistre des outils dans `project_tools.py` (registre) ; il n'a aucun état propre.
+
+### 8.2 Organisation du dossier `site/` et construction déterministe
+
+```
+workspace/site/
+  site.json                  marque, langues, pages, navigation, coordonnées (ou « [À COMPLÉTER : …] »), hôtes externes autorisés, déclarations fournies par le client
+  src/_partials/header.html  footer.html  nav.<lang>.html
+  src/pages/<lang>/<slug>.html     corps de page + 1re ligne <!--meta {"title","description","path","alternates":{"en":"/en/care/"},"og":{"image":"/assets/img/og.png"}} -->
+  src/assets/style.css  site.js(optionnel)  img/  fonts/
+  dist/                      produit par `site_build` UNIQUEMENT (jamais écrit à la main) : aperçu, contrôles et zip lisent dist/
+```
+
+`site_build` (Python, déterministe, sans réseau) assemble `dist/` : insère les parties communes (`<!-- @include header -->`), ajoute à chaque page les balises que le modèle oublie : `<!doctype html>`, `<html lang>`, `<meta charset>`, `<meta name="viewport" content="width=device-width, initial-scale=1">`, `<title>`, description, `canonical`, `hreflang` réciproques, Open Graph (`og:title/description/type/url/image`), carte Twitter, `<link rel="icon">`, et génère `sitemap.xml`, `robots.txt` (`Allow: /` ; l'aperçu, lui, répond `noindex`) et `404.html`. Un site cohérent par construction vaut mieux qu'un site à corriger après coup ; les contrôles (8.3) vérifient quand même le résultat.
+
+### 8.3 Outils (enregistrés par `dashboard/site_tools.py`)
+
+| Outil | Entrée | Effet |
+|---|---|---|
+| `site_scaffold` | `{"profile":"vitrine\|landing\|blog","languages":["fr","en"],"pages":[{"slug","title"}],"brand":{"name","tone","colors?"}}` | crée `site.json`, les parties communes, une feuille `style.css` à variables (`--bg --text --primary --on-primary --accent --radius --space-*`, mobile d'abord, `prefers-reduced-motion`, focus visible) depuis `core/projects/site/templates/<profile>/` ; refuse d'écraser un site existant sans `force:true` |
+| `site_build` | `{}` | construit `dist/`, renvoie la liste des pages et des poids ; rafraîchit l'aperçu (8.4) |
+| `site_check` | `{"profile":"vitrine","must":["links","meta","a11y","perf","privacy","i18n","seo","content"]}` | exécute les contrôles ; enregistre `CHK-xxxx` ; renvoie les constats classés |
+| `site_package` | `{}` | écrit `deliverables/site-<slug>.zip` et `deliverables/MISE-EN-LIGNE.md` (guide, 8.6) ; inscrit les livrables |
+
+Le Worker écrit les pages avec `workspace_write` (HTML, CSS, SVG ; pas de binaire), les images raster passent par le bac à sable (Pillow : redimensionner, convertir en WebP, produire `og.png` 1200×630 ; copie vers `$OUTPUT_DIR/site__src__assets__img__hero.webp`, convention 3.8). Guide injecté dans le prompt de toute étape qui utilise `site_*` : `core/projects/site/SITE-GUIDE.md` (mobile d'abord, accessibilité, performance, typographie française avec espaces insécables avant `: ; ! ?`, aucune police ni script externe, formulaire = `mailto:`/`tel:` par défaut, aucun chiffre ni témoignage inventé).
+
+### 8.4 Contrôles automatiques (`dashboard/site_factory.py`, bibliothèque standard, hors ligne, ≤ 10 s pour 40 pages)
+
+Chaque règle a un identifiant, une gravité (`error` bloque `DONE` ; `warn` est signalé) et des seuils réglables par profil (`core/projects/site/site-checks.json`).
+
+| Famille | Règles (identifiant : contrôle) |
+|---|---|
+| `html` | `html.parse` (balises non fermées / mal imbriquées, `id` en double, attributs sans guillemets en erreur) · `html.doctype`, `html.lang`, `html.charset`, `html.viewport` (balise adaptative présente) |
+| `meta` | `meta.title` (30 à 60 caractères, unique) · `meta.description` (70 à 160) · `meta.canonical` · `meta.og` (5 balises) · `meta.twitter` · `meta.favicon` |
+| `links` | `links.internal` (chaque `href`/`src` interne résout vers un fichier de `dist/`) · `links.anchor` (ancre existante) · `links.external` (listés, **non suivis** : jamais de requête sortante depuis le contrôle ; `rel="noopener noreferrer"` si `target=_blank`) · `links.contact` (`mailto:` et `tel:` bien formés) |
+| `img` | `img.alt` (toute `<img>` a `alt`, décoratif = `alt=""`) · `img.dims` (largeur/hauteur pour éviter le décalage) · `img.size` (≤ 250 Ko) · `img.lazy` (warn) |
+| `a11y` | `a11y.h1` (un seul) · `a11y.heading_order` · `a11y.landmarks` (`header nav main footer`) · `a11y.form_labels` · `a11y.link_text` (pas « cliquez ici » seul) · `a11y.button_name` · `a11y.contrast` (rapport ≥ 4,5 : calculé sur les paires de variables `--text/--bg`, `--on-primary/--primary`, au mieux) · `a11y.focus` (pas de `outline:none` sans substitut) · `a11y.skip_link` (warn) · `a11y.reduced_motion` (warn) |
+| `perf` | `perf.page_weight` (HTML ≤ 100 Ko par page, CSS ≤ 100 Ko, JS propre ≤ 50 Ko, page complète ≤ 1 Mo) · `perf.total` (`dist/` ≤ 10 Mo) |
+| `privacy` | `privacy.trackers` (**error** si un hôte de la liste noire apparaît : Google Analytics/Tag Manager, DoubleClick, Facebook/Meta Pixel, Hotjar, Clarity, LinkedIn Insight, TikTok Pixel…) · `privacy.external` (**error** pour tout script, feuille de style, police, iframe ou image d'un hôte absent de `allowedExternalHosts` ; Google Fonts est refusé par défaut) · `privacy.storage` (`document.cookie`, `localStorage` : error sauf déclaré) · `privacy.forms` (warn : action vers un hôte externe) |
+| `i18n` | `i18n.parity` (chaque page FR a son équivalent EN et inversement, même navigation) · `i18n.hreflang` (réciproque) · `i18n.lang` (attribut `lang` conforme au dossier) |
+| `seo` | `seo.sitemap` (toutes les pages) · `seo.orphans` · `seo.titles_unique` · `seo.jsonld` (JSON valide, valeurs issues de `site.json` seulement) |
+| `content` | `content.placeholders` (info : liste les `[À COMPLÉTER : …]`, qui doivent figurer dans `needsFromClient`) · `claims.unverified` (**error** : motif « +500 clients », « 4,9/5 », « avis », étoiles, `AggregateRating`, « certifié », logos de clients, sauf déclaration explicite dans `site.json.claimsProvidedByClient`) · `abuse.credential_form` (**error** : champ mot de passe ou carte bancaire dans un site de présentation) |
+
+Limite assumée : ce n'est pas le validateur W3C (Nu, indisponible hors ligne) ; c'est un ensemble de règles stables, et le vérificateur lit en plus les pages. Résultat : format 4.2 (`findings[]`, `score`, `ok = aucune erreur`).
+
+### 8.5 Aperçu privé : conception et justification (`dashboard/site_preview.py`)
+
+Principe : l'aperçu montre `dist/` à son client, sous un **contexte de sécurité séparé de celui du tableau de bord**. Le tableau de bord détient les cookies de session et des routes qui déclenchent des actions réelles (`/api/.../approve`, `/api/connector-action/confirm`) ; du HTML **généré par un modèle** (qui lit des pages web et des fichiers d'inconnus, donc exposé à l'injection) ne doit jamais s'y exécuter avec les droits de l'origine du tableau de bord.
+
+- **URL à jeton** : `/preview/<jeton>/<chemin>`, jeton = `secrets.token_urlsafe(24)` (192 bits), enregistré dans `runtime/projects/_previews/<jeton>.json` (`projectId`, `clientId`, `createdUtc`, `expiresUtc`, `revoked`). Durée 72 h par défaut (14 jours au plus), prolongeable, révocable (`DELETE …/site/preview`). Un jeton par projet ; le lien peut être partagé avec les collaborateurs du client (c'est voulu) : c'est un secret porteur, comme un lien de partage ; le jeton ne figure jamais dans `events.jsonl` ni dans un e-mail.
+- **Crochet en tête de `do_GET`**, avant la porte et la lecture des cookies : une seule ligne `if SITE_PREVIEW.handle_get(self, path): return` ; la route ne lit ni ne pose aucun cookie.
+- **En-têtes sur CHAQUE réponse** :
+  ```
+  Content-Security-Policy: sandbox allow-scripts allow-popups allow-popups-to-escape-sandbox; default-src 'none'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; script-src 'self'; media-src 'self'; connect-src 'none'; frame-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'; frame-ancestors 'self'
+  X-Content-Type-Options: nosniff        X-Robots-Tag: noindex, nofollow, noarchive
+  Referrer-Policy: no-referrer           Cache-Control: private, no-store
+  Cross-Origin-Opener-Policy: same-origin     (pas de Set-Cookie, pas de CORS)
+  ```
+  **`sandbox` sans `allow-same-origin`** : le document s'exécute dans une *origine opaque* ; ses scripts ne lisent ni cookies ni stockage du tableau de bord, et leurs requêtes vers `/api/*` sont inter-origines et non authentifiées (cookies `SameSite=Lax` non envoyés). `connect-src 'none'` coupe `fetch`/`XHR`, `form-action 'none'` coupe les envois de formulaire, `frame-ancestors 'self'` autorise seulement le tableau de bord à l'afficher dans un `<iframe sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox" referrerpolicy="no-referrer">`. La CSP `sandbox` s'applique aussi si le lien est ouvert dans un onglet : on ne peut pas la contourner en sortant de l'iframe. `script-src 'self'` limite aux scripts du site (aucun script en ligne).
+- **Chemins stricts** : `urllib.parse.unquote` une fois, puis refus de `..`, `\`, NUL, segments cachés, doubles encodages, chemin absolu ; `posixpath.normpath` ; extension dans la liste (`html css js svg png jpg webp gif ico woff2 xml txt json webmanifest`), type MIME fixé par table (jamais deviné) ; `realpath` sous `realpath(dist/)` + séparateur et aucun composant lien symbolique ; pas de liste de répertoire (`/` → `index.html`) ; 404 uniforme (même corps pour jeton inconnu, expiré, révoqué, chemin invalide : rien à énumérer). Plafonds : fichier ≤ 5 Mo, `dist/` ≤ 25 Mo, ≤ 60 pages, 60 requêtes par minute et par jeton.
+- **Bandeau d'aperçu** (anti-hameçonnage et clarté) : à la volée, un élément fixe « Aperçu privé BK-AI-WORKERS — non publié » est inséré après `<body>` dans les réponses HTML (`BK_PREVIEW_BANNER=1`, défaut). Le contrôle `abuse.credential_form` empêche d'ailleurs de servir une page à champ mot de passe/carte.
+- **Pourquoi pas `allow-same-origin`** : avec lui, un script injecté pourrait appeler `/api/projects/…/approvals/…/approve` avec la session du client, en contournant `SameSite` et le contrôle `Origin` (même origine) : approuver des envois, lire tous les projets. Pourquoi pas un simple domaine séparé dès le départ : il demande un second nom DNS, un bloc `Caddyfile` et un certificat ; la CSP `sandbox` donne l'isolation d'origine **sans infrastructure**. Évolution recommandée à terme : `BK_PREVIEW_BASE_URL=https://apercu.<domaine>` (même processus, second hôte) pour une isolation d'origine *et* de cookies ; le code construit déjà des URL absolues à partir de cette variable. Décision du propriétaire.
+- Mise à jour : `site_build` écrit `dist/` puis rafraîchit l'expiration du jeton (aucune action du client).
+
+### 8.6 Export et publication
+
+- **Zip** (`GET …/site/export.zip`, `site_package`) : `dist/` + `MISE-EN-LIGNE.md` ; noms triés, horodatages fixes (reproductible), aucun fichier caché, ≤ 25 Mo, `Content-Disposition: attachment; filename="site-<slug>.zip"`. `?scope=source` ajoute `src/` et `site.json` pour de futures modifications.
+- **Mise en ligne guidée** (toujours disponible) : `MISE-EN-LIGNE.md` est rédigé pour l'hébergeur que le client indique (Infomaniak, Hostpoint, OVH, Netlify par glisser-déposer, Cloudflare Pages, GitHub Pages…) : où déposer, enregistrements DNS exacts pour SON domaine (`A`/`CNAME`, jamais inventés : si le domaine n'est pas fourni, ils sont à compléter), certificat, liste « avant la mise en ligne » (champs `[À COMPLÉTER]`, mentions légales relues par un juriste ou par Clara, politique de confidentialité conforme à la nLPD/RGPD), liste « après » (soumettre `sitemap.xml` à Search Console ; Seoya peut ensuite suivre l'indexation).
+- **Via les connecteurs du client, après approbation** : seul **WordPress** a un sens pour un site de présentation avec les opérations existantes (`CREATE_DRAFT`, `UPDATE_DRAFT`) : chaque page devient un **brouillon** WordPress (titre + contenu de `<main>` dans un bloc « HTML personnalisé », styles dans une feuille à téléverser ou dans le thème), article d'approbation de risque `medium`, réversible (le client publie lui-même dans son WordPress). Les images exigent une opération `wordpress:UPLOAD_MEDIA` (à ajouter par le constructeur « atelier » dans un nouveau fichier `core/integrations/Connector-Site-Publish.ps1` chargé par une ligne dans `Connector-Dispatch.ps1`, avec tests ; à défaut, téléversement manuel documenté). **Webflow** : seulement des éléments de CMS (articles) via `UPDATE_DRAFT`, pas des pages statiques ; **Shopify/WooCommerce** : pas pertinents pour un site statique. Aucune publication directe sur le site en ligne d'un client sans article d'approbation `high` typé.
+- **Pas d'hébergement public sur notre origine en v1** — décision et raisons : (1) *réputation* : une seule page d'hameçonnage ou de logiciel malveillant fait classer tout le domaine du produit par Safe Browsing et les filtres e-mail, ce qui casserait connexion, paiement et courriels ; (2) *responsabilité d'hébergeur* (droit suisse, DSA pour les visiteurs de l'UE) sans processus de signalement ni de retrait ; (3) le contenu est *généré par un modèle à partir d'entrées web* : le publier automatiquement serait une action sortante non validée ; (4) domaines personnalisés, TLS, DNS, disponibilité, sauvegardes, bande passante et attaques par déni de service sont un produit à part, hors d'un serveur de 2 vCPU ; (5) la loi de la plateforme : tout ce qui sort passe par la validation du client. Évolution possible : un domaine séparé (par exemple `bk-sites.net`), sur un autre serveur, avec procédure d'abus, activé sur demande, après avis juridique.
+
+### 8.7 Tests (constructeur « atelier »)
+
+Une fixture « bon site » (zéro erreur) et une fixture « site piégé » avec un défaut par règle, vérifiées règle par règle ; construction déterministe (deux `site_build` = octets identiques) ; chemins d'aperçu piégés (`..%2f`, `%2e%2e/`, `%252e`, antislash, NUL, lien symbolique, chemin absolu, fichier caché) ; jeton inconnu/expiré/révoqué = même 404 ; **test des en-têtes** (la CSP exacte ci-dessus, présence de `sandbox` et absence de `allow-same-origin`) ; plafonds de taille ; zip reproductible ; 60 pages contrôlées en moins de 10 s ; un test d'intégration où une page contenant un script qui appelle `fetch('/api/projects')` ne peut rien lire (documenté par l'en-tête et vérifié dans un navigateur au moins une fois : étape de recette manuelle consignée).
 
 ## 9. Recettes et évaluation (contrat)
 
