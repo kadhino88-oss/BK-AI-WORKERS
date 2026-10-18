@@ -437,7 +437,87 @@ Au moment de planifier (`kind:"plan"`), `projects.py` demande `recipes.candidate
 
 ## 4. Vérification
 
-*(à approfondir)* Passe indépendante, contexte neuf, preuves par critère, tours de correction bornés (2), rapport final qui cite les preuves.
+### 4.1 Deux niveaux de contrôle
+
+1. **Contrôles déterministes, exécutés par le moteur Python, sans LLM** (`dashboard/project_checks.py`, appelés par `projects.py` après toute étape qui revendique un critère `auto`, et par l'outil `check_run` du vérificateur). Ce sont les preuves les plus fortes : rapides, gratuites, reproductibles.
+2. **Passe du vérificateur** (étape `kind:"verify"`, modèle fort, contexte neuf) pour les critères `rubric` et pour chercher ce que les contrôles typés ne voient pas.
+
+Quand : (a) **contrôles continus** après chaque étape `DONE` qui revendique des critères `auto` ; (b) **jalons** : le plan peut déclarer `milestones: [{"id":"M1","afterSteps":["S4","S5"],"criteriaIds":["C1","C2"]}]` (recommandé dès 12 étapes) ; (c) **finale**, toujours, avant `DONE`.
+
+### 4.2 Types de contrôles (`check`) et résultat
+
+| `check.type` | Paramètres | Vérifie |
+|---|---|---|
+| `file_exists` | `path`, `minBytes` | présent, taille minimale |
+| `file_contains` | `path`, `mustContain[]`, `mustNotContain[]` (littéral ou `re:`) | contenu |
+| `site_check` | `profile`, `must[]` (section 8.3), `path:"site/"` | HTML, liens, méta, accessibilité, poids, traceurs, parité de langues |
+| `xlsx_check` | `path`, `minFormulas`, `sheets[]`, `noErrors:true` | classeur lisible, formules (pas de valeurs figées), pas de `#REF!`/`#DIV/0!` après recalcul de `file_preview` |
+| `docx_check` | `path`, `minWords`, `headings[]` | document lisible, plan attendu |
+| `csv_check` | `path`, `columns[]`, `minRows`, `unique:"colonne"`, `noEmpty[]` | table de prospects, calendrier, etc. |
+| `json_schema` | `path`, `schema` | fichier structuré conforme |
+| `approval_executed` | `kind`, `minCount` | des articles d'approbation d'un type donné ont été exécutés |
+| `count_matches` | `path`, `regex`, `min` | nombre d'éléments (ex. 30 publications dans le calendrier) |
+
+Résultat enregistré dans `verification/<round>/checks/CHK-<8 hex>.json` :
+
+```json
+{"id": "CHK-3fa2c1d0", "type": "site_check", "ranUtc": "…", "ok": false, "score": 0.86,
+ "findings": [{"rule": "links.broken", "severity": "error", "file": "site/tarifs.html", "detail": "Lien interne introuvable : contact.html#rdv"},
+              {"rule": "img.alt", "severity": "warn", "file": "site/index.html", "detail": "2 images sans alt"}],
+ "inputs": [{"path": "site/index.html", "sha256": "…"}]}
+```
+
+### 4.3 La passe du vérificateur
+
+- **Identité neutre** : prompt « Contrôleur qualité » (pas la personnalité ni le playbook du Worker exécutant ; sinon il se juge lui-même). Ses instructions : chercher à **réfuter** chaque critère, ouvrir les fichiers réels, ne jamais se fier aux rapports, noter `PASS`, `FAIL` ou `UNVERIFIABLE` (par exemple une donnée que seul le client possède).
+- **Contexte** : objectif, critères et grilles, registre des livrables, résultats des contrôles automatiques déjà faits, index de l'espace de travail, et les *revendications* des Workers présentées comme « non fiables, à vérifier » ; pas leurs raisonnements ni leurs historiques.
+- **Outils** : lecture seule (`workspace_list/read/search/view_image`), `check_run`, `preview_fetch`, `web_fetch` (pour contrôler des sources citées), `step_complete`. Ni écriture, ni connecteur, ni bac à sable : il ne produit pas la preuve qu'il contrôle.
+- **Modèle** : au moins aussi fort que l'exécutant (phase `verify` = Opus 5.5 effort élevé quand l'exécution est sur Sonnet 5.5).
+
+Sortie `verification/<round>/verification.json` :
+
+```json
+{
+  "schema": "BK-PROJECT-VERIFICATION-V1", "round": 1, "scope": "final",
+  "criteria": [
+    {"id": "C1", "verdict": "FAIL", "note": "2 liens internes cassés et la page EN Équipe manque.",
+     "evidence": [{"type": "check", "ref": "CHK-3fa2c1d0"}, {"type": "file", "ref": "site/en/"}], "fixHint": "Créer site/en/equipe.html ; corriger contact.html#rdv"},
+    {"id": "C3", "verdict": "PASS", "note": "Aucune promesse de guérison relevée sur les 5 pages lues.",
+     "evidence": [{"type": "excerpt", "ref": "site/soins.html", "lines": [24, 31], "quote": "Nous vous proposons un bilan personnalisé"}]}
+  ],
+  "overall": "FAIL", "unverifiable": [], "summary": "…"
+}
+```
+
+### 4.4 Les preuves sont résolues par le moteur, pas crues
+
+`projects.py` valide chaque preuve avant d'accepter le verdict :
+
+| Type | Condition de validité |
+|---|---|
+| `file` | le chemin existe dans `workspace/`, taille > 0 ; le moteur enregistre `sha256` |
+| `check` | `CHK-xxxx` existe dans ce tour de vérification et son champ `ok` est cohérent avec le verdict (un `PASS` appuyé sur un contrôle `ok:false` est refusé) |
+| `excerpt` | le fichier existe et la **citation** (≤ 300 caractères) apparaît littéralement dans les lignes indiquées |
+| `fetch` | l'enregistrement de `preview_fetch` existe (statut 200, taille, titre) |
+| `approval` | l'article existe avec `status: EXECUTED` |
+
+Un `PASS` sans au moins une preuve valide est **rétrogradé en `UNVERIFIABLE`** par le moteur. Un critère `auto` n'est `PASS` que si son contrôle typé est `ok:true` : le vérificateur ne peut pas passer outre. Conséquence : « terminé » ne dépend ni de l'enthousiasme de l'exécutant ni de la complaisance du vérificateur.
+
+### 4.5 Tours de correction (bornés)
+
+1. Les critères `FAIL` créent des étapes `fix` (une par groupe de critères liés), assignées au Worker propriétaire de l'étape concernée, avec le `fixHint` et les preuves d'échec dans leur contexte. Budget : elles comptent dans le projet comme toute étape.
+2. Re-vérification **ciblée** des critères corrigés (moins chère que la finale complète) puis finale complète.
+3. **Au plus 2 tours** de correction. Après le 2ᵉ échec : `WAITING_INPUT` / `CRITERIA_FAILED` avec, par critère en échec, la preuve et trois choix du client (guider avec un message, accepter en l'état → `DONE` avec `acceptedGaps[]`, annuler). Aucune boucle infinie correction/vérification.
+4. Les critères `UNVERIFIABLE` pour cause de donnée client créent une question unique (`request_input` côté moteur) ; ils n'échouent pas le projet.
+5. Budget de vérification : ≤ 15 % du plafond du projet (consigne douce : le planificateur espace les jalons en conséquence) ; si la vérification finale n'est plus payable, le projet passe `BUDGET_REACHED` avec les contrôles déterministes déjà faits affichés, jamais un `DONE` non vérifié.
+
+### 4.6 Rapport final
+
+L'étape `consolidate` écrit `final-report.md` (et un message de livraison) selon un gabarit fixe : **1** ce qui a été demandé ; **2** ce qui est livré (liens vers les livrables) ; **3** tableau critère / verdict / preuve ; **4** hypothèses retenues ; **5** ce que le client doit encore faire (champs `[À COMPLÉTER]`, approbations en attente, décisions) ; **6** actions sortantes exécutées et en attente ; **7** coût (crédits, durée, nombre d'étapes) ; **8** limites et « ce que je n'ai pas pu vérifier ». Le moteur refuse un rapport qui affirme un critère `PASS` absent de `verification.json` (comparaison automatique des identifiants).
+
+### 4.7 Mesurer le vérificateur lui-même
+
+Un vérificateur complaisant est pire que pas de vérificateur. Le jeu de tests (section 9.5) injecte des défauts connus (lien cassé, page manquante, témoignage inventé, formule remplacée par une valeur figée, fichier vide déclaré livré) et exige un taux de détection ≥ 90 % et zéro faux `PASS` sur les défauts « durs » ; sinon la recette ou le prompt du vérificateur est corrigé avant tout déploiement.
 
 ## 5. Validation humaine sans fatigue
 
