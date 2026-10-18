@@ -679,7 +679,169 @@ Atteint quand le plafond de crédits **du projet** est épuisé (ou ne permet pl
 
 ## 6b. Fenêtres d'usage (session 4 h, semaine, mois)
 
-*(à approfondir)* `core/usage/USAGE-LIMITS.json`, `dashboard/usage.py`, `GET /api/usage`, `WAITING_QUOTA`.
+### 6b.1 Le modèle (exigence B du propriétaire)
+
+Comme les limites de Claude, en plus du prix et des crédits mensuels du forfait : une fenêtre de **SESSION** (4 heures, glissante, ouverte par la première utilisation qui consomme des crédits) et une fenêtre **HEBDOMADAIRE** (7 jours à partir de la première utilisation de la semaine). Aucun forfait n'est illimité. Une consommation (mission, étape de projet, automatisation) doit passer **les trois** fenêtres (session, semaine, mois) ; la plus restrictive borne. Quand une limite est atteinte : une mission est refusée avec l'heure exacte de renouvellement ; un **projet ne tombe pas en erreur, il attend** (`WAITING_QUOTA`) avec tout son état et reprend seul au renouvellement, ou tout de suite si le client monte de forfait. Le client voit toujours ce qu'il lui reste en session, en semaine, en mois, la prochaine heure de renouvellement, et la voie de montée en gamme avec les limites du forfait supérieur.
+
+### 6b.2 Constantes (fichier que le propriétaire règle : `core/usage/USAGE-LIMITS.json`)
+
+```json
+{
+  "version": 1,
+  "creditCostChf": 0.0375,
+  "weeklyDivisor": 4.35,
+  "sessionShareOfWeek": 0.40,
+  "sessionHours": 4,
+  "weekDays": 7,
+  "minSessionCredits": 12,
+  "minStartCredits": 6,
+  "reservationTtlSec": {"mission": 720, "project_step": 900, "automation": 300},
+  "exemptClients": ["CLI-DASHBOARD", "CLI-TRIAL-PUBLIC"],
+  "exemptPlans": ["essai"],
+  "overridesByClient": {}
+}
+```
+
+- Hebdomadaire = `round(mensuel / 4,35)` (4,35 semaines par mois en moyenne) ; session = `max(minSessionCredits, round(0,40 × hebdomadaire))`. Le plancher de 12 crédits garantit qu'une mission Approfondi (12 crédits, le plus gros prix unitaire de `LEVELS.json`) tient toujours dans une session vide.
+- `creditCostChf` : 6.1. `overridesByClient` : plafonds d'un contrat Enterprise (`{"CLI-CUST-…": {"sessionCredits": 1200, "weekCredits": 3000}}`), écrits par `POST /api/admin/set-plan`.
+- Essai : exempt des fenêtres (15 crédits uniques sur 3 jours : une fenêtre n'ajouterait rien) ; propriétaire et essai public : exempts. Un identifiant qui n'est pas un compte client reconnu n'est jamais exempté par défaut : il suit `exemptClients` seulement.
+
+### 6b.3 Ce que ça donne (calculé avec les crédits actuels de `PLAN_CATALOG`)
+
+| Forfait | Mois | Semaine (≈ mois / 4,35) | Session (≈ 40 % de la semaine) | Missions Équilibre par session | Coût IA au pire cas, par session / semaine |
+|---|---|---|---|---|---|
+| Solo | 250 | 57 | 23 | 3 | 0,86 / 2,14 CHF |
+| Trio | 500 | 115 | 46 | 7 | 1,72 / 4,31 CHF |
+| Équipe | 900 | 207 | 83 | 13 | 3,11 / 7,76 CHF |
+| Pro | 1 250 | 287 | 115 | 19 | 4,31 / 10,76 CHF |
+| Scale | 4 000 | 920 | 368 | 61 | 13,80 / 34,50 CHF |
+| Enterprise (défaut 10 000) | 10 000 | 2 299 | 920 | 153 | 34,50 / 86,21 CHF |
+| Starter (hérité) | 150 | 34 | 14 | 2 | 0,53 / 1,27 CHF |
+| Business (hérité) | 600 | 138 | 55 | 9 | 2,06 / 5,17 CHF |
+| Pro hérité (1 500 crédits) | 1 500 | 345 | 138 | 23 | 5,17 / 12,94 CHF |
+
+Garantie de coût : le plafond MENSUEL reste actif en plus des deux autres ; quel que soit le chevauchement des fenêtres (jusqu'à 5 semaines glissantes peuvent démarrer dans un mois civil), la consommation d'un cycle ne dépasse jamais les crédits du mois, donc le coût IA reste sous `creditCostChf × crédits`, c'est-à-dire sous 35 % du prix (6.1). Les fenêtres ne servent pas à tenir la règle des 35 % : elles servent à **lisser** l'usage (un client ne vide plus son mois en une journée), comme Claude.
+
+### 6b.4 Fenêtres glissantes : règles exactes (tout en UTC)
+
+- **Session** : si aucune session n'est ouverte (ou si `now ≥ endUtc`), la première réservation qui passe ouvre `[startUtc = now, endUtc = now + 4 h)`. Pendant la fenêtre, `used` s'accumule ; à `endUtc` la fenêtre se ferme ; la suivante s'ouvre à la prochaine réservation (pas de fenêtre « vide » qui court). Une réservation libérée sans aucun crédit consommé **et** sans autre réservation ni consommation dans la fenêtre la **referme** (une erreur au premier appel n'ouvre pas de session).
+- **Semaine** : identique, avec 7 × 24 h.
+- **Mois** : c'est le cycle de facturation existant (`billing_cycle(anchor, renews)` : `[cycleStartUtc, renewsAtUtc)`), pas une fenêtre glissante. Changement de cycle = nouvelle fenêtre mois (compteur à zéro).
+- Chaque fenêtre porte un identifiant (`"S-<startEpoch>"`, `"W-<startEpoch>"`, `"M-<cycleStartEpoch>"`). Une réservation enregistre les identifiants des fenêtres où elle a été prise ; au règlement, seules les fenêtres **encore courantes avec le même identifiant** sont débitées (une étape de 8 minutes qui chevauche la fin d'une session est comptée dans la session où elle a commencé, c'est-à-dire pas dans la suivante : biais favorable au client, d'au plus une étape par fenêtre).
+- Heure de renouvellement affichée au client : `endUtc` de la fenêtre qui borne (`binding`), convertie dans son fuseau par l'interface.
+
+### 6b.5 Grand livre O(1) et réservation atomique
+
+Un fichier par client : `runtime/usage/<ClientId>.json` (quelques centaines d'octets, jamais un balayage des fichiers `TASK-*.json` : `get_billing` le fait aujourd'hui à chaque appel et ne passe pas à l'échelle).
+
+```json
+{
+  "schema": "BK-USAGE-LEDGER-V1", "clientId": "CLI-CUST-1A2B3C4D", "updatedUtc": "…", "rev": 412,
+  "session": {"id": "S-1792474320", "startUtc": "2026-10-20T08:12:00Z", "endUtc": "2026-10-20T12:12:00Z", "used": 30, "reserved": 14},
+  "week":    {"id": "W-1792474320", "startUtc": "2026-10-20T08:12:00Z", "endUtc": "2026-10-27T08:12:00Z", "used": 88, "reserved": 14},
+  "month":   {"id": "M-1790000000", "startUtc": "2026-10-12T10:11:12Z", "endUtc": "2026-11-12T10:11:12Z", "used": 340, "reserved": 14, "seeded": true},
+  "reservations": {
+    "RSV-5d2e91a0": {"credits": 14, "kind": "project_step", "ref": "PRJ-9F1C…:S4", "createdUtc": "…", "expiresUtc": "…",
+                     "windows": {"session": "S-1792474320", "week": "W-1792474320", "month": "M-1790000000"}}
+  },
+  "recent": [{"ts": "…", "kind": "mission", "ref": "TASK-…", "credits": 6}],
+  "lastReconcileUtc": "2026-10-20T06:00:00Z", "drift": 0
+}
+```
+
+```
+reserve(client, credits, kind, ref, ttl_s, allow_partial):          # sous le verrou du grand livre de CE client (RLock par client + _write_json_atomic)
+  L = charger_ou_initialiser(client)           # 1 lecture de fichier ; si absent : amorçage du mois par UN balayage, une seule fois
+  libérer les réservations échues (voir 6b.6)  ; fermer les fenêtres dont endUtc <= now
+  A = allocations(client, now)                 # {session, week, month} recalculées depuis le forfait ACTUEL (jamais stockées)
+  reste[w] = A[w] − L[w].used − L[w].reserved  # pour w dans session, week, month
+  borne = min(reste)  ; fenêtre_bornante = argmin
+  si credits > borne :
+        si allow_partial et borne >= minStartCredits : credits = borne
+        sinon : retourner Blocage(limit=fenêtre_bornante, resetsAtUtc=L[w].endUtc, remaining=borne, needed=credits)
+  ouvrir session/semaine si elles ne sont pas ouvertes (start = now)
+  pour w dans les trois : L[w].reserved += credits
+  L.reservations[rsv] = {...} ; rev += 1 ; écriture atomique ; retourner Reservation(id, credits)
+
+settle(client, rsv, actual)  : débite used += actual et reserved −= credits dans les fenêtres encore courantes (6b.4) ; supprime la réservation ; idempotent (rsv inconnu = rien)
+release(client, rsv)         : settle(…, 0) + referme les fenêtres devenues vides
+```
+
+Atomicité : le verrou du grand livre est un `threading.RLock` **par client** (dictionnaire sous un verrou global court) ; l'écriture est `_write_json_atomic`. Le serveur est un seul processus (plusieurs threads) : aucun verrou inter-processus n'est nécessaire, mais le fichier porte `rev` pour détecter, en test, une écriture concurrente. Deux missions et trois étapes de projet simultanées ne peuvent donc jamais dépasser une fenêtre : la somme `used + reserved` est contrôlée et mise à jour dans la même section critique.
+
+### 6b.6 Réservations échues, réconciliation, sources de vérité
+
+- **Échéance d'une réservation** (`reservationTtlSec`) : une réservation `HELD` plus vieille que son délai est examinée par le *reaper* d'usage (appelé à chaque `reserve` et au démarrage) : si `ref` désigne une mission, on regarde le `TASK-<id>.json` (écrit → on règle sur son `Credits` via `task_credits`) ; sinon la réservation est **libérée à 0** (une mission qui n'a rien livré ne coûte rien, règle existante, `NON_BILLABLE_TASK_STATUSES`) ; pour une étape de projet, on règle d'après `steps/<id>/<n>/cost.json` (le coût dépensé auprès d'Anthropic existe même si le processus est mort).
+- **Source de vérité** : les traces (`runtime/tasks/TASK-*.json` avec `Credits`, et `runtime/projects/<ClientId>/<ProjectId>/cost-ledger.jsonl`) font foi ; le grand livre est un cache O(1). `usage.reconcile(client_id)` (au plus toutes les 6 h par client actif, et à la demande de l'administration) recalcule `month.used` (somme des `task_credits` du cycle + règlements de projets du cycle) et la consommation de la session et de la semaine courantes (champ `CreatedAtUtc` des traces), consigne l'écart (`drift`) et **corrige le cache**, jamais les traces.
+- `get_billing` : `creditsUsed` = `month.used` du grand livre (plus de balayage à chaque appel) ; le balayage ne subsiste que dans `reconcile` et dans un test de non-régression qui compare les deux sur un jeu de traces. **Sans cette règle, les crédits des projets (qui ne sont pas des fichiers `TASK-*.json`) échapperaient au quota mensuel.**
+- **Chemins de consommation** : (1) `submit_task` (point d'entrée UNIQUE des missions : routes, WhatsApp, API publique) réserve `level_credits × nombre de Workers autorisés à Chloé` puis règle sur les `Credits` des traces écrites ; (2) étapes de projet (6.3) ; (3) automatisations : `quota-check.py` appelle `usage.charge(client, 1, kind="automation")` (réservation + règlement immédiats, 1 crédit, niveau Rapide) et la tâche est sautée, sans erreur, si une fenêtre est atteinte (elle sera retentée au tick suivant) ; (4) essai public et propriétaire : exemptés.
+
+### 6b.7 Changements de forfait en cours de fenêtre, forfaits hérités
+
+- Les allocations sont **recalculées à chaque contrôle** depuis `plan_monthly_credits(plan_id, state) + extraCredits` : une montée en gamme élargit tout de suite les trois fenêtres (les `used` restent) ; une descente les réduit sans rembourser (`reste = max(0, …)`). Les forfaits hérités (Starter, Business) et les abonnés Pro/Scale d'avant la grille (`_grandfathered`) suivent automatiquement leurs crédits d'origine (tableau 6b.3). Un nouveau cycle (`set_billing_plan`, renouvellement) repart avec une fenêtre mois neuve ; les fenêtres session et semaine **ne sont pas remises à zéro** par un changement de forfait (comme Claude).
+- Enterprise : allocations dérivées du plafond contractuel (`contractCredits`) ou fixées par `overridesByClient`.
+- Un seul point de branchement pour réveiller les projets en attente : `_billing_save(state, client_id)` appelle `USAGE.on_billing_saved(client_id)` (qui fait un coup de coude au superviseur) ; sans lui le tick de 5 s suffirait.
+
+### 6b.8 Interface Python (`dashboard/usage.py`, indépendante de `server.py`)
+
+```python
+class UsageService:
+    def __init__(self, root, *, plan_view, lock=None, write_json=None, now=time.time, nudge=None): ...
+        # plan_view(client_id) -> {"planId","monthlyCredits","cycleStartUtc","renewsAtUtc","exempt","override"}  (fournie par server.py)
+    def remaining(self, client_id, now=None) -> UsageView            # lecture, aucune écriture (sauf fermeture de fenêtres échues)
+    def reserve(self, client_id, credits, kind, ref, ttl_s=None, allow_partial=False) -> Reservation | UsageBlock
+    def settle(self, client_id, reservation_id, actual_credits) -> None
+    def release(self, client_id, reservation_id) -> None
+    def charge(self, client_id, credits, kind, ref) -> None | UsageBlock    # réserver + régler (automatisations)
+    def next_renewal(self, client_id) -> str | None                  # ISO UTC de la fenêtre qui borne, sinon None
+    def reconcile(self, client_id) -> dict                           # écart relevé et corrigé
+    def on_billing_saved(self, client_id) -> None
+@dataclass UsageView:  session, week, month: Window(limit, used, reserved, remaining, opened, startUtc, resetsAtUtc);  binding: "session"|"week"|"month"|None;  allowedNow: int;  exempt: bool
+@dataclass UsageBlock: limit: "session"|"week"|"month"; resetsAtUtc: str|None; remaining: int; needed: int; view: UsageView
+```
+
+CLI pour PowerShell (`dashboard/usage-cli.py`, même esprit que `quota-check.py`) : `usage-cli.py charge <ClientId> <credits> <kind> <ref>` → une ligne JSON `{"ok":true}` ou `{"ok":false,"limit":"session","resetsAtUtc":"…"}`.
+
+Points de branchement dans `server.py` (régions exactes en section 10) : `subscription_blocks_mission` (ajoute le contrôle des fenêtres, sans consommer), `submit_task` (réserve/règle autour du sous-processus), `get_billing` (bloc `usage`, `creditsUsed` du grand livre), `upgrade_payload` (limites du forfait suivant), `_billing_save` (coup de coude).
+
+### 6b.9 Route HTTP et réponses d'erreur
+
+`GET /api/usage` (compte client ; propriétaire = vue illimitée `exempt:true`) :
+
+```json
+{
+  "ok": true, "planId": "equipe", "planName": "Équipe", "exempt": false,
+  "session": {"limit": 83, "used": 30, "reserved": 0, "remaining": 53, "opened": true,
+              "startUtc": "2026-10-20T08:12:00Z", "resetsAtUtc": "2026-10-20T12:12:00Z", "windowHours": 4},
+  "week":    {"limit": 207, "used": 88, "reserved": 0, "remaining": 119, "opened": true,
+              "startUtc": "2026-10-20T08:12:00Z", "resetsAtUtc": "2026-10-27T08:12:00Z"},
+  "month":   {"limit": 900, "used": 340, "reserved": 0, "remaining": 560, "resetsAtUtc": "2026-11-12T10:11:12Z"},
+  "binding": "session", "allowedNow": 53, "nextRenewalUtc": "2026-10-20T12:12:00Z",
+  "upgrade": {"planId": "pro", "planName": "Pro", "priceChf": {"month": 139, "year": 1390},
+              "limits": {"session": 115, "week": 287, "month": 1250}, "onQuote": false, "selfService": true},
+  "activeReservations": [{"kind": "project_step", "credits": 14, "ref": "PRJ-9F1C…:S4"}]
+}
+```
+
+Refus d'une mission (`402`), nouveau code `USAGE_LIMIT_REACHED` pour session/semaine (le mois garde `SUBSCRIPTION_REQUIRED`, déjà géré par l'interface) :
+
+```json
+{"error": "USAGE_LIMIT_REACHED", "limit": "session", "needed": 6, "remaining": 2, "resetsAtUtc": "2026-10-20T12:12:00Z",
+ "detail": "Vous avez utilisé votre quota de session (83 crédits). Il se renouvelle à 14:12 (dans 1 h 12). Pour continuer sans attendre, passez au forfait Pro (115 crédits par session).",
+ "usage": { … comme GET /api/usage … }, "upgrade": { … }}
+```
+
+### 6b.10 Comportement exact d'un projet : `WAITING_QUOTA` et reprise automatique
+
+1. La passerelle (6.3) obtient `UsageBlock` ou `allowedNow < minStartCredits` → `transition(WAITING_QUOTA, reason="SESSION"|"WEEK"|"MONTH", resumeAtUtc=<resetsAtUtc>)`. L'étape n'est pas lancée (rien n'est perdu : l'étape reste `READY`). Un événement `quota_wait` et un e-mail (`quota_waiting`) partent une fois, avec l'heure de reprise et la carte de montée en gamme.
+2. À chaque tick : `if now ≥ resumeAtUtc or usage.remaining(client).allowedNow ≥ minStartCredits → RUNNING` (ce second test couvre la montée en gamme, un crédit accordé par le propriétaire, ou une réservation libérée). Reprise sans action du client ; tous les projets en attente d'un même client reprennent par ordre d'ancienneté, bornés par le plafond de concurrence par client.
+3. L'attente n'expire pas, et ne compte pas dans `maxDurationHours`.
+4. L'interface affiche : « Pause : votre quota de session est atteint. Reprise automatique à 14:12 (1 h 12). [Passer à Pro : 115 crédits par session] ».
+5. Une étape déjà lancée n'est jamais interrompue par une fenêtre (sa réservation a été prise avant) ; son plafond de coût reflète le reste de la fenêtre au lancement.
+
+### 6b.11 Tests (propriétaire : constructeur « limites d'usage »)
+
+Fenêtre ouverte à la première réservation et refermée si libérée sans usage ; deux threads qui réservent le dernier crédit (un seul passe) ; réservation échue libérée et règlement depuis `cost.json` ; changement de forfait au milieu d'une fenêtre (haut et bas) ; hérité Starter et Pro avant grille ; essai et propriétaire exemptés ; plancher de session à 12 ; dérive détectée et corrigée par `reconcile` sur un jeu de 200 traces (comparaison avec le balayage) ; `get_billing` ne balaie plus ; 402 `USAGE_LIMIT_REACHED` avec `resetsAtUtc` correct ; automatisation sautée sans erreur ; projet `WAITING_QUOTA` repris au `resumeAtUtc` simulé et par montée en gamme.
 
 ## 6c. Chloé, déléguante et cheffe de projet
 
