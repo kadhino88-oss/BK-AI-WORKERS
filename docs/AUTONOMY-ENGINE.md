@@ -592,7 +592,90 @@ Le serveur injecte une fonction `notify(client_id, kind, subject, html, text)` (
 
 ## 6. Budget et sécurité
 
-*(à approfondir)* Crédits, plafond CHF (`Mission-Cost.ps1`, `AI-PRICING.json`), `BK_PROJECTS=0`, pause par client, limites d'abus, `BUDGET_REACHED`, Solo/Trio, essai.
+### 6.1 Les crédits d'un projet sont mesurés, pas forfaitaires
+
+Une mission coûte 1/6/12 crédits quel que soit son coût réel (échelle de `LEVELS.json`). Un projet dure des heures et son coût varie de 1 à 10 : un forfait par étape serait soit injuste, soit ruineux. Les étapes sont donc **facturées au coût mesuré** (`Mission-Cost.ps1` : jetons, cache, recherches web, tarifs de `AI-PRICING.json`, taux fixe 0,83107 CHF/USD) :
+
+```
+crédits cumulés du projet = ceil( coût CHF cumulé / creditCostChf )        creditCostChf = 0.0375   (core/usage/USAGE-LIMITS.json)
+règlement d'une étape      = crédits cumulés après l'étape − crédits déjà réglés       (jamais d'arrondi par étape)
+```
+
+`creditCostChf = 0,0375` n'est pas arbitraire : c'est le plus petit rapport « 35 % du prix du forfait ÷ crédits du forfait » (Équipe : 0,35 × 99 / 900 = 0,0385) arrondi vers le bas. **Par construction, le coût IA d'un client ne dépasse jamais 0,0375 CHF par crédit consommé**, donc jamais 35 % du prix (Solo 32,3 %, Trio 31,8 %, Équipe 34,1 %, Pro 33,7 %, Scale 33,4 % à quota épuisé). Les missions gardent leur échelle fixe (déjà calibrée à 0,0378 au pire cas). Si le propriétaire change la marge cible, il modifie une seule constante.
+
+Ordre de grandeur (hypothèses, à mesurer par l'évaluation, section 9) : plan Opus 5.5 ≈ 0,25 CHF (7 crédits) ; étape Sonnet 5.5 typique ≈ 0,12 à 0,20 CHF (3 à 6 crédits) ; vérification Opus 5.5 ≈ 0,30 CHF (8 crédits) ; un site vitrine de 5 pages en 2 langues ≈ 70 à 140 crédits (un quart à la moitié du quota mensuel de Solo, un dixième de celui d'Équipe).
+
+### 6.2 Estimation, « go » et plafond du projet
+
+Le plan porte `estimate {creditsMin, creditsMax, hoursMin, hoursMax}` (somme des `estimateCredits` des étapes, corrigée par le coefficient mesuré `actual/estimated` des projets précédents de la même recette). Au statut `WAITING_INPUT/PLAN_VALIDATION`, le client voit le plan, les critères, les Workers par étape, l'estimation, son solde (mois, semaine, session, section 6b) et choisit : **Lancer** (`autoStart` mémorisable pour la suite), **Modifier** (retirer une étape, changer le niveau), **Refuser**.
+
+- `budget.creditsCap` par défaut = `min(ceil(creditsMax × 1,25), solde mensuel restant)` ; sans estimation : Standard 150, Approfondi 300. Modifiable par le client (`POST …/budget`), jamais au-delà du solde mensuel restant + 0 (pas de dépassement).
+- `budget.chfCeiling = creditsCap × creditCostChf` ; plafond absolu par projet (`absoluteMaxChf` de `PROJECT-LIMITS.json`) : Solo 8, Trio 12, Équipe 20, Pro 30, Scale 120, Enterprise selon contrat.
+- Si `estimate.creditsMin` dépasse le solde mensuel restant : `402 PROJECT_EXCEEDS_QUOTA` avec trois voies : variante « Essentiel » de la recette (le planificateur retire le facultatif), montée en gamme (carte `upgrade`), ou « démarrer quand même » avec plafond = solde (le projet atteindra `BUDGET_REACHED` avec des livrables partiels, annoncé d'avance).
+
+### 6.3 La passerelle avant CHAQUE étape
+
+```
+gate(project, step):                                   # appelé par le superviseur, sous le verrou du projet
+  si kill switch global / client en pause / projet en pause           -> HOLD (rien ne part)
+  si l'installation du Worker de l'étape est en pause                 -> étape BLOCKED/INSTALLATION_PAUSED
+  si le Worker n'est plus dans la portée du forfait                   -> étape BLOCKED/WORKER_NOT_INCLUDED
+  capLeft = budget.creditsCap − budget.creditsCharged − (crédits réservés par ce projet)
+  si capLeft < minStartCredits (6)                                    -> projet BUDGET_REACHED
+  v = usage.remaining(client)                                         # session, semaine, mois (section 6b)
+  si v.allowed < minStartCredits                                      -> projet WAITING_QUOTA, resumeAtUtc = v.bindingResetUtc
+  creditsToReserve = min(ceil(phase.maxCostChf / creditCostChf), capLeft, v.allowed)
+  rsv = usage.reserve(client, creditsToReserve, kind="project_step", ref="<projectId>:<stepId>")
+  step.ceilingChf = rsv.credits × creditCostChf        # passé à New-BKMissionCost : la boucle s'arrête avant de dépasser
+  lancer le sous-processus
+fin d'étape : usage.settle(client, rsv, crédits réellement consommés) ; budget.creditsCharged += ... ; événement `step_cost`
+```
+
+La réservation garantit qu'**aucun chevauchement** (deux étapes de deux projets, une mission pendant une étape) ne peut dépasser une fenêtre : la somme des réservations et du déjà-consommé reste sous chaque limite (6b.5). `minStartCredits = 6` évite de lancer une étape sans espoir de la finir ; l'étape qui reçoit un plafond inférieur à celui de sa phase peut finir `PARTIAL` et reprend plus tard.
+
+### 6.4 Interrupteurs et contrôle du propriétaire
+
+| Interrupteur | Effet |
+|---|---|
+| `BK_PROJECTS=0` (variable du serveur, défaut tant que non éprouvé) | les routes `/api/projects*` répondent `503 PROJECTS_DISABLED` ; le superviseur ne démarre pas ; les projets existants sont figés, rien n'est perdu. `BK_PROJECTS=1` l'active. |
+| `runtime/projects/_control.json` → `{"killAll": true}` | arrêt immédiat : le superviseur tue tous les lanceurs en cours (étapes `INTERRUPTED`, coûts réglés depuis `cost.json`) et ne lance plus rien. Fichier relu à chaque tick (pas de redémarrage nécessaire). |
+| `_control.json` → `{"pausedClients": ["CLI-CUST-…"]}` | pause par client : ses projets passent `PAUSED` (`OWNER_PAUSED`) ; reprise en retirant l'entrée. Routes propriétaire (porte historique) : `POST /api/admin/projects/pause-client`, `POST /api/admin/projects/<id>/kill`. |
+| `BK_PROJECT_STEPS_GLOBAL`, `BK_PROJECT_STEPS_PER_CLIENT` | plafonds de concurrence (2.5) |
+| `BK_PROJECT_COMPACTION`, `BK_PROJECT_CONVO_CACHE` | options d'optimisation (3.2, 3.6) |
+
+### 6.5 Limites d'abus
+
+| Ressource | Limite |
+|---|---|
+| Longueur de l'objectif / d'un message | 4 000 / 4 000 caractères |
+| Fichiers fournis par le client (`inputs/`) | 10 fichiers, 10 Mo au total par projet ; types : texte, csv, md, json, pdf, docx, xlsx, png, jpg, webp, svg |
+| Projets créés par jour, projets actifs | section 2.5 |
+| Messages au Worker | 60 par heure et par client |
+| Décisions d'approbation | 300 par heure et par client (lots de 50 au plus) |
+| Étapes par projet, replanifications, tentatives par étape | 120, 3, 3 |
+| Articles d'approbation `PENDING` | 50 par projet, 200 par client |
+| Espace de travail | 100 Mo par projet (Scale 300), 1 Go par client (Scale 5) |
+| Alertes au propriétaire | un client dépense plus de 3 fois sa moyenne glissante sur 24 h, ou un projet dépasse 80 % de son plafond en moins de 30 minutes : e-mail au propriétaire via `_notify_owner_email` |
+
+### 6.6 `BUDGET_REACHED` : s'arrêter proprement, dire ce qui reste
+
+Atteint quand le plafond de crédits **du projet** est épuisé (ou ne permet plus l'étape minimale). Le superviseur ne lance plus rien ; l'étape en cours, dont le plafond avait été calculé sous le reste, se termine `PARTIAL` sans dépasser. Les livrables partiels restent téléchargeables. Le client voit : ce qui est fait (étapes, livrables), ce qui reste (étapes `PENDING`/`PARTIAL`, critères non vérifiés), le **coût estimé pour finir** (somme des `estimateCredits` restantes × coefficient mesuré du projet), et trois choix : *relever le plafond de N crédits* (reprise à l'instant, si le forfait le permet), *accepter en l'état* (→ `DONE` avec `acceptedGaps`), *annuler*. Un e-mail `budget_reached` est envoyé. À ne pas confondre avec `WAITING_QUOTA` (fenêtre d'usage atteinte, reprise **automatique** au renouvellement) : ici le plafond est une décision du client, donc c'est lui qui la change.
+
+### 6.7 Forfaits, droits, installation en pause
+
+- **Solo** : pas de Chloé (`PLANS_WITH_CHLOE = ("trio",)` : `worker_allowed(state, "chloe")` faux) ; un projet se lance depuis la fiche du Worker embauché ; toutes les étapes sont de ce Worker (le planificateur ne propose pas d'étapes d'un autre Worker : elles seraient `WORKER_NOT_INCLUDED`). **Trio** : Chloé + les 3 Workers embauchés (section 6c). **Équipe, Pro, Scale, Enterprise** : tous les Workers + Chloé. Les fonctions existantes servent de source unique : `worker_block(client_id, worker_id)`, `allowed_workers_env(client_id)`, `inst.worker_allowed`.
+- **Rechangement de forfait en cours de projet** (rétrogradation, fin de période payée, `_apply_lapse`) : à chaque tick, la portée (`scope.allowedWorkers`) est recalculée ; une étape dont le Worker sort de la portée devient `BLOCKED/WORKER_NOT_INCLUDED` et le client reçoit l'offre d'embaucher ou de replanifier ; rien n'est perdu.
+- **Installation en pause** (`installation_paused(client, worker)`, interrupteur d'arrêt du client) : aucune étape de ce Worker ne démarre (`BLOCKED/INSTALLATION_PAUSED`) ; ses lectures et propositions manuelles restent possibles hors projet.
+- **Essai** : les projets sont **indisponibles** (`403 PROJECT_NOT_IN_PLAN`, carte de montée en gamme vers Solo). Raisons : 15 crédits uniques (0,56 CHF d'IA) ne couvrent pas un projet complet ; le niveau est verrouillé sur Rapide ; promettre un projet que l'on ne peut pas finir serait contraire au principe « jamais « voici comment faire » ». Chloé reste utilisable en mode mission (existant). **Décision ouverte du propriétaire** : offrir un « mini-projet de démonstration » plafonné à 12 crédits.
+- **Ancien forfait (Starter, Business)** et **abonnés Pro/Scale hérités** : mêmes règles, quotas hérités (`plan_monthly_credits(plan_id, state)`), niveau par défaut des missions inchangé ; le niveau d'un projet est choisi explicitement.
+
+### 6.8 Sécurité et isolation entre clients
+
+- Tous les chemins sont construits à partir de `ClientId` et `ProjectId` **validés** (`^CLI-CUST-[A-F0-9]{8}$` ou `CLI-DASHBOARD` ; `^PRJ-[A-F0-9]{32}$`), puis confinés (`realpath` sous `runtime/projects/`). Une route charge `state.json` et compare `clientId` à la session : tout désaccord renvoie **404** (pas 403 : on ne confirme pas l'existence d'un projet d'autrui). Le propriétaire (`CLI-DASHBOARD`) voit ses projets ; une vue d'administration séparée (porte historique) liste tous les projets, sans contenu.
+- Les identifiants Files API/conteneur Anthropic ne sont jamais exposés au client ni acceptés de lui (3.8). Le lanceur n'a accès qu'au dossier de SON étape (`input.json` donne des chemins absolus validés) et à SA liste de connecteurs (`core/connectors/data/<ClientId>.json`). Aucune clé n'est écrite dans `input.json`, `context.md`, `runner.log`, `spool/` ou l'espace de travail (clé lue en mémoire par `Get-BKSecretValue`, comme `ANTHROPIC-ADAPTER.ps1`) ; `workspace_write` refuse les contenus qui ressemblent à un secret (motifs de `Test-BKSecretLike` / `contains_secret`).
+- Le contenu récupéré (web, e-mails, fichiers du client, pages déjà écrites) est une **donnée**, jamais une instruction (addendum 3.5, point 5). Les tentatives d'injection signalées (`ignoredInstructions`) sont montrées au client dans le rapport.
+- Ne jamais fabriquer d'avis, de témoignage, de nombre de clients, de certification : règle de l'addendum **et** critère `rubric` par défaut de toute recette qui produit des textes publics ; le vérificateur le contrôle.
+- Export RGPD (`export_account_data`) : objectifs, plans, livrables et journaux du client ; suppression de compte : dossier `runtime/projects/<ClientId>` supprimé (hooks de la section 10).
 
 ## 6b. Fenêtres d'usage (session 4 h, semaine, mois)
 
