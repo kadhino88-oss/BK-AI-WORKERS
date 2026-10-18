@@ -321,7 +321,11 @@ class Hiring(Fixture):
         time.sleep(0.01)
         p, s = server.grant_workers(A, "trio", ["alex", "maya"], new_cycle=False)
         self.assertEqual(server._billing_load(A)["cycleStartUtc"], first_cycle)
-        p, s = server.grant_workers(A, "trio", ["alex", "maya"])
+        first_paid = server._billing_load(A)["paidUntilUtc"]
+        p, s = server.grant_workers(A, "trio", ["alex", "maya"])                 # facture suivante, avant le terme : la periode PAYEE s'allonge, la fenetre garde son ancrage
+        self.assertEqual(server._billing_load(A)["cycleStartUtc"], first_cycle)
+        self.assertEqual(server._billing_load(A)["paidUntilUtc"][:10], server._add_months(server._parse_utc(first_paid), 1).isoformat()[:10])
+        p, s = server.grant_workers(A, "solo", ["alex"])                         # autre forfait : une fenetre neuve
         self.assertNotEqual(server._billing_load(A)["cycleStartUtc"], first_cycle)
 
     def test_grant_workers_refusals_leave_the_state_untouched(self):
@@ -531,6 +535,18 @@ class OwnerEmail(Fixture):
         self.assertEqual(len(a["message"]), server.HIRE_REQUEST_MESSAGE_MAX)
         c, created3 = server.record_hire_request(A, "maya", "")
         self.assertTrue(created3)
+
+    def test_open_requests_have_a_ceiling_so_the_file_and_the_owner_view_stay_bounded(self):
+        # 2e revue : une demande ouverte n'est jamais supprimee, donc le fichier (reecrit en entier a chaque demande) grossissait sans fin.
+        orig = server.HIRE_OPEN_MAX
+        server.HIRE_OPEN_MAX = 2
+        self.addCleanup(setattr, server, "HIRE_OPEN_MAX", orig)
+        self.assertTrue(server.record_hire_request(A, "nora", "1")[1])
+        self.assertTrue(server.record_hire_request(A, "maya", "2")[1])
+        self.assertEqual(server.record_hire_request(A, "alex", "3"), (None, False))                  # plein : refuse, rien n'est ecrit
+        self.assertEqual(len(server.open_hire_requests()), 2)
+        again, created = server.record_hire_request(A, "nora", "bis")                                # une demande deja ouverte est toujours retrouvee
+        self.assertEqual((created, again["workerId"]), (False, "nora"))
 
 
 class WhatsApp(Fixture):

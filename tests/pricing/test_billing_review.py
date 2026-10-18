@@ -373,12 +373,12 @@ class InvoicePeriod(Fixture):
     def test_the_owner_renewing_the_invoice_extends_the_period(self):
         server.grant_workers(A, "solo", ["alex"])
         server._utcnow = lambda: at(days=28)
-        res, st = server.grant_workers(A, "solo", ["alex"], paid_months=3)       # facture suivante, trois mois d'un coup
-        self.assertEqual((st, res["newCycle"], res["paidUntilUtc"][:10]), (200, True, "2027-02-09"))
+        res, st = server.grant_workers(A, "solo", ["alex"], paid_months=3)       # facture suivante, trois mois d'un coup, 3 jours avant le terme
+        self.assertEqual((st, res["newCycle"], res["paidUntilUtc"][:10]), (200, True, "2027-02-12"))        # 12/11 + 3 mois : aucun jour paye perdu
         server._utcnow = lambda: at(days=70)
         self.assertEqual(server.get_billing(A)["planId"], "solo")
         res, st = server.grant_workers(A, "solo", ["alex"], new_cycle=False)     # simple changement de la liste : la periode payee ne bouge pas
-        self.assertEqual((st, res["paidUntilUtc"][:10]), (200, "2027-02-09"))
+        self.assertEqual((st, res["paidUntilUtc"][:10]), (200, "2027-02-12"))
         res, st = server.set_client_plan(B, "scale", paid_months=12)
         self.assertEqual((st, res["paidUntilUtc"][:10]), (200, "2027-12-21"))
 

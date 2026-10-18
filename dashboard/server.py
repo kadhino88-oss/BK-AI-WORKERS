@@ -3582,9 +3582,20 @@ def _stripe_blocks_invoice_plan(state):
     return {"error": "ACTIVE_SUBSCRIPTION", "detail": "Ce client a un abonnement Stripe actif : annulez-le avant d'attribuer un forfait sur facture."}, 409
 
 
-def _set_invoice_period(state, now_dt, months):
-    """Forfait active sur facture : actif pendant les mois factures (paidUntilUtc), puis retour a l'Essai si le proprietaire ne le reconduit pas."""
-    state["paidUntilUtc"] = _add_months(now_dt, months).isoformat() + "Z"
+def _invoice_renewal_base(state, old_plan_id, plan_id, now_dt):
+    """Fin de la periode DEJA payee quand le proprietaire reconduit le MEME forfait avant son terme : la nouvelle periode s'y ajoute, renouveler N
+    jours en avance ne fait perdre aucun jour paye (et la fenetre de credits garde son ancrage : pas de quota neuf au milieu du mois). None dans les
+    autres cas (autre forfait, periode echue ou en grace, forfait resilie) : la nouvelle periode part de maintenant."""
+    until = _parse_utc(state.get("paidUntilUtc"))
+    if old_plan_id != plan_id or until is None or until <= now_dt or state.get("cancelAtPeriodEnd"):
+        return None
+    return until
+
+
+def _set_invoice_period(state, now_dt, months, base=None):
+    """Forfait active sur facture : actif pendant les mois factures (paidUntilUtc), puis retour a l'Essai si le proprietaire ne le reconduit pas.
+    base = fin de la periode deja payee quand on reconduit en avance (voir _invoice_renewal_base), sinon maintenant."""
+    state["paidUntilUtc"] = _add_months(base or now_dt, months).isoformat() + "Z"
     state.pop("cancelAtPeriodEnd", None)
     state.pop("billingInterval", None)
 
@@ -3618,16 +3629,18 @@ def set_client_plan(client_id, plan_id, contract_credits=None, paid_months=1):
     old_name = PLAN_CATALOG.get(old_plan_id, PLAN_CATALOG["essai"])["name"]
     now_dt = _utcnow()
     now = now_dt.isoformat() + "Z"
+    extend_from = _invoice_renewal_base(state, old_plan_id, plan_id, now_dt)
     state["planId"] = plan_id
     state["gridVersion"] = GRID_VERSION
-    state["cycleStartUtc"] = now
-    state["extraCredits"] = 0
+    if extend_from is None:
+        state["cycleStartUtc"] = now
+        state["extraCredits"] = 0
     if plan.get("contractual"):
         state["contractCredits"] = contract_credits if contract_credits is not None else _kept_contract_cap(state, old_plan_id, plan_id)
     else:
         state.pop("contractCredits", None)
     state.pop("lapsedFrom", None)
-    _set_invoice_period(state, now_dt, months)
+    _set_invoice_period(state, now_dt, months, base=extend_from)
     inst.adapt_hired_to_plan(state, plan_changed=old_plan_id != plan_id)
     cap = f", plafond contractuel de {_fr_int(state['contractCredits'])} crédits par mois" if plan.get("contractual") else ""
     state.setdefault("history", []).append({
@@ -3822,6 +3835,7 @@ def _read_hire_requests():
 
 
 HIRE_REQUESTS_KEPT = 500
+HIRE_OPEN_MAX = 5000      # plafond de demandes OUVERTES (jamais supprimees pour faire de la place) : au-dela, une nouvelle demande est refusee (503)
 
 
 def _write_hire_requests(rows):
@@ -3896,6 +3910,8 @@ def record_hire_request(client_id, worker_id, message):
     for r in open_hire_requests(client_id):
         if r.get("workerId") == worker_id:
             return r, False
+    if len(open_hire_requests()) >= HIRE_OPEN_MAX:
+        return None, False
     rec = {"id": "HRQ-" + secrets.token_hex(4).upper(), "clientId": client_id, "workerId": worker_id,
            "message": str(message or "").strip()[:HIRE_REQUEST_MESSAGE_MAX], "status": "open",
            "createdAtUtc": datetime.datetime.utcnow().isoformat() + "Z"}
@@ -3943,13 +3959,15 @@ def grant_workers(client_id, plan_id, workers, new_cycle=True, paid_months=1):
     plan_changed = old_plan != plan_id
     now_dt = _utcnow()
     now = now_dt.isoformat() + "Z"
+    extend_from = _invoice_renewal_base(state, old_plan, plan_id, now_dt) if new_cycle and not plan_changed else None
     state["planId"] = plan_id
     state["gridVersion"] = GRID_VERSION
     state.pop("lapsedFrom", None)
     if plan_changed or new_cycle:
-        state["cycleStartUtc"] = now
-        state["extraCredits"] = 0
-        _set_invoice_period(state, now_dt, months)
+        if extend_from is None:
+            state["cycleStartUtc"] = now
+            state["extraCredits"] = 0
+        _set_invoice_period(state, now_dt, months, base=extend_from)
     elif not state.get("paidUntilUtc"):
         _set_invoice_period(state, now_dt, months)
     old_name = PLAN_CATALOG.get(old_plan or "essai", PLAN_CATALOG["essai"])["name"]
@@ -5527,6 +5545,9 @@ class Handler(BaseHTTPRequestHandler):
             if body is None:
                 return
             rec, created = record_hire_request(client_id, wid, body.get("message"))
+            if rec is None:
+                self._send_json({"error": "HIRE_REQUESTS_FULL", "detail": f"Les demandes d'embauche sont momentanément saturées : écrivez-nous à {CONTACT_EMAIL}."}, 503)
+                return
             account = next((a for a in _load_accounts() if a.get("clientId") == client_id), None)
             notified = _notify_owner_hire_request(rec, account) if created else False
             log_activity("hire_request", clientId=client_id, workerId=wid)

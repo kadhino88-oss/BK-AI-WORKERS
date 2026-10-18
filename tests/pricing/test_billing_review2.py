@@ -83,6 +83,32 @@ class GraceWindow(Fixture):
         self.assertNotIn("renouvelés le", msg)
 
 
+class EarlyRenewal(Fixture):
+    def test_renewing_early_adds_to_the_paid_period_instead_of_overwriting_it(self):
+        # 2e revue : paidUntilUtc = maintenant + mois, donc renouveler 10 jours en avance faisait perdre ces 10 jours payes (et rouvrait une fenetre de
+        # credits au milieu du mois).
+        server.set_client_plan(A, "equipe")                                      # 12/10 -> 12/11
+        server.grant_workers(B, "solo", ["alex"])                                # idem pour B
+        write_task_record(A, 900, "2026-10-13T00:00:00Z")
+        server._utcnow = lambda: at(days=10)                                     # 22/10
+        res, st = server.set_client_plan(A, "equipe")
+        self.assertEqual((st, res["paidUntilUtc"][:10]), (200, "2026-12-12"))     # 12/11 + 1 mois, pas 22/11
+        out = server.get_billing(A)
+        self.assertEqual(out["creditsRemaining"], 0)                             # pas de quota neuf en milieu de fenetre
+        self.assertEqual(server._billing_load(A)["cycleStartUtc"], "2026-10-12T12:00:00Z")
+        server._utcnow = lambda: NOW.replace(month=11, day=14)                   # la fenetre suivante s'ouvre a la date d'ancrage
+        self.assertEqual(server.get_billing(A)["creditsRemaining"], 900)
+        res, st = server.grant_workers(B, "solo", ["alex"], paid_months=2)       # B etait en grace depuis le 12/11 : la periode repart de maintenant
+        self.assertEqual(res["paidUntilUtc"][:10], "2027-01-14")
+
+    def test_a_plan_change_or_a_renewal_after_the_end_starts_from_now(self):
+        server.set_client_plan(A, "equipe")
+        server._utcnow = lambda: at(days=5)
+        res, st = server.set_client_plan(A, "pro")                               # autre forfait : une periode neuve, payee a partir de maintenant
+        self.assertEqual(res["paidUntilUtc"][:10], "2026-11-17")
+        self.assertEqual(server._billing_load(A)["cycleStartUtc"], "2026-10-17T12:00:00Z")
+
+
 class UnprovenLegacyPlans(Fixture):
     def old_simulation(self, client, plan):
         write_billing(server, client, plan, gridVersion=None, stripeSubscriptionId=None,

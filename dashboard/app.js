@@ -1062,10 +1062,10 @@ async function handleStripeCheckoutReturn() {
   const params = new URLSearchParams(window.location.search);
   const checkout = params.get("billing_checkout");
   const sessionId = params.get("session_id");
+  if (checkout === "success" && sessionId) pendingCheckoutSet(sessionId);       // gardé jusqu'à la confirmation, avant que l'adresse soit nettoyée
   if (checkout) window.history.replaceState({}, "", window.location.pathname);
 
   if (checkout === "success" && sessionId) {
-    pendingCheckoutSet(sessionId);       // gardé jusqu'à la confirmation, même si l'adresse est nettoyée ci-dessus
     showView("billing");
     const outcome = await confirmCheckoutSession(sessionId);
     if (outcome.state === "ok") {
