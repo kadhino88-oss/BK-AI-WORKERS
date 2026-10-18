@@ -902,7 +902,8 @@ async function loadBilling() {
   const line = document.getElementById("billing-usage-line");
   const nf = (n) => Number(n).toLocaleString(BK_LOCALE());
   const renews = data.cancelAtPeriodEnd && data.paidUntilUtc ? ` — résilié : le forfait reste actif jusqu'au ${billingDate(data.paidUntilUtc)}, sans renouvellement.`
-    : (data.renewsAtUtc ? ` — renouvelé le ${billingDate(data.renewsAtUtc)}.` : (data.planId === "essai" ? " — l'essai ne se renouvelle pas." : "."));
+    : (data.awaitingInvoice && data.paidUntilUtc ? ` — valable jusqu'au ${billingDate(data.paidUntilUtc)} ; reconduit à la réception du règlement de la facture suivante.`
+      : (data.renewsAtUtc ? ` — renouvelé le ${billingDate(data.renewsAtUtc)}.` : (data.planId === "essai" ? " — l'essai ne se renouvelle pas." : ".")));
   line.textContent = `${nf(data.creditsUsed)} / ${nf(data.creditsTotal)} crédits consommés (${nf(data.creditsRemaining)} restants)${renews}`;
 
   document.getElementById("billing-alert").hidden = !data.alertThresholdReached;
@@ -933,6 +934,8 @@ async function loadBilling() {
 
   const cancelBtn = document.getElementById("billing-cancel-btn");
   cancelBtn.hidden = data.planId === "essai" || !!data.cancelAtPeriodEnd;        // deja resilie : rien a annuler de plus
+  const pendingBox = document.getElementById("billing-pending-payment");
+  if (pendingBox) pendingBox.hidden = !pendingCheckoutGet();                    // paiement revenu de Stripe mais pas encore confirme
 
   const grid = document.getElementById("billing-plans-grid");
   grid.innerHTML = "";
@@ -1015,34 +1018,91 @@ async function switchBillingPlan(planId, interval) {
   await loadBilling();
 }
 
-async function handleStripeCheckoutReturn() {
-  const params = new URLSearchParams(window.location.search);
-  const checkout = params.get("billing_checkout");
-  if (!checkout) return;
+// Paiement Stripe revenu mais pas encore confirme chez nous : l'identifiant de la session reste dans ce navigateur jusqu'a ce que la confirmation
+// reussisse (delai du pont, reseau coupe, onglet ferme) ; il est retente a chaque chargement et par le bouton « Verifier mon paiement ».
+const PENDING_CHECKOUT_KEY = "bk.pendingCheckoutSession";
+// Refus definitifs : retenter ne servirait a rien, on oublie l'identifiant (le message dit pourquoi).
+const CHECKOUT_FINAL_ERRORS = ["SUBSCRIPTION_NOT_ACTIVE", "PAYMENT_NOT_CONFIRMED", "INVALID_SESSION_ID", "SESSION_ID_REQUIRED"];
 
-  const sessionId = params.get("session_id");
-  window.history.replaceState({}, "", window.location.pathname);
+function pendingCheckoutGet() {
+  try { return localStorage.getItem(PENDING_CHECKOUT_KEY) || ""; } catch { return ""; }
+}
 
-  if (checkout === "success" && sessionId) {
-    showView("billing");
-    const result = await fetchJson("/api/billing/stripe-confirm", {
+function pendingCheckoutSet(sessionId) {
+  try {
+    if (sessionId) localStorage.setItem(PENDING_CHECKOUT_KEY, sessionId);
+    else localStorage.removeItem(PENDING_CHECKOUT_KEY);
+  } catch { /* stockage indisponible : la confirmation reste tentee une fois */ }
+}
+
+// Confirme la session aupres du serveur. Renvoie "ok", "retry" (on garde l'identifiant) ou "final" (refus definitif, identifiant oublie).
+async function confirmCheckoutSession(sessionId) {
+  let result;
+  try {
+    result = await fetchJson("/api/billing/stripe-confirm", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ sessionId }),
     });
-    if (result.error) {
-      alert("Le paiement n'a pas pu être confirmé : " + (result.detail || result.error));
+  } catch (e) {
+    return { state: "retry", detail: e && e.message ? e.message : "connexion impossible" };
+  }
+  if (!result || !result.error) {
+    pendingCheckoutSet("");
+    return { state: "ok", result };
+  }
+  if (CHECKOUT_FINAL_ERRORS.includes(result.error)) {
+    pendingCheckoutSet("");
+    return { state: "final", detail: result.detail || result.error };
+  }
+  return { state: "retry", detail: result.detail || result.error };
+}
+
+async function handleStripeCheckoutReturn() {
+  const params = new URLSearchParams(window.location.search);
+  const checkout = params.get("billing_checkout");
+  const sessionId = params.get("session_id");
+  if (checkout) window.history.replaceState({}, "", window.location.pathname);
+
+  if (checkout === "success" && sessionId) {
+    pendingCheckoutSet(sessionId);       // gardé jusqu'à la confirmation, même si l'adresse est nettoyée ci-dessus
+    showView("billing");
+    const outcome = await confirmCheckoutSession(sessionId);
+    if (outcome.state === "ok") {
+      showToast(iwT("Paiement confirmé : votre forfait est actif."));
+    } else if (outcome.state === "final") {
+      alert("Le paiement n'a pas pu être confirmé : " + outcome.detail);
+    } else {
+      alert("Votre paiement est bien parti, mais nous n'avons pas encore pu le confirmer (" + outcome.detail + "). Rien n'est perdu : cliquez sur « Vérifier mon paiement » dans Facturation, ou rechargez la page dans un instant.");
     }
     await loadBilling();
   } else if (checkout === "cancel") {
     showView("billing");
+  } else if (!checkout && pendingCheckoutGet()) {
+    const outcome = await confirmCheckoutSession(pendingCheckoutGet());       // paiement non confirme lors d'une visite precedente
+    if (outcome.state === "ok") showToast(iwT("Paiement confirmé : votre forfait est actif."));
+    await loadBilling();
   }
+}
+
+async function retryPendingCheckout() {
+  const sessionId = pendingCheckoutGet();
+  if (!sessionId) return;
+  const outcome = await confirmCheckoutSession(sessionId);
+  if (outcome.state === "ok") showToast(iwT("Paiement confirmé : votre forfait est actif."));
+  else if (outcome.state === "final") alert("Le paiement n'a pas pu être confirmé : " + outcome.detail);
+  else alert("Le paiement n'a toujours pas pu être confirmé (" + outcome.detail + "). Réessayez dans un instant ; si cela dure, écrivez-nous en indiquant le montant et la date.");
+  await loadBilling();
 }
 
 async function cancelBillingPlan() {
   // CGV article 6 : la resiliation prend effet a la fin de la periode en cours ; le forfait paye reste actif jusque-la.
   if (!confirm(iwT("Résilier l'abonnement ? Votre forfait reste actif jusqu'à la fin de la période déjà payée, puis votre compte repasse à l'essai. Aucun nouveau prélèvement."))) return;
   const result = await fetchJson("/api/billing/cancel", { method: "POST" });
+  if (result && result.error) {
+    alert(result.detail || result.error);        // ex. STRIPE_UNAVAILABLE : rien n'a change, l'abonnement est intact
+    return;
+  }
   if (result && result.cancelAtPeriodEnd && result.paidUntilUtc) {
     showToast(`${iwT("Résiliation enregistrée : votre forfait reste actif jusqu'au")} ${billingDate(result.paidUntilUtc)}.`);
   }
@@ -1162,8 +1222,8 @@ async function loadAutomations() {
     const statusLabel = AUTOMATION_STATUS_LABELS[a.lastRunStatus] || a.lastRunStatus;
     card.innerHTML = `
       <div class="automation-card-main">
-        <div class="automation-card-objective">${workerNameById(a.workerId)} — ${a.objective}</div>
-        <div class="automation-card-meta">${freqLabel}${slackNote} · dernière exécution : ${lastRun}${a.lastRunStatus ? " · " + statusLabel : ""}${a.enabled && a.nextRunAtUtc ? " · prochaine : " + new Date(a.nextRunAtUtc).toLocaleString(BK_LOCALE()) : ""}</div>
+        <div class="automation-card-objective">${escapeHtml(workerNameById(a.workerId))} — ${escapeHtml(a.objective)}</div>
+        <div class="automation-card-meta">${freqLabel}${slackNote} · dernière exécution : ${lastRun}${a.lastRunStatus ? " · " + escapeHtml(statusLabel) : ""}${a.enabled && a.nextRunAtUtc ? " · prochaine : " + new Date(a.nextRunAtUtc).toLocaleString(BK_LOCALE()) : ""}</div>
       </div>
       <span class="automation-card-status ${a.enabled && !suspended ? "on" : "off"}">${suspended ? "Suspendue (Worker en pause)" : (a.enabled ? "Active" : "En pause")}</span>
       <div class="automation-card-actions">
@@ -5141,6 +5201,7 @@ document.getElementById("nav-admin").addEventListener("click", (e) => {
 });
 document.getElementById("admin-back-btn").addEventListener("click", () => showView("home"));
 document.getElementById("billing-cancel-btn").addEventListener("click", cancelBillingPlan);
+document.getElementById("billing-pending-btn").addEventListener("click", retryPendingCheckout);
 document.querySelectorAll("#billing-interval-toggle button").forEach((btn) => {
   btn.addEventListener("click", () => {
     billingInterval = btn.dataset.interval;
@@ -5860,13 +5921,13 @@ async function renderWhatsappCard(gridEl) {
   });
   document.getElementById("account-delete-btn").addEventListener("click", async () => {
     msg.hidden = true;
-    const pw = prompt("Suppression DÉFINITIVE de votre compte, de vos missions et de vos connexions.\nEntrez votre mot de passe pour confirmer :");
+    const pw = prompt("Suppression DÉFINITIVE de votre compte, de vos missions et de vos connexions. Un forfait déjà résilié mais encore valable s'arrête aussitôt : le temps déjà payé n'est pas remboursé.\nEntrez votre mot de passe pour confirmer :");
     if (!pw) return;
     const r = await fetchJson("/api/account/delete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password: pw }) });
     if (r.ok) { location.href = "/"; return; }
     const texts = {
       INVALID_PASSWORD: "Mot de passe incorrect.",
-      ACTIVE_SUBSCRIPTION: "Résiliez d'abord votre abonnement (section Plans ci-dessus), puis supprimez votre compte.",
+      ACTIVE_SUBSCRIPTION: "Votre abonnement est encore renouvelé : résiliez-le d'abord avec « Annuler l'abonnement » (en haut de cette page), puis supprimez votre compte. Une fois la résiliation enregistrée, vous pouvez supprimer votre compte tout de suite.",
       TOO_MANY_ATTEMPTS: "Trop de tentatives. Réessayez plus tard.",
     };
     say(texts[r.error] || "Suppression impossible (" + (r.error || "erreur") + ").", false);

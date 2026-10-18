@@ -495,7 +495,10 @@ class Checkout(Fixture):
         payload, status = server.set_client_plan(A, "enterprise", contract_credits=15000)
         self.assertEqual((status, payload["credits"]), (200, 15000))
         self.assertEqual(server.get_billing(A)["creditsTotal"], 15000)
-        payload, status = server.set_client_plan(A, "enterprise")           # sans plafond saisi : le defaut documente, jamais illimite
+        payload, status = server.set_client_plan(A, "enterprise")           # reconduit sans repeter le plafond : celui du contrat est garde (2e revue)
+        self.assertEqual(payload["credits"], 15000)
+        server.set_client_plan(A, "pro")
+        payload, status = server.set_client_plan(A, "enterprise")           # premiere activation sans plafond saisi : le defaut documente, jamais illimite
         self.assertEqual(payload["credits"], server.ENTERPRISE_DEFAULT_CREDITS)
         self.assertNotEqual(server._billing_load(A).get("contractCredits"), 15000)
         server.set_client_plan(A, "enterprise", contract_credits=15000)

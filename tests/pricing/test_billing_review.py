@@ -62,6 +62,8 @@ class Fixture(unittest.TestCase):
         self.cancelled = []
         self.cancel_calls = []
         self.cancel_ok = True
+        self.cancel_gone = False         # Stripe repond 404 : l'abonnement n'existe plus
+        self.resume_calls = []
         self.period_end = "2026-11-02T08:00:00Z"
         add_account(server, A)
         add_account(server, B)
@@ -75,9 +77,14 @@ class Fixture(unittest.TestCase):
         if action == "cancel-subscription":
             self.cancelled.append(kw.get("subscription_id"))
             self.cancel_calls.append(kw)
+            if self.cancel_gone:
+                return {"Status": "ERROR", "Detail": "Response status code does not indicate success: 404 (Not Found).", "HttpStatus": 404}
             if not self.cancel_ok:
                 return {"Status": "ERROR", "Detail": "boom"}
             return {"Status": "SUCCESS", "CurrentPeriodEnd": self.period_end} if kw.get("at_period_end") else {"Status": "SUCCESS"}
+        if action == "resume-subscription":
+            self.resume_calls.append(kw.get("subscription_id"))
+            return {"Status": "SUCCESS", "SubscriptionStatus": "active", "CancelAtPeriodEnd": False}
         return {"Status": "ERROR"}
 
     def activate(self, plan, sub, session, client=A, **kw):
@@ -124,9 +131,9 @@ class ReplayedConfirmation(Fixture):
         payload, status = self.activate("solo", "sub_1", "cs_1")
         self.assertEqual((status, payload["planId"], payload.get("alreadyConfirmed")), (200, "essai", True))
         self.assertEqual(server._billing_load(A)["planId"], "essai")
-        # resiliation IMMEDIATE (Stripe injoignable au moment d'annuler) : le rejeu ne ressuscite rien non plus
+        # resiliation IMMEDIATE (Stripe ne connait plus l'abonnement : 404) : le rejeu ne ressuscite rien non plus
         reset(server)
-        self.cancel_ok = False
+        self.cancel_gone = True
         add_account(server, A)
         self.activate("solo", "sub_2", "cs_2")
         self.assertEqual(server.cancel_billing_plan(A)["planId"], "essai")
@@ -248,21 +255,63 @@ class CancelAtPeriodEnd(Fixture):
         self.activate("solo", "sub_2", "cs_2", interval="year")
         self.assertEqual(server.cancel_billing_plan(A)["paidUntilUtc"][:10], "2027-10-12")      # annuel : douze mois payes d'avance, pas un seul
 
-    def test_if_stripe_cannot_be_reached_the_client_is_still_downgraded_and_the_history_says_so(self):
+    def test_if_stripe_cannot_be_reached_nothing_changes_and_the_client_can_retry(self):
+        # 2e revue : le client etait ramene a l'Essai (periode payee perdue) et l'identifiant de l'abonnement oublie, alors que l'abonnement vivait chez
+        # Stripe et continuait d'etre facture, sans que personne puisse plus l'annuler.
         self.activate("solo", "sub_1", "cs_1")
+        before = server._billing_load(A)
         self.cancel_ok = False
         out = server.cancel_billing_plan(A)
-        self.assertEqual((out["planId"], out["cancelAtPeriodEnd"]), ("essai", False))
-        self.assertTrue(any("ECHEC annulation Stripe" in h["event"] for h in out["history"]))
+        self.assertEqual(out["error"], "STRIPE_UNAVAILABLE")
+        after = server._billing_load(A)
+        self.assertEqual((after["planId"], after["stripeSubscriptionId"], after.get("cancelAtPeriodEnd")), ("solo", "sub_1", None))
+        self.assertEqual(after["history"], before["history"])                    # rien n'a ete ecrit : l'abonnement est intact
+        self.cancel_ok = True                                                    # Stripe repond de nouveau : la resiliation passe, en fin de periode
+        out = server.cancel_billing_plan(A)
+        self.assertEqual((out["planId"], out["cancelAtPeriodEnd"], out["paidUntilUtc"]), ("solo", True, "2026-11-02T08:00:00Z"))
+        self.assertEqual(self.cancelled, ["sub_1", "sub_1"])
 
-    def test_choosing_the_same_plan_again_after_cancelling_opens_a_new_checkout(self):
+    def test_a_subscription_that_stripe_no_longer_knows_is_ended_at_once(self):
+        self.activate("solo", "sub_1", "cs_1")
+        self.cancel_gone = True
+        out = server.cancel_billing_plan(A)
+        self.assertEqual((out["planId"], out["cancelAtPeriodEnd"]), ("essai", False))
+        self.assertTrue(any("introuvable chez Stripe" in h["event"] for h in out["history"]))
+        self.assertIsNone(server._billing_load(A)["stripeSubscriptionId"])
+
+    def test_choosing_the_same_plan_again_after_cancelling_resumes_it_without_a_second_payment(self):
+        # 2e revue : une nouvelle Checkout Session facturait de nouveau le plein prix et laissait le temps deja paye sur l'ancien client Stripe.
         self.activate("solo", "sub_1", "cs_1")
         server.cancel_billing_plan(A)
+        before = [c for c in self.bridge_calls if c[0] == "create-checkout"]
+        payload, status = server.select_billing_plan(A, "solo", "month")
+        self.assertEqual((status, payload["planId"], payload["cancelAtPeriodEnd"], payload["paidUntilUtc"]), (200, "solo", False, None))
+        self.assertEqual(self.resume_calls, ["sub_1"])
+        self.assertEqual([c for c in self.bridge_calls if c[0] == "create-checkout"], before)       # aucune nouvelle Checkout Session : aucun second paiement
+        state = server._billing_load(A)
+        self.assertEqual((state["stripeSubscriptionId"], state.get("cancelAtPeriodEnd")), ("sub_1", None))
+        self.assertTrue(any("Résiliation annulée" in h["event"] for h in server.get_billing(A)["history"]))
+
+    def test_resuming_with_stripe_down_changes_nothing(self):
+        self.activate("solo", "sub_1", "cs_1")
+        server.cancel_billing_plan(A)
+        orig = self.fake_bridge
+
+        def down(action, **kw):
+            return {"Status": "ERROR", "Detail": "STRIPE_BRIDGE_TIMEOUT"} if action == "resume-subscription" else orig(action, **kw)
+        server.run_stripe_bridge = down
+        payload, status = server.select_billing_plan(A, "solo", "month")
+        self.assertEqual((status, payload["error"]), (503, "STRIPE_UNAVAILABLE"))
+        self.assertTrue(server._billing_load(A)["cancelAtPeriodEnd"])
+
+    def test_choosing_the_plan_again_once_it_has_ended_opens_a_new_checkout(self):
+        self.activate("solo", "sub_1", "cs_1")
+        server.cancel_billing_plan(A)
+        server._utcnow = lambda: at(days=40)                                     # la periode payee est finie : retour a l'Essai
         payload, status = server.select_billing_plan(A, "solo", "month")
         self.assertEqual((status, payload.get("checkoutUrl")), (200, "https://checkout.example/test"))
-        payload, status = self.activate("solo", "sub_new", "cs_new")             # il a repaye : le forfait repart pour un tour, l'ancien abonnement est solde
+        payload, status = self.activate("solo", "sub_new", "cs_new")
         self.assertEqual((status, payload["cancelAtPeriodEnd"], payload["planId"]), (200, False, "solo"))
-        self.assertEqual(self.cancelled, ["sub_1", "sub_1"])
 
     def test_the_upgrade_card_proposes_the_interval_the_client_pays(self):
         self.activate("solo", "sub_1", "cs_1", interval="year")
@@ -362,8 +411,8 @@ class InvoicePeriod(Fixture):
 
 class ExistingSubscribers(Fixture):
     def test_a_pro_or_scale_account_written_before_the_new_grid_keeps_its_credits_and_its_one_credit_mission(self):
-        write_billing(server, A, "pro", gridVersion=None)
-        write_billing(server, B, "scale", gridVersion=None)
+        write_billing(server, A, "pro", gridVersion=None, stripeSubscriptionId="sub_a")                # abonnement Stripe : preuve de paiement
+        write_billing(server, B, "scale", gridVersion=None, history=[{"dateUtc": "2026-09-01T00:00:00Z", "event": "Changement de plan : Essai -> Scale (paiement Stripe confirme)."}])
         a, b = server.get_billing(A), server.get_billing(B)
         self.assertEqual((a["creditsIncluded"], a["grandfathered"]), (1500, True))
         self.assertEqual((b["creditsIncluded"], b["grandfathered"]), (4000, True))
@@ -384,7 +433,7 @@ class ExistingSubscribers(Fixture):
         self.assertEqual(server._billing_load(A)["gridVersion"], server.GRID_VERSION)
 
     def test_changing_plan_ends_the_old_terms_and_new_states_are_stamped(self):
-        write_billing(server, A, "pro", gridVersion=None)
+        write_billing(server, A, "pro", gridVersion=None, history=[{"dateUtc": "2026-09-01T00:00:00Z", "event": "Changement de plan : Essai -> Pro (paiement Stripe confirme)."}])
         server.set_client_plan(A, "scale")
         self.assertEqual((server.get_billing(A)["creditsIncluded"], server.get_billing(A)["grandfathered"]), (4000, False))
         self.assertEqual(server.normalize_level(None, A), "equilibre")
