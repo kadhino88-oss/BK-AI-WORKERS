@@ -1,0 +1,38 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "BK-STEP-RESULT-V1",
+  "title": "result.json du lanceur d'etape (ecrit par le lanceur ; docs/AUTONOMY-ENGINE.md, sections 3.11 et 7.7)",
+  "type": "object",
+  "required": ["schema", "status", "exitReason"],
+  "properties": {
+    "schema": {"const": "BK-STEP-RESULT-V1"},
+    "status": {"enum": ["DONE", "PARTIAL", "NEEDS_INPUT", "BLOCKED", "FAILED", "RETRY_LATER"]},
+    "exitReason": {"enum": ["step_complete", "step_blocked", "deadline", "cost_ceiling", "iterations", "refusal", "api_unavailable", "invalid_input", "error"]},
+    "report": {
+      "type": ["object", "null"],
+      "properties": {
+        "status": {"enum": ["DONE", "PARTIAL", "BLOCKED", "NEEDS_INPUT"]},
+        "summary": {"type": "string"},
+        "deliverables": {"type": "array", "items": {"type": "object", "required": ["path"], "properties": {"path": {"type": "string"}, "title": {"type": "string"}}}},
+        "criteriaClaims": {"type": "array", "items": {"type": "object", "required": ["criterionId"], "properties": {"criterionId": {"type": "string"}, "claim": {"type": "string"}, "evidence": {"type": "array", "items": {"type": "object", "required": ["type", "ref"]}}}}},
+        "remaining": {"type": "array", "items": {"type": "string"}},
+        "summaryUpdate": {"type": "string"},
+        "decisions": {"type": "array", "items": {"type": "object"}},
+        "inputQuestions": {"type": "array", "items": {"type": "object"}},
+        "nextSuggestions": {"type": "array", "items": {"type": "string"}},
+        "handoffNote": {"type": "string"},
+        "ignoredInstructions": {"type": "array", "items": {"type": "string"}},
+        "verification": {"type": "object"}
+      }
+    },
+    "answerText": {"type": "string"},
+    "usage": {"type": "object"},
+    "model": {"type": "string"},
+    "iterations": {"type": "integer"},
+    "filesImported": {"type": "array", "items": {"type": "object", "properties": {"path": {"type": "string"}, "bytes": {"type": "integer"}}}},
+    "error": {"type": ["string", "null"]},
+    "retryAfterSec": {"type": ["integer", "null"]},
+    "startedUtc": {"type": "string"},
+    "finishedUtc": {"type": "string"}
+  }
+}

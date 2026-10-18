@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "BK-PROJECT-VERIFICATION-V1",
+  "title": "Resultat d'un tour de verification (docs/AUTONOMY-ENGINE.md, section 4.3)",
+  "type": "object",
+  "required": ["schema", "round", "scope", "criteria", "overall"],
+  "properties": {
+    "schema": {"const": "BK-PROJECT-VERIFICATION-V1"},
+    "round": {"type": "integer", "minimum": 1},
+    "scope": {"enum": ["final", "milestone", "consistency", "targeted"]},
+    "criteria": {
+      "type": "array",
+      "items": {
+        "type": "object", "required": ["id", "verdict"],
+        "properties": {
+          "id": {"type": "string"},
+          "verdict": {"enum": ["PASS", "FAIL", "UNVERIFIABLE"]},
+          "note": {"type": "string"},
+          "evidence": {"type": "array", "items": {"type": "object", "required": ["type", "ref"], "properties": {"type": {"enum": ["file", "check", "excerpt", "fetch", "approval"]}, "ref": {"type": "string"}, "lines": {"type": "array", "items": {"type": "integer"}}, "quote": {"type": "string", "maxLength": 300}}}},
+          "fixHint": {"type": "string"}
+        }
+      }
+    },
+    "overall": {"enum": ["PASS", "FAIL", "UNVERIFIABLE"]},
+    "unverifiable": {"type": "array", "items": {"type": "string"}},
+    "summary": {"type": "string"}
+  }
+}
