@@ -118,10 +118,18 @@ def check_file_exists(ctx, check, res):
         res.ok()
 
 
+_NESTED_QUANT = re.compile(r"\([^()]*[+*][^()]*\)[+*{]")
+
+
 def _match(text, pattern):
+    """Texte simple (insensible à la casse) ou « re:<expression> ». Les expressions viennent d'un plan écrit par un modèle et tournent DANS le serveur :
+    longueur bornée, quantificateurs imbriqués refusés (retour catastrophique), texte borné à 2 Mo."""
     if pattern.startswith("re:"):
+        rx = pattern[3:]
+        if len(rx) > 300 or _NESTED_QUANT.search(rx):
+            return False
         try:
-            return re.search(pattern[3:], text, re.MULTILINE | re.IGNORECASE) is not None
+            return re.search(rx, text[:2_000_000], re.MULTILINE | re.IGNORECASE) is not None
         except re.error:
             return False
     return pattern.lower() in text.lower()
@@ -333,11 +341,14 @@ def validate_schema(value, schema, path="$", out=None, depth=0):
         if "maxLength" in schema and len(value) > schema["maxLength"]:
             out.append(f"{path} : trop long")
         if isinstance(schema.get("pattern"), str):
-            try:
-                if not re.search(schema["pattern"], value):
-                    out.append(f"{path} : format invalide")
-            except re.error:
-                pass
+            if len(schema["pattern"]) > 300 or _NESTED_QUANT.search(schema["pattern"]):
+                out.append(f"{path} : expression régulière refusée (trop longue ou quantificateurs imbriqués)")
+            else:
+                try:
+                    if not re.search(schema["pattern"], value[:20000]):
+                        out.append(f"{path} : format invalide")
+                except re.error:
+                    pass
     if isinstance(value, (int, float)) and not isinstance(value, bool):
         if "minimum" in schema and value < schema["minimum"]:
             out.append(f"{path} : inférieur au minimum {schema['minimum']}")
