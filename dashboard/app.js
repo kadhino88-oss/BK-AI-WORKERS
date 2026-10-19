@@ -3267,7 +3267,7 @@ async function runTrialTask(objective) {
     });
 
     if (result.error === "TRIAL_DAILY_LIMIT_REACHED" || result.error === "TRIAL_IP_LIMIT_REACHED") {
-      errorEl.textContent = "Beaucoup de monde teste BK-AI-WORKERS en ce moment — réessayez un peu plus tard, ou inscrivez-vous pour un accès sans limite.";
+      errorEl.textContent = "Beaucoup de monde teste BK-AI-WORKERS en ce moment — réessayez un peu plus tard, ou inscrivez-vous pour accéder à votre forfait.";
       errorEl.hidden = false;
       return;
     }
@@ -3291,7 +3291,7 @@ async function runTrialTask(objective) {
     resultEl.className = "task-result";
     resultEl.innerHTML = `<div class="status-line">Aperçu d'essai gratuit${result.degraded ? " (mode secours)" : ""}</div>
       ${renderAnswer(result.answer)}
-      ${result.truncated ? '<p class="trial-note">Réponse tronquée — inscrivez-vous pour recevoir le livrable complet, sans limite.</p>' : ""}
+      ${result.truncated ? '<p class="trial-note">Réponse tronquée — inscrivez-vous pour recevoir le livrable complet.</p>' : ""}
       <button type="button" class="btn btn-gold" id="trial-cta-lead-btn" style="margin-top:10px">S'inscrire pour continuer &rarr;</button>`;
     resultEl.hidden = false;
     document.getElementById("trial-cta-lead-btn").addEventListener("click", () => requireAccount(() => {}));
