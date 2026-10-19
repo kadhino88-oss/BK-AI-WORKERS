@@ -4395,11 +4395,10 @@ def run_trial_mission(worker_id, objective, client_ip):
     }, 200
 
 
-import sys
 import projects_wiring
 
 # Moteur de projets (dashboard/projects*.py, docs/AUTONOMY-ENGINE.md) : DORMANT tant que BK_PROJECTS n'est pas 1 (routes en 503, superviseur arrete).
-PROJECTS, PROJECTS_API = projects_wiring.build(sys.modules[__name__])
+PROJECTS, PROJECTS_API = projects_wiring.build(projects_wiring.ModuleView(globals()))
 
 
 class Handler(BaseHTTPRequestHandler):

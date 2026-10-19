@@ -73,10 +73,16 @@ def site_cassettes():
                  msg([tu(2, "deliverable_register", {"path": "site/about.html", "title": "A propos", "kind": "site"}), work_report("site/about.html", "A propos", ["C3"])], "tool_use", u=u())],
         "VER1-1": [msg([tu(1, "workspace_read", {"path": "site/index.html"})], "tool_use", u=u()),
                    msg([complete(2, summary="Un critere echoue.", verification=ver("FAIL", [{"type": "excerpt", "ref": "site/index.html", "quote": "Lorem ipsum dolor sit amet"}]))], "tool_use", u=u())],
+        "VERC1-1": [msg([tu(1, "workspace_read", {"path": "site/about.html"}),
+                         complete(2, summary="Aucune contradiction.", verification={"criteria": [{"id": "C-coherence", "verdict": "PASS", "note": "Memes faits, meme ton.", "evidence": [
+                             {"type": "excerpt", "ref": "site/index.html", "quote": "Cabinet de physiotherapie"}, {"type": "excerpt", "ref": "site/about.html", "quote": "Notre equipe vous accueille"}]}],
+                             "consistency": [], "overall": "PASS", "summary": "Coherent."})], "tool_use", u=u())],
         "FIX1-1-1": [msg([tu(1, "workspace_read", {"path": "site/index.html"})], "tool_use", u=u()),
                      msg([tu(2, "workspace_write", {"path": "site/index.html", "content": GOOD_HTML, "mode": "overwrite"})], "tool_use", u=u()),
                      msg([work_report("site/index.html", "Accueil corrige", ["C2"])], "tool_use", u=u())],
         "VER2-1": [msg([complete(1, summary="Tout est conforme.", verification=ver("PASS", [{"type": "excerpt", "ref": "site/index.html", "quote": "Prenez rendez-vous au 021 555 12 34"}]))], "tool_use", u=u())],
+        "VERC2-1": [msg([complete(1, summary="Toujours coherent.", verification={"criteria": [{"id": "C-coherence", "verdict": "PASS", "note": "ok", "evidence": [
+            {"type": "excerpt", "ref": "site/index.html", "quote": "Cabinet de physiotherapie"}]}], "consistency": [], "overall": "PASS"})], "tool_use", u=u())],
         "CONS1-1": [msg([complete(1, summary="Votre page vitrine est livree : site/index.html et site/about.html. Il reste a completer l'adresse du cabinet et a relire les textes avant publication.")],
                         "tool_use", u=u())],
     }
@@ -156,6 +162,7 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(kinds["S1"][:2], ("execute", "lucas"))
         self.assertEqual(kinds["S2"][:2], ("execute", "emma"))
         self.assertEqual(kinds["VER1"][0], "verify")
+        self.assertEqual(kinds["VERC1"][0], "verify")                                                 # deux Workers ont produit : relecture de coherence
         self.assertEqual(kinds["FIX1-1"], ("fix", "lucas", "DONE"))                                 # la correction va au Worker qui possède le critère
         self.assertEqual(kinds["VER2"][0], "verify")
         self.assertEqual(kinds["CONS1"][0], "consolidate")
@@ -163,9 +170,9 @@ class PipelineTests(unittest.TestCase):
         # -- la vérification : refus puis accord, verdicts décidés par le moteur
         v1 = json.loads(e.read(pid, "verification", "1", "verification.json"))
         v2 = json.loads(e.read(pid, "verification", "2", "verification.json"))
-        self.assertEqual({c["id"]: c["verdict"] for c in v1["criteria"]}, {"C1": "PASS", "C2": "FAIL", "C3": "PASS"})
+        self.assertEqual({c["id"]: c["verdict"] for c in v1["criteria"]}, {"C1": "PASS", "C2": "FAIL", "C3": "PASS", "C-coherence": "PASS"})
         self.assertEqual(v1["overall"], "FAIL")
-        self.assertEqual({c["id"]: c["verdict"] for c in v2["criteria"]}, {"C1": "PASS", "C2": "PASS", "C3": "PASS"})
+        self.assertEqual({c["id"]: c["verdict"] for c in v2["criteria"]}, {"C1": "PASS", "C2": "PASS", "C3": "PASS", "C-coherence": "PASS"})
         self.assertTrue(all(c["evidence"] for c in v2["criteria"]))                                   # aucun PASS sans preuve résolue
         c2 = next(c for c in v1["criteria"] if c["id"] == "C2")
         self.assertTrue(any(ev["type"] == "check" for ev in c2["evidence"]))                          # le contrôle typé du moteur a tranché
@@ -192,6 +199,8 @@ class PipelineTests(unittest.TestCase):
         self.assertNotIn("use_connector", ver_call["toolNames"])
         self.assertIn("CONTROLEUR QUALITE", ver_call["systemText"])
         self.assertIn("PROJECT ADDENDUM", e.log("S1-1")[0]["systemText"])
+        self.assertIn("RELECTURE DE COHERENCE", e.log("VERC1-1")[0]["systemText"])
+        self.assertIn("VERIFICATION INDEPENDANTE", ver_call["systemText"])
         # -- rapport final : gabarit fixe, verdicts du tour 2
         report = e.read(pid, "final-report.md")
         for n in range(1, 9):
@@ -199,7 +208,7 @@ class PipelineTests(unittest.TestCase):
         self.assertIn("| C2 — Aucun texte d'exemple ne reste dans l'accueil | PASS", report)
         # -- coût : chaque réponse de l'API est comptée une fois, réglée au grand livre d'usage
         ledger = e.svc.store.read_jsonl(pid, "cost-ledger.jsonl")
-        self.assertEqual({r["stepId"] for r in ledger}, {"PLAN1", "S1", "S2", "VER1", "FIX1-1", "VER2", "CONS1"})
+        self.assertEqual({r["stepId"] for r in ledger}, {"PLAN1", "S1", "S2", "VER1", "VERC1", "FIX1-1", "VER2", "VERC2", "CONS1"})
         self.assertGreater(st["budget"]["creditsCharged"], 0)
         self.assertEqual(sum(a for _r, a in e.usage.settled), st["budget"]["creditsCharged"])
         self.assertEqual(e.usage.rsv, {})                                                              # aucune réservation oubliée

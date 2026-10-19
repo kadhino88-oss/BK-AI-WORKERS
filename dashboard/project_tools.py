@@ -527,7 +527,7 @@ def tool_project_plan(ctx, inp):
         plan = (_read_json(os.path.join(ctx.project_dir, "plan.json"), {}) or {}).get("plan") or {}
         steps = ctx.state().get("steps") or {}
         return {"goal": plan.get("goal") or ctx.state().get("goal"),
-                "criteria": [{"id": c.get("id"), "text": c.get("text"), "kind": c.get("kind")} for c in plan.get("criteria") or []],
+                "criteria": [{"id": c.get("id"), "text": c.get("text"), "kind": c.get("kind")} for c in plan.get("criteria") or [] if not c.get("implicit")],
                 "steps": [{"id": s.get("id"), "title": s.get("title"), "worker": s.get("worker"), "dependsOn": s.get("dependsOn"),
                            "status": (steps.get(s.get("id")) or {}).get("status", "PENDING")} for s in plan.get("steps") or []],
                 "version": plan.get("version")}
@@ -535,6 +535,8 @@ def tool_project_plan(ctx, inp):
         if ctx.kind not in ("plan", "replan"):
             raise ToolError("NOT_ALLOWED", "Seule une étape de planification peut remplacer le plan (project_plan set).")
         plan = inp.get("plan")
+        if isinstance(plan, dict) and isinstance(plan.get("criteria"), list):       # le critère de cohérence est ajouté par le moteur : on ne le redéclare pas
+            plan = dict(plan, criteria=[c for c in plan["criteria"] if not (isinstance(c, dict) and c.get("id") == projects_plan.COHERENCE_ID)])
         st = ctx.state()
         sc = st.get("scope") or {}
         scope = {"chloe": bool(sc.get("chloe")), "allowed": sc.get("allowedWorkers")} if sc.get("allowedWorkers") is not None else None
@@ -764,7 +766,12 @@ def _clean_verification(v, problems):
                 ev.append(item)
         crit.append({"id": c["id"][:20], "verdict": verdict, "note": _text_ok(c.get("note"), "note", 600), "evidence": ev,
                      "fixHint": _text_ok(c.get("fixHint"), "fixHint", 600)})
-    return {"criteria": crit, "overall": v.get("overall") if v.get("overall") in ("PASS", "FAIL", "UNVERIFIABLE") else "FAIL",
+    cons = []
+    for i in (v.get("consistency") or [])[:20] if isinstance(v.get("consistency"), list) else []:
+        if isinstance(i, dict) and isinstance(i.get("issue"), str):
+            cons.append({"worker": _text_ok(i.get("worker"), "worker", 20).lower(), "issue": i["issue"][:600], "fixHint": _text_ok(i.get("fixHint"), "fixHint", 600),
+                         "files": [f[:180] for f in (i.get("files") or [])[:6] if isinstance(f, str)] if isinstance(i.get("files"), list) else []})
+    return {"criteria": crit, "consistency": cons, "overall": v.get("overall") if v.get("overall") in ("PASS", "FAIL", "UNVERIFIABLE") else "FAIL",
             "unverifiable": [x[:20] for x in (v.get("unverifiable") or []) if isinstance(x, str)][:20] if isinstance(v.get("unverifiable"), list) else [],
             "summary": _text_ok(v.get("summary"), "summary", 1500)}
 

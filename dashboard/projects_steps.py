@@ -345,7 +345,12 @@ class StepMixin:
                 for cid, chk_id in ((st.get("verify") or {}).get("auto") or {}).items():
                     auto[cid] = pc_load_check(project_dir, rnd, chk_id) or {"id": chk_id, "ok": False, "findings": []}
                 claims = {s_id: s.get("claims") for s_id, s in st["steps"].items() if s.get("claims")}
-                verif_block = pv.verification_dossier(plan, auto, deliverables, claims, pc.fence)
+                dossier_plan = plan
+                if spec.get("scope") == "consistency":                       # la relecture ne voit que son critère ; l'autre étape traite tous les autres
+                    dossier_plan = dict(plan, criteria=[c for c in plan.get("criteria") or [] if c.get("id") == projects_plan.COHERENCE_ID])
+                elif (st.get("verify") or {}).get("consistency"):
+                    dossier_plan = dict(plan, criteria=[c for c in plan.get("criteria") or [] if c.get("id") != projects_plan.COHERENCE_ID])
+                verif_block = pv.verification_dossier(dossier_plan, auto, deliverables, claims, pc.fence)
                 pp.atomic_write_bytes(os.path.join(step_dir, "verify.json"), json.dumps({"round": rnd}).encode("utf-8"))
             if kind in ("plan", "replan") and st.get("planNotes"):
                 extra.append("## Notes des Workers sur le plan\n" + pc.fence("plan_notes", "\n".join(str(n)[:300] for n in st["planNotes"][-10:])))
@@ -377,6 +382,7 @@ class StepMixin:
                 "autoApproveSafeOps": self._autoapprove_on(st["clientId"], step.get("worker")) if kind in ("execute", "fix") else False,
                 "installationPaused": bool(self.installation_paused(st["clientId"], step.get("worker"))) if kind in ("execute", "fix") else False,
                 "round": int((st.get("verify") or {}).get("round") or 0) if kind == "verify" else None,
+                "scope": (spec.get("scope") or "final") if kind == "verify" else None,
                 "projectStatus": st.get("status"),
             }
             pp.atomic_write_bytes(in_path, json.dumps(inp, ensure_ascii=False, indent=2).encode("utf-8"))
@@ -692,11 +698,13 @@ class StepMixin:
                 "inputs": spec.get("inputs") or [], "expectedOutputs": spec.get("expectedOutputs") or [], "effort": spec.get("effort") or "normal",
                 "connectors": spec.get("connectors") or [], "requiresApprovalsFrom": [], "estimateCredits": spec.get("estimateCredits")}
         trial = dict(plan)
+        trial["criteria"] = [c for c in plan.get("criteria") or [] if not c.get("implicit")]       # le critère implicite (cohérence) n'est visé par aucune étape
         trial["steps"] = list(plan.get("steps") or []) + [cand]
         res = projects_plan.validate_plan(trial, {"chloe": scope.get("chloe"), "allowed": scope.get("allowed")}, limits=self.limits["step"])
         if not res.ok:
             return False
         plan["steps"] = res.plan["steps"]
+        plan = projects_plan.with_coherence(plan)
         plan_doc["plan"] = plan
         self.store.write_json(pid, "plan.json", plan_doc)
         st["steps"][new_id] = {"id": new_id, "kind": "execute", "title": cand["title"], "worker": cand["worker"], "status": "PENDING", "attempts": 0,
@@ -943,7 +951,7 @@ class StepMixin:
         if doc.get("plan"):
             history.append({"version": doc["plan"].get("version"), "plan": doc["plan"], "replacedUtc": self.now_iso()})
         version = int(st.get("planVersion") or 0) + 1
-        plan_norm = dict(plan_norm)
+        plan_norm = projects_plan.with_coherence(dict(plan_norm))      # critère implicite « C-coherence » quand au moins deux Workers produisent
         plan_norm["version"] = version
         self.store.write_json(pid, "plan.json", {"schema": "BK-PROJECT-PLAN-FILE-V1", "plan": plan_norm, "history": history[-10:]})
         st["planVersion"] = version
@@ -1045,28 +1053,49 @@ class StepMixin:
 
     # ---- vérification
     def _on_verify_outcome(self, t, step, out, step_dir, attempt):
+        """Fin d'une étape de vérification. Un tour peut avoir DEUX étapes (critères, puis cohérence entre Workers) : le verdict du tour est rendu quand
+        toutes les étapes du tour sont finies (chaque rapport est gardé sur disque en attendant)."""
         st = t.state
-        sid = step["id"]
         proj_dir = self.store.project_dir(t.pid)
+        rnd = int((st.get("verify") or {}).get("round") or 1)
         if self._common_failure(t, step, out):
-            if step.get("status") == "FAILED":
-                self._verify_fallback(t, step)
-            return
-        rnd = int((st.get("verify") or {}).get("round") or 1)
-        plan = self.read_plan(t.pid)
-        report = (out.get("report") or {}).get("verification")
-        self._finish_verification(t, step, plan, report, proj_dir, rnd, step_dir)
+            if step.get("status") != "FAILED":
+                return                                                      # nouvelle tentative prévue
+            report = None                                                   # le vérificateur n'a pas pu s'exécuter : ses critères resteront UNVERIFIABLE
+        else:
+            report = (out.get("report") or {}).get("verification")
+            step.update(status="DONE", summary=str((out.get("report") or {}).get("summary") or "")[:300])
+        part = {"stepId": step["id"], "scope": (step.get("spec") or {}).get("scope") or "final", "stepDir": step_dir, "report": report}
+        pv.write_part(proj_dir, rnd, step["id"], part)
+        self._maybe_finish_verification(t, rnd)
 
-    def _verify_fallback(self, t, step):
-        """Le vérificateur n'a pas pu s'exécuter : seuls les contrôles typés comptent, tout le reste est UNVERIFIABLE (jamais un PASS sans preuve)."""
+    def _round_steps(self, st, rnd):
+        return [s for s in st["steps"].values() if s.get("kind") == "verify" and int((s.get("spec") or {}).get("round") or 0) == int(rnd)]
+
+    def _maybe_finish_verification(self, t, rnd):
         st = t.state
+        steps = self._round_steps(st, rnd)
+        if any(s.get("status") in ("READY", "RUNNING", "PENDING") for s in steps):
+            return                                                          # l'autre étape du tour n'est pas finie
         proj_dir = self.store.project_dir(t.pid)
-        rnd = int((st.get("verify") or {}).get("round") or 1)
         plan = self.read_plan(t.pid)
-        step["status"] = "FAILED"
-        self._finish_verification(t, step, plan, None, proj_dir, rnd, None)
+        parts = [pv.read_part(proj_dir, rnd, s["id"]) for s in steps]
+        parts = [p for p in parts if p]
+        criteria, issues, summaries, step_dirs, ran = [], [], [], [], False
+        for p in parts:
+            rep = p.get("report")
+            if p.get("stepDir"):
+                step_dirs.append(p["stepDir"])
+            if isinstance(rep, dict):
+                ran = True
+                criteria.extend(c for c in rep.get("criteria") or [] if isinstance(c, dict))
+                issues.extend(i for i in rep.get("consistency") or [] if isinstance(i, dict))
+                if rep.get("summary"):
+                    summaries.append(str(rep["summary"]))
+        merged = {"criteria": criteria, "overall": None, "summary": " ".join(summaries)[:1500]} if ran else None
+        self._finish_verification(t, steps[0] if steps else {"id": "VER?"}, plan, merged, proj_dir, rnd, step_dirs, issues=issues)
 
-    def _finish_verification(self, t, step, plan, report, proj_dir, rnd, step_dir):
+    def _finish_verification(self, t, step, plan, report, proj_dir, rnd, step_dirs, issues=None):
         st = t.state
         auto = {}
         for cid, chk_id in ((st.get("verify") or {}).get("auto") or {}).items():
@@ -1074,10 +1103,14 @@ class StepMixin:
             if c:
                 auto[cid] = c
         approvals = pa.load_items(self.store, t.pid)
-        step_dirs = [step_dir] if step_dir else []
-        ver = pv.resolve_verification(plan, report, auto, proj_dir, rnd, approvals, step_dirs)
+        ver = pv.resolve_verification(plan, report, auto, proj_dir, rnd, approvals, list(step_dirs or []))
         pv.write_verification(proj_dir, rnd, ver)
-        step.update(status="DONE" if step.get("status") != "FAILED" else "FAILED", summary=f"Vérification : {ver['overall']}")
+        coh = next((c for c in ver["criteria"] if c["id"] == projects_plan.COHERENCE_ID), None)
+        if coh is not None:
+            pv.write_consistency(proj_dir, rnd, coh, issues or [])
+        for s_ in self._round_steps(st, rnd):
+            if s_.get("status") == "DONE":
+                s_["summary"] = f"Vérification : {ver['overall']}"
         st["verification"] = {"round": rnd, "overall": ver["overall"], "lastUtc": self.now_iso(),
                               "criteria": [{"id": c["id"], "verdict": c["verdict"], "note": c["note"][:200]} for c in ver["criteria"]]}
         t.event("verification_result", f"Vérification (tour {rnd}) : {ver['overall']}.", round=rnd, overall=ver["overall"],
@@ -1093,13 +1126,13 @@ class StepMixin:
         if fails and approval_only and pending:
             st["phase"] = "execute"
             t.transition("WAITING_APPROVAL", "APPROVALS_REQUIRED", waitingFor="APPROVAL")
-            st["steps"][step["id"]]["status"] = "DONE"
             st["pendingReverify"] = True
             return
         if fails and int(st["counters"].get("fixRounds") or 0) < maxfix and self.steps_room(st, len(fails) + 2):
             st["counters"]["fixRounds"] = int(st["counters"].get("fixRounds") or 0) + 1
-            fixes = pv.plan_fix_steps(plan, st["steps"], ver, st["counters"]["fixRounds"], st.get("leadWorker") or "chloe")
             scope = self.scope_of(st["clientId"])
+            fixes = pv.plan_fix_steps(plan, st["steps"], ver, st["counters"]["fixRounds"], st.get("leadWorker") or "chloe", consistency=issues,
+                                      worker_ok=lambda w: self.worker_in_scope(scope, w))
             for f in fixes:
                 if not self.worker_in_scope(scope, f["worker"]):
                     f["worker"] = st.get("leadWorker") or f["worker"]
@@ -1325,6 +1358,22 @@ class StepMixin:
                     t.transition("WAITING_INPUT", reason, waitingFor=wf)
             return
 
+    def _consistency_goal(self):
+        """Mission de l'étape de cohérence : le gabarit chloe/prompts/consistency-review.md s'il existe (B3), sinon le texte de repli ci-dessous."""
+        text = ""
+        try:
+            with open(os.path.join(self.root, "chloe", "prompts", "consistency-review.md"), encoding="utf-8-sig") as f:
+                text = f.read(6000).strip()
+        except OSError:
+            pass
+        base = ("Relis TOUS les livrables destinés au même public et compare-les. Pour chacun, extrais une fiche de faits : nom de l'entreprise, adresse, "
+                "téléphone, horaires, prix, offres, dates, promesses (délais, garanties), ton, couleurs et typographie. Puis cherche les CONTRADICTIONS : un même "
+                "fait différent d'un livrable à l'autre, une promesse faite ici et absente là, un ton incompatible, une marque incohérente. Ne corrige rien. "
+                "Termine par step_complete avec l'objet « verification » : UN SEUL critère, « C-coherence » (PASS si aucune contradiction, FAIL sinon, avec preuves "
+                "de type extrait cité des DEUX fichiers en contradiction), et la liste « consistency » : [{worker, files:[...], issue, fixHint}] avec le Worker "
+                "propriétaire du fichier à corriger.")
+        return (text + "\n\n" + base) if text else base
+
     def _milestone_checks(self, t, plan):
         """Jalons du plan (plan.milestones) : dès que les étapes d'un jalon sont terminées, le moteur exécute les contrôles typés des critères visés ; un
         échec crée tout de suite une étape de correction (2 jalons corrigés au plus par projet), sans attendre la vérification finale."""
@@ -1368,10 +1417,16 @@ class StepMixin:
         proj_dir = self.store.project_dir(t.pid)
         auto = pv.run_auto_checks(proj_dir, plan, n)
         st["verify"] = {"round": n, "auto": {cid: r["id"] for cid, r in auto.items()}, "startedUtc": self.now_iso()}
+        has_coh = any(c.get("id") == projects_plan.COHERENCE_ID for c in plan.get("criteria") or [])
         sid = f"VER{n}"
         self._new_system_step(st, sid, "verify", "qa", "Vérification indépendante",
                               "Vérifie chaque critère d'acceptation sur les fichiers réels. Essaie de RÉFUTER. Termine par step_complete avec "
-                              "l'objet « verification » (un verdict PASS, FAIL ou UNVERIFIABLE par critère, avec preuves).")
+                              "l'objet « verification » (un verdict PASS, FAIL ou UNVERIFIABLE par critère, avec preuves)."
+                              + (" Le critère « C-coherence » n'est PAS à ton programme : un autre contrôleur le traite." if has_coh else ""),
+                              round=n, scope="final")
+        if has_coh:                                                           # relecture de cohérence entre les contenus de Workers différents (6c.7)
+            self._new_system_step(st, f"VERC{n}", "verify", "qa", "Relecture de cohérence entre Workers", self._consistency_goal(), round=n, scope="consistency")
+        st["verify"]["consistency"] = has_coh
         if st["status"] in ("RUNNING", "WAITING_APPROVAL", "WAITING_INPUT", "PLANNING"):
             t.transition("VERIFYING", "VERIFY")
         t.event("verification_started", f"Vérification indépendante (tour {n}) : {len(plan.get('criteria') or [])} critère(s).", round=n)

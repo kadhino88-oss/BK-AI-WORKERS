@@ -35,7 +35,7 @@ class FlowTests(unittest.TestCase):
         self.assertTrue(os.path.isfile(e.wspath(pid, "handoff/S1.md")))
         ver = json.load(open(os.path.join(e.svc.store.project_dir(pid), "verification", "1", "verification.json"), encoding="utf-8"))
         self.assertEqual(ver["overall"], "PASS")
-        self.assertEqual({c["id"]: c["verdict"] for c in ver["criteria"]}, {"C1": "PASS", "C2": "PASS"})
+        self.assertEqual({c["id"]: c["verdict"] for c in ver["criteria"]}, {"C1": "PASS", "C2": "PASS", "C-coherence": "PASS"})   # lucas + emma : relecture de coherence
         report = open(os.path.join(e.svc.store.project_dir(pid), "final-report.md"), encoding="utf-8").read()
         self.assertIn("Rapport final", report)
         self.assertIn("| C1", report)
@@ -136,7 +136,8 @@ class FlowTests(unittest.TestCase):
     def test_after_two_failed_fix_rounds_the_client_chooses_and_can_accept_the_gaps(self):
         always_fail = {"complete": {"status": "DONE", "summary": "Toujours un defaut.", "verification": {"criteria": [
             {"id": "C1", "verdict": "PASS", "note": "ok", "evidence": [{"type": "file", "ref": "site/index.html"}]},
-            {"id": "C2", "verdict": "FAIL", "note": "Ton non professionnel", "evidence": [{"type": "file", "ref": "site/about.html"}], "fixHint": "Reformuler"}],
+            {"id": "C2", "verdict": "FAIL", "note": "Ton non professionnel", "evidence": [{"type": "file", "ref": "site/about.html"}], "fixHint": "Reformuler"},
+            {"id": "C-coherence", "verdict": "PASS", "note": "ok", "evidence": [{"type": "file", "ref": "site/index.html"}]}],
             "overall": "FAIL", "summary": "echec"}}}
         e = self.env(scenario={"verify": always_fail})
         pid = e.create()

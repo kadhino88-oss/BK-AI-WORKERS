@@ -74,9 +74,12 @@ def default_behavior(inp):
             for n in sorted(fs):
                 if n.endswith(".html") and not some_file:
                     some_file = os.path.relpath(os.path.join(dp, n), ws).replace(os.sep, "/")
+        scope = inp.get("scope") or "final"
         for c in plan.get("criteria") or []:
+            if (scope == "consistency") != (c["id"] == "C-coherence"):         # l'etape de coherence ne traite que C-coherence, l'autre tous les autres
+                continue
             crit.append({"id": c["id"], "verdict": "PASS", "note": "Verifie.", "evidence": [{"type": "file", "ref": some_file or "notes/x.md"}]})
-        return {"complete": {"status": "DONE", "summary": "Verification terminee.", "verification": {"criteria": crit, "overall": "PASS", "summary": "RAS"}}}
+        return {"complete": {"status": "DONE", "summary": "Verification terminee.", "verification": {"criteria": crit, "consistency": [], "overall": "PASS", "summary": "RAS"}}}
     if kind == "consolidate":
         return {"complete": {"status": "DONE", "summary": "Voici vos livrables : le site est pret."}}
     if kind == "answer":

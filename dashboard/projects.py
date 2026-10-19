@@ -370,10 +370,11 @@ class ProjectService(StepMixin, ActionMixin, ViewMixin, HousekeepingMixin):
         rows = []
         for p in ids:
             try:
-                rows.append((self.store.state(p).get("createdUtc") or "", p))
+                stp = self.store.state(p)
+                rows.append((int(stp.get("createdNs") or 0), stp.get("createdUtc") or "", p))      # file d'attente : premier arrivé, premier servi (ordre fin, pas la seconde)
             except ps.ProjectError:
                 continue
-        return [p for _c, p in sorted(rows)]
+        return [p for _n, _c, p in sorted(rows)]
 
     def _promote_queued(self, now):
         by_client = {}

@@ -320,6 +320,24 @@ def needs_consistency_review(plan):
     return len(workers) >= 2
 
 
+COHERENCE_ID = "C-coherence"
+COHERENCE_TEXT = "Les contenus destinés au même public et produits par des Workers différents ne se contredisent pas (mêmes faits, mêmes promesses, ton et marque cohérents)."
+COHERENCE_RUBRIC = ("Compare les fiches de faits de chaque livrable : nom de l'entreprise, adresse, téléphone, prix, offres, dates, promesses, ton, couleurs et "
+                    "typographie. FAIL si deux livrables se contredisent (même prix différent, une promesse absente du site, un ton incompatible).")
+
+
+def with_coherence(plan):
+    """Plan normalisé + critère implicite « C-coherence » (rubric) quand au moins deux Workers produisent des contenus destinés au même public (6c.7).
+    Idempotent ; sans effet si le plan a déjà 25 critères."""
+    if not needs_consistency_review(plan) or any(c.get("id") == COHERENCE_ID for c in plan.get("criteria") or []):
+        return plan
+    if len(plan.get("criteria") or []) >= MAX_CRITERIA:
+        return plan
+    out = dict(plan)
+    out["criteria"] = list(plan.get("criteria") or []) + [{"id": COHERENCE_ID, "text": COHERENCE_TEXT, "kind": "rubric", "rubric": COHERENCE_RUBRIC, "implicit": True}]
+    return out
+
+
 def percent_done(steps, status_of, cap=95):
     """Avancement (0-100) : somme des estimateCredits des étapes terminées ÷ somme totale ; étape sans estimation : poids 1."""
     total = 0.0

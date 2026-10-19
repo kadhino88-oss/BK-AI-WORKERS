@@ -13,10 +13,12 @@ import os
 import re
 import secrets
 import sys
+import time
 
 import project_paths as pp
 import projects_approvals as pa
 import projects_config as cfg
+import projects_plan
 import projects_store as ps
 import projects_usage as pu
 
@@ -211,7 +213,7 @@ class ActionMixin:
             lead = worker_id
             state = {
                 "schema": "BK-PROJECT-STATE-V1", "projectId": pid, "clientId": client_id, "title": make_title(goal), "goal": goal, "leadWorker": lead,
-                "recipeId": recipe, "language": lang, "createdUtc": now_iso, "startedUtc": None, "finishedUtc": None, "updatedUtc": now_iso,
+                "recipeId": recipe, "language": lang, "createdUtc": now_iso, "createdNs": time.time_ns(), "startedUtc": None, "finishedUtc": None, "updatedUtc": now_iso,
                 "status": "QUEUED" if go_queue else "PLANNING", "waitingFor": None, "statusReason": "QUEUED" if go_queue else "CREATED", "resumeAtUtc": None,
                 "statusSinceUtc": now_iso, "previousStatus": None, "activeSeconds": 0.0, "seq": 0,
                 "level": level, "autoStart": bool(auto_start), "planVersion": 0, "planApproved": False, "phase": "plan", "steps": {},
@@ -322,9 +324,11 @@ class ActionMixin:
             s["dependsOn"] = [d for d in s.get("dependsOn") or [] if d not in remove]
             s["requiresApprovalsFrom"] = [d for d in s.get("requiresApprovalsFrom") or [] if d not in remove]
         covered = {c for s in keep for c in s.get("criteriaIds") or []}
-        dropped = [c for c in plan.get("criteria") or [] if c["id"] not in covered]
+        dropped = [c for c in plan.get("criteria") or [] if c["id"] not in covered and not c.get("implicit")]
         plan["steps"] = keep
-        plan["criteria"] = [c for c in plan.get("criteria") or [] if c["id"] in covered]
+        plan["criteria"] = [c for c in plan.get("criteria") or [] if c["id"] in covered or c.get("implicit")]
+        if not projects_plan.needs_consistency_review(plan):         # la relecture de cohérence n'a de sens qu'à partir de deux Workers qui produisent
+            plan["criteria"] = [c for c in plan["criteria"] if not c.get("implicit")]
         if dropped:
             plan.setdefault("assumptions", []).append({"id": f"A{len(plan.get('assumptions') or []) + 1}", "text":
                                                        "Retiré à la demande du client : " + "; ".join(c["text"][:100] for c in dropped)})

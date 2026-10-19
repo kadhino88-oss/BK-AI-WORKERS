@@ -19,6 +19,7 @@ import projects_store as ps
 EVIDENCE_TYPES = ("file", "check", "excerpt", "fetch", "approval")
 VERDICTS = ("PASS", "FAIL", "UNVERIFIABLE")
 SCHEMA = "BK-PROJECT-VERIFICATION-V1"
+COHERENCE_ID = "C-coherence"
 
 
 def round_dir(project_dir, rnd):
@@ -213,6 +214,35 @@ def write_verification(project_dir, rnd, data):
     pp.atomic_write_bytes(os.path.join(d, "verification.json"), json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8"))
 
 
+def write_part(project_dir, rnd, step_id, part):
+    """Rapport d'UNE étape de vérification, gardé en attendant les autres étapes du même tour (critères, cohérence)."""
+    d = os.path.join(round_dir(project_dir, rnd), "parts")
+    os.makedirs(d, exist_ok=True)
+    pp.atomic_write_bytes(os.path.join(d, re.sub(r"[^A-Za-z0-9-]", "_", step_id) + ".json"), json.dumps(part, ensure_ascii=False).encode("utf-8"))
+
+
+def read_part(project_dir, rnd, step_id):
+    try:
+        with open(os.path.join(round_dir(project_dir, rnd), "parts", re.sub(r"[^A-Za-z0-9-]", "_", step_id) + ".json"), encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return None
+
+
+def write_consistency(project_dir, rnd, criterion, issues):
+    """verification/<tour>/consistency.json : verdict du critère C-coherence et écarts relevés (4.6 / 6c.7)."""
+    clean = []
+    for i in (issues or [])[:20]:
+        if isinstance(i, dict):
+            clean.append({"worker": str(i.get("worker") or "")[:20].lower(), "files": [str(f)[:180] for f in (i.get("files") or [])[:6] if isinstance(f, str)],
+                          "issue": str(i.get("issue") or "")[:600], "fixHint": str(i.get("fixHint") or "")[:600]})
+    d = round_dir(project_dir, rnd)
+    os.makedirs(d, exist_ok=True)
+    pp.atomic_write_bytes(os.path.join(d, "consistency.json"), json.dumps(
+        {"schema": SCHEMA, "scope": "consistency", "round": int(rnd), "verdict": criterion.get("verdict"), "note": criterion.get("note"),
+         "evidence": criterion.get("evidence") or [], "issues": clean}, ensure_ascii=False, indent=2).encode("utf-8"))
+
+
 def read_verification(project_dir, rnd):
     try:
         with open(os.path.join(round_dir(project_dir, rnd), "verification.json"), encoding="utf-8") as f:
@@ -242,12 +272,22 @@ def owner_of_criterion(plan, state_steps, cid, lead="chloe"):
     return (best[0]["worker"], best[0]["id"]) if best else (lead, None)
 
 
-def plan_fix_steps(plan, state_steps, verification, rnd, lead="chloe"):
-    """Une étape `fix` par Worker propriétaire des critères en échec, avec le fixHint et les preuves d'échec."""
+def plan_fix_steps(plan, state_steps, verification, rnd, lead="chloe", consistency=None, worker_ok=None):
+    """Une étape `fix` par Worker propriétaire des critères en échec, avec le fixHint et les preuves d'échec. Pour le critère de cohérence, chaque écart
+    relevé va au Worker désigné par la relecture (`consistency` : [{worker, files, issue, fixHint}]) s'il est utilisable (`worker_ok`), sinon au chef de projet."""
     groups = {}
     crit = {c["id"]: c for c in plan.get("criteria") or []}
     for vc in verification.get("criteria") or []:
         if vc["verdict"] != "FAIL":
+            continue
+        if vc["id"] == COHERENCE_ID and consistency:
+            for iss in consistency:
+                w = str(iss.get("worker") or "").lower()
+                w = w if w and (worker_ok is None or worker_ok(w)) else lead
+                g = groups.setdefault(w, {"criteria": [], "src": set()})
+                g["criteria"].append({"id": vc["id"], "verdict": "FAIL", "note": str(iss.get("issue") or vc.get("note") or "")[:600],
+                                      "fixHint": str(iss.get("fixHint") or vc.get("fixHint") or "")[:600],
+                                      "evidence": [{"type": "file", "ref": f} for f in (iss.get("files") or [])[:4] if isinstance(f, str)]})
             continue
         worker, src = owner_of_criterion(plan, state_steps, vc["id"], lead)
         g = groups.setdefault(worker, {"criteria": [], "src": set()})
@@ -262,10 +302,14 @@ def plan_fix_steps(plan, state_steps, verification, rnd, lead="chloe"):
             ev = ", ".join(f"{e.get('type')}:{e.get('ref')}" for e in vc.get("evidence") or [])
             lines.append(f"- {vc['id']} : {c.get('text', '')}\n  Constat : {vc.get('note') or '(voir contrôle)'}\n  À faire : {vc.get('fixHint') or 'corriger puis revérifier'}"
                          + (f"\n  Preuves de l'échec : {ev}" if ev else ""))
-        fixes.append({"id": f"FIX{rnd}-{n}", "kind": "fix", "title": f"Corriger {', '.join(v['id'] for v in g['criteria'])}", "worker": worker,
+        ids = []
+        for v in g["criteria"]:
+            if v["id"] not in ids:
+                ids.append(v["id"])
+        fixes.append({"id": f"FIX{rnd}-{n}", "kind": "fix", "title": f"Corriger {', '.join(ids)}", "worker": worker,
                       "goal": "Le contrôleur qualité a relevé des critères en échec. Corrige-les dans l'espace de travail (n'écris pas de nouveau "
                               "projet : modifie ce qui existe), puis rends compte :\n" + "\n".join(lines),
-                      "criteriaIds": [v["id"] for v in g["criteria"]], "dependsOn": [], "inputs": [], "expectedOutputs": [],
+                      "criteriaIds": ids, "dependsOn": [], "inputs": [], "expectedOutputs": [],
                       "effort": "normal", "connectors": [], "requiresApprovalsFrom": [], "estimateCredits": 6, "round": rnd})
     return fixes
 

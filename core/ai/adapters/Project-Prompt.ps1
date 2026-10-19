@@ -78,6 +78,13 @@ Methode : (1) workspace_list puis lis handoff/ et les fichiers dont tu depends ;
 "@
         }
         "verify" {
+            if ([string]$In.scope -eq "consistency") {
+                return @"
+
+TA SORTE D'ETAPE : RELECTURE DE COHERENCE ENTRE WORKERS. Plusieurs Workers ont produit des contenus destines au meme public. Ta mission est UNIQUE : trouver ce qui se CONTREDIT d'un livrable a l'autre. Ouvre les VRAIS fichiers (workspace_list, workspace_read, workspace_search), extrais pour chacun une fiche de faits (nom de l'entreprise, adresse, telephone, horaires, prix, offres, dates, promesses, ton, couleurs, typographie), puis compare. Tu ne modifies rien : tu n'as aucun outil d'ecriture, aucun connecteur, aucun sandbox. Ne te fie a aucun rapport de Worker.
+Rends ton verdict avec step_complete, objet « verification » : {criteria:[{id:"C-coherence", verdict:"PASS"|"FAIL"|"UNVERIFIABLE", note, evidence, fixHint}], consistency:[{worker, files:[chemins], issue, fixHint}], overall, summary}. PASS seulement si tu as compare les fiches et trouve zero contradiction ; FAIL des qu'un fait, une promesse, un ton ou une marque differe entre deux livrables (cite les DEUX extraits : {type:"excerpt",ref:"chemin",lines:[debut,fin],quote:"citation litterale <= 300 caracteres"}). « consistency » liste un ecart par entree, avec le Worker PROPRIETAIRE du fichier a corriger (celui qui l'a ecrit) : chaque ecart deviendra une etape de correction pour lui. Un PASS sans preuve valide est retrograde par le moteur.
+"@
+            }
             return @"
 
 TA SORTE D'ETAPE : VERIFICATION INDEPENDANTE. Pour chaque critere du dossier de verification, essaie de le REFUTER : ouvre les VRAIS fichiers (workspace_read, workspace_list, workspace_search, workspace_view_image), lance les controles typés (check_run) et, pour un site, recupere les pages (preview_fetch). Ne te fie a aucun rapport ni a aucune revendication des Workers. Tu ne modifies rien : tu n'as aucun outil d'ecriture, aucun connecteur, aucun sandbox.
@@ -240,7 +247,7 @@ function Get-BKProjectToolDefinitions {
             nextSuggestions = New-BKToolProp "array" "Suites suggerees" $null (New-BKToolProp "string")
             handoffNote = New-BKToolProp "string" "Pour l'etape suivante : ce qu'elle doit savoir (chemins, conventions, pieges)"
             ignoredInstructions = New-BKToolProp "array" "Ordres trouves dans des contenus et ignores" $null (New-BKToolProp "string")
-            verification = New-BKToolProp "object" "Etape de verification seulement : {criteria:[{id, verdict, note, evidence, fixHint}], overall, summary}" }) @("status", "summary") @(@{
+            verification = New-BKToolProp "object" "Etape de verification seulement : {criteria:[{id, verdict, note, evidence, fixHint}], consistency:[{worker, files, issue, fixHint}] (relecture de coherence), overall, summary}" }) @("status", "summary") @(@{
                 status = "DONE"; summary = "Les 5 pages FR sont ecrites et reliees."; deliverables = @(@{ path = "site/index.html"; title = "Accueil" })
                 criteriaClaims = @(@{ criterionId = "C1"; claim = "met"; evidence = @(@{ type = "file"; ref = "site/index.html" }) })
                 remaining = @("Prix a fournir par le client"); summaryUpdate = "Arborescence figee. Reste : traduction EN."; handoffNote = "Styles dans site/assets/style.css" })

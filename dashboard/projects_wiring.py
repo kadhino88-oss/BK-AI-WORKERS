@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Branchement du moteur de projets sur server.py (docs/AUTONOMY-ENGINE.md, sections 7.8 et 10) : UN bloc dans server.py,
 
-    PROJECTS, PROJECTS_API = projects_wiring.build(sys.modules[__name__])
+    PROJECTS, PROJECTS_API = projects_wiring.build(projects_wiring.ModuleView(globals()))
 
 placé juste au-dessus de `class Handler(BaseHTTPRequestHandler):`. Ce module lit les fonctions du serveur (facturation, droits des Workers, courrier,
 pont des connecteurs...) PAR NOM, au moment de l'appel, et les injecte dans ProjectService : le moteur n'importe jamais server.py (pas d'import
@@ -24,6 +24,20 @@ import projects_approvals as pa
 import projects_config as cfg
 import projects_store as ps
 import projects_usage as pu
+
+
+class ModuleView:
+    """Vue en lecture d'un espace de noms (le `globals()` de server.py) : `getattr(vue, nom, défaut)` lit le nom AU MOMENT de l'appel, sans copie. Plus sûr que
+    `sys.modules[__name__]` : les suites de tests qui chargent server.py par importlib sans l'inscrire dans sys.modules continuent de fonctionner."""
+
+    def __init__(self, namespace):
+        self._ns = namespace
+
+    def __getattr__(self, name):
+        try:
+            return self._ns[name]
+        except KeyError:
+            raise AttributeError(name) from None
 
 
 def _truthy(value):
