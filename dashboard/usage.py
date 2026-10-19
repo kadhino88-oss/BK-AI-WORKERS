@@ -802,9 +802,8 @@ class UsageService:
                 if allow_partial and not consume and smallest >= max(1, floor) and mode == "on":
                     granted = smallest
                 else:
-                    blocked = self._blocking_window(L, rem, credits)
-                    block = UsageBlock(limit=blocked, resetsAtUtc=self._reset_of(L, blocked), remaining=max(0, rem[blocked]), needed=credits,
-                                       view=self._view(L, pv, alloc, now))
+                    block = self._block_for(L, pv, alloc, rem, credits, now)
+                    blocked = block.limit
                     if mode == "on":
                         return block
                     self._emit("usage_would_block", clientId=client_id, planId=pv.get("planId"), limit=blocked, needed=credits,
@@ -832,6 +831,32 @@ class UsageService:
             self._recompute_reserved(L)
             self._write(client_id, L, now)
             return rsv
+
+    def _block_for(self, L, pv, alloc, rem, credits, now):
+        blocked = self._blocking_window(L, rem, credits)
+        return UsageBlock(limit=blocked, resetsAtUtc=self._reset_of(L, blocked), remaining=max(0, rem[blocked]), needed=credits,
+                          view=self._view(L, pv, alloc, now))
+
+    def check(self, client_id, credits):
+        """Sans RIEN consommer : None si `credits` passeraient maintenant dans les trois fenetres, sinon l'UsageBlock qui dirait pourquoi (fenetre
+        nommee, heure de renouvellement). C'est le controle de subscription_blocks_mission ; la reservation reste faite par submit_task."""
+        credits = int(credits)
+        if credits <= 0 or not self.enabled or self.exempt_client(client_id):
+            return None
+        pv = self._pv(client_id)
+        if pv is None or pv.get("exempt"):
+            return None
+        now = self._now()
+        alloc = self._alloc(client_id, pv)
+        if self._read(client_id) is None:
+            with self._guard(client_id):
+                L = self._open(client_id, pv, now)
+        else:
+            L = self._open(client_id, pv, now, readonly=True)
+        rem = self._rem(L, alloc, not self._windows_exempt(pv))
+        if min(rem.values()) >= credits:
+            return None
+        return self._block_for(L, pv, alloc, rem, credits, now)
 
     def _reset_of(self, L, window):
         raw = L[window]

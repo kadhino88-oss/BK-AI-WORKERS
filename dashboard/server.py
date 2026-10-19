@@ -26,6 +26,7 @@ import seo_pages
 import pwa_static
 import trust_pages
 import installations as inst
+import usage_wiring
 
 # ---------------------------------------------------------------------
 # Ecritures concurrentes (2026-09-28) : le serveur traite les requetes en
@@ -2801,9 +2802,12 @@ def next_plan_info(plan_id):
     nxt = PLAN_CATALOG.get(nxt_id) if nxt_id else None
     if not nxt:
         return None
-    return {"planId": nxt_id, "name": nxt["name"], "credits": None if nxt.get("contractual") else nxt["credits"],
+    info = {"planId": nxt_id, "name": nxt["name"], "credits": None if nxt.get("contractual") else nxt["credits"],
             "priceChf": nxt.get("priceChf"), "onQuote": bool(nxt.get("onQuote")), "selfService": not nxt.get("onQuote") and not nxt.get("legacy"),
             "workerSlots": nxt.get("workerSlots")}
+    if USAGE.enforced:        # limites par session et par semaine du forfait du dessus (jamais annoncees tant qu'elles ne s'appliquent pas)
+        info["limits"] = USAGE.next_limits(info["credits"])
+    return info
 
 
 def upgrade_payload(billing):
@@ -2813,9 +2817,12 @@ def upgrade_payload(billing):
     plan = PLAN_CATALOG.get(pid)
     if not plan:
         return None
-    return {"planId": pid, "planName": plan["name"], "creditsIncluded": billing.get("creditsIncluded"),
+    card = {"planId": pid, "planName": plan["name"], "creditsIncluded": billing.get("creditsIncluded"),
             "renews": bool(billing.get("renewsAtUtc")), "renewsAtUtc": billing.get("renewsAtUtc"), "next": next_plan_info(pid),
             "interval": billing.get("billingInterval") or "month", "contactEmail": CONTACT_EMAIL}
+    if USAGE.enforced:        # limites par session et par semaine du forfait ACTUEL (celles du forfait suivant sont dans card["next"]["limits"])
+        card["limits"] = USAGE.next_limits(billing.get("creditsTotal"))
+    return card
 
 
 def _upgrade_sentence(billing):
@@ -2890,7 +2897,7 @@ def _apply_lapse(state, now=None):
     cancelled = bool(state.get("cancelAtPeriodEnd"))
     state["planId"] = "essai"
     state["extraCredits"] = 0
-    for key in ("contractCredits", "paidUntilUtc", "cancelAtPeriodEnd", "billingInterval"):
+    for key in ("contractCredits", "usageOverride", "paidUntilUtc", "cancelAtPeriodEnd", "billingInterval"):
         state.pop(key, None)
     state["stripeSubscriptionId"] = None
     inst.adapt_hired_to_plan(state)
@@ -2931,6 +2938,7 @@ def _billing_load(client_id=DASHBOARD_CLIENT_ID):
 def _billing_save(state, client_id=DASHBOARD_CLIENT_ID):
     os.makedirs(BILLING_DATA_DIR, exist_ok=True)
     _write_json_atomic(_billing_path(client_id), state, ensure_ascii=False, indent=2)
+    USAGE.on_billing_saved(client_id)     # les allocations session / semaine se recalculent seules ; il reste a reveiller les projets en attente
 
 
 def _picker_plans(current_plan_id, state):
@@ -2980,8 +2988,11 @@ def get_billing(client_id=DASHBOARD_CLIENT_ID):
     if cancel_pending and renews_at and _parse_utc(renews_at) >= _parse_utc(paid_until):
         renews_at = None       # resilie : rien ne se renouvelle au-dela de la periode deja payee
 
-    used = 0
-    if os.path.isdir(TASKS_DIR):
+    # Fenetres d'usage actives (BK_USAGE_WINDOWS=shadow|1) : les credits du cycle viennent du grand livre (O(1), et ils comptent aussi les etapes
+    # de projet, qui ne sont pas des fichiers TASK-*.json). Service inerte, compte exempte ou grand livre illisible : balayage d'origine.
+    ledger_used = USAGE.billing_used(client_id)
+    used = ledger_used if ledger_used is not None else 0
+    if ledger_used is None and os.path.isdir(TASKS_DIR):
         for fname in os.listdir(TASKS_DIR):
             if not fname.startswith("TASK-") or not fname.endswith(".json"):
                 continue
@@ -3044,6 +3055,11 @@ def get_billing(client_id=DASHBOARD_CLIENT_ID):
     out["upgrade"] = upgrade_payload(out)
     # Montee en gamme proposee des 80 % du quota (et quand il est epuise) ; sans forfait superieur (Enterprise) : « nous ecrire ».
     out["upgradeSuggested"] = bool(alert and out["upgrade"])
+    if USAGE.enabled and not USAGE.exempt_client(client_id):
+        try:
+            out["usage"] = USAGE.payload(client_id)      # fenetres session / semaine / mois (meme corps que GET /api/usage)
+        except Exception as exc:  # noqa: BLE001 - le bloc d'usage est un plus : la facturation reste lisible sans lui
+            USAGE._fail_open("billing_usage", client_id, exc)
     return out
 
 
@@ -3069,6 +3085,7 @@ def set_billing_plan(plan_id, via_stripe=False, stripe_subscription_id=None, cli
     state["cycleStartUtc"] = now
     state["extraCredits"] = 0
     state.pop("contractCredits", None)   # le plafond contractuel d'Enterprise est propre a un contrat : il ne suit pas un changement de forfait
+    state.pop("usageOverride", None)     # ... ni les plafonds de session / semaine negocies avec lui
     # Stripe renouvelle lui-meme l'abonnement : pas de date de fin de periode payee (elle n'existe que pour une resiliation ou une facture).
     state.pop("paidUntilUtc", None)
     state.pop("cancelAtPeriodEnd", None)
@@ -3163,7 +3180,7 @@ def cancel_billing_plan(client_id=DASHBOARD_CLIENT_ID):
         # s'abonner puis annuler redonnerait 15 credits d'essai gratuits a chaque fois (l'essai n'est pas renouvelable).
         state["cycleStartUtc"] = billing_cycle(state.get("cycleStartUtc", now), old_plan.get("renews", True))[0]
         state["extraCredits"] = 0
-        for key in ("contractCredits", "paidUntilUtc", "cancelAtPeriodEnd", "billingInterval"):
+        for key in ("contractCredits", "usageOverride", "paidUntilUtc", "cancelAtPeriodEnd", "billingInterval"):
             state.pop(key, None)
         state["stripeSubscriptionId"] = None
         inst.adapt_hired_to_plan(state)
@@ -3364,7 +3381,8 @@ def subscription_blocks_mission(client_id, level=None):
     lvl = normalize_level(level, client_id)
     needed = level_credits(lvl) if lvl else 1
     if remaining >= needed:
-        return None
+        # Quota du mois suffisant : restent la session (4 h) et la semaine (BK_USAGE_WINDOWS=1) ; le refus nomme la fenetre et l'heure de renouvellement.
+        return USAGE.gate(client_id, needed)
     if remaining > 0:
         sentence = _upgrade_sentence(billing)
         return (f"Il vous reste {remaining} crédit(s), ce niveau en demande {needed}. Choisissez un niveau plus rapide"
@@ -3388,11 +3406,22 @@ def chloe_worker_cap(client_id, level=None):
 def subscription_required_payload(client_id, detail):
     """Corps de la reponse 402 : le message, plus de quoi afficher le bouton de montee en gamme (forfait actuel, credits inclus, date de
     renouvellement, forfait suivant avec ses credits et son prix)."""
+    if getattr(detail, "usage_block", None) is not None:       # refus de la SESSION ou de la SEMAINE (usage_wiring.UsageLimitMessage)
+        try:
+            return USAGE.limit_payload(client_id, detail)
+        except Exception:  # noqa: BLE001 - le message suffit
+            return {"error": "USAGE_LIMIT_REACHED", "detail": str(detail), "limit": detail.usage_block.limit,
+                    "resetsAtUtc": detail.usage_block.resetsAtUtc, "needed": detail.usage_block.needed, "remaining": detail.usage_block.remaining}
     try:
         upgrade = upgrade_payload(get_billing(client_id))
     except Exception:  # noqa: BLE001 - le message suffit si la facturation est illisible
         upgrade = None
     return {"error": "SUBSCRIPTION_REQUIRED", "detail": detail, "upgrade": upgrade}
+
+
+# Fenetres d'usage (session 4 h, semaine, mois) : grand livre par client, branche ici. Inerte tant que BK_USAGE_WINDOWS n'est pas shadow ou 1
+# (docs/PRICING.md section 6, dashboard/usage.py, dashboard/usage_wiring.py).
+USAGE = usage_wiring.build(globals())
 
 
 # ---------------------------------------------------------------------
@@ -3629,6 +3658,8 @@ def grant_workers(client_id, plan_id, workers, new_cycle=True, paid_months=1):
     now = now_dt.isoformat() + "Z"
     state["planId"] = plan_id
     state["gridVersion"] = GRID_VERSION
+    if plan_changed:
+        state.pop("usageOverride", None)      # plafonds de session / semaine d'un contrat precedent : ils ne suivent pas un changement de forfait
     if plan_changed or new_cycle:
         state["cycleStartUtc"] = now
         state["extraCredits"] = 0
