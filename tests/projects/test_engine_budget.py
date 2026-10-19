@@ -120,7 +120,7 @@ class BudgetTests(unittest.TestCase):
 
     def test_a_running_step_is_never_interrupted_by_a_window(self):
         usage = FakeUsage(session=40)
-        e = self.env(usage=usage, scenario={"S1": {"sleep": 1.0, "actions": []}})
+        e = self.env(usage=usage, scenario={"S1": {"sleep": 1.0}})
         pid = e.create()
         e.drive(pid, lambda s: s["steps"].get("S1", {}).get("status") == "RUNNING")
         usage.w["session"]["limit"] = 0                                              # la fenetre se ferme pendant l'etape
@@ -151,7 +151,7 @@ class BudgetTests(unittest.TestCase):
 
     # ------------------------------------------------------------------ droits du forfait, installation en pause
     def test_a_worker_leaving_the_plan_blocks_its_step_and_the_project_waits_then_resumes(self):
-        e = self.env(scenario={"S2": {"sleep": 0.0, "actions": []}})
+        e = self.env(scenario={"S2": {"sleep": 0.0}})
         pid = e.create(auto_start=False)
         e.drive(pid, lambda s: s["status"] == "WAITING_INPUT")
         e.scope.allowed = [w for w in WORKERS_17 if w != "emma"]                      # rétrogradation : Emma n'est plus incluse
@@ -341,7 +341,7 @@ class BudgetTests(unittest.TestCase):
 
     # ------------------------------------------------------------------ concurrence et interrupteurs
     def test_global_and_per_client_runner_caps(self):
-        e = self.env(plan="pro", scenario={"S1": {"sleep": 1.2, "actions": []}, "S2": {"sleep": 1.2, "actions": []}})
+        e = self.env(plan="pro", scenario={"S1": {"sleep": 1.2}, "S2": {"sleep": 1.2}})
         p1 = e.create()
         e.drive(p1, lambda s: s["steps"].get("S1", {}).get("status") == "RUNNING")
         self.assertEqual(e.svc.running_count(CLIENT), 1)
@@ -401,7 +401,7 @@ class BudgetTests(unittest.TestCase):
         self.assertEqual(e.run_to_done(pid)["status"], "DONE")
 
     def test_maximum_duration_ends_a_project_that_never_finishes(self):
-        e = self.env(limits={"maxDurationHours": {"equipe": 0.0001}}, scenario={"S1": {"sleep": 0.5, "actions": []}})
+        e = self.env(limits={"maxDurationHours": {"equipe": 0.0001}}, scenario={"S1": {"sleep": 0.5}})
         pid = e.create()
         st = e.drive(pid, lambda s: s["status"] in ("FAILED", "DONE"), timeout=60)
         self.assertEqual(st["status"], "FAILED")

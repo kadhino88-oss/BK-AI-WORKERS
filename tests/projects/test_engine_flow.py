@@ -193,7 +193,7 @@ class FlowTests(unittest.TestCase):
         self.assertIn("021 555 12 34", ctx)                              # la reponse est dans le contexte de la reprise
 
     def test_a_question_is_answered_even_while_the_project_is_paused(self):
-        e = self.env(scenario={"S1": {"sleep": 1.5, "actions": []}})
+        e = self.env(scenario={"S1": {"sleep": 1.5}})
         pid = e.create()
         e.drive(pid, lambda s: s["steps"].get("S1", {}).get("status") == "RUNNING")
         e.svc.pause(CLIENT, pid)
@@ -216,7 +216,7 @@ class FlowTests(unittest.TestCase):
         e.run_to_done(pid)
 
     def test_a_note_is_given_to_the_next_step(self):
-        e = self.env(scenario={"S1": {"sleep": 1.0, "actions": []}})
+        e = self.env(scenario={"S1": {"sleep": 1.0}})
         pid = e.create()
         e.drive(pid, lambda s: s["steps"].get("S1", {}).get("status") == "RUNNING")
         e.svc.post_message(CLIENT, pid, "note", "Utilisez le vouvoiement partout")
@@ -227,7 +227,7 @@ class FlowTests(unittest.TestCase):
 
     # ------------------------------------------------------------------ pause, annulation, relance
     def test_pause_stops_new_steps_and_resume_continues(self):
-        e = self.env(scenario={"S1": {"sleep": 0.8, "actions": []}})
+        e = self.env(scenario={"S1": {"sleep": 0.8}})
         pid = e.create()
         e.drive(pid, lambda s: s["steps"].get("S1", {}).get("status") == "RUNNING")
         e.svc.pause(CLIENT, pid)
@@ -263,10 +263,11 @@ class FlowTests(unittest.TestCase):
         st = e.drive(pid, lambda s: s["status"] == "PAUSED")
         self.assertEqual(st["statusReason"], "NO_PROGRESS")
         e.svc.resume(CLIENT, pid)
-        self.assertEqual(e.state(pid)["status"], "RUNNING")
+        self.assertIn(e.state(pid)["status"], ("RUNNING", "VERIFYING"))          # reprise : tout est fait, la verification peut commencer
+        self.assertEqual(e.state(pid)["counters"]["noProgress"], 0)
 
     def test_a_step_that_fails_three_times_blocks_its_dependents_and_asks_for_a_replan(self):
-        e = self.env(scenario={"S2": {"status": "FAILED", "exitReason": "refusal", "error": "BOOM", "complete": None}})
+        e = self.env(scenario={"S2": {"status": "FAILED", "error": "BOOM", "actions": []}})
         pid = e.create()
         st = e.drive(pid, lambda s: s["steps"].get("S2", {}).get("status") == "FAILED")
         self.assertEqual(st["steps"]["S2"]["attempts"], 3)

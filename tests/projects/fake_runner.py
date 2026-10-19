@@ -89,8 +89,16 @@ def main():
     inp = read_json(in_path)
     scenario = read_json(os.environ.get("FAKE_SCENARIO") or "", {}) or {}
     beh = pick(scenario, inp)
+    base = default_behavior(inp)
     if beh is None:
-        beh = default_behavior(inp)
+        beh = base
+    else:                                   # ce que le scenario ne precise pas vient du comportement par defaut
+        beh = dict(beh)
+        if not any(k in beh for k in ("complete", "blocked", "report", "answerText", "hang", "crash")):
+            beh["complete"] = base.get("complete")
+            beh.setdefault("answerText", base.get("answerText", ""))
+        if "actions" not in beh:
+            beh["actions"] = base.get("actions") or []
     started = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     sd = inp["paths"]["stepDir"]
     with open(os.path.join(sd, "runner.log"), "a", encoding="utf-8") as f:

@@ -138,10 +138,10 @@ class StepMixin:
             return ("BLOCKED",)
         b = st["budget"]
         reserved_running = sum(int(s.get("reservedCredits") or 0) for s in st["steps"].values() if s.get("status") == "RUNNING")
-        cap_left = int(b.get("creditsCap") or 0) - int(b.get("creditsCharged") or 0) - reserved_running
+        cap_left = int(b.get("creditsCap") or 0) - int(b.get("creditsCharged") or 0) - (0 if kind == "answer" else reserved_running)
         min_start = int(lim["budget"]["minStartCredits"])
         if kind == "answer":
-            min_start = 1
+            min_start = 1                    # une question du client coûte 1 à 3 crédits : la réservation d'une étape en cours ne la prive pas de budget
         if cap_left < min_start:
             if kind != "answer" and st["status"] in ("PLANNING", "RUNNING", "VERIFYING"):
                 t.transition("BUDGET_REACHED", "CAP", waitingFor="BUDGET")
@@ -414,8 +414,11 @@ class StepMixin:
         return True
 
     def _ws_fingerprint(self, project_dir):
+        """Empreinte de workspace/ SANS handoff/ (le rapport de relais est écrit par le moteur : ce n'est pas un progrès du Worker)."""
         h = hashlib.sha256()
         for rel, size, mt in pp.walk_files(os.path.join(project_dir, "workspace"), limit=1000):
+            if rel.startswith("handoff/"):
+                continue
             h.update(f"{rel}|{size}|{int(mt)}\n".encode("utf-8"))
         return h.hexdigest()[:16]
 
