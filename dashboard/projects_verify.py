@@ -380,13 +380,13 @@ def message_claims_ok(text, verification):
     return True
 
 
-def build_final_report(state, plan, verification, deliverables, approvals, delivery_message, accepted_gaps, now_iso):
+def build_final_report(state, plan, verification, deliverables, approvals, delivery_message, accepted_gaps, now_iso, status_label=None):
     vmap = {c["id"]: c for c in (verification or {}).get("criteria") or []}
     b = state.get("budget") or {}
     L = []
     L.append(f"# Rapport final — {state.get('title') or state.get('projectId')}")
     L.append("")
-    L.append(f"Projet {state.get('projectId')} — établi le {now_iso} — statut : **{state.get('status')}**")
+    L.append(f"Projet {state.get('projectId')} — établi le {now_iso} — statut : **{status_label or state.get('status')}**")
     L.append("")
     L.append("## 1. Ce qui a été demandé")
     L.append("")

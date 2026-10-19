@@ -38,6 +38,7 @@ class FlowTests(unittest.TestCase):
         self.assertEqual({c["id"]: c["verdict"] for c in ver["criteria"]}, {"C1": "PASS", "C2": "PASS", "C-coherence": "PASS"})   # lucas + emma : relecture de coherence
         report = open(os.path.join(e.svc.store.project_dir(pid), "final-report.md"), encoding="utf-8").read()
         self.assertIn("Rapport final", report)
+        self.assertIn("statut : **DONE**", report)                       # le rapport dit l'etat reel du projet, pas celui d'avant la cloture
         self.assertIn("| C1", report)
         self.assertIn("PASS", report)
         # budget : cout mesure, regle dans les fenetres d'usage, une ligne de journal par etape
