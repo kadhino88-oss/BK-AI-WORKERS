@@ -14,6 +14,7 @@ import hashlib
 import os
 import re
 import secrets
+import time
 
 SEG_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}\Z")
 MAX_PATH_CHARS = 180
@@ -164,7 +165,15 @@ def atomic_write_bytes(full, data):
             f.write(data)
             f.flush()
             os.fsync(f.fileno())
-        os.replace(tmp, full)
+        for attempt in range(60):
+            try:
+                os.replace(tmp, full)
+                break
+            except PermissionError:
+                # Windows : un lecteur tient le fichier ouvert pile pendant le remplacement ; sous Linux (production) cela n'arrive pas.
+                if attempt == 59:
+                    raise
+                time.sleep(0.005 * (attempt + 1))
     finally:
         if os.path.exists(tmp):
             try:
