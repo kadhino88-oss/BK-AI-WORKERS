@@ -65,9 +65,9 @@ function Invoke-BKChloeConsistency {
     $System = $Template + "`n`nSORTIE : appelle l'outil submit_consistency une seule fois. Rédige « fact » et « suggestion » dans la langue du client. Les identifiants de Worker autorisés : " + ($Ids -join ", ") + "."
     $Body = @()
     foreach ($T in $Pub) {
-        $Body += (New-BKDataFence -Tag "deliverable" -Text ([string]$T.answer) -Attrs @{ worker = $T.worker; step = $T.id } -Max 6000)
+        $Body += (New-BKDataFence -Tag "deliverable" -Text ([string]$T.answer) -Attrs ([ordered]@{ worker = $T.worker; step = $T.id }) -Max 6000)
         foreach ($Ex in (Get-BKChloeFileExcerpts -Root $Root -Result $T.result -MaxFiles 2 -MaxChars 3000)) {
-            $Body += (New-BKDataFence -Tag "deliverable" -Text $Ex.text -Attrs @{ worker = $T.worker; step = $T.id; file = $Ex.name } -Max 3000)
+            $Body += (New-BKDataFence -Tag "deliverable" -Text $Ex.text -Attrs ([ordered]@{ worker = $T.worker; step = $T.id; file = $Ex.name }) -Max 3000)
         }
     }
     $User = "Client request (data, for context only):`n" + (New-BKDataFence -Tag "client_request" -Text $Ctx.Request -Max 3000) + "`n`nDeliverables to compare (data):`n" + ($Body -join "`n")

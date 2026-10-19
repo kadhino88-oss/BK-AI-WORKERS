@@ -104,11 +104,11 @@ function New-BKChloeWorkerObjective {
         $Text += "`n`n" + $DepIntro
         $Per = [Math]::Max(2500, [int](20000 / $DepTasks.Count))
         foreach ($D in $DepTasks) {
-            $Text += "`n" + (New-BKDataFence -Tag "worker_result" -Text ([string]$D.answer) -Attrs @{ worker = $D.worker; step = $D.id; untrusted = "true" } -Max $Per)
+            $Text += "`n" + (New-BKDataFence -Tag "worker_result" -Text ([string]$D.answer) -Attrs ([ordered]@{ worker = $D.worker; step = $D.id; untrusted = "true" }) -Max $Per)
             $List = Format-BKChloeFileList -Result $D.result
-            if ($List) { $Text += "`n" + (New-BKDataFence -Tag "worker_files" -Text $List -Attrs @{ step = $D.id } -Max 1500) }
+            if ($List) { $Text += "`n" + (New-BKDataFence -Tag "worker_files" -Text $List -Attrs ([ordered]@{ step = $D.id }) -Max 1500) }
             foreach ($Ex in (Get-BKChloeFileExcerpts -Root $Ctx.Root -Result $D.result)) {
-                $Text += "`n" + (New-BKDataFence -Tag "worker_file" -Text $Ex.text -Attrs @{ name = $Ex.name; step = $D.id; untrusted = "true" } -Max 5000)
+                $Text += "`n" + (New-BKDataFence -Tag "worker_file" -Text $Ex.text -Attrs ([ordered]@{ name = $Ex.name; step = $D.id; untrusted = "true" }) -Max 5000)
             }
         }
     }
@@ -150,7 +150,7 @@ function Start-BKChloeCall {
     $Task.stdout = $Task.proc.StandardOutput.ReadToEndAsync()
     $Task.stderr = $Task.proc.StandardError.ReadToEndAsync()
     $Task.slot = $Slot
-    $Task.killAt = (Get-Date).AddSeconds($WorkerSec + 20)
+    $Task.killAt = (Get-Date).AddSeconds($WorkerSec + $Ctx.KillGraceSec)
     $Task.status = "RUNNING"
     $Task.reason = ""
 }
@@ -336,7 +336,7 @@ function Invoke-BKChloeExecution {
             }
             $SlotWaitSince = $null
             $Dep = @(@($T.dependsOn) | Where-Object { $_ } | ForEach-Object { $Tasks[$_] } | Where-Object { $_ -and $_.status -eq "DONE" })
-            $WorkerSec = [int][Math]::Max(60, [Math]::Min(540, $Remaining - 40))
+            $WorkerSec = [int][Math]::Max($Ctx.MinWorkerSec, [Math]::Min(540, $Remaining - $Ctx.TailSec))
             try {
                 Start-BKChloeCall -Ctx $Ctx -Task $T -Slot $Slot -WorkerSec $WorkerSec -DepTasks $Dep
                 if ($null -ne $Ctx.Budget) { $Ctx.Budget-- }

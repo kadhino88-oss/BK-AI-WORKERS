@@ -359,7 +359,10 @@ $Ctx = @{
     Width = $(if ($Inline) { 1 } else { Get-BKChloeEnvInt -Name "BK_CHLOE_PARALLEL" -Default 2 -Min 1 -Max 4 })
     SlotTotal = (Get-BKChloeEnvInt -Name "BK_CHLOE_SLOTS_GLOBAL" -Default 3 -Min 1 -Max 8)
     SlotWaitSec = (Get-BKChloeEnvInt -Name "BK_CHLOE_SLOT_WAIT_SEC" -Default 300 -Min 5 -Max 540)
-    MinLaunchSec = (Get-BKChloeEnvInt -Name "BK_CHLOE_MIN_LAUNCH_SEC" -Default 90 -Min 10 -Max 300)
+    MinLaunchSec = (Get-BKChloeEnvInt -Name "BK_CHLOE_MIN_LAUNCH_SEC" -Default 90 -Min 3 -Max 300)
+    MinWorkerSec = (Get-BKChloeEnvInt -Name "BK_CHLOE_MIN_WORKER_SEC" -Default 60 -Min 3 -Max 300)       # delai plancher donne a un Worker (lu par l'adaptateur)
+    TailSec = (Get-BKChloeEnvInt -Name "BK_CHLOE_TAIL_SEC" -Default 40 -Min 2 -Max 120)                  # temps garde pour la revue, la synthese et la memoire
+    KillGraceSec = (Get-BKChloeEnvInt -Name "BK_CHLOE_KILL_GRACE_SEC" -Default 20 -Min 0 -Max 120)        # tolerance avant de couper un Worker qui n'a pas rendu son resultat partiel
     RunDeadline = $RunStart.AddSeconds((Get-BKChloeEnvInt -Name "BK_CHLOE_DEADLINE_SEC" -Default 535 -Min 30 -Max 585))
     Budget = $Budget; Tasks = $TaskTable; Order = $Order; Depths = (Get-BKTaskDepths -Tasks $KeptSpecs); LastProgress = ""
 }

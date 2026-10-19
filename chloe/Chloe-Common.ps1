@@ -60,9 +60,9 @@ function Protect-BKFenceText {
 }
 
 function New-BKDataFence {
-    param([Parameter(Mandatory=$true)][string]$Tag, [string]$Text, [hashtable]$Attrs = @{}, [int]$Max = 8000)
+    param([Parameter(Mandatory=$true)][string]$Tag, [string]$Text, [System.Collections.IDictionary]$Attrs = @{}, [int]$Max = 8000)
     $A = ""
-    foreach ($K in @($Attrs.Keys | Sort-Object)) {
+    foreach ($K in @($Attrs.Keys)) {
         $V = ([string]$Attrs[$K]) -replace '[^A-Za-z0-9_.:-]', '_'
         $A += " $K=`"$V`""
     }
