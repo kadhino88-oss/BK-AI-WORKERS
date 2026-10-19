@@ -326,6 +326,7 @@ class StepMixin:
             step_dir = os.path.join(project_dir, "steps", sid, str(attempt))
             os.makedirs(step_dir, exist_ok=True)
             scope = self.scope_of(st["clientId"])
+            self.refresh_scope_state(st)
             soft = int(self.limits["step"]["softDeadlineSec"])
             hard = int(self.limits["step"]["hardDeadlineSec"])
             shrink = bool(step.get("contextShrink"))
@@ -333,8 +334,8 @@ class StepMixin:
             deliverables = (self.store.read_json(pid, "deliverables.json", {}) or {}).get("items") or []
             inbox = self.store.read_jsonl(pid, "inbox.jsonl")
             processed = set(st.get("inboxProcessed") or [])
-            fresh = [m for m in inbox if m.get("id") not in processed and m.get("kind") in ("note", "change", "input_answer", "approval_feedback", "question")
-                     and (not m.get("stepId") or m.get("stepId") == sid)]
+            fresh = [m for m in inbox if m.get("id") not in processed and m.get("kind") in ("note", "change", "answer", "input_answer", "approval_feedback")
+                     and (not m.get("stepId") or m.get("stepId") == sid or (m.get("kind") == "approval_feedback" and m.get("worker") == step.get("worker")))]
             budget_left = {"seconds": soft, "iterations": phase["maxIterations"], "chf": ceiling}
             extra, verif_block = [], None
             catalog = self._worker_catalog(scope, st.get("leadWorker")) if kind in ("plan", "replan") else None

@@ -169,7 +169,7 @@ def build_context(*, state, plan, step, step_state, project_dir, kind, attempt, 
         dep_text += "\nAutres étapes terminées (une ligne) :\n" + fence("other_steps", clip("\n".join(others), 1800))
     out.append("## 5. Rapports des étapes dont celle-ci dépend\n" + dep_text)
     # ---- 6. Messages du client
-    msgs = [m for m in inbox_unprocessed if m.get("kind") in ("note", "change", "approval_feedback", "answer", "question")]
+    msgs = [m for m in inbox_unprocessed if m.get("kind") in ("note", "change", "approval_feedback", "answer", "input_answer")]
     if msgs:
         lines = []
         for m in msgs[-15:]:

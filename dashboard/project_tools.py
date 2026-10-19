@@ -772,6 +772,18 @@ def tool_step_blocked(ctx, inp):
                                           "resumeHint": _text_ok(inp.get("resumeHint"), "resumeHint", 400)}}
 
 
+def revalidate_report(project_dir, step_dir, report):
+    """Revalidation PAR LE MOTEUR (3.11) d'un rapport `DONE` avant de l'accepter : livrables présents et non vides, preuves de type fichier
+    existantes, preuves de type contrôle enregistrées pendant l'étape. Renvoie la liste (français) des manques ; vide = rapport accepté."""
+    try:
+        sid = os.path.basename(os.path.dirname(os.path.normpath(step_dir)))
+        ctx = ToolCtx({"projectDir": project_dir, "stepDir": step_dir, "stepId": sid, "kind": "execute", "worker": "", "input": {}})
+        _out, problems = _normalise_report(ctx, report if isinstance(report, dict) else {})
+        return problems
+    except ToolError as e:
+        return [e.detail]
+
+
 # ------------------------------------------------------------------ contrôles et aperçu (vérificateur)
 def tool_check_run(ctx, inp):
     check = inp.get("check")

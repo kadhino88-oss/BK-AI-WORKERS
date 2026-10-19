@@ -101,7 +101,8 @@ class ProjectService(StepMixin, ActionMixin, ViewMixin):
         self._notify_q = []
         self._notify_lock = threading.Lock()
         self._notify_thread = None
-        self._rate_creations = {}             # client -> [epoch] créations de projets (24 h)
+        self._create_lock = threading.Lock()  # création d'un projet : plafonds (actifs, file, par jour) vérifiés sans course
+        self._usage_cache = {}                # client -> (epoch, vue d'usage) : la progression est interrogée toutes les 3 s
         self._booted = False
         self.executor = pa.ApprovalExecutor(self._approval_begin, self._run_connector_safe, self._approval_finish, self.limits, now=now, sleep=sleep)
         self.store.hooks.append(self._on_commit)
