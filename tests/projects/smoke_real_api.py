@@ -85,6 +85,7 @@ def main():
     ap.add_argument("--cap-usd", type=float, default=3.0)
     ap.add_argument("--report", default="")
     ap.add_argument("--timeout", type=int, default=900)
+    ap.add_argument("--keep", default="", help="dossier où copier le projet (journaux des lanceurs compris) avant de supprimer le dossier jetable")
     args = ap.parse_args()
     if not os.environ.get("BK_SECRET_ANTHROPIC"):
         print("BK_SECRET_ANTHROPIC absente : placez la clé dans cette variable d'environnement (sans l'afficher) avant de lancer.")
@@ -161,6 +162,24 @@ def main():
                     print(f"\n== VERIFICATION tour {rnd} : {v['overall']} ==")
                     for c in v["criteria"]:
                         print(f"  {c['id']} {c['verdict']} — {str(c.get('note'))[:140]}")
+        NL = chr(10)
+        for sid, s_ in st["steps"].items():          # une etape relancee : pourquoi ? (resultat et journal du lanceur de la tentative precedente)
+            for att in range(1, int(s_.get("attempts") or 0)):
+                d = os.path.join(e.svc.store.project_dir(pid), "steps", sid, str(att))
+                try:
+                    with open(os.path.join(d, "result.json"), encoding="utf-8") as f:
+                        r = json.load(f)
+                    print(NL + f"== {sid} tentative {att} : {r.get('status')} / {r.get('exitReason')} / erreur={r.get('error')} / tours={r.get('iterations')} ==")
+                    print("  rapport :", json.dumps(r.get("report"), ensure_ascii=False)[:600])
+                except (OSError, ValueError):
+                    print(NL + f"== {sid} tentative {att} : pas de result.json ==")
+                try:
+                    with open(os.path.join(d, "runner.log"), encoding="utf-8") as f:
+                        print("  journal :" + NL + "    " + (NL + "    ").join(f.read().splitlines()[-12:]))
+                except OSError:
+                    pass
+        if args.keep:
+            shutil.copytree(e.svc.store.project_dir(pid), args.keep, dirs_exist_ok=True)
         report = {"status": st["status"], "reason": st.get("statusReason"), "seconds": int(time.time() - started), "estimatedUsd": round(total_usd, 4),
                   "chf": st["budget"].get("chfSpent"), "credits": st["budget"].get("creditsCharged"), "stoppedByCap": stopped_by_cap, "timeline": status_log,
                   "steps": {k: {"kind": v["kind"], "worker": v.get("worker"), "status": v["status"], "attempts": v.get("attempts"), "chf": v.get("chf")} for k, v in st["steps"].items()}}
