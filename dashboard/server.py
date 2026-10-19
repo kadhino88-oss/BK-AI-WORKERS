@@ -2342,6 +2342,10 @@ def delete_account(client_id, password):
         # Un abonnement dont la resiliation est deja enregistree (cancelAtPeriodEnd : Stripe ne le renouvelle plus) ne bloque pas la suppression du compte
         # (droit a l'effacement) : seul un abonnement encore renouvele doit d'abord etre resilie. Le temps deja paye est alors perdu, l'interface le dit.
         return "ACTIVE_SUBSCRIPTION"
+    if billing.get("staleStripeSubscriptions"):
+        # Un ancien abonnement (montee en gamme) n'a pas pu etre annule chez Stripe et facture encore : supprimer le compte maintenant le laisserait
+        # sans plus aucun moyen de l'annuler. Le suivi des abonnements retente toutes les 6 heures (retry_stale_stripe_cancellations).
+        return "STRIPE_CLEANUP_PENDING"
     _save_accounts([a for a in accounts if a.get("clientId") != client_id])
     account_clear_all_sessions(client_id)
     WA_STORE.unlink_client(client_id)
@@ -3432,13 +3436,57 @@ def activate_checkout_plan(confirmation, fallback_client_id=None):
         cancellation = run_stripe_bridge("cancel-subscription", subscription_id=previous, prorate=True)
         if cancellation.get("Status") == "SUCCESS":
             _billing_note(client_id, "Ancien abonnement Stripe annulé : le nouveau forfait le remplace (aucune double facturation, le temps déjà payé est crédité chez Stripe).")
+        elif _stripe_subscription_gone(cancellation):
+            _billing_note(client_id, "Ancien abonnement Stripe introuvable chez Stripe : il n'y a plus rien à annuler.")
         else:
+            # L'ancien abonnement vit encore chez Stripe et continuerait de facturer : son identifiant est retenu et l'annulation est retentee a chaque
+            # passage du suivi des abonnements (retry_stale_stripe_cancellations) jusqu'a ce qu'elle aboutisse.
+            _remember_stale_subscription(client_id, previous)
             _billing_note(client_id, "ECHEC annulation de l'ancien abonnement Stripe (" + str(cancellation.get("Detail") or cancellation.get("Status"))
-                          + ") — à annuler à la main dans le tableau de bord Stripe pour éviter une double facturation.")
+                          + ") — nouvelle tentative automatique toutes les 6 heures ; à annuler à la main dans le tableau de bord Stripe si elle échoue encore.")
             log_activity("stripe_cancel_failed", clientId=client_id, subscriptionId=previous)
-            print(f"[billing] ALERTE : l'ancien abonnement Stripe {previous} de {client_id} n'a pas pu etre annule ; a annuler a la main dans Stripe.", flush=True)
+            print(f"[billing] ALERTE : l'ancien abonnement Stripe {previous} de {client_id} n'a pas pu etre annule ; nouvelle tentative au prochain suivi.", flush=True)
         result = get_billing(client_id)
     return result, 400 if "error" in result else 200
+
+
+STALE_SUBSCRIPTIONS_KEPT = 10
+
+
+def _remember_stale_subscription(client_id, subscription_id):
+    """Retient un ancien abonnement Stripe que la montee en gamme n'a pas pu annuler (staleStripeSubscriptions, 10 au plus)."""
+    with _STATE_LOCK:
+        state = _billing_load(client_id)
+        stale = [s for s in (state.get("staleStripeSubscriptions") or []) if s != subscription_id] + [subscription_id]
+        state["staleStripeSubscriptions"] = stale[-STALE_SUBSCRIPTIONS_KEPT:]
+        _billing_save(state, client_id)
+
+
+def retry_stale_stripe_cancellations(client_id):
+    """Retente l'annulation (avec prorata du temps paye) des anciens abonnements restes actifs chez Stripe apres une montee en gamme dont
+    l'annulation avait echoue. Un abonnement deja arrete ou introuvable chez Stripe est solde aussi. Renvoie le nombre d'abonnements soldes."""
+    state = _billing_load(client_id)
+    stale = [s for s in (state.get("staleStripeSubscriptions") or []) if isinstance(s, str)]
+    settled = []
+    for subscription_id in stale:
+        result = run_stripe_bridge("cancel-subscription", subscription_id=subscription_id, prorate=True)       # reseau : hors du verrou
+        if result.get("Status") != "SUCCESS" and not _stripe_subscription_gone(result):
+            read = run_stripe_bridge("get-subscription", subscription_id=subscription_id)
+            if not (read.get("Status") == "SUCCESS" and read.get("SubscriptionStatus") in STRIPE_ENDED_STATUSES) and not _stripe_subscription_gone(read):
+                continue
+        settled.append(subscription_id)
+    if settled:
+        with _STATE_LOCK:
+            state = _billing_load(client_id)
+            left = [s for s in (state.get("staleStripeSubscriptions") or []) if s not in settled]
+            if left:
+                state["staleStripeSubscriptions"] = left
+            else:
+                state.pop("staleStripeSubscriptions", None)
+            state.setdefault("history", []).append({"dateUtc": _utcnow().isoformat() + "Z",
+                                                    "event": "Ancien abonnement Stripe annulé à la nouvelle tentative : plus de double facturation."})
+            _billing_save(state, client_id)
+    return len(settled)
 
 
 # ---- SUIVI DES ABONNEMENTS STRIPE (revue du 2026-10-19). Sans webhook, un abonnement resilie dans le tableau de bord Stripe, impaye ou arrete apres des
@@ -3457,6 +3505,9 @@ def sync_stripe_subscription(client_id, force=False):
     if not _is_customer_id(client_id):
         return "no_subscription"
     first = _billing_load(client_id)
+    if first.get("staleStripeSubscriptions"):
+        retry_stale_stripe_cancellations(client_id)          # ancien abonnement reste actif apres une montee en gamme : on retente de le solder
+        first = _billing_load(client_id)
     subscription_id = first.get("stripeSubscriptionId")
     if not subscription_id:
         return "no_subscription"
@@ -3524,7 +3575,7 @@ def sync_all_stripe_subscriptions(force=False):
         if not _is_customer_id(client_id):
             continue
         state = load_json(os.path.join(BILLING_DATA_DIR, name), {}) or {}
-        if not isinstance(state, dict) or not state.get("stripeSubscriptionId"):
+        if not isinstance(state, dict) or not (state.get("stripeSubscriptionId") or state.get("staleStripeSubscriptions")):
             continue
         try:
             outcome = sync_stripe_subscription(client_id, force=force)
@@ -5315,7 +5366,7 @@ class Handler(BaseHTTPRequestHandler):
             if err:
                 if err == "INVALID_PASSWORD":
                     auth_record_fail(self._client_ip(), "del|" + client_id)
-                self._send_json({"error": err}, 400 if err != "ACTIVE_SUBSCRIPTION" else 409)
+                self._send_json({"error": err}, 409 if err in ("ACTIVE_SUBSCRIPTION", "STRIPE_CLEANUP_PENDING") else 400)
                 return
             self.send_response(200)
             self.send_header("Content-Type", "application/json; charset=utf-8")

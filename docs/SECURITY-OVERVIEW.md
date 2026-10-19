@@ -65,7 +65,7 @@ La clé `BK_SECRET_CRED_ENCRYPTION_KEY` vit dans `.env` (hôte, `chmod 600`), fo
 | Chaîne d'autorisation | capacité, autorité, politique, tâche, identifiants, connecteur, fournisseur, preuve, rétention ; échec = `AI_AUTHORIZATION_BLOCKED` | `core/runtime/worker-runtime/Invoke-Worker-AI.ps1` |
 | Agent téléphonique | aucun Worker, connecteur ni donnée de client joignable : seulement la fiche publique | `dashboard/phone_agent.py`, `docs/PHONE-AGENT.md` |
 | Écritures concurrentes | verrou + écriture atomique (incident du 2026-09-28) | `server.py`, `core/runtime/State-Lock.ps1` |
-| Droits des personnes | export JSON (`/api/account/export`), suppression en libre-service (`/api/account/delete`, mot de passe requis, refus si abonnement Stripe actif) | `server.py` |
+| Droits des personnes | export JSON (`/api/account/export`), suppression en libre-service (`/api/account/delete`, mot de passe requis, refus tant qu'un abonnement Stripe est encore renouvelé ; une résiliation déjà enregistrée ne bloque plus la suppression) | `server.py` |
 | Disponibilité | mesure toutes les 60 s, agrégats quotidiens 90 j, page `/status.html`, `/api/status` | `status_monitor.py`, `trust_pages.py` |
 
 ## 4. Services tiers réellement appelés (liste de sous-traitants)

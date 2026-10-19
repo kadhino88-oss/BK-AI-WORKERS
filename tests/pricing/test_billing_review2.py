@@ -330,6 +330,87 @@ class StripeFollowUp(Fixture):
         self.assertEqual(server.sync_stripe_subscription(B), "no_subscription")
 
 
+class StaleSubscriptions(Fixture):
+    """Montee en gamme dont l'annulation de l'ancien abonnement echoue : il facturerait encore, il est donc retenu et retente (et non plus seulement note)."""
+
+    def setUp(self):
+        super().setUp()
+        self.subs = {}                                    # identifiant -> reponse de get-subscription (actif par defaut)
+        self.reads = []
+
+    def fake_bridge(self, action, **kw):
+        if action == "get-subscription":
+            self.reads.append(kw.get("subscription_id"))
+            return dict(self.subs.get(kw.get("subscription_id"), {"Status": "SUCCESS", "SubscriptionStatus": "active", "CancelAtPeriodEnd": False,
+                                                                  "CurrentPeriodEnd": "2026-11-12T12:00:00Z"}))
+        return super().fake_bridge(action, **kw)
+
+    def upgrade_with_failing_cancel(self):
+        self.activate("pro", "sub_1", "cs_1")
+        self.cancel_ok = False
+        self.activate("scale", "sub_2", "cs_2")
+
+    def test_the_old_subscription_is_remembered_and_retried_until_stripe_accepts_the_cancellation(self):
+        self.upgrade_with_failing_cancel()
+        state = server._billing_load(A)
+        self.assertEqual((state["planId"], state["stripeSubscriptionId"], state["staleStripeSubscriptions"]), ("scale", "sub_2", ["sub_1"]))
+        self.assertIn("nouvelle tentative automatique", state["history"][-1]["event"])
+        self.assertEqual(server.sync_stripe_subscription(A, force=True), "ok")           # Stripe refuse encore : l'ancien abonnement reste retenu
+        self.assertEqual(server._billing_load(A)["staleStripeSubscriptions"], ["sub_1"])
+        self.cancel_ok = True                                                            # Stripe repond de nouveau
+        self.cancel_calls.clear()
+        server.sync_stripe_subscription(A, force=True)
+        state = server._billing_load(A)
+        self.assertNotIn("staleStripeSubscriptions", state)
+        self.assertEqual([(c["subscription_id"], c.get("prorate")) for c in self.cancel_calls], [("sub_1", True)])      # annule avec prorata
+        self.assertTrue(any("annulé à la nouvelle tentative" in h["event"] for h in state["history"]))
+        self.assertEqual(state["stripeSubscriptionId"], "sub_2")                         # le forfait en cours n'est pas touche
+
+    def test_an_old_subscription_already_stopped_at_stripe_is_settled_without_a_cancellation(self):
+        self.upgrade_with_failing_cancel()
+        self.subs["sub_1"] = {"Status": "SUCCESS", "SubscriptionStatus": "canceled"}
+        server.sync_stripe_subscription(A, force=True)
+        self.assertNotIn("staleStripeSubscriptions", server._billing_load(A))
+        self.assertEqual(server._billing_load(A)["planId"], "scale")                     # seul sub_1 est arrete, pas l'abonnement en cours
+
+    def test_an_old_subscription_stripe_does_not_know_is_settled_by_the_cancellation_itself(self):
+        self.activate("pro", "sub_1", "cs_1")
+        self.cancel_gone = True                                                          # 404 « No such subscription » a l'annulation
+        self.activate("scale", "sub_2", "cs_2")
+        state = server._billing_load(A)
+        self.assertNotIn("staleStripeSubscriptions", state)
+        self.assertTrue(any("introuvable chez Stripe" in h["event"] for h in state["history"]))
+
+    def test_a_client_that_lapsed_with_a_leftover_is_still_visited_and_cleaned(self):
+        self.upgrade_with_failing_cancel()
+        state = server._billing_load(A)
+        state["stripeSubscriptionId"] = None                                             # son abonnement en cours s'est arrete entre-temps
+        server._billing_save(state, A)
+        self.cancel_ok = True
+        self.assertEqual(server.sync_all_stripe_subscriptions(force=True), {"no_subscription": 1})
+        self.assertNotIn("staleStripeSubscriptions", server._billing_load(A))
+
+    def test_the_account_cannot_be_deleted_while_an_old_subscription_may_still_be_billing(self):
+        self.upgrade_with_failing_cancel()
+        self.assertEqual(server.delete_account(A, "motdepasse-test"), "ACTIVE_SUBSCRIPTION")      # l'abonnement en cours est encore renouvele
+        state = server._billing_load(A)
+        state["cancelAtPeriodEnd"] = True                                                # le client a resilie son abonnement en cours (fin de periode)
+        state["paidUntilUtc"] = "2026-11-12T12:00:00Z"
+        server._billing_save(state, A)
+        self.subs["sub_2"] = {"Status": "SUCCESS", "SubscriptionStatus": "active", "CancelAtPeriodEnd": True, "CurrentPeriodEnd": "2026-11-12T12:00:00Z"}
+        self.assertEqual(server.delete_account(A, "motdepasse-test"), "STRIPE_CLEANUP_PENDING")   # resilie, mais l'ancien facture peut-etre encore
+        self.cancel_ok = True
+        server.sync_stripe_subscription(A, force=True)
+        self.assertIsNone(server.delete_account(A, "motdepasse-test"))
+
+    def test_the_list_of_leftovers_is_capped_and_has_no_duplicates(self):
+        for n in range(12):
+            server._remember_stale_subscription(A, f"sub_old{n}")
+        server._remember_stale_subscription(A, "sub_old11")                               # deja retenu : pas de doublon
+        stale = server._billing_load(A)["staleStripeSubscriptions"]
+        self.assertEqual((len(stale), stale[0], stale[-1]), (10, "sub_old2", "sub_old11"))
+
+
 class AccountDeletionAfterCancel(Fixture):
     def test_a_cancelled_subscription_no_longer_blocks_the_deletion_of_the_account(self):
         self.activate("pro", "sub_1", "cs_1")

@@ -331,6 +331,7 @@ check("la liste des automatisations echappe l'objectif et le libelle du dernier 
 check("la suppression de compte ne dit plus de resilier un abonnement deja resilie et previent de la perte du temps paye",
       "le temps déjà payé n'est pas remboursé" in APP and "Une fois la résiliation enregistrée, vous pouvez supprimer votre compte tout de suite" in APP)
 check("un forfait sur facture en dernier mois paye est annonce « valable jusqu'au », pas « renouvele »", "data.awaitingInvoice" in APP)
+check("la suppression de compte explique le refus quand un ancien abonnement attend encore son annulation chez Stripe", "STRIPE_CLEANUP_PENDING" in APP)
 check("les statuts « installation_paused » et « worker_not_included » ont un libelle francais", "AUTOMATION_STATUS_LABELS" in APP and "non lancée : Worker en pause" in APP)
 
 print("\n" + ("TOUT PASSE" if not failures else f"{len(failures)} ECHEC(S)"))
