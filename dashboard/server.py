@@ -3526,6 +3526,11 @@ def sync_stripe_subscription(client_id, force=False):
         now_dt = _utcnow()
         now = now_dt.isoformat() + "Z"
         state["stripeSyncedAtUtc"] = now
+        customer = result.get("CustomerId")
+        if _STRIPE_CUSTOMER_RE.fullmatch(str(customer or "")):
+            # Le client Stripe de l'abonnement en cours (les abonnes d'avant la conservation du client n'en avaient pas) : la prochaine Checkout Session
+            # du compte le reutilise, donc le credit de prorata de l'ancien abonnement s'applique au nouveau au lieu de rester sur un ancien client.
+            state["stripeCustomerId"] = customer
         outcome = "ok"
         history = state.setdefault("history", [])
         plan_name = PLAN_CATALOG.get(state.get("planId") or "essai", PLAN_CATALOG["essai"])["name"]

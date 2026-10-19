@@ -209,6 +209,16 @@ function ConvertTo-StripeSubscriptionSummary {
     return [pscustomobject]$Summary
 }
 
+function Get-StripeCustomerId {
+    # Identifiant du client Stripe (cus_...) d'un objet Stripe : le texte tel quel, ou l'objet deplie (.id) ; $null sinon. Fonction PURE (testable
+    # sans Stripe) : le champ `customer` d'une Checkout Session ou d'un abonnement est un identifiant, sauf s'il a ete deplie avec expand.
+    param($Customer)
+    if ($null -eq $Customer) { return $null }
+    if ($Customer -is [string]) { return $Customer }
+    if ($Customer.PSObject.Properties["id"]) { return [string]$Customer.id }
+    return $null
+}
+
 function Get-StripeCheckoutSession {
     <#
     Relit une Checkout Session existante DIRECTEMENT DEPUIS STRIPE (pas
@@ -252,7 +262,7 @@ function Get-StripeCheckoutSession {
             SubscriptionStatus = $Sub.Status
             CurrentPeriodEnd   = $Sub.CurrentPeriodEnd
             # Client Stripe qui a paye : le serveur le garde pour que les Checkout Sessions suivantes du meme compte le reutilisent.
-            CustomerId         = if ($Response.customer -is [string]) { $Response.customer } elseif ($Response.customer) { [string]$Response.customer.id } else { $null }
+            CustomerId         = Get-StripeCustomerId -Customer $Response.customer
         }
     }
     catch {
@@ -367,6 +377,7 @@ function Get-StripeSubscription {
             SubscriptionStatus = $Sub.Status
             CancelAtPeriodEnd  = $Sub.CancelAtPeriodEnd
             CurrentPeriodEnd   = $Sub.CurrentPeriodEnd
+            CustomerId         = Get-StripeCustomerId -Customer $Response.customer
         }
     }
     catch {

@@ -38,6 +38,8 @@ foreach ($c in $cases) {
 }
 $resume = Get-StripeResumeFields
 $out += @{ name = "resume"; ok = $true; fields = $resume; body = (ConvertTo-StripeFormBody -Fields $resume) }
+$out += @{ name = "customers"; ok = $true; ids = @((Get-StripeCustomerId -Customer "cus_A1"), (Get-StripeCustomerId -Customer ([pscustomobject]@{ id = "cus_B2"; email = "x" })),
+    (Get-StripeCustomerId -Customer $null), (Get-StripeCustomerId -Customer ([pscustomobject]@{ email = "x" }))) }
 [System.IO.File]::WriteAllText($env:T_OUT, ($out | ConvertTo-Json -Depth 6 -AsArray), [System.Text.UTF8Encoding]::new($false))
 '''
 
@@ -148,6 +150,9 @@ class StripeFields(unittest.TestCase):
     def test_resuming_a_cancelled_subscription_only_clears_cancel_at_period_end(self):
         self.assertEqual(self.f("resume"), {"cancel_at_period_end": "false"})
         self.assertEqual(self.r["resume"]["body"], "cancel_at_period_end=false")
+
+    def test_the_customer_id_is_read_from_a_plain_or_an_expanded_customer_field(self):
+        self.assertEqual(self.r["customers"]["ids"], ["cus_A1", "cus_B2", None, None])
 
     def test_the_bridge_exposes_the_subscription_read_and_resume_actions_and_the_customer(self):
         with open(os.path.join(REPO, "dashboard", "Stripe-Bridge.ps1"), encoding="utf-8-sig") as f:

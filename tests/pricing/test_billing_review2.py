@@ -300,6 +300,19 @@ class StripeFollowUp(Fixture):
         self.assertEqual(server.sync_stripe_subscription(A, force=True), "resumed")
         self.assertFalse(server.get_billing(A)["cancelAtPeriodEnd"])
 
+    def test_the_follow_up_stores_the_stripe_customer_of_subscribers_who_paid_before_it_was_kept(self):
+        # Sans client Stripe retenu, la prochaine montee en gamme creerait un client neuf et le credit de prorata resterait sur l'ancien.
+        self.pro()
+        self.assertNotIn("stripeCustomerId", server._billing_load(A))
+        self.sub = dict(self.sub, CustomerId="cus_SYNC1")
+        server.sync_stripe_subscription(A, force=True)
+        self.assertEqual(server._billing_load(A)["stripeCustomerId"], "cus_SYNC1")
+        self.sub = dict(self.sub, CustomerId="cus_x&mode=payment")                       # un identifiant mal forme n'est jamais retenu
+        server.sync_stripe_subscription(A, force=True)
+        self.assertEqual(server._billing_load(A)["stripeCustomerId"], "cus_SYNC1")
+        server.select_billing_plan(A, "scale", "month")
+        self.assertEqual([c for c in self.bridge_calls if c[0] == "create-checkout"][-1][1].get("customer_id"), "cus_SYNC1")
+
     def test_a_late_payment_keeps_the_access_and_is_recorded_once(self):
         self.pro()
         self.sub = {"Status": "SUCCESS", "SubscriptionStatus": "past_due", "CancelAtPeriodEnd": False}
