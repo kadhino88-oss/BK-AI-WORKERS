@@ -4,6 +4,7 @@
 Tout est lu à la demande depuis les fichiers versionnés (le propriétaire règle ces fichiers sans toucher au code). Chaque valeur a une
 valeur par défaut sûre ici : un fichier absent ou illisible ne désactive jamais un plafond. Module PUR (aucune dépendance au serveur).
 """
+import copy
 import json
 import math
 import os
@@ -81,7 +82,7 @@ def _merge(base, over):
 
 def load_limits(root, env=None):
     env = os.environ if env is None else env
-    lim = _merge(DEFAULT_LIMITS, read_json(os.path.join(root, "core", "projects", "PROJECT-LIMITS.json"), {}) or {})
+    lim = copy.deepcopy(_merge(DEFAULT_LIMITS, read_json(os.path.join(root, "core", "projects", "PROJECT-LIMITS.json"), {}) or {}))   # copie : jamais le défaut du module
     for var, path in (("BK_PROJECT_STEPS_GLOBAL", ("runners", "global")), ("BK_PROJECT_STEPS_PER_CLIENT", ("runners", "perClient"))):
         raw = str(env.get(var) or "").strip()
         if raw.isdigit() and int(raw) >= 1:
@@ -90,7 +91,7 @@ def load_limits(root, env=None):
 
 
 def load_phases(root):
-    return _merge(DEFAULT_PHASES, read_json(os.path.join(root, "core", "ai", "PROJECT-PHASES.json"), {}) or {})
+    return copy.deepcopy(_merge(DEFAULT_PHASES, read_json(os.path.join(root, "core", "ai", "PROJECT-PHASES.json"), {}) or {}))
 
 
 def load_levels(root):
