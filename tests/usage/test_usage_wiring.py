@@ -329,6 +329,7 @@ def run():
 
     # ----------------------------------------------------------------------------------------------------------------------------------------
     print("\n== automatisations : quota-check.py et usage-cli.py ==")
+    CLOCK.dt = START
     fresh_client(B, "equipe")
     spec = importlib.util.spec_from_file_location("quota_check", os.path.join(HERE, "..", "..", "dashboard", "quota-check.py"))
     qc = importlib.util.module_from_spec(spec)
