@@ -21,7 +21,7 @@ DEFAULT_LIMITS = {
     "chloeDelegation": {"trio": "hired_only", "default": "all"},
     "step": {"softDeadlineSec": 480, "hardDeadlineSec": 540, "maxAttempts": 3, "maxStepsPerProject": 120, "maxPlanSteps": 40,
              "maxCriteria": 25, "maxAddedSteps": 8, "maxReplans": 3, "maxFixRounds": 2, "noProgressLimit": 3,
-             "retryLaterDelaysSec": [60, 300, 1200], "heartbeatSec": 20, "noHeartbeatSec": 120},
+             "retryLaterDelaysSec": [60, 300, 1200], "heartbeatSec": 20, "noHeartbeatSec": 120, "killGraceSec": 15},
     "budget": {"creditCostChf": 0.0375, "minStartCredits": 6, "capMargin": 1.25, "defaultCap": {"standard": 150, "approfondi": 300},
                "verifyShareOfCap": 0.15},
     "input": {"goalMaxChars": 4000, "messageMaxChars": 4000, "inputFilesMax": 10, "inputFilesMaxBytes": 10485760,

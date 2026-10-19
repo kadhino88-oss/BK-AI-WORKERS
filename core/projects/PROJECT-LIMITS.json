@@ -28,7 +28,8 @@
     "noProgressLimit": 3,
     "retryLaterDelaysSec": [60, 300, 1200],
     "heartbeatSec": 20,
-    "noHeartbeatSec": 120
+    "noHeartbeatSec": 120,
+    "killGraceSec": 15
   },
   "budget": {
     "creditCostChf": 0.0375,

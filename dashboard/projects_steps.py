@@ -410,7 +410,7 @@ class StepMixin:
                      "fix": f"{worker_name} corrige : {step.get('title')}", "execute": f"{worker_name} travaille : {step.get('title')}"}
             t.event("step_started", verbs.get(kind, step.get("title")), stepId=sid, worker=step.get("worker"), kind=kind, attempt=attempt)
             with self._procs_lock:
-                self._procs[(pid, sid)] = StepProcRef(popen, pid, sid, attempt, st["clientId"], step_dir, now_ts, now_ts + hard + 15, kind)
+                self._procs[(pid, sid)] = StepProcRef(popen, pid, sid, attempt, st["clientId"], step_dir, now_ts, now_ts + hard + float(self.limits["step"].get("killGraceSec", 15)), kind)
         return True
 
     def _ws_fingerprint(self, project_dir):
