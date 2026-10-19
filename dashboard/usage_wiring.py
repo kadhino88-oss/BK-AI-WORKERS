@@ -98,7 +98,9 @@ class WiredUsage(usage_mod.UsageService):
         state = s._billing_load(client_id)
         plan_id = state.get("planId", "essai")
         plan = s.PLAN_CATALOG.get(plan_id, s.PLAN_CATALOG["essai"])
-        cycle_start, renews_at = s.billing_cycle(state.get("cycleStartUtc", ""), plan.get("renews", True))
+        # Meme horloge que get_billing : une fois la periode payee terminee (jours de grace d'un forfait sur facture), la fenetre du mois ne
+        # se renouvelle plus ; sans cela le grand livre ouvrirait un mois neuf que personne n'a paye.
+        cycle_start, renews_at = s.billing_cycle(state.get("cycleStartUtc", ""), plan.get("renews", True), s._window_clock(state))
         paid_until = state.get("paidUntilUtc") if s._parse_utc(state.get("paidUntilUtc")) else None
         if bool(state.get("cancelAtPeriodEnd")) and paid_until and renews_at and s._parse_utc(renews_at) >= s._parse_utc(paid_until):
             renews_at = None            # meme regle que get_billing : resilie, rien ne se renouvelle au-dela de la periode payee
@@ -202,7 +204,7 @@ class WiredUsage(usage_mod.UsageService):
         except Exception as exc:  # noqa: BLE001
             self._fail_open("gate", client_id, exc)
             return None
-        return self.block_message(client_id, block) if block else None
+        return None if block is None else self.block_message(client_id, block)       # UsageBlock est faux comme booleen : toujours tester `is None`
 
     def block_message(self, client_id, block):
         s = self.s

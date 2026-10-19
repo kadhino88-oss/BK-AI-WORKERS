@@ -1116,6 +1116,7 @@ const AUTOMATION_STATUS_LABELS = {
   installation_paused: "non lancée : Worker en pause",
   worker_not_included: "non lancée : Worker hors de votre forfait",
   quota_exceeded: "non lancée : quota de crédits atteint",
+  usage_limit: "non lancée : quota de session ou de semaine atteint, reprise au prochain passage",
 };
 
 const FREQUENCY_LABELS = {
