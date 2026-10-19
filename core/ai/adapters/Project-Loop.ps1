@@ -49,6 +49,18 @@ function Write-BKCostFile {
     } catch { }
 }
 
+function ConvertTo-BKUtcDate {
+    # Date UTC d'un champ de input.json. ConvertFrom-Json transforme deja « 2026-10-19T09:44:36Z » en DateTime : on ne repasse JAMAIS par
+    # [string] (la culture et le fuseau de la machine decaleraient l'echeance). Une chaine sans fuseau est lue comme UTC.
+    param($Value)
+    if ($Value -is [datetime]) {
+        if ($Value.Kind -eq [System.DateTimeKind]::Unspecified) { return [datetime]::SpecifyKind($Value, [System.DateTimeKind]::Utc) }
+        return $Value.ToUniversalTime()
+    }
+    if ($Value -is [DateTimeOffset]) { return $Value.UtcDateTime }
+    return [DateTimeOffset]::Parse([string]$Value, [System.Globalization.CultureInfo]::InvariantCulture, [System.Globalization.DateTimeStyles]::AssumeUniversal).UtcDateTime
+}
+
 function Get-BKPythonCommand {
     if ($env:BK_PYTHON) { return [string]$env:BK_PYTHON }
     if ($IsWindows -or $PSVersionTable.PSEdition -ne "Core") { return "python" }
@@ -355,8 +367,8 @@ function Invoke-BKProjectStepLoop {
     param($In, [string]$PlainKey, [string]$Root)
     $Started = (Get-Date).ToUniversalTime()
     $Kind = [string]$In.kind
-    $Soft = [DateTimeOffset]::Parse([string]$In.deadlineUtc).UtcDateTime
-    $Hard = [DateTimeOffset]::Parse([string]$In.hardDeadlineUtc).UtcDateTime
+    $Soft = ConvertTo-BKUtcDate $In.deadlineUtc
+    $Hard = ConvertTo-BKUtcDate $In.hardDeadlineUtc
     $SoftTotalSec = [Math]::Max(30.0, ($Soft - $Started).TotalSeconds)
     $MaxIterations = [Math]::Max(1, [int]$In.maxIterations)
     $CallTimeout = [Math]::Max(30, [int]$In.callTimeoutSec)

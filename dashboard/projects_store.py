@@ -239,6 +239,8 @@ class ProjectStore:
         self.hooks = []                  # fn(store, pid, state, events, transitions) appelées après chaque transaction validée
         self.boot_utc = iso(now())
         os.makedirs(self.base, exist_ok=True)
+        self._real_base = os.path.realpath(self.base)
+        self._dirs_ok = set()
 
     # ------------------------------------------------------------------ chemins
     def client_dir(self, client_id):
@@ -250,9 +252,12 @@ class ProjectStore:
         if not PROJECT_ID_RE.match(pid or ""):
             raise ProjectNotFound(pid)
         d = os.path.join(self.client_dir(client_id), pid)
-        real_base = os.path.realpath(self.base)
-        if not os.path.realpath(d).startswith(real_base + os.sep):
+        if d in self._dirs_ok:
+            return d
+        if not os.path.realpath(d).startswith(self._real_base + os.sep):      # confinement : jamais hors de runtime/projects (lien symbolique...)
             raise ProjectNotFound(pid)
+        if os.path.isdir(d):
+            self._dirs_ok.add(d)                                              # vérifié une fois (realpath est lent, surtout sous Windows)
         return d
 
     def refresh_index(self):
@@ -472,6 +477,7 @@ class ProjectStore:
             with self._index_guard:
                 self._index.pop(pid, None)
             self._claimed.discard(pid)
+            self._dirs_ok.discard(d)
 
     def disk_usage_client(self, client_id):
         total = 0

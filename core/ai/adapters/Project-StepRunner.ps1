@@ -53,7 +53,7 @@ try {
     if ([string]$In.model -notmatch '^[a-z0-9][a-z0-9._-]{2,60}$') { throw "INPUT_MODEL" }
     foreach ($P in @("projectDir", "workspace", "stepDir", "spool", "context")) { if ([string]::IsNullOrWhiteSpace([string]$In.paths.$P)) { throw "INPUT_PATHS" } }
     if (-not (Test-Path -LiteralPath ([string]$In.paths.stepDir) -PathType Container)) { throw "INPUT_STEPDIR" }
-    [void][DateTimeOffset]::Parse([string]$In.deadlineUtc); [void][DateTimeOffset]::Parse([string]$In.hardDeadlineUtc)
+    foreach ($D in @($In.deadlineUtc, $In.hardDeadlineUtc)) { if ($D -isnot [datetime] -and $D -isnot [DateTimeOffset]) { [void][DateTimeOffset]::Parse([string]$D) } }
 }
 catch {
     Write-Host ("Project-StepRunner : entree invalide (" + $_.Exception.Message + ")")
@@ -66,7 +66,8 @@ catch {
 . (Join-Path $ProjectRoot "core/ai/adapters/Client-Memory.ps1")
 . (Join-Path $ProjectRoot "core/ai/adapters/Client-Installation.ps1")
 . (Join-Path $ProjectRoot "core/ai/adapters/Mission-Cost.ps1")
-. (Join-Path $ProjectRoot "core/integrations/Connector-Dispatch.ps1")
+# Le repartiteur de connecteurs (gros, ~2 s de chargement) n'est charge que pour une etape qui peut utiliser use_connector.
+if (@($In.tools) -contains "use_connector") { . (Join-Path $ProjectRoot "core/integrations/Connector-Dispatch.ps1") }
 . (Join-Path $ProjectRoot "core/ai/adapters/Adapter-Common.ps1")
 . (Join-Path $ProjectRoot "core/ai/adapters/Project-Prompt.ps1")
 . (Join-Path $ProjectRoot "core/ai/adapters/Project-Loop.ps1")
