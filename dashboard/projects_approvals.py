@@ -340,6 +340,9 @@ def validate_item(root, client_id, item, existing, client_pending, limits=None, 
         if RISK_ORDER[calc] > RISK_ORDER[risk]:
             risk = calc
     status = item.get("status") if item.get("status") in ("PENDING", "EXECUTED") else "PENDING"
+    downgraded = False
+    if status == "EXECUTED" and not (kind == "connector_action" and item.get("autoApproved") is True and is_safe_draft(root, item.get("connectorId"), item.get("operation"))):
+        status, downgraded = "PENDING", True     # seul un vrai brouillon pré-autorisé naît « exécuté » : tout le reste attend la validation du client
     if status == "PENDING":
         if any(e.get("dedupKey") and e.get("dedupKey") == item.get("dedupKey") for e in existing):
             return ("APPROVAL_DUPLICATE", "action déjà préparée")
@@ -351,6 +354,8 @@ def validate_item(root, client_id, item, existing, client_pending, limits=None, 
     out["risk"] = risk
     out["status"] = status
     out["params"] = params
+    if downgraded:
+        out.update(autoApproved=False, decision=None, decidedUtc=None, execution=None)
     out["display"] = {"title": str(disp.get("title"))[:200], "what": str(disp.get("what"))[:600], "why": str(disp.get("why") or "")[:600],
                       "recipients": disp.get("recipients") if isinstance(disp.get("recipients"), int) and not isinstance(disp.get("recipients"), bool)
                       else (count_recipients(params) or None),
