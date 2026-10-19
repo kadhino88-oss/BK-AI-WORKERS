@@ -679,7 +679,7 @@ class StepMixin:
         plan_doc = self.store.read_json(pid, "plan.json", {}) or {}
         plan = plan_doc.get("plan") or {}
         added_total = sum(1 for s in st["steps"].values() if s.get("addedBy"))
-        if added_total >= int(self.limits["step"]["maxAddedSteps"]) or len(plan.get("steps") or []) >= int(self.limits["step"]["maxPlanSteps"]):
+        if added_total >= int(self.limits["step"]["maxAddedSteps"]) or len(plan.get("steps") or []) >= int(self.limits["step"]["maxPlanSteps"])                 or not self.steps_room(st):
             return False
         scope = self.scope_of(st["clientId"])
         if not self.worker_in_scope(scope, spec.get("worker")):
@@ -1096,7 +1096,7 @@ class StepMixin:
             st["steps"][step["id"]]["status"] = "DONE"
             st["pendingReverify"] = True
             return
-        if fails and int(st["counters"].get("fixRounds") or 0) < maxfix:
+        if fails and int(st["counters"].get("fixRounds") or 0) < maxfix and self.steps_room(st, len(fails) + 2):
             st["counters"]["fixRounds"] = int(st["counters"].get("fixRounds") or 0) + 1
             fixes = pv.plan_fix_steps(plan, st["steps"], ver, st["counters"]["fixRounds"], st.get("leadWorker") or "chloe")
             scope = self.scope_of(st["clientId"])
@@ -1183,7 +1183,7 @@ class StepMixin:
     # ------------------------------------------------------------------ replanification
     def _request_replan(self, t, reason, needs_approval=False):
         st = t.state
-        if int(st["counters"].get("replans") or 0) >= int(self.limits["step"]["maxReplans"]):
+        if int(st["counters"].get("replans") or 0) >= int(self.limits["step"]["maxReplans"]) or not self.steps_room(st):
             t.event("replan", "Le nombre maximal de replanifications est atteint : demande ignorée.", ignored=True)
             return None
         if any(s.get("kind") in ("replan",) and s.get("status") in ("READY", "RUNNING", "PENDING") for s in st["steps"].values()):
@@ -1263,6 +1263,7 @@ class StepMixin:
                 s.update(status="BLOCKED", blockedReason="APPROVAL")
             elif d == "approval_expired":
                 s.update(status="BLOCKED", blockedReason="APPROVAL_EXPIRED")
+        self._milestone_checks(t, plan)
         # 3. état du projet
         active = [s for s in steps.values() if s["status"] in ("RUNNING", "READY") and s["kind"] != "answer"]
         status = st["status"]
@@ -1323,6 +1324,37 @@ class StepMixin:
                 if status != "WAITING_INPUT" or st.get("waitingFor") != wf:
                     t.transition("WAITING_INPUT", reason, waitingFor=wf)
             return
+
+    def _milestone_checks(self, t, plan):
+        """Jalons du plan (plan.milestones) : dès que les étapes d'un jalon sont terminées, le moteur exécute les contrôles typés des critères visés ; un
+        échec crée tout de suite une étape de correction (2 jalons corrigés au plus par projet), sans attendre la vérification finale."""
+        st = t.state
+        if st["status"] not in ("PLANNING", "RUNNING") or not plan.get("milestones"):
+            return
+        done = st.setdefault("milestones", {})
+        proj_dir = self.store.project_dir(t.pid)
+        for m in plan["milestones"]:
+            mid = m.get("id")
+            if not mid or mid in done:
+                continue
+            if not all((st["steps"].get(a) or {}).get("status") in SATISFIED for a in m.get("afterSteps") or []):
+                continue
+            results = pv.run_milestone_checks(proj_dir, plan, m)
+            failed = [cid for cid, r in results.items() if not r.get("ok")]
+            done[mid] = {"checkedUtc": self.now_iso(), "failed": failed}
+            t.event("verification_result", f"Jalon « {mid} » : {len(results) - len(failed)} contrôle(s) automatique(s) réussi(s), {len(failed)} en échec.",
+                    scope="milestone", milestone=mid, failed=failed)
+            fixes_used = int(st["counters"].get("milestoneFixes") or 0)
+            if failed and fixes_used < int(self.limits["step"].get("maxMilestoneFixes", 2)) and self.steps_room(st, len(failed) + 2):
+                st["counters"]["milestoneFixes"] = fixes_used + 1
+                fixes = pv.plan_fix_steps(plan, st["steps"], {"criteria": pv.milestone_failures(results)}, f"M{fixes_used + 1}", st.get("leadWorker") or "chloe")
+                scope = self.scope_of(st["clientId"])
+                for f in fixes:
+                    if not self.worker_in_scope(scope, f["worker"]):
+                        f["worker"] = st.get("leadWorker") or f["worker"]
+                    self._new_system_step(st, f["id"], "fix", f["worker"], f["title"], f["goal"], criteriaIds=f["criteriaIds"], estimateCredits=6)
+                    st["steps"][f["id"]]["fixHint"] = f["goal"][:1500]
+                t.event("replan", f"Un jalon est en échec : {len(fixes)} étape(s) de correction ajoutée(s) tout de suite.", fixSteps=[f["id"] for f in fixes], milestone=mid)
 
     def _start_verification(self, t, plan):
         st = t.state

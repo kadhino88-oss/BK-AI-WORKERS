@@ -249,7 +249,7 @@ class ViewMixin:
             "notices": (st.get("notices") or [])[-5:], "acceptedGaps": st.get("acceptedGaps") or [], "doneProblems": st.get("doneProblems") or [],
             "scope": st.get("scope"), "level": st.get("level"), "autoStart": bool(st.get("autoStart")), "recipeId": st.get("recipeId"), "language": st.get("language"),
             "hasFinalReport": os.path.isfile(os.path.join(self.store.project_dir(pid), "final-report.md")),
-            "planNotice": st.get("planNotice"),
+            "planNotice": st.get("planNotice"), "workspacePurged": bool(st.get("workspacePurgedUtc")),
         })
         return out
 

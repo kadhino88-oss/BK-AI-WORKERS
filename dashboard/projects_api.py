@@ -94,6 +94,12 @@ class _Limiter:
                     self.rows.pop(k, None)
             return True, 0
 
+    def refund(self, key, n=1):
+        """Rend `n` places prises par `hit` (une demande refusée pour cause de saisie invalide ne doit pas consommer le quota de création)."""
+        with self.lock:
+            rows = self.rows.get(key) or []
+            del rows[max(0, len(rows) - n):]
+
 
 def _origin(url):
     p = urlparse(url or "")
@@ -133,7 +139,7 @@ class ProjectsAPI:
         R("GET", rf"^/api/projects/{PID}/export\.zip\Z", self._r_zip, rate="zip")
         R("GET", rf"^/api/projects/{PID}/log\Z", self._r_log, rate="get")
         R("GET", r"^/api/admin/projects\Z", self._r_admin_list, rate=None, auth="owner")
-        R("POST", r"^/api/projects\Z", self._r_create, rate="create")
+        R("POST", r"^/api/projects\Z", self._r_create, rate="createAttempts")      # le débit « create » (6/h) est appliqué dans la route, après validation
         R("POST", rf"^/api/projects/{PID}/plan/approve\Z", self._r_plan_approve, rate="control")
         R("POST", rf"^/api/projects/{PID}/plan/reject\Z", self._r_plan_reject, rate="control")
         R("POST", rf"^/api/projects/{PID}/messages\Z", self._r_message_post, rate="messages")
@@ -164,12 +170,14 @@ class ProjectsAPI:
         handler.end_headers()
         handler.wfile.write(body)
 
-    def error(self, handler, code, detail, status=None, **extra):
+    def error(self, handler, code, detail, http_status=None, **extra):
+        """Réponse d'erreur {"error","detail",...}. `http_status` est le code HTTP ; les champs libres (extra) passent dans le corps : un champ nommé « status »
+        (le statut du projet, dans INVALID_STATE) ne doit jamais être pris pour le code HTTP."""
         retry = extra.pop("retryAfterSec", None)
         payload = {"error": code, "detail": detail}
         payload.update({k: v for k, v in extra.items() if v is not None})
         headers = {"Retry-After": int(retry)} if retry else None
-        self._json(handler, payload, status or STATUS_OF.get(code, 400), headers)
+        self._json(handler, payload, http_status or STATUS_OF.get(code, 400), headers)
 
     def _project_error(self, handler, e):
         if isinstance(e, ps.ProjectNotFound):
@@ -390,9 +398,16 @@ class ProjectsAPI:
             return None
         if self.service.read_control().get("killAll"):
             raise ps.ProjectError("PROJECTS_DISABLED", "Les projets sont momentanément suspendus par l'administration.")
-        out = self.service.create_project(
-            r.client_id, body.get("goal"), body.get("workerId") or "chloe", recipe_id=body.get("recipeId"), level=body.get("level") or "standard",
-            credits_cap=body.get("creditsCap"), auto_start=bool(body.get("autoStart")), language=body.get("language"), inputs=body.get("inputs"))
+        if not self.rate_pass(r.handler, "create", r.client_id):
+            return None
+        try:
+            out = self.service.create_project(
+                r.client_id, body.get("goal"), body.get("workerId") or "chloe", recipe_id=body.get("recipeId"), level=body.get("level") or "standard",
+                credits_cap=body.get("creditsCap"), auto_start=bool(body.get("autoStart")), language=body.get("language"), inputs=body.get("inputs"))
+        except ps.ProjectError as e:
+            if STATUS_OF.get(e.code, 400) == 400 and self.rate_ok is None:
+                self.limiter.refund(("create", r.client_id))               # une saisie invalide n'a rien créé : elle ne consomme pas le quota
+            raise
         return out, 201
 
     def _r_plan_approve(self, r):

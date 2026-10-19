@@ -40,6 +40,36 @@ def run_auto_checks(project_dir, plan, rnd, only_ids=None):
     return results
 
 
+def run_milestone_checks(project_dir, plan, milestone):
+    """Contrôles typés d'un JALON (4.5) : les critères « auto » que le jalon vise, SANS modèle. Résultats écrits dans verification/m-<jalon>/ ;
+    renvoie {criterionId: résultat CHK-…}. Un jalon ne rend aucun verdict final : il fait remonter tôt ce qu'une vérification finale trouverait tard."""
+    mid = re.sub(r"[^A-Za-z0-9_-]", "_", str(milestone.get("id") or "m"))[:20] or "m"
+    base = os.path.join(project_dir, "verification", f"m-{mid}")
+    ws = os.path.join(project_dir, "workspace")
+    wanted = set(milestone.get("criteriaIds") or [])
+    results = {}
+    for c in plan.get("criteria") or []:
+        if c["id"] in wanted and c.get("kind") == "auto" and isinstance(c.get("check"), dict):
+            results[c["id"]] = pc.run_check(pc.CheckCtx(ws, project_dir), c["check"], out_dir=os.path.join(base, "checks"))
+    os.makedirs(base, exist_ok=True)
+    pp.atomic_write_bytes(os.path.join(base, "milestone.json"), json.dumps(
+        {"schema": SCHEMA, "scope": "milestone", "milestone": milestone.get("id"), "criteria": [{"id": cid, "ok": bool(r.get("ok")), "check": r["id"]} for cid, r in results.items()],
+         "overall": "PASS" if all(r.get("ok") for r in results.values()) else "FAIL"}, ensure_ascii=False, indent=2).encode("utf-8"))
+    return results
+
+
+def milestone_failures(results):
+    """Constat de verdict FAIL (forme d'une vérification) pour les contrôles de jalon en échec : alimente plan_fix_steps."""
+    out = []
+    for cid, r in results.items():
+        if r.get("ok"):
+            continue
+        errs = [f for f in r.get("findings") or [] if f.get("severity") == "error"]
+        out.append({"id": cid, "verdict": "FAIL", "note": "; ".join(f"{f.get('rule')}: {f.get('detail')}" for f in errs)[:600],
+                    "fixHint": "Corriger : " + "; ".join(str(f.get("detail", "")) for f in errs)[:500], "evidence": [{"type": "check", "ref": r["id"]}]})
+    return out
+
+
 def _lines_of(full):
     return pc._read_text(full).splitlines()
 

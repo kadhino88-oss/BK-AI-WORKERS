@@ -33,6 +33,7 @@ import projects_config as cfg
 import projects_store as ps
 import projects_usage as pu
 from projects_actions import ActionMixin
+from projects_housekeeping import HousekeepingMixin
 from projects_plan import (PlanResult, validate_plan, register_check_type, known_check_types,    # noqa: F401  (interface publique)
                            topological_order, critical_path_lengths, needs_consistency_review, percent_done)
 from projects_steps import StepMixin
@@ -55,11 +56,11 @@ def _default_mem_available_mb():
     return None
 
 
-class ProjectService(StepMixin, ActionMixin, ViewMixin):
+class ProjectService(StepMixin, ActionMixin, ViewMixin, HousekeepingMixin):
     def __init__(self, root, ps_cmd, *, resolve_scope, usage, notify=None, run_connector=None, log_activity=None, write_json=None, lock=None,
                  plan_view=None, account_email=None, worker_summary=None, now=time.time, enabled=True, runner_cmd=None, installation_paused=None,
                  autoapprove=None, public_url="", owner_alert=None, mem_available=None, python=None, allowlist=None, tick_sec=5.0,
-                 connectors_active=None, sleep=time.sleep, upgrade=None):
+                 connectors_active=None, sleep=time.sleep, upgrade=None, files_cleanup_cmd=None):
         self.root = root
         self.ps_cmd = list(ps_cmd or [])
         self.resolve_scope = resolve_scope
@@ -105,6 +106,11 @@ class ProjectService(StepMixin, ActionMixin, ViewMixin):
         self._create_lock = threading.Lock()  # création d'un projet : plafonds (actifs, file, par jour) vérifiés sans course
         self._usage_cache = {}                # client -> (epoch, vue d'usage) : la progression est interrogée toutes les 3 s
         self._booted = False
+        self.files_cleanup_cmd = files_cleanup_cmd      # fn(ids_path) -> argv ; défaut : Project-FilesCleanup.ps1 (la clé reste côté PowerShell)
+        self._disk_cache = {}                 # client -> (epoch, octets)
+        self._last_housekeeping = 0.0
+        self._last_files_reap = 0.0
+        self._spike_alerted = {}
         self.executor = pa.ApprovalExecutor(self._approval_begin, self._run_connector_safe, self._approval_finish, self.limits, now=now, sleep=sleep)
         self.store.hooks.append(self._on_commit)
         self.store.refresh_index()
@@ -330,6 +336,7 @@ class ProjectService(StepMixin, ActionMixin, ViewMixin):
                 sys.stderr.write(f"projects maintain {pid}: {type(e).__name__}: {e}\n")
         self._promote_queued(now)
         self._spawn_ready(now, ctrl)
+        self.housekeeping_tick(now)
 
     def _on_commit(self, store, pid, state, events, transitions):
         status = state.get("status")
@@ -412,6 +419,7 @@ class ProjectService(StepMixin, ActionMixin, ViewMixin):
             except Exception as e:  # noqa: BLE001
                 sys.stderr.write(f"projects reap {pid}: {type(e).__name__}: {e}\n")
         self._booted = True
+        self._last_files_reap = 0.0              # le premier nettoyage des fichiers distants suit tout de suite le démarrage
         self.nudge()
 
     # ------------------------------------------------------------------ superviseur : arrêt global

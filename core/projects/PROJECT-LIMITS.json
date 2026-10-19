@@ -25,6 +25,7 @@
     "maxAddedSteps": 8,
     "maxReplans": 3,
     "maxFixRounds": 2,
+    "maxMilestoneFixes": 2,
     "noProgressLimit": 3,
     "retryLaterDelaysSec": [60, 300, 1200],
     "heartbeatSec": 20,
@@ -64,6 +65,7 @@
   },
   "rates": {
     "create": [6, 3600],
+    "createAttempts": [60, 3600],
     "messages": [60, 3600],
     "approvals": [300, 3600],
     "control": [60, 3600],

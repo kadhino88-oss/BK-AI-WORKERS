@@ -164,6 +164,7 @@ class ActionMixin:
         if level not in LEVELS:
             raise ps.ProjectError("INVALID_INPUT", "Niveau : « standard » ou « approfondi ».", field="level")
         plan_id = self._check_allowed(client_id)
+        self.check_client_disk(client_id, plan_id)
         scope = self.scope_of(client_id, fresh=True)
         if not self.worker_in_scope(scope, worker_id):
             hire = None
@@ -414,6 +415,8 @@ class ActionMixin:
                 open_q = [s for s in st["steps"].values() if s.get("kind") == "answer" and s.get("status") in ("READY", "RUNNING")]
                 if len(open_q) >= MAX_OPEN_QUESTIONS:
                     raise ps.ProjectError("RATE_LIMITED", "Plusieurs questions sont déjà en cours de traitement : patientez un instant.", retryAfterSec=30)
+                if not self.steps_room(st):
+                    raise ps.ProjectError("TOO_LARGE", "Ce projet a atteint son nombre maximal d'étapes : les questions ne sont plus possibles.")
                 sid = self._next_id(st, "ANS")
                 lead = st.get("leadWorker") or "chloe"
                 self._new_system_step(st, sid, "answer", lead, "Réponse à votre question", text[:3000])
