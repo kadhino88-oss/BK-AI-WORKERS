@@ -57,7 +57,7 @@ TOOLS_BY_KIND = {
     "answer": READ_TOOLS + ("workspace_view_image",),
 }
 # Outils réservés au lanceur ou appelés par lui seul (jamais proposés au modèle) :
-RUNNER_ONLY = ("import_file",)
+RUNNER_ONLY = ("import_file", "record_executed_action")
 
 
 class ToolError(Exception):
@@ -605,7 +605,7 @@ def tool_request_approval(ctx, inp):
         if problem:
             raise ToolError(problem[0], problem[1])
         if not what:
-            what = pa.default_what(conn, op)
+            what = pa.default_what(conn, op, ROOT)
         risk = pa.classify_risk(ROOT, conn, op, params, recipients=inp.get("recipients"))
         item.update({"kind": "connector_action", "connectorId": conn, "operation": op, "params": params,
                      "display": {"title": title, "what": what, "why": why,
@@ -620,14 +620,38 @@ def tool_request_approval(ctx, inp):
         if isinstance(a, dict) and a.get("dedupKey") == item["dedupKey"]:
             return {"queued": True, "approvalId": a.get("id"), "duplicate": True,
                     "note": f"QUEUED:{a.get('id')} (cette action était déjà préparée ; rien n'est ajouté)."}
-    if inp.get("autoApproved") is True and kind == "connector":
-        ex = inp.get("execution") if isinstance(inp.get("execution"), dict) else {}
-        item.update({"autoApproved": True, "status": "EXECUTED", "decision": "auto", "decidedUtc": item["createdUtc"],
-                     "execution": {"startedUtc": item["createdUtc"], "finishedUtc": item["createdUtc"],
-                                   "connectorStatus": _text_ok(ex.get("connectorStatus"), "connectorStatus", 40),
-                                   "detail": _text_ok(ex.get("detail"), "detail", 300)}})
     ctx.spool_append("approvals", item)
     return {"queued": True, "approvalId": item["id"], "risk": item["risk"], "note": f"QUEUED:{item['id']}"}
+
+
+def tool_record_executed_action(ctx, inp):
+    """Réservé au LANCEUR : enregistre une action qu'il vient d'exécuter lui-même parce qu'elle est un vrai brouillon pré-autorisé par le client
+    ($AutoApproveSafeOps, installation non en pause). L'article naît EXECUTED avec autoApproved:true, visible au journal. Le modèle n'appelle
+    jamais cet outil : il n'est pas dans ses définitions et le champ autoApproved d'un request_approval du modèle est ignoré."""
+    conn = _text_ok(inp.get("connectorId"), "connectorId", 40, required=True).lower()
+    op = _text_ok(inp.get("operation"), "operation", 60, required=True).upper()
+    params = inp.get("params") if isinstance(inp.get("params"), dict) else {}
+    import projects_approvals as pa
+    if not pa.is_safe_draft(ROOT, conn, op):
+        raise ToolError("NOT_ALLOWED", "Seuls les vrais brouillons peuvent être enregistrés comme exécutés automatiquement.")
+    raw = json.dumps(params, ensure_ascii=False, sort_keys=True)
+    if _contains_secret(raw) or len(raw.encode("utf-8")) > pa.PARAMS_MAX_BYTES:
+        raise ToolError("SECRET_REFUSED", "Paramètres refusés.")
+    now = now_iso()
+    ex = inp.get("execution") if isinstance(inp.get("execution"), dict) else {}
+    item = {"id": "APR-" + secrets.token_hex(4), "batchId": None, "projectId": os.path.basename(ctx.project_dir), "stepId": ctx.step_id,
+            "worker": ctx.worker, "createdUtc": now, "expiresUtc": now, "validUntilUtc": None, "kind": "connector_action", "connectorId": conn,
+            "operation": op, "params": params,
+            "display": {"title": _text_ok(inp.get("title"), "title", 200) or f"{conn} : {op}", "what": pa.default_what(conn, op, ROOT),
+                        "why": _text_ok(inp.get("why"), "why", 600), "recipients": None, "spendChf": None},
+            "risk": pa.classify_risk(ROOT, conn, op, params), "reversible": True, "supersedes": None, "status": "EXECUTED", "autoApproved": True,
+            "decision": "auto", "decidedUtc": now, "editedParams": None,
+            "execution": {"startedUtc": now, "finishedUtc": now, "connectorStatus": _text_ok(ex.get("connectorStatus"), "connectorStatus", 40),
+                          "detail": _text_ok(ex.get("detail"), "detail", 300)},
+            "dedupKey": f"{ctx.step_id}|{conn}|{op}|auto|{secrets.token_hex(4)}"}
+    item["idempotencyKey"] = hashlib.sha256((item["projectId"] + item["dedupKey"]).encode("utf-8")).hexdigest()[:32]
+    ctx.spool_append("approvals", item)
+    return {"recorded": item["id"]}
 
 
 # ------------------------------------------------------------------ step_complete / step_blocked
@@ -817,7 +841,7 @@ for _name, _fn in (
         ("workspace_search", tool_workspace_search), ("deliverable_register", tool_deliverable_register), ("request_input", tool_request_input),
         ("note_decision", tool_note_decision), ("project_plan", tool_project_plan), ("request_approval", tool_request_approval),
         ("step_complete", tool_step_complete), ("step_blocked", tool_step_blocked), ("check_run", tool_check_run),
-        ("preview_fetch", tool_preview_fetch), ("import_file", tool_import_file)):
+        ("preview_fetch", tool_preview_fetch), ("import_file", tool_import_file), ("record_executed_action", tool_record_executed_action)):
     REGISTRY[_name] = {"fn": _fn, "kinds": None}
 
 

@@ -145,6 +145,7 @@ class Txn:
         self.events = []
         self.transitions = []
         self.committed_events = []
+        self._snapshot = None
         self._lock = None
 
     def __enter__(self):
@@ -158,6 +159,7 @@ class Txn:
             if depth.get(self.pid):
                 raise RuntimeError("transaction imbriquée sur le même projet")
             self.state = st._load_state_locked(self.pid)
+            self._snapshot = json.dumps(self.state, sort_keys=True, ensure_ascii=False)
             depth[self.pid] = True
         except BaseException:
             self._lock.release()
@@ -428,6 +430,9 @@ class ProjectStore:
                 f.flush()
                 os.fsync(f.fileno())
             st["seq"] = seq
+        if not out_events and t._snapshot is not None and json.dumps(st, sort_keys=True, ensure_ascii=False) == t._snapshot:
+            t.committed_events = []
+            return                      # rien n'a changé : aucune écriture (les passes périodiques du superviseur restent gratuites)
         st["updatedUtc"] = iso(now)
         self.write_json(pid, STATE_FILE, st)
         t.committed_events = out_events
