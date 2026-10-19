@@ -354,6 +354,31 @@ class AutomationLevel(unittest.TestCase):
         self.assertEqual((autos[0]["lastRunStatus"], autos[0]["runCount"]), ("installation_paused", 1))
         self.assertGreater(autos[0]["nextRunAtUtc"], "2026-10-02")                                      # l'echeance avance comme pour une execution normale
 
+    # ------------------------------------------------------------------------------------------------------ limites d'usage (session, semaine)
+    def test_a_full_usage_session_skips_the_automation_without_error_and_a_free_one_charges_a_credit(self):
+        """BK_USAGE_WINDOWS=1 : une session de Solo (23 credits) deja pleine saute l'automatisation (statut « usage_limit », aucune tache, aucune erreur) ;
+        avec de la place, le grand livre compte 1 credit. Le mode 0 (defaut) ne change rien."""
+        import datetime
+        now = datetime.datetime.now(datetime.timezone.utc)
+        iso = (now - datetime.timedelta(seconds=90)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        write_json(os.path.join(self.root, "runtime", "tasks", "TASK-" + "3" * 32 + ".json"), {"TaskId": "TASK-" + "3" * 32, "ClientId": A, "Credits": 23, "CreatedAtUtc": iso})
+        v = self.quota(A, "alex", "scheduled", BK_USAGE_WINDOWS="1")
+        self.assertEqual((v["blocked"], v["code"], v["limit"]), (True, "USAGE_LIMIT_REACHED", "session"), v)
+        self.assertTrue(v["resetsAtUtc"] and "quota de session" in v["detail"], v)
+        v0 = self.quota(A, "alex", "scheduled")                                                         # interrupteur eteint : seul le mois borne
+        self.assertEqual(v0["blocked"], False, v0)
+        res, p = self.run_automation(worker="alex", BK_USAGE_WINDOWS="1")
+        self.assertEqual(len(self.tasks()), 1, "aucune mission lancee : seule la trace posee par le test reste")
+        autos = json.load(open(os.path.join(self.root, "core", "automation", "data", "automations.json"), encoding="utf-8-sig"))
+        self.assertEqual((autos[0]["lastRunStatus"], autos[0]["runCount"]), ("usage_limit", 1), p.stdout[-300:] + p.stderr[-300:])
+        # de la place : le debit est fait par quota-check, une fois, apres tous les autres controles
+        shutil.rmtree(os.path.join(self.root, "runtime"), ignore_errors=True)
+        v = self.quota(A, "alex", "scheduled", BK_USAGE_WINDOWS="1")
+        self.assertEqual((v["blocked"], v["level"]), (False, "rapide"), v)
+        with open(os.path.join(self.root, "runtime", "usage", A + ".json"), encoding="utf-8") as f:
+            ledger = json.load(f)
+        self.assertEqual((ledger["session"]["used"], ledger["week"]["used"], ledger["month"]["used"], ledger["reservations"]), (1, 1, 1, {}), ledger)
+
 
 if __name__ == "__main__":
     ok = unittest.main(verbosity=2, exit=False).result.wasSuccessful()

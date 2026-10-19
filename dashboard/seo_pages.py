@@ -254,7 +254,7 @@ def _usage_limits_html(usage):
     hours = int(usage.get("sessionHours") or 4)
     return (f"<h2>Les limites d'usage de votre forfait</h2><p>Chaque forfait a un prix mensuel et des limites d'usage : un quota par session de {hours} heures, "
             "qui s'ouvre à votre première mission et se renouvelle seul, un quota par semaine, et le quota du mois. Aucun forfait n'est illimité.</p>"
-            "<p>Quand une limite est atteinte, vos missions reprennent à l'heure de renouvellement affichée dans votre compte, ou tout de suite si vous passez "
+            "<p>Quand une limite est atteinte, vous pouvez lancer de nouvelles missions à l'heure de renouvellement affichée dans votre compte, ou tout de suite si vous passez "
             "au forfait supérieur, qui a ses propres limites plus larges.</p>")
 
 
@@ -350,8 +350,8 @@ FAQ_ITEMS = [
 FAQ_USAGE_ITEM = (
     "Que se passe-t-il quand j'atteins une limite d'usage ?",
     "Votre forfait a un quota par session de 4 heures, un quota par semaine et un quota par mois. Quand l'un d'eux est atteint, la mission est refusée avec le nom "
-    "de la limite et l'heure exacte de son renouvellement. Un projet en cours ne se perd pas : il se met en pause avec tout son état et reprend tout seul au "
-    "renouvellement, ou tout de suite si vous passez au forfait supérieur. Vous voyez à tout moment ce qu'il vous reste, dans Facturation et dans la barre du haut.")
+    "de la limite et l'heure exacte de son renouvellement. Une automatisation est simplement reportée à son "
+    "prochain passage, et passer au forfait supérieur élargit tout de suite vos limites. Vous voyez à tout moment ce qu'il vous reste, dans Facturation et dans la barre du haut.")
 
 
 def render_faq_page(usage=None):
@@ -562,8 +562,8 @@ def render_analytics_page():
 
 def render_facturation_page(usage=None):
     usage_html = ("<p>En plus du quota du mois, chaque forfait a deux limites d'usage : un quota par session de 4 heures (il s'ouvre à votre première mission et "
-                  "se renouvelle seul) et un quota par semaine. Quand une limite est atteinte, la mission est refusée avec l'heure exacte de renouvellement, et un projet "
-                  "en cours se met en pause pour reprendre tout seul. Vous les voyez à tout moment dans votre compte.</p>") if _usage_on(usage) else ""
+                  "se renouvelle seul) et un quota par semaine. Quand une limite est atteinte, la mission est refusée avec l'heure exacte de renouvellement ; "
+                  "passer au forfait supérieur élargit tout de suite les limites. Vous les voyez à tout moment dans votre compte.</p>") if _usage_on(usage) else ""
     body = """
       <h1>Facturation</h1>
       <p class="u">Des crédits, un usage transparent, aucun engagement forcé.</p>

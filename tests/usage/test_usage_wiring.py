@@ -252,7 +252,7 @@ def run():
     job = server.submit_task_async("Prepare un plan", worker_id="alex", client_id=B, level="approfondi")
     end = time.time() + 10
     rec = server.read_async_job(job["jobId"])
-    while rec and rec["status"] == "RUNNING" and time.time() < end:
+    while (rec is None or rec["status"] == "RUNNING") and time.time() < end:        # None : lecture tombee pile pendant le remplacement atomique du fichier (Windows)
         time.sleep(0.05)
         rec = server.read_async_job(job["jobId"])
     check("mission en arriere-plan : job ERROR / USAGE_LIMIT_REACHED, avec le message et le corps", rec["status"] == "ERROR"

@@ -324,6 +324,8 @@ def main():
         st, js = anon.text("/app.js")
         check("app.js : jauges, pastille, refus USAGE_LIMIT_REACHED, compte a rebours", all(x in js for x in ("function renderUsageMeters", "function renderUsageChip", "USAGE_LIMIT_REACHED",
               "usageTick", 'role="progressbar"', "aria-valuetext", "isQuotaRefusal")))
+        check("aucune page ni texte d'interface n'annonce de projet qui se met en pause (le moteur de projets n'est pas livre : rien n'est annonce avant d'etre construit)",
+              all("projet en cours" not in t.lower() and "reprend tout seul" not in t for t in (tarifs, faq, fact)) and "Un projet en cours ne se perd pas" not in js)
         st, en = anon.text("/i18n-en-app.js")
         check("i18n-en-app.js : textes anglais des limites", "Your usage limits" in en and "Session quota reached" in en and "You have used your session quota (" in en)
         st, css = anon.text("/style.css")

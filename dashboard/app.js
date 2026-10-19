@@ -1199,7 +1199,7 @@ function usageMeterHtml(kind, w, title, warn) {
   if (level === "warn") {
     alert = `<p class="usage-meter-alert"><span aria-hidden="true">⚠️</span> ${escapeHtml(iwTf(kind === "session" ? "Plus de {pct} % de votre quota de session est utilisé." : "Plus de {pct} % de votre quota de la semaine est utilisé.", { pct: warn || 80 }))}</p>`;
   } else if (level === "full") {
-    alert = `<p class="usage-meter-alert"><span aria-hidden="true">⛔</span> ${escapeHtml(iwTf(kind === "session" ? "Quota de session atteint : vos missions reprennent {when}." : "Quota de la semaine atteint : vos missions reprennent {when}.", { when: w.resetsAtUtc ? usageWhenText(w.resetsAtUtc) : "" }))}</p>`;
+    alert = `<p class="usage-meter-alert"><span aria-hidden="true">⛔</span> ${escapeHtml(iwTf(kind === "session" ? "Quota de session atteint : vous pourrez lancer de nouvelles missions {when}." : "Quota de la semaine atteint : vous pourrez lancer de nouvelles missions {when}.", { when: w.resetsAtUtc ? usageWhenText(w.resetsAtUtc) : "" }))}</p>`;
   }
   return `<div class="usage-meter" data-window="${kind}" data-level="${level}">
     <div class="usage-meter-head"><span class="usage-meter-name" id="${id}-name">${escapeHtml(title)}</span>
@@ -1395,7 +1395,7 @@ async function renderPricingUsage() {
     if (enforced) {
       box.innerHTML = `<h2>${escapeHtml(iwT("Les limites d'usage de votre forfait"))}</h2>
         <p>${escapeHtml(iwTf("Chaque forfait a un prix mensuel et des limites d'usage : un quota de {h} heures par session, qui s'ouvre à votre première mission et se renouvelle seul, un quota par semaine, et le quota du mois. Aucun forfait n'est illimité.", { h: data.sessionHours }))}</p>
-        <p>${escapeHtml(iwT("Quand une limite est atteinte, vos missions reprennent à l'heure de renouvellement affichée dans votre compte, ou tout de suite si vous passez au forfait supérieur, qui a ses propres limites plus larges."))}</p>`;
+        <p>${escapeHtml(iwT("Quand une limite est atteinte, vous pouvez lancer de nouvelles missions à l'heure de renouvellement affichée dans votre compte, ou tout de suite si vous passez au forfait supérieur, qui a ses propres limites plus larges."))}</p>`;
     }
   }
 }
@@ -1411,7 +1411,7 @@ function renderUsageFaq(enforced) {
   item.className = "faq-item";
   item.id = "faq-usage-limits";
   item.innerHTML = `<summary>${escapeHtml(iwT("Que se passe-t-il quand j'atteins une limite d'usage ?"))}</summary>
-    <p>${escapeHtml(iwT("Votre forfait a un quota par session de 4 heures, un quota par semaine et un quota par mois. Quand l'un d'eux est atteint, la mission est refusée avec le nom de la limite et l'heure exacte de son renouvellement. Un projet en cours ne se perd pas : il se met en pause avec tout son état et reprend tout seul au renouvellement, ou tout de suite si vous passez au forfait supérieur. Vous voyez à tout moment ce qu'il vous reste, dans Facturation et dans la barre du haut."))}</p>`;
+    <p>${escapeHtml(iwT("Votre forfait a un quota par session de 4 heures, un quota par semaine et un quota par mois. Quand l'un d'eux est atteint, la mission est refusée avec le nom de la limite et l'heure exacte de son renouvellement. Une automatisation est simplement reportée à son prochain passage, et passer au forfait supérieur élargit tout de suite vos limites. Vous voyez à tout moment ce qu'il vous reste, dans Facturation et dans la barre du haut."))}</p>`;
   list.appendChild(item);
 }
 
