@@ -294,6 +294,37 @@ class AutomationLevel(unittest.TestCase):
         self.assertEqual(res["status"], "worker_not_included")
         self.assertEqual(self.tasks(), [])
 
+    def test_a_checker_that_raises_never_opens_the_workers_of_a_restricted_plan(self):
+        # 2e revue : quota-check.py repond {"blocked": false, "error": ...} quand il plante (import de server.py impossible, exception de la
+        # facturation). Le moteur prenait ce JSON pour un verdict et ouvrait les Workers d'un forfait Solo / Trio. Un verdict portant `error`
+        # n'en est pas un : le repli sur l'etat de facturation s'applique comme sans reponse.
+        write_json(os.path.join(self.root, "core", "billing", "data", A + ".json"),
+                   {"planId": "solo", "gridVersion": 2, "cycleStartUtc": "2026-10-01T00:00:00Z", "extraCredits": 0, "history": [], "hiredWorkers": ["nora"]})
+        server_path = os.path.join(self.root, "dashboard", "server.py")
+        with open(server_path, encoding="utf-8") as f:
+            original = f.read()
+        try:
+            with open(server_path, "w", encoding="utf-8", newline="") as f:
+                f.write("raise RuntimeError('simulated import failure')\n" + original)
+            verdict = self.quota(A, "alex", "scheduled")
+            self.assertEqual(verdict["blocked"], False)                       # le verificateur reste fail-open pour le QUOTA...
+            self.assertIn("RuntimeError", verdict["error"])
+            res, p = self.run_automation(worker="alex")                       # ...mais le moteur ne laisse pas passer un Worker non embauche
+            self.assertEqual(res["status"], "worker_not_included", p.stdout[-300:] + p.stderr[-300:])
+            self.assertEqual(self.tasks(), [])
+            # un Worker embauche tourne-t-il quand meme ? Non plus : sans verdict, le forfait restreint est saute par prudence (reprise au prochain passage).
+            res, p = self.run_automation(worker="nora")
+            self.assertEqual(res["status"], "worker_not_included")
+            # un forfait non restreint garde le comportement indicatif : l'automatisation s'execute
+            write_json(os.path.join(self.root, "core", "billing", "data", A + ".json"),
+                       {"planId": "pro", "gridVersion": 2, "cycleStartUtc": "2026-10-01T00:00:00Z", "extraCredits": 0, "history": []})
+            shutil.rmtree(os.path.join(self.root, "core", "automation", "data"), ignore_errors=True)
+            res, p = self.run_automation(worker="alex")
+            self.assertEqual(len(self.tasks()), 1, p.stdout[-300:] + p.stderr[-300:])
+        finally:
+            with open(server_path, "w", encoding="utf-8", newline="") as f:
+                f.write(original)
+
     def test_a_broken_checker_still_lets_the_other_plans_run_because_the_quota_is_indicative(self):
         for plan in ("pro", "essai"):
             shutil.rmtree(os.path.join(self.root, "runtime"), ignore_errors=True)
