@@ -46,7 +46,7 @@ Conventions : `id` de service et `category` en kebab-case ; `key` de champ en sn
 
 ## Règles d'autonomie (la loi de la plateforme)
 
-Chaque règle : `category`, `label`, `examples`, `risk` (`low|medium|high`), `defaultMode`, `maxAutoPerDay`, et `operations` (`"connecteur:OPERATION"`) quand elle gouverne une écriture dans un outil.
+Chaque règle : `category`, `label`, `examples`, `risk` (`low|medium|high`), `defaultMode`, `maxAutoPerDay`, et `operations` (`"connecteur:OPERATION"`) quand elle gouverne une écriture dans un outil. Le serveur (`dashboard/installations.py`) refuse `auto` pour toute règle qui a des `operations`, même à risque `low`. `maxAutoPerDay` est **indicatif** : la plateforme ne le fait pas respecter (il n'est ni appliqué par le serveur ni transmis au Worker) ; ne pas l'annoncer comme une limite.
 
 | `defaultMode` | Sens |
 |---|---|

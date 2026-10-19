@@ -103,7 +103,10 @@ function Invoke-BKChloeAIRouting {
     param(
         [Parameter(Mandatory=$true)][string]$UserRequest,
         [Parameter(Mandatory=$true)]$RoutingConfig,
-        [Parameter(Mandatory=$true)][array]$Excluded
+        [Parameter(Mandatory=$true)][array]$Excluded,
+        # Offre "Worker a l'unite" : Workers embauches par le client (null = tous). Le routeur les prefere pour une demande generale ou
+        # ambigue, et ne choisit un autre Worker que si la demande releve clairement de sa specialite (Chloe repondra alors WORKER_NOT_INCLUDED).
+        $PreferredIds = $null
     )
     if (-not (Test-BKSecret -Name "anthropic")) { return $null }
     try {
@@ -138,11 +141,15 @@ or, when no Worker is needed:
 
 The values of "workers" must be EXACTLY identifiers from the list above (lowercase), never invented.$RouteLangHint
 "@
+        if ($null -ne $PreferredIds) {
+            $HiredText = if (@($PreferredIds).Count -gt 0) { (@($PreferredIds) -join ", ") } else { "(none)" }
+            $SystemPrompt = $SystemPrompt + "`n`nThis client has hired ONLY these Workers: $HiredText. For a general, ambiguous or off-topic request, choose among them (never a Worker outside this list as a fallback). Choose a Worker outside this list only when the request clearly belongs to that Worker's specialty."
+        }
 
         # Le routeur est un appel JSON-seul (300 jetons max) : on n'y ajoute PAS le guide complet de Chloe (revue 2026-10-11 :
         # il contredisait la regle "JSON uniquement" et pouvait faire echouer tout le routage). Seulement les tarifs, pour
         # qu'une question sur les plans ne soit jamais inventee ni attribuee a la mauvaise marque.
-        $SystemPrompt = $SystemPrompt + "`n`nPRIX (questions sur les plans, a repondre dans direct_reply) : plateforme BK-AI-WORKERS = plan gratuit, Starter 39, Business 99, Pro 139, Scale 449 CHF par mois. BK Entreprise est l'agence parente : devis uniquement, jamais de tarifs BK Entreprise. N'invente aucun autre chiffre.`nReply ONLY with the strict JSON object described above."
+        $SystemPrompt = $SystemPrompt + "`n`nPRIX (questions sur les plans, a repondre dans direct_reply) : plateforme BK-AI-WORKERS, en CHF par mois (annuel = 10 mois) : Essai gratuit 3 jours (15 credits) ; Solo 29 (1 Worker au choix, 250 credits) ; Trio 59 (3 Workers au choix + Chloe, 500 credits) ; Equipe 99 (tous les Workers + Chloe, 900 credits) ; Pro 139 (1250 credits) ; Scale 449 (4000 credits) ; Enterprise sur devis (plafond de credits fixe par contrat). Starter et Business ne sont plus vendus. Chaque forfait est un quota MENSUEL fixe, jamais illimite : quota atteint = forfait superieur, sans recharge ni depassement facture. BK Entreprise est l'agence parente : devis uniquement, jamais de tarifs BK Entreprise. N'invente aucun autre chiffre.`nReply ONLY with the strict JSON object described above."
 
         $BodyObj = [ordered]@{
             model      = "claude-haiku-4-5-20251001"
@@ -188,6 +195,18 @@ $Lower = $Request.ToLowerInvariant()
 $RoutingConfig = Get-Content -LiteralPath $RoutingConfigPath -Raw | ConvertFrom-Json
 $Excluded = @($RoutingConfig.excluded_from_routing)
 
+# Offre "Worker a l'unite" (2026-10-12) : BK_ALLOWED_WORKERS (pose par dashboard/server.py ou par le moteur d'automatisation) = Workers
+# embauches par le client, separes par des virgules ; "-" = aucun ; absente = tous les Workers. Chloe ne delegue qu'a ces Workers.
+$AllowedWorkers = $null
+$AllowedRaw = [string]$env:BK_ALLOWED_WORKERS
+if (-not [string]::IsNullOrWhiteSpace($AllowedRaw)) {
+    $AllowedWorkers = @($AllowedRaw.ToLowerInvariant().Split(",") | ForEach-Object { $_.Trim() } | Where-Object { $_ -match '^[a-z]{2,20}$' })
+}
+function Format-BKWorkerName([string]$Name) {
+    if ([string]::IsNullOrWhiteSpace($Name)) { return $Name }
+    return $Name.Substring(0, 1).ToUpperInvariant() + $Name.Substring(1).ToLowerInvariant()
+}
+
 $SelectedWorkers = @()
 foreach ($WorkerIdProp in $RoutingConfig.workers.PSObject.Properties) {
     if ($Excluded -contains $WorkerIdProp.Name) { continue }
@@ -208,7 +227,7 @@ if ($SelectedWorkers.Count -eq 0) {
     # Repli IA reel avant d'abandonner (voir bloc Invoke-BKChloeAIRouting
     # plus haut) : comprend la demande semantiquement, dans n'importe
     # quelle langue, et choisit les vrais Workers ou repond directement.
-    $AIRouting = Invoke-BKChloeAIRouting -UserRequest $Request -RoutingConfig $RoutingConfig -Excluded $Excluded
+    $AIRouting = Invoke-BKChloeAIRouting -UserRequest $Request -RoutingConfig $RoutingConfig -Excluded $Excluded -PreferredIds $AllowedWorkers
 
     if ($null -ne $AIRouting -and $AIRouting.Workers.Count -gt 0) {
         # Des Workers reels ont ete identifies semantiquement : on
@@ -253,13 +272,65 @@ if ($SelectedWorkers.Count -eq 0) {
     }
 }
 
+# =================================================
+# OFFRE "WORKER A L'UNITE" : seuls les Workers embauches par le client peuvent etre choisis. Si le meilleur Worker pour la demande
+# n'est pas embauche, Chloe ne delegue PAS a un autre a sa place : Status WORKER_NOT_INCLUDED et un message clair (aucune mission
+# n'est lancee, donc aucun credit consomme). Si une partie seulement des Workers choisis est embauchee, Chloe travaille avec
+# ceux-la et signale les autres (NotIncludedWorkers).
+# =================================================
+$NotIncludedWorkers = @()
+if ($null -ne $AllowedWorkers) {
+    $KeptWorkers = @()
+    foreach ($Candidate in $SelectedWorkers) {
+        if ($AllowedWorkers -contains ([string]$Candidate).ToLowerInvariant()) { $KeptWorkers += $Candidate } else { $NotIncludedWorkers += $Candidate }
+    }
+    $SelectedWorkers = $KeptWorkers
+    if ($KeptWorkers.Count -eq 0 -and $NotIncludedWorkers.Count -gt 0) {
+        $Names = (@($NotIncludedWorkers | ForEach-Object { Format-BKWorkerName ([string]$_) }) -join ", ")
+        $Verb = if ($NotIncludedWorkers.Count -gt 1) { "relèvent de $Names, qui ne font pas partie de vos Workers embauchés" } else { "relève de $Names, qui ne fait pas partie de vos Workers embauchés" }
+        return [pscustomobject]@{
+            Orchestrator       = "CHLOE"
+            Request            = $Request
+            SelectedWorkers    = @()
+            NotIncludedWorkers = $NotIncludedWorkers
+            Status             = "WORKER_NOT_INCLUDED"
+            NextAction         = "HIRE_WORKER"
+            Results            = @()
+            FinalSynthesis     = "Cette demande $Verb. Embauchez-le (ou remplacez l'un de vos Workers) pour lui confier cette mission : aucune mission n'a été lancée et aucun crédit n'a été consommé."
+        }
+    }
+}
+$NotIncludedNote = ""
+if ($NotIncludedWorkers.Count -gt 0) {
+    $NotIncludedNote = "`n`nNon inclus dans votre forfait, donc non traités : " + (@($NotIncludedWorkers | ForEach-Object { Format-BKWorkerName ([string]$_) }) -join ", ") + "."
+}
+
+# =================================================
+# PLAFOND DE CREDITS : chaque Worker appele coute le niveau de la mission (Submit-Task.ps1). BK_MAX_WORKERS (pose par dashboard/server.py et
+# dashboard/quota-check.py) = solde de credits // cout du niveau : Chloe n'appelle jamais plus de Workers que le client n'a de credits pour en
+# payer (sinon une seule mission peut depasser le quota de plusieurs dizaines de credits). Les Workers retenus sont les premiers dans l'ordre
+# de selection ; les autres sont signales a la fin de la synthese. Absente ou invalide = pas de plafond (proprietaire, essai public).
+# =================================================
+$QuotaSkippedWorkers = @()
+$MaxWorkers = 0
+if ([int]::TryParse([string]$env:BK_MAX_WORKERS, [ref]$MaxWorkers) -and $MaxWorkers -ge 1 -and @($SelectedWorkers).Count -gt $MaxWorkers) {
+    $QuotaSkippedWorkers = @($SelectedWorkers | Select-Object -Skip $MaxWorkers)
+    $SelectedWorkers = @($SelectedWorkers | Select-Object -First $MaxWorkers)
+}
+$QuotaNote = ""
+if ($QuotaSkippedWorkers.Count -gt 0) {
+    $QuotaNote = "`n`nFaute de crédits suffisants ce mois-ci pour tous les Workers, non traités : " + (@($QuotaSkippedWorkers | ForEach-Object { Format-BKWorkerName ([string]$_) }) -join ", ") + ". Relancez-les séparément, avec un niveau plus rapide ou au forfait supérieur."
+}
+
 if ($PlanOnly) {
     return [pscustomobject]@{
-        Orchestrator    = "CHLOE"
-        Request         = $Request
-        SelectedWorkers = $SelectedWorkers
-        Status          = "PLANNED"
-        NextAction      = "AWAITING_VALIDATION"
+        Orchestrator       = "CHLOE"
+        Request            = $Request
+        SelectedWorkers    = $SelectedWorkers
+        NotIncludedWorkers = $NotIncludedWorkers
+        QuotaSkippedWorkers = $QuotaSkippedWorkers
+        Status             = "PLANNED"
+        NextAction         = "AWAITING_VALIDATION"
     }
 }
 
@@ -408,6 +479,7 @@ $FinalSynthesis = if ($SynthesisParts.Count -gt 0) {
 } else {
     "Aucun resultat verifie a livrer pour cette demande."
 }
+$FinalSynthesis = $FinalSynthesis + $NotIncludedNote + $QuotaNote
 
 # =================================================
 # LEARN : depose un resume de la mission dans la memoire
@@ -453,6 +525,8 @@ return [pscustomobject]@{
     Request           = $Request
     CollaborationMode = $CollaborationMode
     SelectedWorkers   = $SelectedWorkers
+    NotIncludedWorkers = $NotIncludedWorkers
+    QuotaSkippedWorkers = $QuotaSkippedWorkers
     Status            = $OverallStatus
     NextAction        = if ($OverallStatus -eq "SUCCESS") { "REVIEW_RESULT" } else { "HUMAN_REVIEW_REQUIRED" }
     Results           = $Results

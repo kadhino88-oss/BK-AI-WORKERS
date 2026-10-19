@@ -8,6 +8,7 @@ et peut soumettre une vraie tache via Submit-Task.ps1.
 Aucune dependance externe : http.server de la bibliotheque standard.
 """
 
+import calendar
 import json
 import os
 import re
@@ -24,6 +25,7 @@ from urllib.parse import urlparse, unquote, parse_qs, urlencode
 import seo_pages
 import pwa_static
 import trust_pages
+import installations as inst
 
 # ---------------------------------------------------------------------
 # Ecritures concurrentes (2026-09-28) : le serveur traite les requetes en
@@ -540,6 +542,11 @@ def submit_task(worker_hint_text, worker_id="", plan_only=False, client_id="", l
     bannieres Write-Host des scripts imbriques)."""
     import tempfile, uuid
 
+    # Offre "Worker a l'unite" : DERNIER verrou, valable pour TOUS les points d'entree (routes, WhatsApp, essai, API publique) : un Worker
+    # non embauche ne demarre jamais de mission (donc aucun credit consomme), meme si une route l'avait oublie.
+    block = worker_block(client_id, worker_id or "-")
+    if block:
+        return block
     out_file = os.path.join(tempfile.gettempdir(), f"bkaiw-dashboard-{uuid.uuid4().hex}.json")
     try:
         cmd = [
@@ -565,6 +572,18 @@ def submit_task(worker_hint_text, worker_id="", plan_only=False, client_id="", l
             child_env["BK_MISSION_LEVEL"] = lvl
         else:
             child_env.pop("BK_MISSION_LEVEL", None)
+        # Liste des Workers embauches pour Submit-Task.ps1 / Chloe (le routeur ne peut choisir qu'eux) ; absente = tous les Workers.
+        allowed_env = allowed_workers_env(client_id)
+        if allowed_env is not None:
+            child_env["BK_ALLOWED_WORKERS"] = allowed_env
+        else:
+            child_env.pop("BK_ALLOWED_WORKERS", None)
+        # Chloe appelle PLUSIEURS Workers et chacun coute le niveau de la mission : on plafonne leur nombre au solde de credits du client.
+        max_workers = chloe_worker_cap(client_id, lvl) if str(worker_id or "").lower() == "chloe" else None
+        if max_workers is not None:
+            child_env["BK_MAX_WORKERS"] = str(max_workers)
+        else:
+            child_env.pop("BK_MAX_WORKERS", None)
         proc = subprocess.run(
             cmd,
             capture_output=True, timeout=600, env=child_env
@@ -575,7 +594,7 @@ def submit_task(worker_hint_text, worker_id="", plan_only=False, client_id="", l
         if os.path.isfile(out_file):
             with open(out_file, encoding="utf-8-sig") as f:
                 result = json.load(f)
-            if not plan_only:
+            if not plan_only and not refused_for_hiring(result):
                 dispatch_webhook_if_configured(client_id, result)
             return result
 
@@ -720,9 +739,15 @@ def submit_task_async(objective, worker_id="", client_id="", plan_only=False, le
                     result = attach_pending_action(result)
                 except Exception:
                     pass
-            record.update(status="DONE",
-                          finishedAtUtc=datetime.datetime.utcnow().isoformat() + "Z",
-                          result=result)
+            refused = refused_for_hiring(result)
+            if refused:
+                # Offre "Worker a l'unite" : le Worker choisi n'est pas embauche -> erreur claire (aucune mission lancee, aucun credit)
+                record.update(status="ERROR", error=refused, errorCode="WORKER_NOT_INCLUDED",
+                              finishedAtUtc=datetime.datetime.utcnow().isoformat() + "Z")
+            else:
+                record.update(status="DONE",
+                              finishedAtUtc=datetime.datetime.utcnow().isoformat() + "Z",
+                              result=result)
         except Exception as exc:  # noqa: BLE001
             record.update(status="ERROR",
                           finishedAtUtc=datetime.datetime.utcnow().isoformat() + "Z",
@@ -811,7 +836,8 @@ def mission_levels():
 
 
 def levels_enabled(data=None):
-    """BK_LEVELS=1 / 0 force ; sinon l'interrupteur "enabled" de core/ai/LEVELS.json (inactif par defaut)."""
+    """Les niveaux sont ACTIFS (2026-10-12 : echelle de credits validee, "enabled": true dans core/ai/LEVELS.json). Interrupteur d'arret
+    du serveur : BK_LEVELS=0 revient a l'ancien comportement (un seul niveau, modele leger, 1 credit par mission) ; BK_LEVELS=1 les force."""
     env = os.environ.get("BK_LEVELS")
     if env in ("0", "1"):
         return env == "1"
@@ -820,17 +846,48 @@ def levels_enabled(data=None):
     return bool(data.get("enabled", False))
 
 
+def _client_plan(client_id):
+    """Forfait (entree de PLAN_CATALOG) d'un compte client ; {} pour le proprietaire et les identifiants qui ne sont pas des comptes clients.
+    Un compte sans fichier de facturation est a l'essai ; un fichier illisible aussi (le niveau le moins cher : on ne depense jamais plus
+    par defaut)."""
+    if not _is_customer_id(client_id):
+        return {}
+    state = _billing_state_readonly(client_id)
+    plan = PLAN_CATALOG.get((state or {}).get("planId") or "essai") or PLAN_CATALOG["essai"]
+    if _grandfathered(state):
+        plan = dict(plan, defaultLevel=GRANDFATHERED_PLANS[state["planId"]]["defaultLevel"])      # ancien abonne : mission par defaut a 1 credit
+    return plan
+
+
+def plan_level_lock(client_id):
+    """Niveau impose par le forfait du client (l'essai est verrouille sur Rapide), sinon ""."""
+    return _client_plan(client_id).get("levelLock") or ""
+
+
+def plan_default_level(client_id):
+    """Niveau PAR DEFAUT du forfait quand le client n'en choisit pas, sinon "" (= celui de core/ai/LEVELS.json). Forfaits HERITES (Starter,
+    Business) : Rapide, pour qu'une mission sans choix coute 1 credit comme avant l'activation des niveaux (aucun changement silencieux pour
+    un abonne existant) ; il peut toujours choisir un niveau superieur, au cout de ce niveau."""
+    return _client_plan(client_id).get("defaultLevel") or ""
+
+
 def normalize_level(value, client_id=""):
-    """Niveau a appliquer a une mission ("" = niveaux desactives : BK_LEVELS=0 ou fichier absent). Le client anonyme de
-    l'essai public est toujours au niveau le moins cher ; une valeur inconnue retombe sur le niveau par defaut."""
+    """Niveau a appliquer a une mission ("" = niveaux desactives : BK_LEVELS=0 ou fichier absent). Le client anonyme de l'essai public et
+    tout compte au forfait Essai sont toujours au niveau le moins cher (Rapide) ; une valeur inconnue retombe sur le niveau par defaut."""
     data, levels = mission_levels()
     if not levels or not levels_enabled(data):
         return ""
     if client_id == "CLI-TRIAL-PUBLIC":
         return data.get("trial") if data.get("trial") in levels else next(iter(levels))
+    lock = plan_level_lock(client_id)
+    if lock in levels:
+        return lock
     v = str(value or "").strip().lower()
     if v in levels:
         return v
+    plan_default = plan_default_level(client_id)
+    if plan_default in levels:
+        return plan_default
     return data.get("default") if data.get("default") in levels else next(iter(levels))
 
 
@@ -842,13 +899,33 @@ def level_credits(level):
         return 1
 
 
-def public_mission_levels():
+def public_mission_levels(client_id=""):
+    """Niveaux proposes au client (id, libelle, cout en credits) ; un forfait verrouille (l'essai) ne voit que son niveau."""
     data, levels = mission_levels()
     if not levels_enabled(data):
         return {"levels": [], "default": ""}
-    return {"default": data.get("default"),
+    lock = plan_level_lock(client_id)
+    shown = {k: v for k, v in levels.items() if not lock or k == lock} if lock in levels else levels
+    default = plan_default_level(client_id) or data.get("default")
+    if shown and default not in shown:
+        default = data.get("default") if data.get("default") in shown else next(iter(shown))
+    return {"default": default, "locked": bool(lock and lock in levels),
             "levels": [{"id": k, "label": v.get("label", k), "description": v.get("description", ""), "credits": level_credits(k)}
-                       for k, v in levels.items()]}
+                       for k, v in shown.items()]}
+
+
+AUTOMATION_LEVEL = "rapide"     # les missions recurrentes (automatisations) tournent TOUJOURS au niveau le moins cher : 1 credit
+
+
+def automation_level(client_id=""):
+    """Niveau des automatisations planifiees : Rapide (1 credit), pour que les quotas restent parlants. "" quand les niveaux sont
+    desactives (BK_LEVELS=0 : ancien comportement, modele leger, 1 credit)."""
+    data, levels = mission_levels()
+    if not levels or not levels_enabled(data):
+        return ""
+    if AUTOMATION_LEVEL in levels:
+        return AUTOMATION_LEVEL
+    return min(levels, key=lambda k: level_credits(k))
 
 
 
@@ -1262,7 +1339,22 @@ def run_automation_bridge(action, **kwargs):
             pass
 
 
+STRIPE_BRIDGE_SLOTS = threading.BoundedSemaphore(3)     # appels PowerShell simultanes vers Stripe : une salve de requetes ne doit pas saturer la machine
+STRIPE_BRIDGE_WAIT_S = 20
+
+
 def run_stripe_bridge(action, **kwargs):
+    """Appelle Stripe-Bridge.ps1 sous un plafond d'appels simultanes (STRIPE_BRIDGE_SLOTS) : chaque appel lance un processus PowerShell de plusieurs
+    secondes sur une petite machine ; au-dela, l'appel attend STRIPE_BRIDGE_WAIT_S secondes puis renvoie STRIPE_BRIDGE_BUSY (le client reessaie)."""
+    if not STRIPE_BRIDGE_SLOTS.acquire(timeout=STRIPE_BRIDGE_WAIT_S):
+        return {"Status": "ERROR", "Detail": "STRIPE_BRIDGE_BUSY"}
+    try:
+        return _run_stripe_bridge(action, **kwargs)
+    finally:
+        STRIPE_BRIDGE_SLOTS.release()
+
+
+def _run_stripe_bridge(action, **kwargs):
     """Appelle Stripe-Bridge.ps1 (statut / creation de Checkout Session /
     confirmation apres paiement). Meme convention que run_automation_bridge :
     resultat ecrit dans un fichier temporaire dedie. Aucune donnee de
@@ -1292,6 +1384,16 @@ def run_stripe_bridge(action, **kwargs):
             cmd += ["-Interval", kwargs["interval"]]
         if kwargs.get("client_id"):
             cmd += ["-ClientId", kwargs["client_id"]]
+        if kwargs.get("customer_id"):
+            cmd += ["-CustomerId", kwargs["customer_id"]]      # client Stripe deja connu du compte (voir Get-StripeCheckoutFields)
+        if kwargs.get("amount_cents"):
+            cmd += ["-AmountCents", str(int(kwargs["amount_cents"]))]
+        if kwargs.get("plan_name"):
+            cmd += ["-PlanName", kwargs["plan_name"]]
+        if kwargs.get("at_period_end"):
+            cmd += ["-AtPeriodEnd"]          # resilier l'abonnement a la fin de la periode deja payee (et non tout de suite)
+        if kwargs.get("prorate"):
+            cmd += ["-Prorate"]              # resiliation immediate avec credit du temps deja paye (remplacement par un forfait superieur)
 
         proc = subprocess.run(cmd, capture_output=True, timeout=30)
         stderr = (proc.stderr or b"").decode("utf-8", errors="replace")
@@ -1484,6 +1586,7 @@ def _summarize_mission_result(result):
                     "status": r.get("Status"),
                     "answer": (r.get("Result") or {}).get("Answer"),
                     "files": (r.get("Result") or {}).get("Files"),
+                    "costCapped": bool((r.get("Result") or {}).get("CostCapped")),
                 }
                 for r in result.get("Results", []) if isinstance(r, dict)
             ],
@@ -1494,6 +1597,8 @@ def _summarize_mission_result(result):
         "status": result.get("Status"),
         "answer": (result.get("Result") or {}).get("Answer"),
         "files": (result.get("Result") or {}).get("Files"),
+        # True = mission arretee a son plafond de cout par niveau : la reponse est partielle (la note de fin le dit).
+        "costCapped": bool((result.get("Result") or {}).get("CostCapped")),
     }
 
 
@@ -1654,27 +1759,29 @@ ESTIMATED_MINUTES_SAVED_PER_MISSION = 12
 # Tarifs publics indicatifs (USD par million de tokens : entree, sortie).
 # Tarifs API Anthropic de premiere partie + OpenAI (indicatifs, 2026).
 # Un modele absent de cette table n'a PAS de cout affiche (jamais devine).
-# La table couvre desormais les modeles "forts" (Fable/Opus/Sonnet), pas
-# seulement Haiku : basculer un Worker sur un modele fort donne ainsi un
-# cout mesure et non "sans prix".
-MODEL_PRICING_USD_PER_MTOK = {
-    # Anthropic — famille Claude
-    "claude-fable-5-1": (10.00, 50.00),
-    "claude-fable-5": (10.00, 50.00),
-    "claude-opus-5-5": (4.00, 20.00),
-    "claude-opus-5": (5.00, 25.00),
-    "claude-opus-4-8": (5.00, 25.00),
-    "claude-opus-4-7": (5.00, 25.00),
-    "claude-opus-4-6": (5.00, 25.00),
-    "claude-sonnet-5-5": (2.00, 10.00),
-    "claude-sonnet-5": (2.00, 10.00),
-    "claude-sonnet-4-6": (3.00, 15.00),
-    "claude-haiku-5-5": (0.10, 0.50),
-    "claude-haiku-4-5": (1.00, 5.00),
-    # OpenAI
-    "gpt-4o": (2.50, 10.00),
-    "gpt-4o-mini": (0.15, 0.60),
-}
+# La table couvre les modeles "forts" (Fable/Opus/Sonnet), pas seulement
+# Haiku : basculer un Worker sur un modele fort donne ainsi un cout mesure
+# et non "sans prix".
+# UNE SEULE source (2026-10-12) : core/ai/AI-PRICING.json, lue aussi par
+# l'adaptateur Anthropic (core/ai/adapters/Mission-Cost.ps1) pour le plafond
+# de cout par mission, avec les prix du cache, des recherches web et le taux
+# CHF. Pour changer un prix, modifier ce fichier, pas ce code.
+AI_PRICING_PATH = os.path.join(ROOT, "core", "ai", "AI-PRICING.json")
+
+
+def pricing_table_from(data):
+    """{modele: (entree, sortie)} (USD par million de tokens) depuis le contenu de AI-PRICING.json ; {} si illisible."""
+    table = {}
+    models = (data or {}).get("models") if isinstance(data, dict) else None
+    for key, entry in (models if isinstance(models, dict) else {}).items():
+        try:
+            table[str(key).lower()] = (float(entry["input"]), float(entry["output"]))
+        except (KeyError, TypeError, ValueError):
+            continue
+    return table
+
+
+MODEL_PRICING_USD_PER_MTOK = pricing_table_from(load_json(AI_PRICING_PATH, {}))
 
 
 def price_for_model(model_id):
@@ -1711,7 +1818,7 @@ def configured_model_for(provider):
 def get_ai_cost_summary(client_id=DASHBOARD_CLIENT_ID):
     """Tokens reellement consommes (releves dans les reponses des
     fournisseurs) et cout ESTIME au tarif public — pas une facture."""
-    input_tokens = output_tokens = missions = 0
+    input_tokens = output_tokens = missions = capped = 0
     cost_usd = 0.0
     unpriced = 0
     if os.path.isdir(TASKS_DIR):
@@ -1729,6 +1836,14 @@ def get_ai_cost_summary(client_id=DASHBOARD_CLIENT_ID):
             input_tokens += i
             output_tokens += o
             missions += 1
+            if res.get("CostCapped") or usage.get("cost_capped"):
+                capped += 1
+            # Cout releve par l'adaptateur (tous les appels de la mission : cache et recherches web compris) : prioritaire sur
+            # l'estimation jetons x tarif, qui ignore le cache et les recherches web.
+            measured = usage.get("estimated_cost_usd")
+            if isinstance(measured, (int, float)) and not isinstance(measured, bool) and measured >= 0:
+                cost_usd += float(measured)
+                continue
             model_used = res.get("Model") or res.get("model")
             if str(model_used or "").strip().upper() in ("", "NONE"):
                 model_used = configured_model_for(res.get("Provider"))
@@ -1744,6 +1859,7 @@ def get_ai_cost_summary(client_id=DASHBOARD_CLIENT_ID):
         "estimatedCostUsd": round(cost_usd, 4),
         "avgCostUsdPerCall": round(cost_usd / missions, 4) if missions else 0,
         "callsWithoutPrice": unpriced,
+        "costCappedMissions": capped,
         "note": "Estimation au tarif public du fournisseur (tokens reels releves dans les reponses) — pas une facture.",
     }
 
@@ -2149,6 +2265,8 @@ def export_account_data(client_id):
         "companyProfile": get_company_profile(client_id),
         "billing": _billing_load(client_id),
         "missions": get_client_missions(client_id, limit=1000),
+        "installations": INSTALLS.list(client_id),
+        "hireRequests": [r for r in _read_hire_requests() if r.get("clientId") == client_id],
         "automations": all_auto,
         "connectedTools": providers,
         "whatsappLinked": bool(wa),
@@ -2189,6 +2307,13 @@ def _purge_client_mission_artifacts(client_id, task_ids):
                 pass
     shutil.rmtree(os.path.join(ROOT, "runtime", "threads", client_id), ignore_errors=True)   # memoire de conversation v2
     shutil.rmtree(os.path.join(ROOT, "runtime", "client-memory", client_id), ignore_errors=True)   # notes durables
+    INSTALLS.delete_client(client_id)                                                              # installations des Workers (fiches de connaissances)
+    try:                                                                                           # demandes d'embauche du client
+        rows = _read_hire_requests()
+        if any(r.get("clientId") == client_id for r in rows):
+            _write_hire_requests([r for r in rows if r.get("clientId") != client_id])
+    except Exception:
+        pass
     try:
         for name in os.listdir(ASYNC_JOBS_DIR):
             if not name.endswith(".json"):
@@ -2212,7 +2337,10 @@ def delete_account(client_id, password):
     acc = next((a for a in accounts if a.get("clientId") == client_id), None)
     if not acc or not _verify_password(password or "", acc.get("passwordHash", "")):
         return "INVALID_PASSWORD"
-    if (_billing_load(client_id) or {}).get("stripeSubscriptionId"):
+    billing = _billing_load(client_id) or {}
+    if billing.get("stripeSubscriptionId") and not billing.get("cancelAtPeriodEnd"):
+        # Un abonnement dont la resiliation est deja enregistree (cancelAtPeriodEnd : Stripe ne le renouvelle plus) ne bloque pas la suppression du compte
+        # (droit a l'effacement) : seul un abonnement encore renouvele doit d'abord etre resilie. Le temps deja paye est alors perdu, l'interface le dit.
         return "ACTIVE_SUBSCRIPTION"
     _save_accounts([a for a in accounts if a.get("clientId") != client_id])
     account_clear_all_sessions(client_id)
@@ -2472,6 +2600,8 @@ def get_admin_overview():
             "automationsActive": analytics["automationsActive"],
             "planId": billing["planId"],
             "planName": billing["planName"],
+            "paidUntilUtc": None if c["isOwner"] else billing["paidUntilUtc"],        # forfait sur facture ou resilie : fin de la periode payee (a reconduire)
+            "cancelAtPeriodEnd": False if c["isOwner"] else billing["cancelAtPeriodEnd"],
             "creditsUsed": billing["creditsUsed"],
             # Le proprietaire n'est jamais soumis a un quota (voir
             # subscription_blocks_mission, bypass CLI-DASHBOARD) : le
@@ -2479,6 +2609,8 @@ def get_admin_overview():
             # l'afficher ici induirait Kader en erreur sur sa propre
             # limite reelle (aucune) — on le masque a la source.
             "creditsTotal": None if c["isOwner"] else billing["creditsTotal"],
+            "workerSlots": None if c["isOwner"] else billing["workerSlots"],
+            "hiredWorkers": [] if c["isOwner"] else billing["hiredWorkers"],
         })
 
     rows.sort(key=lambda r: r["totalMissions"], reverse=True)
@@ -2489,6 +2621,10 @@ def get_admin_overview():
         "totalMissionsAllClients": total_missions,
         "totalAutomationsActiveAllClients": total_automations_active,
         "clients": rows,
+        # Offre "Worker a l'unite" : demandes d'embauche en attente (a traiter avec POST /api/admin/grant-workers une fois la facture reglee).
+        "hireRequests": [dict(r, workerName=worker_display_name(r.get("workerId")),
+                              clientLabel=next((c["label"] for c in clients if c["clientId"] == r.get("clientId")), r.get("clientId")))
+                         for r in open_hire_requests()],
     }
 
 
@@ -2518,33 +2654,335 @@ BILLING_DATA_LEGACY_PATH = os.path.join(BILLING_DATA_DIR, "subscription.json")
 def _billing_path(client_id):
     return os.path.join(BILLING_DATA_DIR, f"{client_id}.json")
 
-# Quota de missions inclus par cycle, par plan (1 mission traitee = 1
-# credit consomme). Purement indicatif tant qu'aucun PSP n'est branche.
+# ---------------------------------------------------------------------
+# GRILLE DES FORFAITS (validee par le proprietaire le 2026-10-12 d'apres docs/ETUDE-MARCHE-PRIX-2026-10.md, branche ws/market-study).
+#
+# MODELE DE QUOTA (consigne explicite du proprietaire) : chaque forfait est un quota MENSUEL FIXE de credits, comme les limites d'usage de
+# Claude. Jamais de missions illimitees, jamais de paquet de credits, de paiement a l'usage ni de depassement facture. Quota atteint -> le
+# client passe au forfait SUIVANT (champ nextPlan), qui a son propre plafond plus eleve ; Scale mene a Enterprise (sur devis), qui a AUSSI
+# un plafond contractuel (jamais "illimite"). Cout d'une mission en credits : core/ai/LEVELS.json (Rapide 1 / Equilibre 6 / Approfondi 12).
+# Les fenetres hebdomadaire et de session (comme les 5 heures et la semaine de Claude) ne sont PAS construites : decision ouverte.
+#
+# Champs d'un forfait :
+#   name, credits (par mois), priceChf {month, year} (annuel = 10 mois), nextPlan (voie de montee en gamme) ;
+#   legacy      : forfait HERITE (Starter, Business) : plus vendu, il reste pour les abonnes existants avec les memes credits et le meme
+#                 prix qu'avant ; masque de la page Tarifs et du choix de forfait ;
+#   onQuote     : sur devis, jamais de bascule en libre-service (Enterprise) ;
+#   contractual : plafond fixe par le proprietaire pour CE client (billing["contractCredits"]), sinon la valeur "credits" ci-dessous ;
+#   renews      : False = pas de renouvellement mensuel (l'essai : 15 credits, une seule fois) ;
+#   defaultLevel : niveau de mission par defaut quand le client n'en choisit pas (heritage : Rapide, 1 credit comme avant les niveaux) ;
+#   trialDays, phoneMinutes, levelLock : l'essai dure 3 jours (affichage), n'inclut AUCUNE minute de telephone et reste au niveau Rapide ;
+#   workerSlots / byInvoice : offre "Worker a l'unite" (voir plus bas) ; byInvoice = tant que le paiement en ligne n'est pas configure, le
+#                 forfait est active par le proprietaire apres facture reglee -> jamais de bascule libre-service gratuite.
+# L'ordre du dictionnaire est l'ordre d'affichage (forfaits vendus d'abord, heritage a la fin).
+CONTACT_EMAIL = trust_pages.CONTACT_EMAIL     # adresse deja publiee (mentions legales) : sert pour Enterprise et le plafond contractuel
+ENTERPRISE_DEFAULT_CREDITS = 10000      # plafond mensuel par defaut d'Enterprise, a fixer par contrat pour chaque client (voir set_client_plan)
+ENTERPRISE_MAX_CREDITS = 1000000        # borne de securite d'un plafond contractuel saisi par le proprietaire
 PLAN_CATALOG = {
-    "essai":      {"name": "Essai",      "credits": 15},
-    "starter":    {"name": "Starter",    "credits": 150},
-    "business":   {"name": "Business",   "credits": 600},
-    "pro":        {"name": "Pro",        "credits": 1500},
-    "scale":      {"name": "Scale",      "credits": 4000},
-    "enterprise": {"name": "Enterprise", "credits": None},  # illimite, sur devis
+    "essai":      {"name": "Essai", "credits": 15, "nextPlan": "solo", "renews": False, "trialDays": 3, "phoneMinutes": 0, "levelLock": "rapide"},
+    # Offre "Worker a l'unite" (2026-10-12) : Solo (1 Worker au choix) et Trio (3 Workers au choix + Chloe) n'ouvrent que les Workers
+    # EMBAUCHES (workerSlots), avec leur propre pot de credits. Tous les autres forfaits gardent TOUS les Workers.
+    "solo":       {"name": "Solo", "credits": 250, "workerSlots": inst.PLAN_WORKER_SLOTS["solo"], "byInvoice": True, "nextPlan": "trio",
+                   "priceChf": {"month": 29, "year": 290}},
+    "trio":       {"name": "Trio", "credits": 500, "workerSlots": inst.PLAN_WORKER_SLOTS["trio"], "byInvoice": True, "nextPlan": "equipe",
+                   "priceChf": {"month": 59, "year": 590}},
+    "equipe":     {"name": "Équipe", "credits": 900, "byInvoice": True, "nextPlan": "pro", "priceChf": {"month": 99, "year": 990}},
+    "pro":        {"name": "Pro", "credits": 1250, "nextPlan": "scale", "priceChf": {"month": 139, "year": 1390}},
+    "scale":      {"name": "Scale", "credits": 4000, "nextPlan": "enterprise", "priceChf": {"month": 449, "year": 4490}},
+    "enterprise": {"name": "Enterprise", "credits": ENTERPRISE_DEFAULT_CREDITS, "contractual": True, "onQuote": True, "nextPlan": None},
+    # Forfaits HERITES : memes credits et memes prix qu'avant (aucun changement silencieux pour un abonne existant).
+    "starter":    {"name": "Starter", "credits": 150, "legacy": True, "defaultLevel": "rapide", "nextPlan": "equipe", "priceChf": {"month": 39, "year": 390}},
+    "business":   {"name": "Business", "credits": 600, "legacy": True, "defaultLevel": "rapide", "nextPlan": "pro", "priceChf": {"month": 99, "year": 990}},
 }
 
-# Plans qui passent par une vraie Checkout Session Stripe quand Stripe
-# est configure (Essai = gratuit, Enterprise = sur devis -> jamais de
-# checkout self-service pour ces deux-la).
-PAID_PLANS_WITH_CHECKOUT = {"starter", "business", "pro", "scale"}
+# Forfaits qui passent par une vraie Checkout Session Stripe quand Stripe est configure (Essai = gratuit, Enterprise = sur devis, forfaits
+# heritages = plus vendus -> jamais de checkout pour ceux-la). Quand Stripe n'est PAS configure (ou injoignable), AUCUN de ces cinq forfaits ne
+# bascule gratuitement pour un client : le proprietaire les active apres facture reglee (grant_workers, set_client_plan ; revue du 2026-10-13, Pro et
+# Scale restaient une simulation gratuite). Seul le compte du proprietaire peut simuler un changement.
+PAID_PLANS_WITH_CHECKOUT = {"solo", "trio", "equipe", "pro", "scale"}
+INVOICE_ONLY_PLANS = {pid for pid, p in PLAN_CATALOG.items() if p.get("byInvoice")}   # solo, trio, equipe : sans Price ID Stripe, le montant du catalogue est envoye
+STRIPE_AMOUNT_MIN_CENTS = 100             # garde-fou sur le montant envoye a Stripe : de CHF 1 ...
+STRIPE_AMOUNT_MAX_CENTS = 10000000        # ... a CHF 100'000
+
+# ---- PERIODE PAYEE ET ANCIENS ABONNES (2026-10-13, revue de la branche ws/hire-final)
+# Un forfait active SUR FACTURE (grant_workers, set_client_plan) n'a ni webhook ni renouvellement automatique : il porte une date de fin de
+# periode payee (paidUntilUtc = activation + les mois factures, 1 par defaut) et retombe a l'Essai une fois cette date passee (plus
+# INVOICE_GRACE_DAYS jours de grace), sauf si le proprietaire le reconduit. Un abonnement Stripe resilie en fin de periode (cancelAtPeriodEnd)
+# garde son forfait jusqu'a la fin de la periode DEJA payee puis retombe a l'Essai de la meme facon, sans grace. Un forfait sans date de fin
+# (abonnement Stripe en cours, ou etat ecrit avant cette version) ne se termine jamais tout seul.
+INVOICE_GRACE_DAYS = 5
+INVOICE_MONTHS_MAX = 24
+# Grille de prix du 2026-10-12 : tout forfait activee depuis porte gridVersion. Un abonne Pro ou Scale dont l'etat n'en a pas date d'AVANT :
+# il garde ses credits d'origine et le niveau Rapide par defaut (1 credit par mission) tant qu'il ne change pas de forfait (CGV : les
+# conditions applicables sont celles du moment de la souscription ; voir docs/PRICING.md, « Abonnes existants »).
+GRID_VERSION = 2
+GRANDFATHERED_PLANS = {"pro": {"credits": 1500, "defaultLevel": "rapide"}, "scale": {"credits": 4000, "defaultLevel": "rapide"}}
+
+
+def plan_price_cents(plan_id, interval="month"):
+    """Montant d'une Checkout Session Stripe, en centimes de franc suisse : prix du catalogue (annuel = 10 mois). None si le forfait n'a pas
+    de prix (essai, Enterprise sur devis) ou si l'intervalle est inconnu : on n'invente jamais un montant."""
+    plan = PLAN_CATALOG.get(plan_id) or {}
+    price = (plan.get("priceChf") or {}).get(interval if interval in ("month", "year") else "")
+    if isinstance(price, bool) or not isinstance(price, int) or price <= 0:
+        return None
+    cents = price * 100
+    return cents if STRIPE_AMOUNT_MIN_CENTS <= cents <= STRIPE_AMOUNT_MAX_CENTS else None
+
+
+def _payment_evidence(state):
+    """True quand l'etat de facturation prouve qu'un paiement a eu lieu : un abonnement Stripe, ou une ligne d'historique « paiement Stripe confirme »
+    (ancienne route) / « activé par BK Entreprise » (facture reglee). Avant le 2026-10-13, la route de choix de forfait SIMULAIT Pro et Scale sans aucun
+    paiement quand Stripe n'etait pas configure (« simulation, aucun paiement reel ») : ces etats-la ne prouvent rien."""
+    if not isinstance(state, dict):
+        return False
+    if state.get("stripeSubscriptionId"):
+        return True
+    for h in state.get("history") or []:
+        event = str((h or {}).get("event") or "") if isinstance(h, dict) else ""
+        if "paiement Stripe confirme" in event or "activé par BK Entreprise" in event:
+            return True
+    return False
+
+
+def _grandfathered(state, plan_id=None):
+    """True pour un abonne Pro ou Scale dont l'etat de facturation date d'AVANT la grille du 2026-10-12 (pas de gridVersion) ET qui a vraiment paye
+    (_payment_evidence) : il garde les credits et le niveau par defaut d'origine (GRANDFATHERED_PLANS). Jamais pour un etat vide (compte sans
+    fichier), pour un autre forfait, ni pour une ancienne simulation gratuite (voir _stamp_unproven_legacy_plan)."""
+    if not isinstance(state, dict) or not state:
+        return False
+    return (plan_id or state.get("planId")) in GRANDFATHERED_PLANS and not state.get("gridVersion") and _payment_evidence(state)
+
+
+def plan_monthly_credits(plan_id, state=None):
+    """Credits inclus PAR MOIS par ce forfait pour CE client : toujours un entier fini. Il n'existe pas de forfait sans plafond : un
+    plafond absent, negatif ou illisible vaut 0 (la mission est alors refusee), jamais "illimite". Enterprise : plafond contractuel fixe
+    par le proprietaire (billing["contractCredits"]), sinon ENTERPRISE_DEFAULT_CREDITS."""
+    plan = PLAN_CATALOG.get(plan_id) or PLAN_CATALOG["essai"]
+    credits = plan.get("credits")
+    if _grandfathered(state, plan_id):
+        credits = GRANDFATHERED_PLANS[plan_id]["credits"]
+    if plan.get("contractual"):
+        custom = (state or {}).get("contractCredits")
+        if isinstance(custom, int) and not isinstance(custom, bool) and 1 <= custom <= ENTERPRISE_MAX_CREDITS:
+            credits = custom
+    if isinstance(credits, bool) or not isinstance(credits, int) or credits < 0:
+        return 0
+    return credits
+
+
+# ---- cycle mensuel : le quota se renouvelle chaque mois a la date d'activation du forfait (meme jour du mois, ramene au dernier jour
+# du mois pour les mois courts). Avant le 2026-10-12 la fenetre ne se renouvelait jamais : le compteur courait depuis l'activation.
+def _utcnow():
+    return datetime.datetime.utcnow()
+
+
+def _parse_utc(text):
+    """Date UTC naive d'un texte ISO 8601 (« 2026-10-12T10:11:12.123456Z ») ; None si illisible. Les fractions de seconde sont ignorees."""
+    m = re.match(r"^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2}):(\d{2})", str(text or ""))
+    if not m:
+        return None
+    try:
+        return datetime.datetime(*(int(g) for g in m.groups()))
+    except ValueError:
+        return None
+
+
+def _add_months(dt, months):
+    total = dt.year * 12 + (dt.month - 1) + months
+    year, month = divmod(total, 12)
+    month += 1
+    return dt.replace(year=year, month=month, day=min(dt.day, calendar.monthrange(year, month)[1]))
+
+
+def billing_cycle(anchor_text, renews=True, now=None):
+    """(debut de la fenetre en cours en texte ISO, date de renouvellement en texte ISO ou None). Fenetre mensuelle ancree sur
+    cycleStartUtc ; un forfait sans renouvellement (l'essai) garde sa fenetre unique ; une ancre illisible est renvoyee telle quelle."""
+    anchor = _parse_utc(anchor_text)
+    now = now or _utcnow()
+    if anchor is None or not renews or now < anchor:
+        return anchor_text, None
+    n = (now.year - anchor.year) * 12 + (now.month - anchor.month)
+    if _add_months(anchor, n) > now:
+        n -= 1
+    n = max(n, 0)
+    start = anchor_text if n == 0 else _add_months(anchor, n).isoformat() + "Z"
+    return start, _add_months(anchor, n + 1).isoformat() + "Z"
+
+
+_MOIS_FR = ("janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre")
+
+
+def _fr_date(text):
+    """« 2026-11-12T10:11:12Z » -> « 12 novembre 2026 » (sans dependre de la locale du serveur)."""
+    dt = _parse_utc(text)
+    if dt is None:
+        return ""
+    return f"{'1er' if dt.day == 1 else dt.day} {_MOIS_FR[dt.month - 1]} {dt.year}"
+
+
+def _fr_int(n):
+    return f"{int(n):,}".replace(",", " ")
+
+
+def _fr_price(plan):
+    price = (plan.get("priceChf") or {}).get("month")
+    return f"CHF {price} par mois" if price else ""
+
+
+def next_plan_info(plan_id):
+    """Forfait immediatement superieur (voie de montee en gamme : Solo, Trio, Equipe, Pro, Scale, Enterprise sur devis), avec ses credits
+    et son prix ; None pour le dernier. selfService = le client peut le prendre seul (POST /api/billing/plan) ; sinon : nous ecrire."""
+    nxt_id = (PLAN_CATALOG.get(plan_id) or {}).get("nextPlan")
+    nxt = PLAN_CATALOG.get(nxt_id) if nxt_id else None
+    if not nxt:
+        return None
+    return {"planId": nxt_id, "name": nxt["name"], "credits": None if nxt.get("contractual") else nxt["credits"],
+            "priceChf": nxt.get("priceChf"), "onQuote": bool(nxt.get("onQuote")), "selfService": not nxt.get("onQuote") and not nxt.get("legacy"),
+            "workerSlots": nxt.get("workerSlots")}
+
+
+def upgrade_payload(billing):
+    """Ce que l'interface affiche quand le quota est atteint (ou presque) : forfait actuel, credits inclus, date de renouvellement et forfait
+    suivant (credits, prix). None si le forfait est inconnu."""
+    pid = billing.get("planId")
+    plan = PLAN_CATALOG.get(pid)
+    if not plan:
+        return None
+    return {"planId": pid, "planName": plan["name"], "creditsIncluded": billing.get("creditsIncluded"),
+            "renews": bool(billing.get("renewsAtUtc")), "renewsAtUtc": billing.get("renewsAtUtc"), "next": next_plan_info(pid),
+            "interval": billing.get("billingInterval") or "month", "contactEmail": CONTACT_EMAIL}
+
+
+def _upgrade_sentence(billing):
+    """Fin de phrase francaise qui nomme le forfait suivant (credits + prix), « passez au forfait Trio (500 crédits par mois, CHF 59 par mois) » ;
+    « écrivez-nous… » pour Enterprise ; chaine vide si le forfait est inconnu."""
+    up = upgrade_payload(billing)
+    if not up:
+        return ""
+    nxt = up["next"]
+    if nxt is None:
+        return f"écrivez-nous à {CONTACT_EMAIL} pour relever le plafond de votre contrat"
+    if nxt["onQuote"]:
+        return (f"passez à Enterprise, sur devis, avec un plafond de crédits fixé par contrat : écrivez-nous à {CONTACT_EMAIL}")
+    return f"passez au forfait {nxt['name']} ({_fr_int(nxt['credits'])} crédits par mois, {_fr_price(PLAN_CATALOG[nxt['planId']])})"
+
+
+def quota_reached_message(billing):
+    """Message affiche quand le quota est epuise : combien de credits le forfait inclut, quand il se renouvelle, quel est le forfait suivant."""
+    up = upgrade_payload(billing)
+    if not up:
+        return "Votre quota est épuisé. Souscrivez un abonnement pour continuer à confier des missions."
+    plan = PLAN_CATALOG[up["planId"]]
+    included = _fr_int(up["creditsIncluded"] or 0)
+    if billing.get("cancelAtPeriodEnd"):
+        base = (f"Votre quota est épuisé : le forfait {plan['name']} inclut {included} crédits par mois, mais votre résiliation y met fin le "
+                f"{_fr_date(billing.get('paidUntilUtc'))}, sans renouvellement.")
+    elif plan.get("renews", True) and billing.get("awaitingInvoice") and billing.get("paidUntilUtc"):
+        # forfait active sur facture, dernier mois paye : rien ne se renouvelle tant que la facture suivante n'est pas reglee
+        base = (f"Votre quota est épuisé : le forfait {plan['name']} inclut {included} crédits par mois, valable jusqu'au "
+                f"{_fr_date(billing.get('paidUntilUtc'))} ; il se reconduit à la réception du règlement de la facture suivante.")
+    elif plan.get("renews", True):
+        when = _fr_date(up["renewsAtUtc"])
+        base = (f"Votre quota est épuisé : le forfait {plan['name']} inclut {included} crédits par mois"
+                + (f", renouvelés le {when}." if when else ", renouvelés chaque mois."))
+    else:
+        base = f"Votre quota est épuisé : l'essai inclut {included} crédits."
+    sentence = _upgrade_sentence(billing)
+    return base + (f" Pour continuer sans attendre, {sentence}." if sentence else "")
 
 
 def _billing_default_state():
-    now = datetime.datetime.utcnow().isoformat() + "Z"
+    now = _utcnow().isoformat() + "Z"
     return {
         "planId": "essai",
+        "gridVersion": GRID_VERSION,
         "cycleStartUtc": now,
         "extraCredits": 0,
         "history": [
             {"dateUtc": now, "event": "Compte cree — plan Essai (3 jours, gratuit, sans carte)."},
         ],
     }
+
+
+UNPROVEN_PLAN_DAYS = 30
+
+
+def _unproven_legacy_plan(state, client_id):
+    """Pro ou Scale ecrit avant la grille (sans gridVersion), pour un vrai compte client, SANS preuve de paiement : une ancienne simulation gratuite."""
+    return (_is_customer_id(client_id) and isinstance(state, dict) and state.get("planId") in GRANDFATHERED_PLANS and not state.get("gridVersion")
+            and not _payment_evidence(state))
+
+
+def _stamp_unproven_legacy_plan(state, now_dt=None):
+    """Migration unique (a la premiere lecture) : un Pro / Scale sans preuve de paiement n'est PAS un ancien abonne a vie. Il passe a la grille actuelle
+    (credits et niveau par defaut du catalogue) et garde son forfait UNIQUEMENT pendant UNPROVEN_PLAN_DAYS jours (paidUntilUtc), le temps que le
+    proprietaire verifie le reglement et le reconduise (set-plan) ; ensuite il retombe a l'Essai comme tout forfait sur facture non reconduit."""
+    now_dt = now_dt or _utcnow()
+    plan = PLAN_CATALOG[state["planId"]]
+    state["gridVersion"] = GRID_VERSION
+    state["paidUntilUtc"] = (now_dt + datetime.timedelta(days=UNPROVEN_PLAN_DAYS)).isoformat() + "Z"
+    state.setdefault("history", []).append({
+        "dateUtc": now_dt.isoformat() + "Z",
+        "event": (f"Forfait {plan['name']} sans paiement vérifiable (enregistré par simulation avant l'ouverture des paiements) : actif jusqu'au "
+                  f"{_fr_date(state['paidUntilUtc'])}, puis retour à l'Essai si BK Entreprise ne reçoit pas le règlement."),
+    })
+
+
+def _lapse_due(state, now=None):
+    """True quand la periode payee de ce forfait est terminee (voir le bloc PERIODE PAYEE) : le forfait retombe alors a l'Essai. Faux pour l'Essai,
+    pour un forfait sans date de fin et tant que la date n'est pas passee (plus la grace d'un forfait sur facture non resilie)."""
+    if not isinstance(state, dict) or state.get("planId", "essai") == "essai":
+        return False
+    until = _parse_utc(state.get("paidUntilUtc"))
+    if until is None:
+        return False
+    grace = 0 if (state.get("stripeSubscriptionId") or state.get("cancelAtPeriodEnd")) else INVOICE_GRACE_DAYS
+    return (now or _utcnow()) > until + datetime.timedelta(days=grace)
+
+
+def _apply_lapse(state, now=None, reason=None):
+    """Fin de periode payee : retour a l'Essai. La fenetre mensuelle en cours est conservee (l'essai n'est pas renouvelable : s'abonner puis
+    laisser expirer ne redonne pas 15 credits neufs), les Workers embauches et le plafond contractuel tombent avec le forfait."""
+    now = now or _utcnow()
+    old_plan_id = state.get("planId") or "essai"
+    old_plan = PLAN_CATALOG.get(old_plan_id, PLAN_CATALOG["essai"])
+    until = state.get("paidUntilUtc")
+    # La fenetre gardee est la DERNIERE fenetre payee (celle qui contient la veille de la fin de periode), pas celle qui commence a l'echeance :
+    # ses missions comptent sur les 15 credits de l'Essai, qui n'est pas renouvelable.
+    last_paid_day = (_parse_utc(until) or now) - datetime.timedelta(seconds=1)
+    state["cycleStartUtc"] = billing_cycle(state.get("cycleStartUtc", now.isoformat() + "Z"), old_plan.get("renews", True), min(now, last_paid_day))[0]
+    cancelled = bool(state.get("cancelAtPeriodEnd"))
+    # Ce que le forfait portait (Workers embauches, plafond contractuel) est retenu : le proprietaire qui reconduit apres un retard doit retrouver
+    # la liste et le plafond du client sans les reconstituer (lapsedFrom, relu par set_client_plan ; efface a la prochaine activation).
+    kept_workers = inst.hired_workers(state)
+    kept_cap = state.get("contractCredits") if isinstance(state.get("contractCredits"), int) and not isinstance(state.get("contractCredits"), bool) else None
+    state["planId"] = "essai"
+    state["extraCredits"] = 0
+    for key in ("contractCredits", "paidUntilUtc", "cancelAtPeriodEnd", "billingInterval", "paymentIssue"):
+        state.pop(key, None)
+    state["stripeSubscriptionId"] = None
+    state["lapsedFrom"] = {"planId": old_plan_id, "hiredWorkers": kept_workers,
+                           "contractCredits": kept_cap, "atUtc": now.isoformat() + "Z"}
+    inst.adapt_hired_to_plan(state)
+    carried = ((f" Workers embauchés : {', '.join(kept_workers)}." if kept_workers else "")
+               + (f" Plafond contractuel : {_fr_int(kept_cap)} crédits par mois." if kept_cap else ""))
+    state.setdefault("history", []).append({
+        "dateUtc": now.isoformat() + "Z",
+        "event": (f"Abonnement {old_plan['name']} arrêté chez Stripe ({reason}) : retour au plan Essai." + carried if reason else
+                  f"Forfait {old_plan['name']} arrivé à échéance le {_fr_date(until)} : retour au plan Essai (résiliation arrivée à son terme)." + carried if cancelled else
+                  f"Forfait {old_plan['name']} arrivé à échéance le {_fr_date(until)} : retour au plan Essai. Pour le reprendre, réglez la facture suivante "
+                  f"et demandez sa réactivation à BK Entreprise." + carried),
+    })
+
+
+def _lapsed_view(state):
+    """Copie de l'etat avec la fin de periode appliquee, sans rien ecrire : pour les controles d'acces qui lisent le fichier sans le verrouiller."""
+    if not _lapse_due(state):
+        return state
+    view = json.loads(json.dumps(state))
+    _apply_lapse(view)
+    return view
 
 
 @_state_locked
@@ -2558,6 +2996,16 @@ def _billing_load(client_id=DASHBOARD_CLIENT_ID):
     if not state or "planId" not in state:
         state = _billing_default_state()
         _billing_save(state, client_id)
+    else:
+        changed = False
+        if _unproven_legacy_plan(state, client_id):
+            _stamp_unproven_legacy_plan(state)
+            changed = True
+        if _lapse_due(state):
+            _apply_lapse(state)
+            changed = True
+        if changed:
+            _billing_save(state, client_id)
     return state
 
 
@@ -2566,11 +3014,65 @@ def _billing_save(state, client_id=DASHBOARD_CLIENT_ID):
     _write_json_atomic(_billing_path(client_id), state, ensure_ascii=False, indent=2)
 
 
+def _picker_plans(current_plan_id, state):
+    """Forfaits proposes dans le choix de forfait du client : tous ceux qui se vendent (Solo, Trio, Equipe, Pro, Scale, Enterprise sur devis),
+    plus SON forfait s'il est herite (Starter, Business : visible pour lui, jamais propose aux autres). Jamais l'essai (on y revient en
+    annulant l'abonnement). credits est toujours un entier ; pour Enterprise c'est le plafond par defaut du contrat (onQuote = a fixer avec nous)."""
+    out = []
+    for pid, p in PLAN_CATALOG.items():
+        if pid == "essai" or (p.get("legacy") and pid != current_plan_id):
+            continue
+        out.append({"planId": pid, "name": p["name"], "credits": plan_monthly_credits(pid, state if pid == current_plan_id else None),
+                    "priceChf": p.get("priceChf"), "onQuote": bool(p.get("onQuote")), "legacy": bool(p.get("legacy")),
+                    "workerSlots": p.get("workerSlots"), "chloeIncluded": pid in inst.PLANS_WITH_CHLOE if p.get("workerSlots") else True})
+    return out
+
+
+# Une mission refusee ou n'ayant rien produit ne coute aucun credit : refusee par la securite, Worker non embauche, verification de Chloe
+# demandee, ou traitee par le repli local parce que le fournisseur d'IA etait indisponible (Result.Degraded : le client n'a pas eu de vraie reponse).
+NON_BILLABLE_TASK_STATUSES = {"BLOCKED", "SECURITY_BLOCKED", "NEEDS_CHLOE_VERIFICATION", "WORKER_NOT_INCLUDED"}
+
+
+def task_credits(data):
+    """Credits consommes par une trace de mission (runtime/tasks/TASK-*.json) : le cout de son niveau (champ Credits), 0 si la mission est refusee
+    ou degradee (voir NON_BILLABLE_TASK_STATUSES), 1 pour une trace ecrite avant les niveaux (sans champ Credits) ou au champ illisible."""
+    if str(data.get("Status") or "").upper() in NON_BILLABLE_TASK_STATUSES:
+        return 0
+    result = data.get("Result")
+    if isinstance(result, dict) and result.get("Degraded") is True:
+        return 0
+    raw = data.get("Credits")
+    if raw is None or isinstance(raw, bool):
+        return 1
+    try:
+        return max(0, int(raw))
+    except (TypeError, ValueError):
+        return 1
+
+
+def _window_clock(state, now=None):
+    """Instant qui place la fenetre mensuelle de credits. Une fois la periode payee terminee (grace d'un forfait active sur facture, voir
+    _lapse_due), RIEN ne se renouvelle plus : la fenetre reste la derniere fenetre payee, comme le fait _apply_lapse. Sans cela, la date
+    d'ancrage suivante ouvrait une fenetre neuve (un mois de credits que personne n'a paye) pendant les jours de grace."""
+    now = now or _utcnow()
+    until = _parse_utc((state or {}).get("paidUntilUtc"))
+    if until is not None and now >= until:
+        return until - datetime.timedelta(seconds=1)
+    return now
+
+
 def get_billing(client_id=DASHBOARD_CLIENT_ID):
     state = _billing_load(client_id)
     plan_id = state.get("planId", "essai")
     plan = PLAN_CATALOG.get(plan_id, PLAN_CATALOG["essai"])
-    cycle_start = state.get("cycleStartUtc", "")
+    cycle_anchor = state.get("cycleStartUtc", "")
+    cycle_start, renews_at = billing_cycle(cycle_anchor, plan.get("renews", True), _window_clock(state))
+    paid_until = state.get("paidUntilUtc") if _parse_utc(state.get("paidUntilUtc")) else None
+    cancel_pending = bool(state.get("cancelAtPeriodEnd")) and paid_until is not None
+    if cancel_pending and renews_at and _parse_utc(renews_at) >= _parse_utc(paid_until):
+        renews_at = None       # resilie : rien ne se renouvelle au-dela de la periode deja payee
+    # Forfait sur facture dont la fenetre en cours est la DERNIERE payee : « renouvele » serait faux, rien ne repart sans le reglement de la facture suivante.
+    awaiting_invoice = bool(paid_until and not cancel_pending and renews_at and _parse_utc(renews_at) >= _parse_utc(paid_until))
 
     used = 0
     if os.path.isdir(TASKS_DIR):
@@ -2587,87 +3089,568 @@ def get_billing(client_id=DASHBOARD_CLIENT_ID):
             created = data.get("CreatedAtUtc", "")
             if cycle_start and created and created < cycle_start:
                 continue
-            try:
-                used += max(1, int(data.get("Credits") or 1))
-            except (TypeError, ValueError):
-                used += 1
+            used += task_credits(data)
 
-    base_credits = plan["credits"]
-    extra = int(state.get("extraCredits") or 0)
-    total_credits = None if base_credits is None else base_credits + extra
-    remaining = None if total_credits is None else max(0, total_credits - used)
-    percent_used = None if total_credits in (None, 0) else round((used / total_credits) * 100)
+    # Quota MENSUEL FIXE : toujours un entier, jamais "illimite" (voir PLAN_CATALOG). extraCredits = credits accordes par le proprietaire.
+    included = plan_monthly_credits(plan_id, state)
+    try:
+        extra = max(0, int(state.get("extraCredits") or 0))
+    except (TypeError, ValueError):
+        extra = 0
+    total_credits = included + extra
+    remaining = max(0, total_credits - used)
+    percent_used = None if total_credits == 0 else round((used / total_credits) * 100)
+    alert = percent_used is not None and percent_used >= 80
 
-    return {
+    out = {
         "planId": plan_id,
         "planName": plan["name"],
         "cycleStartUtc": cycle_start,
+        "cycleAnchorUtc": cycle_anchor,
+        "renewsAtUtc": renews_at,
+        "creditsIncluded": included,
         "creditsTotal": total_credits,
         "creditsUsed": used,
         "creditsRemaining": remaining,
         "percentUsed": percent_used,
-        "alertThresholdReached": percent_used is not None and percent_used >= 80,
-        "unlimited": total_credits is None,
+        "alertThresholdReached": alert,
+        "unlimited": False,     # conserve pour les anciens clients de l'API : il n'y a plus de forfait illimite
+        "priceChf": plan.get("priceChf"),
+        "legacy": bool(plan.get("legacy")),
+        # Periode payee : billingInterval = rythme de paiement de l'abonnement Stripe (la montee en gamme propose le meme) ; paidUntilUtc /
+        # cancelAtPeriodEnd = forfait resilie ou active sur facture, actif jusqu'a cette date ; grandfathered = ancien abonne Pro / Scale.
+        "billingInterval": state.get("billingInterval") if state.get("billingInterval") in ("month", "year") else None,
+        "paidUntilUtc": paid_until,
+        "cancelAtPeriodEnd": cancel_pending,
+        "awaitingInvoice": awaiting_invoice,
+        "grandfathered": _grandfathered(state),
+        "trialDays": plan.get("trialDays"),
         "history": list(reversed(state.get("history", [])))[:20],
-        "availablePlans": [{"planId": pid, "name": p["name"], "credits": p["credits"]} for pid, p in PLAN_CATALOG.items()],
-        "missionLevels": public_mission_levels(),
+        # Choix de forfait du client (voir _picker_plans) ; workerPlans : le detail de Solo/Trio (emplacements, Chloe, prix).
+        "availablePlans": _picker_plans(plan_id, state),
+        "workerPlans": [{"planId": pid, "name": p["name"], "credits": p["credits"], "workerSlots": p["workerSlots"],
+                         "chloeIncluded": pid in inst.PLANS_WITH_CHLOE, "priceChf": p.get("priceChf")}
+                        for pid, p in PLAN_CATALOG.items() if p.get("workerSlots")],
+        "workerSlots": inst.worker_slots(state),
+        "hiredWorkers": inst.hired_workers(state),
+        "hire": inst.hire_summary(state),
+        "missionLevels": public_mission_levels(client_id),
     }
+    out["upgrade"] = upgrade_payload(out)
+    # Montee en gamme proposee des 80 % du quota (et quand il est epuise) ; sans forfait superieur (Enterprise) : « nous ecrire ».
+    out["upgradeSuggested"] = bool(alert and out["upgrade"])
+    return out
+
+
+_STRIPE_CUSTOMER_RE = re.compile(r"^cus_[A-Za-z0-9_]{1,200}$")
+STRIPE_SESSIONS_KEPT = 50      # Checkout Sessions deja confirmees dont on garde l'identifiant (rejeu impossible, voir activate_checkout_plan)
 
 
 @_state_locked
-def set_billing_plan(plan_id, via_stripe=False, stripe_subscription_id=None, client_id=DASHBOARD_CLIENT_ID):
+def set_billing_plan(plan_id, via_stripe=False, stripe_subscription_id=None, client_id=DASHBOARD_CLIENT_ID, session_id=None, interval=None,
+                     stripe_customer_id=None):
     if plan_id not in PLAN_CATALOG:
         return {"error": "UNKNOWN_PLAN"}
     state = _billing_load(client_id)
-    old_name = PLAN_CATALOG.get(state.get("planId", "essai"), PLAN_CATALOG["essai"])["name"]
+    old_plan_id = state.get("planId", "essai")
+    if old_plan_id == plan_id and not via_stripe:
+        # Redemander le forfait qu'on a deja ne doit JAMAIS repartir sur un nouveau cycle : ce serait un quota mensuel gratuit en plus.
+        return get_billing(client_id)
+    if via_stripe and old_plan_id == plan_id and stripe_subscription_id and state.get("stripeSubscriptionId") == stripe_subscription_id:
+        return get_billing(client_id)      # meme forfait, meme abonnement Stripe : une confirmation rejouee ne repart jamais sur un nouveau cycle
+    old_name = PLAN_CATALOG.get(old_plan_id, PLAN_CATALOG["essai"])["name"]
     new_name = PLAN_CATALOG[plan_id]["name"]
-    now = datetime.datetime.utcnow().isoformat() + "Z"
+    now = _utcnow().isoformat() + "Z"
     state["planId"] = plan_id
+    state["gridVersion"] = GRID_VERSION
     state["cycleStartUtc"] = now
     state["extraCredits"] = 0
+    state.pop("contractCredits", None)   # le plafond contractuel d'Enterprise est propre a un contrat : il ne suit pas un changement de forfait
+    state.pop("lapsedFrom", None)
+    # Stripe renouvelle lui-meme l'abonnement : pas de date de fin de periode payee (elle n'existe que pour une resiliation ou une facture).
+    state.pop("paidUntilUtc", None)
+    state.pop("cancelAtPeriodEnd", None)
+    if via_stripe and interval in ("month", "year"):
+        state["billingInterval"] = interval         # l'interface propose la montee en gamme avec le MEME rythme de paiement
+    else:
+        state.pop("billingInterval", None)
+    # Le delai d'echange de Worker (1 par 30 jours) ne repart de zero que si le forfait CHANGE vraiment, jamais pour un meme forfait repaye.
+    inst.adapt_hired_to_plan(state, plan_changed=old_plan_id != plan_id)   # forfait restreint (solo/trio) : liste tronquee aux emplacements ; autre forfait : liste vidée
     # Un changement simule (ou vers Essai/Enterprise) n'a pas de vrai
     # abonnement Stripe derriere : on efface toute reference precedente
     # pour ne jamais tenter d'annuler un abonnement qui n'est plus le
     # plan actif.
     state["stripeSubscriptionId"] = stripe_subscription_id if via_stripe else None
+    if via_stripe and _STRIPE_CUSTOMER_RE.fullmatch(str(stripe_customer_id or "")):
+        # Le client Stripe survit au forfait : la prochaine Checkout Session du compte le reutilise (credit de prorata, un seul client par compte).
+        state["stripeCustomerId"] = stripe_customer_id
+    if via_stripe and session_id:
+        state["stripeSessions"] = (list(state.get("stripeSessions") or []) + [session_id])[-STRIPE_SESSIONS_KEPT:]
     label = "paiement Stripe confirme" if via_stripe else "simulation, aucun paiement reel"
     state.setdefault("history", []).append({
         "dateUtc": now,
         "event": f"Changement de plan : {old_name} -> {new_name} ({label}).",
     })
     _billing_save(state, client_id)
+    if _is_customer_id(client_id):
+        _pause_unhired_installations(client_id, state)
     return get_billing(client_id)
 
 
+def _period_end_fallback(state):
+    """Fin de la periode DEJA payee quand Stripe ne la donne pas : prochain renouvellement de la fenetre ancree sur l'activation, au pas de
+    l'intervalle souscrit (1 mois, 12 pour un abonnement annuel). None si l'ancre est illisible."""
+    anchor = _parse_utc(state.get("cycleStartUtc"))
+    if anchor is None:
+        return None
+    now = _utcnow()
+    step = 12 if state.get("billingInterval") == "year" else 1
+    n = step
+    while _add_months(anchor, n) <= now and n < 1200:
+        n += step
+    return _add_months(anchor, n).isoformat() + "Z"
+
+
+def _stripe_subscription_gone(result):
+    """True quand Stripe repond que l'abonnement n'existe pas (HTTP 404, « No such subscription ») : il n'y a alors plus rien a resilier ni a
+    facturer. Toute autre erreur (delai du pont, reseau, 5xx, cle refusee) NE prouve PAS que l'abonnement est arrete."""
+    if not isinstance(result, dict):
+        return False
+    if result.get("HttpStatus") == 404:
+        return True
+    detail = str(result.get("Detail") or "").lower()
+    return "no such subscription" in detail or "resource_missing" in detail
+
+
 def cancel_billing_plan(client_id=DASHBOARD_CLIENT_ID):
-    # L'annulation Stripe (appel reseau de plusieurs secondes) se fait HORS
-    # du verrou ; seule la mise a jour du fichier de facturation est verrouillee.
-    subscription_id = _billing_load(client_id).get("stripeSubscriptionId")
+    """POST /api/billing/cancel. CGV article 6 : la resiliation prend effet a la FIN de la periode en cours. Le forfait paye reste donc actif
+    jusqu'a la fin de la periode deja payee (cancelAtPeriodEnd + paidUntilUtc), puis retombe a l'Essai (_apply_lapse) ; l'abonnement Stripe est
+    resilie en fin de periode (cancel_at_period_end : plus aucun renouvellement, et rien a rembourser). Sans periode payee connue (simulation,
+    etat ecrit avant cette version), le retour a l'Essai est immediat et l'historique le dit.
+    Si Stripe ne repond pas (delai du pont, erreur) : AUCUN changement et {"error": "STRIPE_UNAVAILABLE"} (HTTP 503), le client reessaie. Retomber a
+    l'Essai sans avoir resilie chez Stripe perdait la periode payee ET laissait un abonnement vivant, facture, dont l'identifiant etait oublie."""
+    # L'appel Stripe (reseau, plusieurs secondes) se fait HORS du verrou ; seule la mise a jour du fichier de facturation est verrouillee.
+    first = _billing_load(client_id)
+    subscription_id = first.get("stripeSubscriptionId")
+    if first.get("cancelAtPeriodEnd"):
+        return get_billing(client_id)          # deja resilie : on ne refait rien (ni second appel a Stripe, ni nouvelle date)
     label = "simulation, aucun paiement reel"
+    stripe_period_end = None
+    stripe_ok = False
     if subscription_id:
-        # Un vrai abonnement Stripe est derriere ce plan : "annuler"
-        # doit reellement l'annuler cote Stripe, pas seulement basculer
-        # l'affichage local — sinon Stripe continuerait a le renouveler.
-        cancellation = run_stripe_bridge("cancel-subscription", subscription_id=subscription_id)
+        # Un vrai abonnement Stripe est derriere ce plan : "annuler" doit reellement le resilier cote Stripe, pas seulement changer l'affichage
+        # local — sinon Stripe continuerait a le renouveler et a le facturer.
+        cancellation = run_stripe_bridge("cancel-subscription", subscription_id=subscription_id, at_period_end=True)
         if cancellation.get("Status") == "SUCCESS":
-            label = "abonnement Stripe reellement annule"
+            stripe_ok = True
+            stripe_period_end = cancellation.get("CurrentPeriodEnd") or None
+            label = "abonnement Stripe résilié en fin de période, plus aucun renouvellement"
+        elif _stripe_subscription_gone(cancellation):
+            label = "abonnement introuvable chez Stripe, plus rien à résilier"      # retour immediat a l'Essai (voir plus bas)
         else:
-            label = f"ECHEC annulation Stripe ({cancellation.get('Detail') or cancellation.get('Status')}) — verifier manuellement dans le dashboard Stripe"
+            log_activity("stripe_cancel_failed", clientId=client_id, subscriptionId=subscription_id, detail=str(cancellation.get("Detail") or cancellation.get("Status"))[:200])
+            return {"error": "STRIPE_UNAVAILABLE", "detail": "La résiliation n'a pas pu être transmise à notre prestataire de paiement. Aucun changement n'a été fait : "
+                                                              "votre abonnement est inchangé. Réessayez dans quelques minutes."}
 
     with _STATE_LOCK:
         state = _billing_load(client_id)
-        old_name = PLAN_CATALOG.get(state.get("planId", "essai"), PLAN_CATALOG["essai"])["name"]
-        now = datetime.datetime.utcnow().isoformat() + "Z"
+        if state.get("planId", "essai") == "essai" and not subscription_id:
+            return get_billing(client_id)      # deja a l'essai : « annuler » ne redonne pas 15 credits gratuits
+        old_plan = PLAN_CATALOG.get(state.get("planId", "essai"), PLAN_CATALOG["essai"])
+        old_name = old_plan["name"]
+        now_dt = _utcnow()
+        now = now_dt.isoformat() + "Z"
+        # Fin de la periode deja payee : donnee par Stripe, sinon deduite de la fenetre (abonnement Stripe) ; pour un forfait sur facture, la date
+        # saisie a l'activation. Passee ou inconnue : retour immediat a l'Essai.
+        until = None
+        if stripe_ok:
+            until = stripe_period_end if _parse_utc(stripe_period_end) else _period_end_fallback(state)
+        elif not subscription_id and _parse_utc(state.get("paidUntilUtc")):
+            until = state["paidUntilUtc"]
+        if until and _parse_utc(until) > now_dt:
+            state["cancelAtPeriodEnd"] = True
+            state["paidUntilUtc"] = until
+            state.setdefault("history", []).append({
+                "dateUtc": now,
+                "event": f"Résiliation enregistrée ({old_name}) : le forfait reste actif jusqu'au {_fr_date(until)}, sans renouvellement ({label}).",
+            })
+            _billing_save(state, client_id)
+            return get_billing(client_id)
         state["planId"] = "essai"
-        state["cycleStartUtc"] = now
+        # Le cycle n'est PAS remis a zero : la fenetre mensuelle en cours est conservee et ses missions restent comptees, sinon
+        # s'abonner puis annuler redonnerait 15 credits d'essai gratuits a chaque fois (l'essai n'est pas renouvelable).
+        state["cycleStartUtc"] = billing_cycle(state.get("cycleStartUtc", now), old_plan.get("renews", True))[0]
         state["extraCredits"] = 0
+        for key in ("contractCredits", "paidUntilUtc", "cancelAtPeriodEnd", "billingInterval"):
+            state.pop(key, None)
         state["stripeSubscriptionId"] = None
+        inst.adapt_hired_to_plan(state)
         state.setdefault("history", []).append({
             "dateUtc": now,
             "event": f"Abonnement annule ({old_name}) — retour au plan Essai ({label}).",
         })
         _billing_save(state, client_id)
     return get_billing(client_id)
+
+
+def _billing_note(client_id, text):
+    """Ajoute une ligne a l'historique de facturation du client (visible dans « Historique du compte »)."""
+    with _STATE_LOCK:
+        state = _billing_load(client_id)
+        state.setdefault("history", []).append({"dateUtc": _utcnow().isoformat() + "Z", "event": text})
+        _billing_save(state, client_id)
+
+
+def select_billing_plan(client_id, plan_id, interval="month"):
+    """POST /api/billing/plan : le client choisit un forfait (c'est le bouton « Passer a la formule superieure »). Renvoie (corps, statut HTTP).
+    - Essai : on n'y « bascule » pas (annuler l'abonnement y ramene) ; Enterprise : sur devis ; forfait HERITE (Starter, Business) : plus
+      vendu, sauf pour celui qui l'a deja (rien ne change pour lui) ; le forfait qu'on a deja : aucun effet (pas de nouveau cycle).
+    - Stripe configure : une vraie Checkout Session (montant du catalogue en centimes de CHF), le forfait n'est active qu'APRES le
+      paiement verifie cote serveur (/api/billing/stripe-confirm). Aucun prelevement ici.
+    - Stripe NON configure : aucun forfait payant (Solo, Trio, Equipe, Pro, Scale) ne bascule jamais gratuitement pour un client
+      (PLAN_BY_INVOICE : le proprietaire les active apres facture reglee, voir grant_workers et set_client_plan) ; seul le compte du proprietaire
+      peut simuler un changement pour tester le parcours.
+    - Stripe configure mais injoignable (pont en erreur ou delai depasse) : 503 STRIPE_UNAVAILABLE et RIEN ne change, jamais de bascule
+      gratuite faute de reponse."""
+    if plan_id not in PLAN_CATALOG:
+        return {"error": "UNKNOWN_PLAN"}, 400
+    plan = PLAN_CATALOG[plan_id]
+    owner = client_id == DASHBOARD_CLIENT_ID
+    current_state = (_billing_state_readonly(client_id) or {}) if _is_customer_id(client_id) else {}
+    current = (current_state.get("planId") or "essai") if _is_customer_id(client_id) else None
+    if not owner:
+        if plan_id == "essai":
+            return {"error": "PLAN_NOT_SELECTABLE", "detail": "On ne revient pas à l'essai en le choisissant : utilisez « Annuler l'abonnement »."}, 403
+        if plan.get("onQuote"):
+            return {"error": "PLAN_ON_QUOTE", "contactEmail": CONTACT_EMAIL,
+                    "detail": f"{plan['name']} se fait sur devis, avec un plafond de crédits mensuel fixé au contrat. Écrivez-nous à {CONTACT_EMAIL}."}, 403
+        if plan.get("legacy") and current != plan_id:
+            return {"error": "PLAN_NOT_SOLD", "detail": f"Le forfait {plan['name']} n'est plus proposé. Choisissez l'un des forfaits de la page Tarifs."}, 403
+        if current == plan_id and not current_state.get("cancelAtPeriodEnd"):
+            return get_billing(client_id), 200
+        if current == plan_id and current_state.get("stripeSubscriptionId") and stripe_resume_possible(current_state):
+            return resume_billing_plan(client_id)   # forfait resilie mais encore actif : « reprendre » annule la resiliation, sans second paiement
+    stripe_status = None
+    if plan_id in PAID_PLANS_WITH_CHECKOUT:
+        stripe_status = run_stripe_bridge("status")
+        if stripe_status.get("Configured") is not True and stripe_status.get("Configured") is not False:
+            # Le pont a echoue (erreur PowerShell, delai de 30 s depasse...) : on ne sait pas si Stripe est configure -> on refuse, on n'offre rien.
+            return {"error": "STRIPE_UNAVAILABLE", "detail": "Le paiement est momentanément indisponible. Aucun changement n'a été fait : réessayez dans quelques minutes."}, 503
+        if stripe_status.get("Configured") is False and not owner:
+            what = ("Les forfaits Solo et Trio sont activés par BK Entreprise après règlement de la facture. Pour garder un Worker, ouvrez sa fiche "
+                    f"et utilisez « Garder seulement ce Worker après l'essai », ou écrivez-nous à {CONTACT_EMAIL}.") if plan.get("workerSlots") else (
+                    f"Le forfait {plan['name']} est activé par BK Entreprise après règlement de la facture. Écrivez-nous à {CONTACT_EMAIL}.")
+            return {"error": "PLAN_BY_INVOICE", "detail": what}, 403
+    if plan_id in PAID_PLANS_WITH_CHECKOUT and client_id != DASHBOARD_CLIENT_ID and not account_email_verified(client_id):
+        return {"error": "EMAIL_NOT_VERIFIED"}, 403
+    # Forfaits payants : si Stripe est configure, vraie Checkout Session hebergee par Stripe ; Essai et Enterprise restent hors paiement.
+    if plan_id in PAID_PLANS_WITH_CHECKOUT:
+        if stripe_status.get("Configured"):
+            checkout_args = dict(plan_id=plan_id, plan_name=plan["name"], amount_cents=plan_price_cents(plan_id, interval) or 0,
+                                 success_url=PUBLIC_BASE_URL + "/?billing_checkout=success&session_id={CHECKOUT_SESSION_ID}",
+                                 cancel_url=PUBLIC_BASE_URL + "/?billing_checkout=cancel", interval=interval, client_id=client_id)
+            customer_id = current_state.get("stripeCustomerId") if _STRIPE_CUSTOMER_RE.fullmatch(str(current_state.get("stripeCustomerId") or "")) else None
+            # Meme client Stripe qu'au paiement precedent : le credit du temps deja paye (montee en gamme) lui reste attache au lieu d'etre perdu sur
+            # un ancien client. Si Stripe ne connait plus ce client, une seconde tentative sans lui cree un client neuf.
+            checkout = run_stripe_bridge("create-checkout", customer_id=customer_id, **checkout_args) if customer_id else {}
+            if checkout.get("Status") != "SUCCESS":
+                checkout = run_stripe_bridge("create-checkout", **checkout_args)
+            if checkout.get("Status") == "SUCCESS":
+                return {"checkoutUrl": checkout["CheckoutUrl"], "sessionId": checkout["SessionId"]}, 200
+            return {"error": "STRIPE_CHECKOUT_FAILED", "detail": checkout.get("Detail") or checkout.get("Status")}, 400
+    result = set_billing_plan(plan_id, client_id=client_id)       # Essai / Enterprise (proprietaire), ou simulation du proprietaire sans Stripe
+    return result, 400 if "error" in result else 200
+
+
+def stripe_resume_possible(state):
+    """True quand le forfait est resilie en fin de periode MAIS son abonnement Stripe court encore (date de fin dans le futur)."""
+    until = _parse_utc((state or {}).get("paidUntilUtc"))
+    return bool((state or {}).get("cancelAtPeriodEnd") and (state or {}).get("stripeSubscriptionId") and until and until > _utcnow())
+
+
+def resume_billing_plan(client_id):
+    """POST /api/billing/plan sur le forfait deja resilie en fin de periode : annule la resiliation chez Stripe (cancel_at_period_end=false) et
+    garde l'abonnement, le temps deja paye et la fenetre de credits. Aucun second paiement (une nouvelle Checkout Session facturait de nouveau le
+    plein prix). Stripe injoignable : 503 et rien ne change. Renvoie (corps, statut HTTP)."""
+    first = _billing_load(client_id)
+    subscription_id = first.get("stripeSubscriptionId")
+    if not stripe_resume_possible(first):
+        return get_billing(client_id), 200
+    resumed = run_stripe_bridge("resume-subscription", subscription_id=subscription_id)
+    if resumed.get("Status") != "SUCCESS" or resumed.get("SubscriptionStatus") not in ("active", "trialing") or resumed.get("CancelAtPeriodEnd"):
+        return {"error": "STRIPE_UNAVAILABLE", "detail": "La reprise de l'abonnement n'a pas pu être transmise à notre prestataire de paiement. Aucun changement "
+                                                         "n'a été fait : réessayez dans quelques minutes."}, 503
+    with _STATE_LOCK:
+        state = _billing_load(client_id)
+        if state.get("stripeSubscriptionId") == subscription_id and state.get("cancelAtPeriodEnd"):
+            state.pop("cancelAtPeriodEnd", None)
+            state.pop("paidUntilUtc", None)       # Stripe renouvelle lui-meme : plus de date de fin de periode
+            state.setdefault("history", []).append({
+                "dateUtc": _utcnow().isoformat() + "Z",
+                "event": "Résiliation annulée : l'abonnement continue, sans nouveau paiement (le temps déjà payé est conservé).",
+            })
+            _billing_save(state, client_id)
+    return get_billing(client_id), 200
+
+
+def activate_checkout_plan(confirmation, fallback_client_id=None):
+    """POST /api/billing/stripe-confirm, une fois la session relue chez Stripe (Paid, PlanId, ClientId, SubscriptionId, SubscriptionStatus,
+    SessionId, Interval). Active le forfait paye. Renvoie (corps, statut HTTP).
+    - IDEMPOTENT : une Checkout Session ne peut activer un forfait qu'UNE fois (son identifiant est garde dans l'etat de facturation, et un meme
+      abonnement deja actif ne change rien). Sans cela, rejouer la confirmation (payment_status reste « paid » a vie) redonnait un quota neuf,
+      effacait le delai d'echange de Worker et ressuscitait un forfait resilie. Un rejeu renvoie l'etat courant, sans rien modifier.
+    - L'abonnement doit etre encore actif chez Stripe (active ou en essai), sinon rien n'est active.
+    - Le ClientId vient des metadata de la session ; un compte connecte DIFFERENT (fallback_client_id) est refuse.
+    - Un client qui change de forfait par une NOUVELLE Checkout Session (montee en gamme) a deja un abonnement Stripe : on l'annule une fois le
+      nouveau confirme, avec le prorata du temps deja paye (credit chez Stripe), sinon il serait facture deux fois."""
+    if not confirmation.get("Paid") or confirmation.get("PlanId") not in PLAN_CATALOG:
+        return {"error": "PAYMENT_NOT_CONFIRMED", "detail": confirmation.get("PaymentStatus")}, 400
+    meta_client = confirmation.get("ClientId")
+    if meta_client and fallback_client_id and meta_client != fallback_client_id:
+        return {"error": "SESSION_CLIENT_MISMATCH",
+                "detail": "Ce paiement a été fait depuis un autre compte. Reconnectez-vous au compte qui a payé pour le confirmer."}, 403
+    client_id = meta_client or fallback_client_id
+    if not client_id:
+        return {"error": "ACCOUNT_REQUIRED"}, 401
+    plan_id = confirmation["PlanId"]
+    new_sub = confirmation.get("SubscriptionId")
+    session_id = str(confirmation.get("SessionId") or "").strip() or None
+    with _STATE_LOCK:
+        state = _billing_load(client_id)
+        if (session_id and session_id in (state.get("stripeSessions") or [])) or (
+                new_sub and state.get("stripeSubscriptionId") == new_sub and state.get("planId") == plan_id):
+            return dict(get_billing(client_id), alreadyConfirmed=True), 200
+        if confirmation.get("SubscriptionStatus") not in ("active", "trialing"):
+            return {"error": "SUBSCRIPTION_NOT_ACTIVE",
+                    "detail": "L'abonnement lié à ce paiement n'est plus actif chez Stripe : aucun forfait n'a été activé."}, 409
+        previous = state.get("stripeSubscriptionId") if _is_customer_id(client_id) else None
+        result = set_billing_plan(plan_id, via_stripe=True, stripe_subscription_id=new_sub, client_id=client_id,
+                                  session_id=session_id, interval=confirmation.get("Interval"),
+                                  stripe_customer_id=confirmation.get("CustomerId"))
+    if previous and new_sub and previous != new_sub and "error" not in result:
+        cancellation = run_stripe_bridge("cancel-subscription", subscription_id=previous, prorate=True)
+        if cancellation.get("Status") == "SUCCESS":
+            _billing_note(client_id, "Ancien abonnement Stripe annulé : le nouveau forfait le remplace (aucune double facturation, le temps déjà payé est crédité chez Stripe).")
+        else:
+            _billing_note(client_id, "ECHEC annulation de l'ancien abonnement Stripe (" + str(cancellation.get("Detail") or cancellation.get("Status"))
+                          + ") — à annuler à la main dans le tableau de bord Stripe pour éviter une double facturation.")
+            log_activity("stripe_cancel_failed", clientId=client_id, subscriptionId=previous)
+            print(f"[billing] ALERTE : l'ancien abonnement Stripe {previous} de {client_id} n'a pas pu etre annule ; a annuler a la main dans Stripe.", flush=True)
+        result = get_billing(client_id)
+    return result, 400 if "error" in result else 200
+
+
+# ---- SUIVI DES ABONNEMENTS STRIPE (revue du 2026-10-19). Sans webhook, un abonnement resilie dans le tableau de bord Stripe, impaye ou arrete apres des
+# paiements refuses laissait Pro / Scale (CHF 139 / 449) actifs a vie. Le serveur relit donc chaque abonnement Stripe par le pont (lecture seule), au plus
+# une fois par STRIPE_SYNC_INTERVAL_S et par client, et applique : arrete -> retour a l'Essai ; resilie cote Stripe -> fin de periode ; paiement en retard
+# -> mention dans l'historique (l'acces reste ouvert pendant que Stripe relance le paiement).
+STRIPE_SYNC_INTERVAL_S = 6 * 3600
+STRIPE_SYNC_FIRST_DELAY_S = 600
+STRIPE_ENDED_STATUSES = {"canceled", "unpaid", "incomplete_expired"}
+
+
+def sync_stripe_subscription(client_id, force=False):
+    """Relit l'abonnement Stripe de ce client et aligne le forfait. Renvoie : « no_subscription », « recent » (deja relu il y a peu), « error » (Stripe
+    n'a pas repondu : rien ne change), « changed » (l'abonnement a change entre-temps), « ended » (retour a l'Essai), « cancel_scheduled », « resumed »,
+    « past_due » ou « ok »."""
+    if not _is_customer_id(client_id):
+        return "no_subscription"
+    first = _billing_load(client_id)
+    subscription_id = first.get("stripeSubscriptionId")
+    if not subscription_id:
+        return "no_subscription"
+    synced = _parse_utc(first.get("stripeSyncedAtUtc"))
+    if not force and synced and (_utcnow() - synced).total_seconds() < STRIPE_SYNC_INTERVAL_S:
+        return "recent"
+    result = run_stripe_bridge("get-subscription", subscription_id=subscription_id)       # reseau : hors du verrou
+    gone = _stripe_subscription_gone(result)
+    if result.get("Status") != "SUCCESS" and not gone:
+        return "error"
+    status = "canceled" if gone else str(result.get("SubscriptionStatus") or "")
+    with _STATE_LOCK:
+        state = _billing_load(client_id)
+        if state.get("stripeSubscriptionId") != subscription_id:
+            return "changed"
+        now_dt = _utcnow()
+        now = now_dt.isoformat() + "Z"
+        state["stripeSyncedAtUtc"] = now
+        outcome = "ok"
+        history = state.setdefault("history", [])
+        plan_name = PLAN_CATALOG.get(state.get("planId") or "essai", PLAN_CATALOG["essai"])["name"]
+        if status in STRIPE_ENDED_STATUSES:
+            if (state.get("planId") or "essai") == "essai":
+                state["stripeSubscriptionId"] = None
+            else:
+                state["paidUntilUtc"] = now
+                _apply_lapse(state, now_dt, reason={"canceled": "résilié", "unpaid": "impayé", "incomplete_expired": "paiement jamais abouti"}[status]
+                             + (" ; introuvable chez Stripe" if gone else ""))
+            outcome = "ended"
+        elif status in ("active", "trialing", "past_due"):
+            period_end = result.get("CurrentPeriodEnd") if _parse_utc(result.get("CurrentPeriodEnd")) else _period_end_fallback(state)
+            if result.get("CancelAtPeriodEnd") and not state.get("cancelAtPeriodEnd") and period_end:
+                state["cancelAtPeriodEnd"] = True
+                state["paidUntilUtc"] = period_end
+                history.append({"dateUtc": now, "event": f"Résiliation constatée chez Stripe ({plan_name}) : le forfait reste actif jusqu'au {_fr_date(period_end)}, "
+                                                         f"sans renouvellement."})
+                outcome = "cancel_scheduled"
+            elif not result.get("CancelAtPeriodEnd") and state.get("cancelAtPeriodEnd") and state.get("stripeSubscriptionId"):
+                state.pop("cancelAtPeriodEnd", None)
+                state.pop("paidUntilUtc", None)
+                history.append({"dateUtc": now, "event": f"Résiliation annulée chez Stripe ({plan_name}) : l'abonnement continue."})
+                outcome = "resumed"
+            if status == "past_due":
+                if state.get("paymentIssue") != "past_due":
+                    state["paymentIssue"] = "past_due"
+                    history.append({"dateUtc": now, "event": f"Paiement de l'abonnement {plan_name} en retard chez Stripe : l'accès reste ouvert pendant que Stripe "
+                                                             f"relance le paiement ; il s'arrête si l'abonnement est finalement impayé."})
+                    log_activity("stripe_past_due", clientId=client_id)
+                outcome = "past_due" if outcome == "ok" else outcome
+            else:
+                state.pop("paymentIssue", None)
+        _billing_save(state, client_id)
+    return outcome
+
+
+def sync_all_stripe_subscriptions(force=False):
+    """Relit, l'un apres l'autre, les abonnements Stripe de tous les clients qui en ont un. Renvoie {resultat: nombre}."""
+    counts = {}
+    try:
+        names = sorted(os.listdir(BILLING_DATA_DIR))
+    except OSError:
+        return counts
+    for name in names:
+        client_id = name[:-5] if name.endswith(".json") else ""
+        if not _is_customer_id(client_id):
+            continue
+        state = load_json(os.path.join(BILLING_DATA_DIR, name), {}) or {}
+        if not isinstance(state, dict) or not state.get("stripeSubscriptionId"):
+            continue
+        try:
+            outcome = sync_stripe_subscription(client_id, force=force)
+        except Exception as e:  # noqa: BLE001 - un client illisible ne bloque pas les autres
+            print(f"[billing] suivi Stripe de {client_id} impossible : {type(e).__name__}", flush=True)
+            outcome = "error"
+        counts[outcome] = counts.get(outcome, 0) + 1
+    return counts
+
+
+def _stripe_sync_loop():
+    time.sleep(STRIPE_SYNC_FIRST_DELAY_S)
+    while True:
+        try:
+            counts = sync_all_stripe_subscriptions()
+            if counts:
+                print(f"[billing] suivi des abonnements Stripe : {counts}", flush=True)
+        except Exception as e:  # noqa: BLE001
+            print(f"[billing] suivi des abonnements Stripe en echec : {type(e).__name__}", flush=True)
+        time.sleep(STRIPE_SYNC_INTERVAL_S)
+
+
+def _paid_months(value):
+    """Nombre de mois couverts par la facture reglee (1 par defaut) : entier de 1 a INVOICE_MONTHS_MAX, sinon None."""
+    if value is None:
+        return 1
+    if isinstance(value, bool) or not isinstance(value, int) or not 1 <= value <= INVOICE_MONTHS_MAX:
+        return None
+    return value
+
+
+def _kept_contract_cap(state, old_plan_id, plan_id):
+    """Plafond mensuel d'un Enterprise reconduit sans plafond explicite : celui du contrat en cours (meme forfait), ou celui que le forfait portait
+    quand il est arrive a echeance (lapsedFrom), sinon le plafond par defaut. Reconduire une facture ne doit jamais ramener un contrat de
+    25 000 credits a 10 000 (client restreint a tort) ni relever un plus petit contrat (credits offerts)."""
+    candidates = []
+    if old_plan_id == plan_id:
+        candidates.append(state.get("contractCredits"))
+    lapsed = state.get("lapsedFrom") if isinstance(state.get("lapsedFrom"), dict) else {}
+    if lapsed.get("planId") == plan_id:
+        candidates.append(lapsed.get("contractCredits"))
+    for cap in candidates:
+        if isinstance(cap, int) and not isinstance(cap, bool) and 1 <= cap <= ENTERPRISE_MAX_CREDITS:
+            return cap
+    return ENTERPRISE_DEFAULT_CREDITS
+
+
+def _stripe_blocks_invoice_plan(state):
+    """Reponse 409 quand le client a un abonnement Stripe encore renouvele (a annuler d'abord, sinon il serait facture deux fois) ; None sinon. Un
+    abonnement deja resilie en fin de periode ne se renouvelle plus : le forfait sur facture peut le remplacer (son identifiant est alors oublie)."""
+    if not state.get("stripeSubscriptionId"):
+        return None
+    if state.get("cancelAtPeriodEnd"):
+        state["stripeSubscriptionId"] = None
+        return None
+    return {"error": "ACTIVE_SUBSCRIPTION", "detail": "Ce client a un abonnement Stripe actif : annulez-le avant d'attribuer un forfait sur facture."}, 409
+
+
+def _invoice_renewal_base(state, old_plan_id, plan_id, now_dt):
+    """Fin de la periode DEJA payee quand le proprietaire reconduit le MEME forfait avant son terme : la nouvelle periode s'y ajoute, renouveler N
+    jours en avance ne fait perdre aucun jour paye (et la fenetre de credits garde son ancrage : pas de quota neuf au milieu du mois). None dans les
+    autres cas (autre forfait, periode echue ou en grace, forfait resilie) : la nouvelle periode part de maintenant."""
+    until = _parse_utc(state.get("paidUntilUtc"))
+    if old_plan_id != plan_id or until is None or until <= now_dt or state.get("cancelAtPeriodEnd"):
+        return None
+    return until
+
+
+def _set_invoice_period(state, now_dt, months, base=None):
+    """Forfait active sur facture : actif pendant les mois factures (paidUntilUtc), puis retour a l'Essai si le proprietaire ne le reconduit pas.
+    base = fin de la periode deja payee quand on reconduit en avance (voir _invoice_renewal_base), sinon maintenant."""
+    state["paidUntilUtc"] = _add_months(base or now_dt, months).isoformat() + "Z"
+    state.pop("cancelAtPeriodEnd", None)
+    state.pop("billingInterval", None)
+
+
+@_state_locked
+def set_client_plan(client_id, plan_id, contract_credits=None, paid_months=1):
+    """Proprietaire, apres facture reglee ou devis signe : active un forfait SANS liste de Workers (Equipe, Pro, Scale, Enterprise ; Solo et
+    Trio passent par grant_workers). Pour Enterprise, contract_credits fixe le plafond mensuel CONTRACTUEL du client (entier de 1 a
+    ENTERPRISE_MAX_CREDITS, sinon ENTERPRISE_DEFAULT_CREDITS) : il n'existe aucun forfait illimite. paid_months = mois couverts par la facture
+    (1 a INVOICE_MONTHS_MAX) : au-dela, le forfait retombe a l'Essai (periode payee, voir plus haut) tant que le proprietaire ne le reconduit pas.
+    Renvoie (corps, statut HTTP)."""
+    months = _paid_months(paid_months)
+    if months is None:
+        return {"error": "INVALID_PERIOD", "detail": f"Mois facturés attendus : un entier de 1 à {INVOICE_MONTHS_MAX}."}, 400
+    if not _is_customer_id(client_id) or not any(a.get("clientId") == client_id for a in _load_accounts()):
+        return {"error": "CLIENT_NOT_FOUND", "detail": "Aucun compte client avec cet identifiant."}, 404
+    plan = PLAN_CATALOG.get(plan_id)
+    if not plan or plan_id == "essai" or plan.get("workerSlots"):
+        return {"error": "INVALID_PLAN", "detail": "Forfait attendu : " + ", ".join(
+            pid for pid, p in PLAN_CATALOG.items() if pid != "essai" and not p.get("workerSlots")) + " (Solo et Trio : grant-workers)."}, 400
+    if contract_credits is not None:
+        if not plan.get("contractual"):
+            return {"error": "CAP_NOT_ALLOWED", "detail": "Un plafond de crédits contractuel n'existe que pour Enterprise."}, 400
+        if not isinstance(contract_credits, int) or isinstance(contract_credits, bool) or not 1 <= contract_credits <= ENTERPRISE_MAX_CREDITS:
+            return {"error": "INVALID_CAP", "detail": f"Plafond mensuel attendu : un entier de 1 à {ENTERPRISE_MAX_CREDITS}."}, 400
+    state = _billing_load(client_id)
+    blocked = _stripe_blocks_invoice_plan(state)
+    if blocked:
+        return blocked
+    old_plan_id = state.get("planId") or "essai"
+    old_name = PLAN_CATALOG.get(old_plan_id, PLAN_CATALOG["essai"])["name"]
+    now_dt = _utcnow()
+    now = now_dt.isoformat() + "Z"
+    extend_from = _invoice_renewal_base(state, old_plan_id, plan_id, now_dt)
+    state["planId"] = plan_id
+    state["gridVersion"] = GRID_VERSION
+    if extend_from is None:
+        state["cycleStartUtc"] = now
+        state["extraCredits"] = 0
+    if plan.get("contractual"):
+        state["contractCredits"] = contract_credits if contract_credits is not None else _kept_contract_cap(state, old_plan_id, plan_id)
+    else:
+        state.pop("contractCredits", None)
+    state.pop("lapsedFrom", None)
+    _set_invoice_period(state, now_dt, months, base=extend_from)
+    inst.adapt_hired_to_plan(state, plan_changed=old_plan_id != plan_id)
+    cap = f", plafond contractuel de {_fr_int(state['contractCredits'])} crédits par mois" if plan.get("contractual") else ""
+    state.setdefault("history", []).append({
+        "dateUtc": now, "event": f"Forfait {plan['name']} activé par BK Entreprise{cap} pour {months} mois (jusqu'au {_fr_date(state['paidUntilUtc'])}), "
+                                 f"ancien forfait : {old_name}."})
+    _billing_save(state, client_id)
+    log_activity("set_plan", clientId=client_id, planId=plan_id, contractCredits=state.get("contractCredits"), paidMonths=months)
+    billing = get_billing(client_id)
+    return {"ok": True, "clientId": client_id, "planId": plan_id, "planName": plan["name"], "credits": billing["creditsIncluded"],
+            "renewsAtUtc": billing["renewsAtUtc"], "paidUntilUtc": billing["paidUntilUtc"]}, 200
 
 
 def subscription_blocks_mission(client_id, level=None):
@@ -2682,17 +3665,474 @@ def subscription_blocks_mission(client_id, level=None):
     if client_id == DASHBOARD_CLIENT_ID:
         return None
     billing = get_billing(client_id)
-    if billing["unlimited"]:
-        return None
-    remaining = billing["creditsRemaining"] or 0
+    # Plus de forfait illimite : un nombre de credits absent ou illisible vaut 0 (on refuse), jamais « tout est permis ».
+    remaining = billing.get("creditsRemaining")
+    remaining = remaining if isinstance(remaining, int) and not isinstance(remaining, bool) and remaining > 0 else 0
     lvl = normalize_level(level, client_id)
     needed = level_credits(lvl) if lvl else 1
     if remaining >= needed:
         return None
     if remaining > 0:
-        return (f"Il vous reste {remaining} crédit(s), ce niveau en demande {needed}. "
-                "Choisissez un niveau plus rapide ou souscrivez un abonnement pour continuer.")
-    return "Votre quota est épuisé. Souscrivez un abonnement pour continuer à confier des missions."
+        sentence = _upgrade_sentence(billing)
+        return (f"Il vous reste {remaining} crédit(s), ce niveau en demande {needed}. Choisissez un niveau plus rapide"
+                + (f" ou {sentence}." if sentence else " ou souscrivez un abonnement pour continuer."))
+    return quota_reached_message(billing)
+
+
+def chloe_worker_cap(client_id, level=None):
+    """Nombre maximal de Workers que Chloe peut appeler pour UNE mission de ce client : chaque Worker appele est trace (et facture) au niveau de
+    la mission, donc solde de credits // cout du niveau. Au moins 1 (subscription_blocks_mission a deja verifie qu'une mission de ce niveau est
+    payable). Sans cela, une mission de Chloe qui rassemble 5 ou 17 Workers depassait le quota de plusieurs dizaines de credits. None = pas de
+    plafond (proprietaire, essai public, identifiant qui n'est pas un compte client). `level` est le niveau tel que normalize_level le donne."""
+    if not _is_customer_id(client_id):
+        return None
+    remaining = get_billing(client_id).get("creditsRemaining")
+    remaining = remaining if isinstance(remaining, int) and not isinstance(remaining, bool) and remaining > 0 else 0
+    cost = level_credits(level) if level else 1
+    return max(1, remaining // max(1, cost))
+
+
+def subscription_required_payload(client_id, detail):
+    """Corps de la reponse 402 : le message, plus de quoi afficher le bouton de montee en gamme (forfait actuel, credits inclus, date de
+    renouvellement, forfait suivant avec ses credits et son prix)."""
+    try:
+        upgrade = upgrade_payload(get_billing(client_id))
+    except Exception:  # noqa: BLE001 - le message suffit si la facturation est illisible
+        upgrade = None
+    return {"error": "SUBSCRIPTION_REQUIRED", "detail": detail, "upgrade": upgrade}
+
+
+# ---------------------------------------------------------------------
+# OFFRE "WORKER A L'UNITE" (2026-10-12) : un client en forfait Solo/Trio n'accede qu'aux Workers qu'il a EMBAUCHES (liste hiredWorkers de
+# son etat de facturation, voir installations.py) et peut installer chacun selon ses competences (fiche runtime/installations/<ClientId>/).
+# Le refus est toujours le meme : HTTP 403, error WORKER_NOT_INCLUDED, message francais, AUCUN credit consomme (aucune mission n'est creee).
+# Le proprietaire (CLI-DASHBOARD) et l'essai public ne sont jamais restreints, comme pour le quota.
+# ---------------------------------------------------------------------
+INSTALLS = inst.InstallationStore(ROOT)
+HIRE_REQUESTS_PATH = os.path.join(ROOT, "core", "hire", "data", "hire-requests.json")
+HIRE_REQUEST_MESSAGE_MAX = 500
+HIRE_LIMITS = {   # action -> (maximum, fenetre en secondes) ; par client (par proprietaire pour grant)
+    "hire": (20, 3600), "hire-request": (5, 86400), "grant": (60, 3600), "install-write": (300, 3600), "install-status": (60, 3600),
+    "stripe-confirm": (30, 3600),       # par adresse IP : chaque confirmation lance un processus PowerShell
+}
+HIRE_RATE = {}
+HIRE_BODY_LIMITS = {"hire": 2000, "hire-request": 3000, "grant": 5000, "install-write": 200000, "install-status": 2000, "stripe-confirm": 2000}
+HIRE_NOTIFY_MAX_PER_DAY = 30
+_HIRE_NOTIFIED = {"day": "", "n": 0}
+
+
+def hire_rate_ok(action, key):
+    limit, window = HIRE_LIMITS[action]
+    with _STATE_LOCK:
+        rows = _recent(HIRE_RATE, f"{action}|{key}", window)
+        if len(rows) >= limit:
+            return False
+        HIRE_RATE[f"{action}|{key}"] = rows + [time.time()]
+    return True
+
+
+def _billing_state_readonly(client_id):
+    """Etat de facturation du client SANS le creer (contrairement a _billing_load) : pour les controles d'acces. {} si le client n'a pas
+    encore de fichier (acces normal) ; None si le fichier existe mais est illisible -> les controles REFUSENT (on n'ouvre jamais par defaut)."""
+    path = _billing_path(client_id)
+    if not os.path.isfile(path):
+        return {}
+    for _ in range(2):          # un lecteur peut tomber pile pendant un remplacement de fichier : un second essai
+        state = load_json(path, None)
+        if isinstance(state, dict):
+            return _lapsed_view(state)       # periode payee terminee : les controles d'acces voient deja l'Essai (rien n'est ecrit ici)
+        time.sleep(0.05)
+    return None
+
+
+STRIPE_SESSION_RE = re.compile(r"^cs_[A-Za-z0-9_]{6,250}$")
+STRIPE_STATUS_TTL_S = 60
+_STRIPE_STATUS_CACHE = {"at": 0.0, "ttl": 0, "result": None}
+_STRIPE_STATUS_LOCK = threading.Lock()
+
+
+def stripe_status_public():
+    """GET /api/billing/stripe-status (sans connexion) : etat de la configuration Stripe, relu au plus une fois par STRIPE_STATUS_TTL_S secondes
+    pour TOUS les visiteurs (un appel = un processus PowerShell de plusieurs secondes). Une erreur du pont n'est gardee que quelques secondes."""
+    with _STRIPE_STATUS_LOCK:
+        now = time.time()
+        cache = _STRIPE_STATUS_CACHE
+        if cache["result"] is not None and now - cache["at"] < cache["ttl"]:
+            return cache["result"]
+        result = run_stripe_bridge("status")
+        ok = result.get("Configured") is True or result.get("Configured") is False
+        cache.update(at=time.time(), ttl=STRIPE_STATUS_TTL_S if ok else 10, result=result)
+        return result
+
+
+def _is_customer_id(client_id):
+    return bool(CLIENT_ID_RE.fullmatch(client_id or ""))
+
+
+def worker_display_name(worker_id):
+    wid = str(worker_id or "").lower()
+    if not inst.WORKER_ID_RE.match(wid):
+        return "Ce Worker"
+    ident = load_json(os.path.join(worker_base_dir(wid), "identity", "identity.json"), {}) or {}
+    return str(ident.get("name") or wid.capitalize())
+
+
+def worker_block(client_id, worker_id):
+    """None si ce client peut confier une mission a ce Worker, sinon la reponse d'erreur (HTTP 403) a renvoyer telle quelle."""
+    if not _is_customer_id(client_id):
+        return None
+    state = _billing_state_readonly(client_id)
+    if state is None:
+        return {"error": "WORKER_NOT_INCLUDED", "detail": "Votre abonnement n'a pas pu être lu pour le moment. Réessayez dans un instant.",
+                "workerId": None, "hire": None}
+    if inst.worker_allowed(state, worker_id):
+        return None
+    wid = str(worker_id or "").lower()
+    return {"error": "WORKER_NOT_INCLUDED", "detail": inst.refusal_detail(state, wid, worker_display_name),
+            "workerId": wid if inst.WORKER_ID_RE.match(wid) else None, "hire": inst.hire_summary(state)}
+
+
+def allowed_workers_env(client_id):
+    """Valeur de BK_ALLOWED_WORKERS pour les scripts PowerShell : liste de Workers separes par des virgules, "-" quand aucun Worker n'est
+    autorise, None (variable absente) quand le client a acces a tous les Workers."""
+    if not _is_customer_id(client_id):
+        return None
+    state = _billing_state_readonly(client_id)
+    if state is None:
+        return "-"
+    allowed = inst.allowed_workers(state)
+    return None if allowed is None else (",".join(allowed) or "-")
+
+
+def _pause_installation(client_id, worker_id):
+    """Interrupteur d'arret : un Worker qui n'est plus embauche ne garde aucune installation active."""
+    try:
+        if INSTALLS.get(client_id, worker_id):
+            INSTALLS.set_status(client_id, worker_id, "paused")
+    except inst.InstallationError:
+        pass
+
+
+def _pause_unhired_installations(client_id, state):
+    """Forfait Solo / Trio : met en pause TOUTE installation d'un Worker que le client n'a pas (ou plus) embauche, pas seulement celles de la liste
+    precedente. Pendant l'essai le client a pu en installer plusieurs : sans cela elles restaient « Actif » (et « Hors forfait »), et reprenaient
+    d'elles-memes si le Worker etait embauche plus tard. Hors forfait restreint, tous les Workers sont autorises : rien a faire."""
+    allowed = inst.allowed_workers(state)
+    if allowed is None:
+        return
+    try:
+        for rec in INSTALLS.list(client_id):
+            wid = str(rec.get("workerId") or "").lower()
+            if wid and wid not in allowed and rec.get("status") != "paused":
+                INSTALLS.set_status(client_id, wid, "paused")
+    except inst.InstallationError:
+        pass
+
+
+def _read_hire_requests():
+    rows = load_json(HIRE_REQUESTS_PATH, []) or []
+    return [r for r in rows if isinstance(r, dict)]
+
+
+HIRE_REQUESTS_KEPT = 500
+HIRE_OPEN_MAX = 5000      # plafond de demandes OUVERTES (jamais supprimees pour faire de la place) : au-dela, une nouvelle demande est refusee (503)
+
+
+def _write_hire_requests(rows):
+    if len(rows) > HIRE_REQUESTS_KEPT:
+        # Une demande OUVERTE n'est jamais supprimee pour faire de la place (quelques comptes gratuits pouvaient sinon en chasser des legitimes de la
+        # vue du proprietaire) : seules les demandes deja traitees les plus anciennes partent.
+        closed = [i for i, r in enumerate(rows) if r.get("status") != "open"]
+        drop = set(closed[:len(rows) - HIRE_REQUESTS_KEPT])
+        rows = [r for i, r in enumerate(rows) if i not in drop]
+    os.makedirs(os.path.dirname(HIRE_REQUESTS_PATH), exist_ok=True)
+    _write_json_atomic(HIRE_REQUESTS_PATH, rows, ensure_ascii=False, indent=2)
+
+
+@_state_locked
+def _close_hire_requests(client_id, worker_ids, status):
+    rows = _read_hire_requests()
+    changed = False
+    for r in rows:
+        if r.get("clientId") == client_id and r.get("status") == "open" and r.get("workerId") in worker_ids:
+            r["status"] = status
+            r["closedAtUtc"] = datetime.datetime.utcnow().isoformat() + "Z"
+            changed = True
+    if changed:
+        _write_hire_requests(rows)
+
+
+def open_hire_requests(client_id=None):
+    return [r for r in _read_hire_requests() if r.get("status") == "open" and (client_id is None or r.get("clientId") == client_id)]
+
+
+def _notify_owner_hire_request(rec, account):
+    """E-mail au proprietaire (meme chemin que le programme pilote : adresse BK_PILOT_NOTIFY_EMAIL ou fiche du standard). Sans adresse
+    configuree la demande reste visible dans l'apercu proprietaire. Renvoie True si un envoi a ete lance."""
+    to = pilot_program.owner_notify_address(ROOT)
+    if not to:
+        print("[hire] demande d'embauche enregistree ; aucune adresse proprietaire configuree (BK_PILOT_NOTIFY_EMAIL)", flush=True)
+        return False
+    import html as _html
+    today = datetime.date.today().isoformat()
+    with _STATE_LOCK:
+        if _HIRE_NOTIFIED["day"] != today:
+            _HIRE_NOTIFIED.update(day=today, n=0)
+        if _HIRE_NOTIFIED["n"] >= HIRE_NOTIFY_MAX_PER_DAY:
+            print("[hire] plafond journalier d'e-mails atteint ; la demande reste dans l'apercu proprietaire", flush=True)
+            return False
+        _HIRE_NOTIFIED["n"] += 1
+    esc = lambda v: _html.escape(str(v or "—"))    # noqa: E731 - tout ce qui vient du client est echappe
+    worker = worker_display_name(rec["workerId"])
+    company = (account or {}).get("companyName") or "—"
+    subject = f"Demande d'embauche : {worker} ({company})"[:150]
+    rows = [("Référence", rec["id"]), ("Client", rec["clientId"]), ("Entreprise", company), ("E-mail", (account or {}).get("email")),
+            ("Worker demandé", worker), ("Message", rec.get("message"))]
+    html_body = mailer.brand_email("Demande d'embauche d'un Worker", "<table>" + "".join(
+        f"<tr><td><b>{esc(k)}</b></td><td>{esc(v)}</td></tr>" for k, v in rows) + "</table>"
+        "<p>Pour l'accorder après règlement de la facture : POST /api/admin/grant-workers.</p>")
+    text = "\n".join(f"{k} : {v or '—'}" for k, v in rows)
+
+    def _send():
+        try:
+            ok, err = mailer.send_email(to, subject, html_body, text, gmail_bridge=run_mailer_bridge)
+            print("[hire] e-mail au proprietaire : " + ("envoye" if ok else f"ECHEC ({err})"), flush=True)
+        except Exception as e:  # noqa: BLE001 - jamais de demande perdue a cause d'un e-mail
+            print(f"[hire] e-mail au proprietaire : ECHEC ({type(e).__name__})", flush=True)
+
+    threading.Thread(target=_send, daemon=True).start()
+    return True
+
+
+@_state_locked
+def record_hire_request(client_id, worker_id, message):
+    """Enregistre la demande d'un client pour un Worker (une seule demande ouverte par client et par Worker). (fiche, creee)."""
+    for r in open_hire_requests(client_id):
+        if r.get("workerId") == worker_id:
+            return r, False
+    if len(open_hire_requests()) >= HIRE_OPEN_MAX:
+        return None, False
+    rec = {"id": "HRQ-" + secrets.token_hex(4).upper(), "clientId": client_id, "workerId": worker_id,
+           "message": str(message or "").strip()[:HIRE_REQUEST_MESSAGE_MAX], "status": "open",
+           "createdAtUtc": datetime.datetime.utcnow().isoformat() + "Z"}
+    _write_hire_requests(_read_hire_requests() + [rec])
+    return rec, True
+
+
+@_state_locked
+def hire_worker(client_id, worker_id, replace_id=None):
+    """Le client choisit un Worker tant qu'il reste un emplacement ; plein : il en remplace un (un echange par 30 jours). (payload, statut)."""
+    if not _is_customer_id(client_id):
+        return {"error": "NO_RESTRICTED_PLAN", "detail": "Ce compte a accès à tous les Workers : il n'y a rien à embaucher."}, 409
+    state = _billing_load(client_id)
+    try:
+        res = inst.hire(state, worker_id, replace_id, known_ids=set(get_worker_ids()), name_of=worker_display_name)
+    except inst.HireError as e:
+        return dict(e.extra, error=e.code, detail=e.detail), e.status
+    if not res["alreadyHired"]:
+        _billing_save(state, client_id)
+        if res["replaced"]:
+            _pause_installation(client_id, res["replaced"])
+        _pause_unhired_installations(client_id, state)
+        _close_hire_requests(client_id, {res["hired"]}, "hired")
+        log_activity("hire", clientId=client_id, hired=res["hired"], replaced=res["replaced"])
+    return dict(res, ok=True, hire=inst.hire_summary(state)), 200
+
+
+@_state_locked
+def grant_workers(client_id, plan_id, workers, new_cycle=True, paid_months=1):
+    """Proprietaire, apres facture reglee : active le forfait Solo/Trio d'un client et fixe la liste de ses Workers. paid_months = mois couverts
+    par la facture (1 a INVOICE_MONTHS_MAX) : le forfait retombe a l'Essai au-dela si le proprietaire ne le reconduit pas (rappeler cette route
+    avec la facture suivante). newCycle=False ne change que la liste des Workers : la periode payee en cours n'est pas touchee. (payload, statut)."""
+    months = _paid_months(paid_months)
+    if months is None:
+        return {"error": "INVALID_PERIOD", "detail": f"Mois facturés attendus : un entier de 1 à {INVOICE_MONTHS_MAX}."}, 400
+    if not _is_customer_id(client_id) or not any(a.get("clientId") == client_id for a in _load_accounts()):
+        return {"error": "CLIENT_NOT_FOUND", "detail": "Aucun compte client avec cet identifiant."}, 404
+    if plan_id not in inst.PLAN_WORKER_SLOTS:
+        return {"error": "INVALID_PLAN", "detail": "Forfait attendu : " + " ou ".join(sorted(inst.PLAN_WORKER_SLOTS)) + "."}, 400
+    state = _billing_load(client_id)
+    blocked = _stripe_blocks_invoice_plan(state)
+    if blocked:
+        return blocked
+    old_plan, old_hired = state.get("planId"), inst.hired_workers(state)
+    plan_changed = old_plan != plan_id
+    now_dt = _utcnow()
+    now = now_dt.isoformat() + "Z"
+    extend_from = _invoice_renewal_base(state, old_plan, plan_id, now_dt) if new_cycle and not plan_changed else None
+    state["planId"] = plan_id
+    state["gridVersion"] = GRID_VERSION
+    state.pop("lapsedFrom", None)
+    if plan_changed or new_cycle:
+        if extend_from is None:
+            state["cycleStartUtc"] = now
+            state["extraCredits"] = 0
+        _set_invoice_period(state, now_dt, months, base=extend_from)
+    elif not state.get("paidUntilUtc"):
+        _set_invoice_period(state, now_dt, months)
+    old_name = PLAN_CATALOG.get(old_plan or "essai", PLAN_CATALOG["essai"])["name"]
+    state.setdefault("history", []).append({
+        "dateUtc": now, "event": f"Forfait {PLAN_CATALOG[plan_id]['name']} activé par BK Entreprise (facture réglée), ancien forfait : {old_name}."})
+    inst.adapt_hired_to_plan(state, plan_changed=plan_changed)
+    try:
+        clean = inst.grant(state, workers, known_ids=set(get_worker_ids()), name_of=worker_display_name)
+    except inst.HireError as e:
+        return dict(e.extra, error=e.code, detail=e.detail), e.status
+    _billing_save(state, client_id)
+    for removed in old_hired:
+        if removed not in clean:
+            _pause_installation(client_id, removed)
+    _pause_unhired_installations(client_id, state)
+    _close_hire_requests(client_id, set(clean), "granted")
+    log_activity("grant_workers", clientId=client_id, planId=plan_id, workers=clean)
+    plan = PLAN_CATALOG[plan_id]
+    return {"ok": True, "clientId": client_id, "planId": plan_id, "planName": plan["name"], "credits": plan["credits"],
+            "newCycle": bool(plan_changed or new_cycle), "paidUntilUtc": state.get("paidUntilUtc"), "hire": inst.hire_summary(state)}, 200
+
+
+def _connected_connector_ids(client_id, profile):
+    """Connecteurs du profil que CE client a reellement connectes (fichier d'identifiant present). None pour le proprietaire (identifiants globaux)."""
+    if not _is_customer_id(client_id):
+        return None
+    configured = get_client_configured_providers(client_id)
+    out = set()
+    for cid in inst.profile_connector_ids(profile):
+        base = cid.removesuffix(".controlled")
+        if CONNECTOR_ID_TO_CREDENTIAL_PROVIDER.get(base, base) in configured:
+            out.add(cid)
+    return out
+
+
+def _install_worker_ok(worker_id):
+    return isinstance(worker_id, str) and worker_id in get_worker_ids()
+
+
+def _installation_view(client_id, rec, profile, entitled):
+    return dict(rec, workerName=worker_display_name(rec.get("workerId")), entitled=entitled,
+                readiness=INSTALLS.readiness(rec, profile, connected=_connected_connector_ids(client_id, profile)))
+
+
+def installation_profile_payload(client_id, worker_id):
+    """GET /api/workers/<id>/install-profile : le profil du Worker + l'installation de CE client et ce qu'il manque pour l'activer."""
+    if not _install_worker_ok(worker_id):
+        return {"error": "UNKNOWN_WORKER"}, 404
+    profile = inst.load_profile(ROOT, worker_id)
+    if profile is None:
+        return {"error": "NO_INSTALL_PROFILE", "detail": "Ce Worker n'a pas encore de fiche d'installation."}, 404
+    entitled = worker_block(client_id, worker_id) is None
+    rec = INSTALLS.get(client_id, worker_id)
+    connected = _connected_connector_ids(client_id, profile)
+    status = {cid: (cid in connected if connected is not None else None) for cid in sorted(inst.profile_connector_ids(profile))}
+    return {"workerId": worker_id, "workerName": worker_display_name(worker_id), "profile": profile, "entitled": entitled,
+            "installation": rec, "readiness": INSTALLS.readiness(rec, profile, connected=connected) if rec else None,
+            "connectorStatus": status, "liveChannels": list(inst.live_channels(profile))}, 200
+
+
+def installations_payload(client_id):
+    """GET /api/installations : toutes les installations de CE client, avec ce qu'il manque pour activer chacune."""
+    items = []
+    for rec in INSTALLS.list(client_id):
+        wid = rec.get("workerId")
+        profile = inst.load_profile(ROOT, wid)
+        items.append(_installation_view(client_id, rec, profile, worker_block(client_id, wid) is None))
+    return {"installations": items}
+
+
+def save_installation(client_id, worker_id, body):
+    """POST /api/installations : enregistre un brouillon (jamais l'activation). (payload, statut)."""
+    if not _install_worker_ok(worker_id):
+        return {"error": "UNKNOWN_WORKER"}, 404
+    profile = inst.load_profile(ROOT, worker_id)
+    if profile is None:
+        return {"error": "NO_INSTALL_PROFILE", "detail": "Ce Worker n'a pas encore de fiche d'installation."}, 404
+    block = worker_block(client_id, worker_id)
+    if block:
+        return block, 403
+    try:
+        rec, warnings = INSTALLS.upsert_with_warnings(client_id, worker_id, {"services": body.get("services"), "notes": body.get("notes")})
+    except inst.InstallationError as e:
+        return {"error": "INSTALLATION_INVALID", "detail": "Certains champs sont à corriger.", "errors": e.errors}, 400
+    return {"ok": True, "installation": _installation_view(client_id, rec, profile, True), "warnings": warnings}, 200
+
+
+def set_installation_status(client_id, worker_id, status):
+    """POST /api/installations/status : activer (seulement si rien ne manque et si le Worker est embauche), mettre en pause, repasser en essai."""
+    if not _install_worker_ok(worker_id):
+        return {"error": "UNKNOWN_WORKER"}, 404
+    if status not in inst.STATUSES:
+        return {"error": "INVALID_STATUS", "detail": "Statut attendu : active, paused ou draft."}, 400
+    profile = inst.load_profile(ROOT, worker_id)
+    rec = INSTALLS.get(client_id, worker_id)
+    if rec is None:
+        return {"error": "NO_INSTALLATION", "detail": "Aucune installation pour ce Worker : enregistrez d'abord sa configuration."}, 404
+    if status == "active":
+        block = worker_block(client_id, worker_id)
+        if block:
+            return block, 403
+    try:
+        rec = INSTALLS.set_status(client_id, worker_id, status, connected=_connected_connector_ids(client_id, profile))
+    except inst.InstallationError as e:
+        return {"error": "NOT_READY", "detail": "L'installation n'est pas complète : " + " ".join(e.errors), "errors": e.errors,
+                "readiness": e.errors}, 409
+    log_activity("installation", clientId=client_id, workerId=worker_id, status=status)
+    return {"ok": True, "installation": _installation_view(client_id, rec, profile, worker_block(client_id, worker_id) is None)}, 200
+
+
+def automation_worker(client_id, automation_id):
+    """Worker d'une automatisation de CE client (None si elle n'existe pas ou appartient a un autre) : sert a verifier le droit d'acces."""
+    try:
+        with open(os.path.join(ROOT, "core", "automation", "data", "automations.json"), encoding="utf-8-sig") as f:
+            autos = json.load(f) or []
+    except Exception:
+        return None
+    if isinstance(autos, dict):
+        autos = [autos]
+    for a in autos:
+        if isinstance(a, dict) and a.get("id") == automation_id and (a.get("clientId") or DASHBOARD_CLIENT_ID) == client_id:
+            return str(a.get("workerId") or "").lower() or None
+    return None
+
+
+def refused_for_hiring(result):
+    """Message francais si le resultat d'une mission est un refus d'embauche (verrou de submit_task, ou Chloe dont le meilleur Worker n'est
+    pas embauche : Status WORKER_NOT_INCLUDED), sinon None. Les routes le transforment en HTTP 403 / job en erreur."""
+    if isinstance(result, dict):
+        if result.get("error") == "WORKER_NOT_INCLUDED":
+            return str(result.get("detail") or "Ce Worker ne fait pas partie de votre forfait.")
+        if result.get("Status") == "WORKER_NOT_INCLUDED":
+            return str(result.get("FinalSynthesis") or "Ce Worker ne fait pas partie de votre forfait.")
+    return None
+
+
+def paused_workers(client_id):
+    """Workers dont le client a mis l'installation en pause (interrupteur d'arret), en minuscules."""
+    try:
+        records = INSTALLS.list(client_id)
+    except Exception:
+        return set()
+    return {str(r.get("workerId") or "").lower() for r in records if r.get("status") == "paused"}
+
+
+def scheduled_allowed_workers_env(client_id):
+    """BK_ALLOWED_WORKERS d'une mission AUTOMATIQUE (planifiee) : celui d'allowed_workers_env, sans les Workers que le client a mis en pause. Sans
+    cela, une automatisation de Chloe continuait d'appeler un Worker en pause (l'interrupteur ne regardait que le Worker de l'automatisation, ici
+    Chloe). Renvoie (valeur, aucun_worker_restant) : valeur None = tous les Workers, "-" = aucun."""
+    base = allowed_workers_env(client_id)
+    paused = paused_workers(client_id) if _is_customer_id(client_id) else set()
+    if not paused or base == "-":
+        return base, False
+    universe = [w for w in (get_worker_ids() if base is None else base.split(",")) if w]
+    kept = [w for w in universe if w.lower() not in paused]
+    return (",".join(kept) or "-"), not kept
+
+
+def installation_paused(client_id, worker_id):
+    """True quand le client a mis l'installation de ce Worker en pause (interrupteur d'arret : plus aucune mission automatique)."""
+    try:
+        rec = INSTALLS.get(client_id, str(worker_id or "").lower())
+    except Exception:
+        return False
+    return bool(rec) and rec.get("status") == "paused"
 
 
 @_state_locked
@@ -2706,9 +4146,9 @@ def recharge_billing_credits(amount, client_id=DASHBOARD_CLIENT_ID):
     collage de cle/jeton (meme principe, meme endroit du fichier)."""
     if client_id != DASHBOARD_CLIENT_ID:
         return {"error": "RECHARGE_NOT_AVAILABLE",
-                "detail": "L'achat de crédits supplémentaires n'est pas encore relié à un vrai paiement — indisponible pour le moment."}
+                "detail": "Il n'y a pas de recharge de crédits : chaque forfait inclut un quota mensuel fixe. Quand il est atteint, passez au forfait supérieur."}
     state = _billing_load(client_id)
-    now = datetime.datetime.utcnow().isoformat() + "Z"
+    now = _utcnow().isoformat() + "Z"
     state["extraCredits"] = int(state.get("extraCredits") or 0) + amount
     state.setdefault("history", []).append({
         "dateUtc": now,
@@ -3077,6 +4517,35 @@ class Handler(BaseHTTPRequestHandler):
     def _send_account_required(self):
         self._send_json({"error": "ACCOUNT_REQUIRED"}, 401)
 
+    def _worker_not_included(self, client_id, worker_id):
+        """Offre "Worker a l'unite" : True (reponse 403 WORKER_NOT_INCLUDED deja envoyee) si ce client n'a pas embauche ce Worker."""
+        block = worker_block(client_id, worker_id)
+        if block:
+            self._send_json(block, 403)
+            return True
+        return False
+
+    def _read_json_limited(self, limit, strict=False):
+        """Corps JSON d'une requete d'ecriture, avec taille maximale : renvoie le dict, ou None quand la reponse d'erreur (413, ou 400 si strict et que le
+        corps n'est pas un objet JSON) est deja envoyee. Non strict, un corps illisible vaut {}."""
+        try:
+            length = int(self.headers.get("Content-Length", 0) or 0)
+        except ValueError:
+            length = -1
+        if length < 0 or length > limit:
+            self.close_connection = True
+            self._send_json({"error": "TOO_LARGE"}, 413)
+            return None
+        raw = self.rfile.read(length) if length else b"{}"
+        try:
+            body = json.loads(raw.decode("utf-8"))
+        except Exception:
+            body = None if strict else {}
+        if strict and not isinstance(body, dict):
+            self._send_json({"error": "INVALID_JSON", "detail": "Un objet JSON est attendu."}, 400)
+            return None
+        return body if isinstance(body, dict) else {}
+
     def _public_api_key(self):
         """Cle API pour /api/public/v1/* : header Authorization: Bearer
         <cle> (convention Zapier/Make "API Key" standard) ou X-Api-Key,
@@ -3180,7 +4649,7 @@ class Handler(BaseHTTPRequestHandler):
         elif path == "/facturation.html":
             self._send_html(seo_pages.render_facturation_page())
         elif path == "/tarifs.html":
-            self._send_html(seo_pages.render_tarifs_page())
+            self._send_html(seo_pages.render_tarifs_page(public_mission_levels()))
         elif path == "/faq.html":
             self._send_html(seo_pages.render_faq_page())
         elif path == "/cgv.html":
@@ -3199,6 +4668,28 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json({"total": len(workers), "categories": counts})
         elif path == "/api/chloe":
             self._send_json(build_worker_summary("chloe"))
+        elif path == "/api/workers/hired":
+            # Offre "Worker a l'unite" : emplacements, Workers embauches, echange possible, demandes en cours (reserve au compte connecte).
+            client_id = self._resolve_client_id()
+            if not client_id:
+                self._send_account_required()
+                return
+            state = _billing_load(client_id) if _is_customer_id(client_id) else {}
+            self._send_json({"hire": inst.hire_summary(state), "planName": PLAN_CATALOG.get(state.get("planId") or "essai", PLAN_CATALOG["essai"])["name"],
+                             "openRequests": [r.get("workerId") for r in open_hire_requests(client_id)]})
+        elif path.startswith("/api/workers/") and path.endswith("/install-profile") and len(path.strip("/").split("/")) == 4:
+            client_id = self._resolve_client_id()
+            if not client_id:
+                self._send_account_required()
+                return
+            payload, status = installation_profile_payload(client_id, path.split("/")[3])
+            self._send_json(payload, status)
+        elif path == "/api/installations":
+            client_id = self._resolve_client_id()
+            if not client_id:
+                self._send_account_required()
+                return
+            self._send_json(installations_payload(client_id))
         elif path.startswith("/api/workers/") and path.endswith("/activity"):
             wid = path.split("/")[3]
             if wid not in get_worker_ids() and wid != "chloe":
@@ -3427,7 +4918,10 @@ class Handler(BaseHTTPRequestHandler):
                 return
             self._send_json({"notes": list_client_memory(client_id)})
         elif path == "/api/mission-levels":
-            self._send_json(public_mission_levels())
+            if (parse_qs(parsed.query).get("scale") or [""])[0] == "public":
+                self._send_json(public_mission_levels(""))     # l'echelle complete, la meme pour tous (page Tarifs) : aucune donnee de compte
+            else:
+                self._send_json(public_mission_levels(self._resolve_client_id() or ""))     # un compte a l'essai ne voit que Rapide
         elif path == "/api/fx":
             self._send_json(get_fx_rates())
         elif path == "/webhooks/whatsapp":
@@ -3500,8 +4994,7 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 self._send_json({"loggedIn": False})
         elif path == "/api/billing/stripe-status":
-            result = run_stripe_bridge("status")
-            self._send_json(result)
+            self._send_json(stripe_status_public())
         elif path == "/api/automations":
             client_id = self._resolve_client_id()
             if not client_id:
@@ -3541,7 +5034,29 @@ class Handler(BaseHTTPRequestHandler):
         if not TRUST.handle_head(self, unquote(urlparse(self.path).path)):
             self.send_error(501, "Unsupported method ('HEAD')")
 
+    def send_response(self, code, message=None):
+        self._response_started = True
+        super().send_response(code, message)
+
     def do_POST(self):
+        """Toute route POST : une exception inattendue (corps JSON de mauvais type : liste, nombre, null...) donne une reponse JSON 400 ou 500 au lieu
+        de couper la connexion sans reponse."""
+        self._response_started = False
+        try:
+            self._handle_post()
+        except (BrokenPipeError, ConnectionError):
+            raise
+        except Exception as e:  # noqa: BLE001
+            print(f"[http] POST {self.path.split('?')[0]} : {type(e).__name__}", flush=True)
+            if self._response_started:
+                self.close_connection = True
+                return
+            if isinstance(e, (AttributeError, TypeError, ValueError, KeyError)):
+                self._send_json({"error": "INVALID_REQUEST", "detail": "La requête est mal formée."}, 400)
+            else:
+                self._send_json({"error": "SERVER_ERROR", "detail": "Erreur interne du serveur."}, 500)
+
+    def _handle_post(self):
         parsed = urlparse(self.path)
         path = unquote(parsed.path)
 
@@ -3824,9 +5339,7 @@ class Handler(BaseHTTPRequestHandler):
             if not client_id:
                 self._send_account_required()
                 return
-            block = subscription_blocks_mission(client_id)
-            if block:
-                self._send_json({"error": "SUBSCRIPTION_REQUIRED", "detail": block}, 402)
+            if self._worker_not_included(client_id, "chloe"):
                 return
             length = int(self.headers.get("Content-Length", 0))
             raw = self.rfile.read(length) if length else b"{}"
@@ -3834,11 +5347,21 @@ class Handler(BaseHTTPRequestHandler):
                 body = json.loads(raw.decode("utf-8"))
             except Exception:
                 body = {}
+            # Le quota est controle AU NIVEAU DEMANDE (et non au niveau par defaut) : sinon une mission Approfondi (12 credits) passait
+            # avec le solde d'une mission Equilibre.
+            block = subscription_blocks_mission(client_id, body.get("level"))
+            if block:
+                self._send_json(subscription_required_payload(client_id, block), 402)
+                return
             objective = (body.get("objective") or "").strip()
             if not objective:
                 self._send_json({"error": "OBJECTIVE_REQUIRED"}, 400)
                 return
             result = submit_task_limited(objective, worker_id="chloe", client_id=client_id, level=body.get("level"))
+            refused = refused_for_hiring(result)
+            if refused:
+                self._send_json({"error": "WORKER_NOT_INCLUDED", "detail": refused, "notIncludedWorkers": result.get("NotIncludedWorkers") or []}, 403)
+                return
             self._send_json(attach_pending_action(result))
         elif path == "/api/chloe/task/async":
             # Variante asynchrone de /api/chloe/task : memes gardes (compte,
@@ -3850,6 +5373,8 @@ class Handler(BaseHTTPRequestHandler):
             if not client_id:
                 self._send_account_required()
                 return
+            if self._worker_not_included(client_id, "chloe"):
+                return
             length = int(self.headers.get("Content-Length", 0))
             raw = self.rfile.read(length) if length else b"{}"
             try:
@@ -3858,7 +5383,7 @@ class Handler(BaseHTTPRequestHandler):
                 body = {}
             block = subscription_blocks_mission(client_id, body.get("level"))
             if block:
-                self._send_json({"error": "SUBSCRIPTION_REQUIRED", "detail": block}, 402)
+                self._send_json(subscription_required_payload(client_id, block), 402)
                 return
             objective = (body.get("objective") or "").strip()
             if not objective:
@@ -3875,6 +5400,8 @@ class Handler(BaseHTTPRequestHandler):
             if not client_id:
                 self._send_account_required()
                 return
+            if self._worker_not_included(client_id, "chloe"):
+                return
             length = int(self.headers.get("Content-Length", 0))
             raw = self.rfile.read(length) if length else b"{}"
             try:
@@ -3886,6 +5413,10 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json({"error": "OBJECTIVE_REQUIRED"}, 400)
                 return
             result = submit_task(objective, worker_id="chloe", plan_only=True, client_id=client_id)
+            refused = refused_for_hiring(result)       # comme /api/chloe/task : la demande d'un Worker non embauche est un 403 clair, pas un plan vide
+            if refused:
+                self._send_json({"error": "WORKER_NOT_INCLUDED", "detail": refused, "notIncludedWorkers": result.get("NotIncludedWorkers") or []}, 403)
+                return
             self._send_json(result)
         elif path.startswith("/api/workers/") and path.endswith("/task"):
             wid = path.split("/")[3]
@@ -3896,9 +5427,7 @@ class Handler(BaseHTTPRequestHandler):
             if not client_id:
                 self._send_account_required()
                 return
-            block = subscription_blocks_mission(client_id)
-            if block:
-                self._send_json({"error": "SUBSCRIPTION_REQUIRED", "detail": block}, 402)
+            if self._worker_not_included(client_id, wid):
                 return
             length = int(self.headers.get("Content-Length", 0))
             raw = self.rfile.read(length) if length else b"{}"
@@ -3906,11 +5435,19 @@ class Handler(BaseHTTPRequestHandler):
                 body = json.loads(raw.decode("utf-8"))
             except Exception:
                 body = {}
+            block = subscription_blocks_mission(client_id, body.get("level"))      # au niveau demande (voir /api/chloe/task)
+            if block:
+                self._send_json(subscription_required_payload(client_id, block), 402)
+                return
             objective = (body.get("objective") or "").strip()
             if not objective:
                 self._send_json({"error": "OBJECTIVE_REQUIRED"}, 400)
                 return
             result = submit_task_limited(objective, worker_id=wid, client_id=client_id, level=body.get("level"))
+            refused = refused_for_hiring(result)
+            if refused:
+                self._send_json({"error": "WORKER_NOT_INCLUDED", "detail": refused, "workerId": wid}, 403)
+                return
             self._send_json(attach_pending_action(result))
         elif path.startswith("/api/workers/") and path.endswith("/task/async"):
             # Variante asynchrone de /api/workers/<id>/task : memes gardes
@@ -3925,6 +5462,8 @@ class Handler(BaseHTTPRequestHandler):
             if not client_id:
                 self._send_account_required()
                 return
+            if self._worker_not_included(client_id, wid):
+                return
             length = int(self.headers.get("Content-Length", 0))
             raw = self.rfile.read(length) if length else b"{}"
             try:
@@ -3933,7 +5472,7 @@ class Handler(BaseHTTPRequestHandler):
                 body = {}
             block = subscription_blocks_mission(client_id, body.get("level"))
             if block:
-                self._send_json({"error": "SUBSCRIPTION_REQUIRED", "detail": block}, 402)
+                self._send_json(subscription_required_payload(client_id, block), 402)
                 return
             objective = (body.get("objective") or "").strip()
             if not objective:
@@ -3970,6 +5509,144 @@ class Handler(BaseHTTPRequestHandler):
             except Exception:
                 pass
             self._send_json(result)
+        elif path == "/api/workers/hire":
+            # Offre "Worker a l'unite" : le client choisit son Worker (Solo : 1, Trio : 3). Emplacements pleins : replaceWorkerId, une fois par 30 jours.
+            client_id = self._resolve_client_id()
+            if not client_id:
+                self._send_account_required()
+                return
+            if not hire_rate_ok("hire", client_id):
+                self._send_json({"error": "RATE_LIMITED", "detail": "Trop de tentatives : réessayez dans un moment."}, 429)
+                return
+            body = self._read_json_limited(HIRE_BODY_LIMITS["hire"])
+            if body is None:
+                return
+            payload, status = hire_worker(client_id, str(body.get("workerId") or "").strip().lower(), body.get("replaceWorkerId"))
+            self._send_json(payload, status)
+        elif path.startswith("/api/workers/") and path.endswith("/hire-request") and len(path.strip("/").split("/")) == 4:
+            wid = path.split("/")[3]
+            if wid not in get_worker_ids():
+                self._send_json({"error": "UNKNOWN_WORKER"}, 404)
+                return
+            client_id = self._resolve_client_id()
+            if not client_id:
+                self._send_account_required()
+                return
+            # Une demande a un sens pour un client en forfait Solo/Trio qui n'a pas ce Worker, ou en Essai qui voudrait le souscrire seul ;
+            # un forfait payant classique donne deja acces a tous les Workers.
+            state = _billing_state_readonly(client_id) or {} if _is_customer_id(client_id) else None
+            if state is None or not ((state.get("planId") or "essai") == "essai" or worker_block(client_id, wid)):
+                self._send_json({"error": "ALREADY_INCLUDED", "detail": "Ce Worker fait déjà partie de votre forfait."}, 409)
+                return
+            if not hire_rate_ok("hire-request", client_id):
+                self._send_json({"error": "RATE_LIMITED", "detail": "Vous avez déjà envoyé plusieurs demandes aujourd'hui : nous revenons vers vous."}, 429)
+                return
+            body = self._read_json_limited(HIRE_BODY_LIMITS["hire-request"])
+            if body is None:
+                return
+            rec, created = record_hire_request(client_id, wid, body.get("message"))
+            if rec is None:
+                self._send_json({"error": "HIRE_REQUESTS_FULL", "detail": f"Les demandes d'embauche sont momentanément saturées : écrivez-nous à {CONTACT_EMAIL}."}, 503)
+                return
+            account = next((a for a in _load_accounts() if a.get("clientId") == client_id), None)
+            notified = _notify_owner_hire_request(rec, account) if created else False
+            log_activity("hire_request", clientId=client_id, workerId=wid)
+            self._send_json({"ok": True, "requestId": rec["id"], "alreadyRequested": not created, "notified": notified})
+        elif path == "/api/admin/grant-workers":
+            # Proprietaire uniquement (porte historique, jamais une session de compte client) : a appeler une fois la facture reglee.
+            if not self._gate_authenticated():
+                self._send_gate_required()
+                return
+            if not hire_rate_ok("grant", "owner"):
+                self._send_json({"error": "RATE_LIMITED"}, 429)
+                return
+            body = self._read_json_limited(HIRE_BODY_LIMITS["grant"], strict=True)
+            if body is None:
+                return
+            payload, status = grant_workers(str(body.get("clientId") or "").strip(), str(body.get("planId") or "").strip().lower(),
+                                            body.get("workers"), new_cycle=body.get("newCycle") is not False, paid_months=body.get("paidMonths"))
+            self._send_json(payload, status)
+        elif path == "/api/admin/set-plan":
+            # Proprietaire uniquement : active Equipe, Pro, Scale ou Enterprise (devis signe : plafond de credits MENSUEL contractuel) pour un
+            # client, une fois la facture reglee. Aucun forfait n'est illimite : Enterprise sans plafond saisi prend ENTERPRISE_DEFAULT_CREDITS.
+            if not self._gate_authenticated():
+                self._send_gate_required()
+                return
+            if not hire_rate_ok("grant", "owner"):
+                self._send_json({"error": "RATE_LIMITED"}, 429)
+                return
+            body = self._read_json_limited(HIRE_BODY_LIMITS["grant"], strict=True)
+            if body is None:
+                return
+            payload, status = set_client_plan(str(body.get("clientId") or "").strip(), str(body.get("planId") or "").strip().lower(),
+                                              contract_credits=body.get("contractCredits"), paid_months=body.get("paidMonths"))
+            self._send_json(payload, status)
+        elif path == "/api/admin/stripe-sync":
+            # Proprietaire uniquement : relit maintenant l'abonnement Stripe d'un client (clientId) ou de tous, sans attendre le passage automatique de 6 h.
+            if not self._gate_authenticated():
+                self._send_gate_required()
+                return
+            if not hire_rate_ok("grant", "owner"):
+                self._send_json({"error": "RATE_LIMITED"}, 429)
+                return
+            body = self._read_json_limited(HIRE_BODY_LIMITS["grant"], strict=True)
+            if body is None:
+                return
+            target = str(body.get("clientId") or "").strip()
+            if target and not _is_customer_id(target):
+                self._send_json({"error": "CLIENT_NOT_FOUND", "detail": "Identifiant client invalide."}, 404)
+                return
+            self._send_json({"ok": True, **({"clientId": target, "result": sync_stripe_subscription(target, force=True)} if target
+                                            else {"results": sync_all_stripe_subscriptions(force=True)})})
+        elif path == "/api/installations":
+            client_id = self._resolve_client_id()
+            if not client_id:
+                self._send_account_required()
+                return
+            if not hire_rate_ok("install-write", client_id):
+                self._send_json({"error": "RATE_LIMITED", "detail": "Trop d'enregistrements : réessayez dans un moment."}, 429)
+                return
+            body = self._read_json_limited(HIRE_BODY_LIMITS["install-write"])
+            if body is None:
+                return
+            try:
+                payload, status = save_installation(client_id, str(body.get("workerId") or "").strip().lower(), body)
+            except Exception as e:  # noqa: BLE001 - une requete mal formee ne doit jamais couper la connexion sans reponse
+                print(f"[installations] enregistrement impossible : {type(e).__name__}", flush=True)
+                payload, status = {"error": "INSTALLATION_FAILED", "detail": "Cette configuration n'a pas pu être enregistrée. Vérifiez les champs et réessayez."}, 500
+            self._send_json(payload, status)
+        elif path == "/api/installations/status":
+            client_id = self._resolve_client_id()
+            if not client_id:
+                self._send_account_required()
+                return
+            if not hire_rate_ok("install-status", client_id):
+                self._send_json({"error": "RATE_LIMITED", "detail": "Trop de changements : réessayez dans un moment."}, 429)
+                return
+            body = self._read_json_limited(HIRE_BODY_LIMITS["install-status"])
+            if body is None:
+                return
+            payload, status = set_installation_status(client_id, str(body.get("workerId") or "").strip().lower(), body.get("status"))
+            self._send_json(payload, status)
+        elif path == "/api/installations/delete":
+            client_id = self._resolve_client_id()
+            if not client_id:
+                self._send_account_required()
+                return
+            if not hire_rate_ok("install-status", client_id):
+                self._send_json({"error": "RATE_LIMITED", "detail": "Trop de changements : réessayez dans un moment."}, 429)
+                return
+            body = self._read_json_limited(HIRE_BODY_LIMITS["install-status"])
+            if body is None:
+                return
+            wid = str(body.get("workerId") or "").strip().lower()
+            if not _install_worker_ok(wid):
+                self._send_json({"error": "UNKNOWN_WORKER"}, 404)
+                return
+            deleted = INSTALLS.delete(client_id, wid)
+            if deleted:
+                log_activity("installation", clientId=client_id, workerId=wid, status="deleted")
+            self._send_json({"ok": True, "deleted": deleted})
         elif path == "/api/memory/delete":
             client_id = self._resolve_client_id()
             if not client_id:
@@ -4007,9 +5684,9 @@ class Handler(BaseHTTPRequestHandler):
             if not client_id:
                 self._send_account_required()
                 return
-            block = subscription_blocks_mission(client_id)
+            block = subscription_blocks_mission(client_id, automation_level(client_id))      # missions recurrentes : niveau Rapide, 1 credit
             if block:
-                self._send_json({"error": "SUBSCRIPTION_REQUIRED", "detail": block}, 402)
+                self._send_json(subscription_required_payload(client_id, block), 402)
                 return
             length = int(self.headers.get("Content-Length", 0))
             raw = self.rfile.read(length) if length else b"{}"
@@ -4022,6 +5699,8 @@ class Handler(BaseHTTPRequestHandler):
             frequency_minutes = body.get("frequencyMinutes")
             if worker_id != "chloe" and worker_id not in get_worker_ids():
                 self._send_json({"error": "UNKNOWN_WORKER"}, 404)
+                return
+            if self._worker_not_included(client_id, worker_id):
                 return
             if not objective:
                 self._send_json({"error": "OBJECTIVE_REQUIRED"}, 400)
@@ -4053,9 +5732,11 @@ class Handler(BaseHTTPRequestHandler):
                 body = {}
             enabled = bool(body.get("enabled"))
             if enabled:
-                block = subscription_blocks_mission(client_id)
+                if self._worker_not_included(client_id, automation_worker(client_id, automation_id)):
+                    return
+                block = subscription_blocks_mission(client_id, automation_level(client_id))      # missions recurrentes : niveau Rapide, 1 credit
                 if block:
-                    self._send_json({"error": "SUBSCRIPTION_REQUIRED", "detail": block}, 402)
+                    self._send_json(subscription_required_payload(client_id, block), 402)
                     return
             result = run_automation_bridge("toggle", automation_id=automation_id, enabled=enabled, client_id=client_id)
             self._send_json({"automations": result} if isinstance(result, list) else result)
@@ -4071,11 +5752,13 @@ class Handler(BaseHTTPRequestHandler):
             if not client_id:
                 self._send_account_required()
                 return
-            block = subscription_blocks_mission(client_id)
-            if block:
-                self._send_json({"error": "SUBSCRIPTION_REQUIRED", "detail": block}, 402)
-                return
             automation_id = path.split("/")[3]
+            if self._worker_not_included(client_id, automation_worker(client_id, automation_id)):
+                return
+            block = subscription_blocks_mission(client_id, automation_level(client_id))      # missions recurrentes : niveau Rapide, 1 credit
+            if block:
+                self._send_json(subscription_required_payload(client_id, block), 402)
+                return
             result = run_automation_bridge("run", automation_id=automation_id, client_id=client_id)
             self._send_json(result)
         elif path == "/api/automations/tick":
@@ -4083,9 +5766,9 @@ class Handler(BaseHTTPRequestHandler):
             if not client_id:
                 self._send_account_required()
                 return
-            block = subscription_blocks_mission(client_id)
+            block = subscription_blocks_mission(client_id, automation_level(client_id))      # missions recurrentes : niveau Rapide, 1 credit
             if block:
-                self._send_json({"error": "SUBSCRIPTION_REQUIRED", "detail": block}, 402)
+                self._send_json(subscription_required_payload(client_id, block), 402)
                 return
             result = run_automation_bridge("tick", client_id=client_id)
             self._send_json({"ran": result} if isinstance(result, list) else result)
@@ -4149,7 +5832,7 @@ class Handler(BaseHTTPRequestHandler):
                 return
             block = subscription_blocks_mission(client_id)
             if block:
-                self._send_json({"error": "SUBSCRIPTION_REQUIRED", "detail": block}, 402)
+                self._send_json(subscription_required_payload(client_id, block), 402)
                 return
             length = int(self.headers.get("Content-Length", 0))
             raw = self.rfile.read(length) if length else b"{}"
@@ -4165,7 +5848,13 @@ class Handler(BaseHTTPRequestHandler):
             if worker_id and worker_id not in get_worker_ids():
                 self._send_json({"error": "UNKNOWN_WORKER"}, 404)
                 return
+            if self._worker_not_included(client_id, worker_id or "chloe"):
+                return
             result = submit_task_limited(objective, worker_id=worker_id or "chloe", client_id=client_id)
+            refused = refused_for_hiring(result)
+            if refused:
+                self._send_json({"error": "WORKER_NOT_INCLUDED", "detail": refused}, 403)
+                return
             self._send_json(_summarize_mission_result(result))
         elif path == "/api/connectors/auto-approve/toggle":
             # Pre-autorisation globale : quand activee, les actions
@@ -4278,71 +5967,34 @@ class Handler(BaseHTTPRequestHandler):
             interval = (body.get("interval") or "month").strip().lower()
             if interval not in ("month", "year"):
                 interval = "month"
-            if plan_id not in PLAN_CATALOG:
-                self._send_json({"error": "UNKNOWN_PLAN"}, 400)
-                return
-            if plan_id in PAID_PLANS_WITH_CHECKOUT and client_id != DASHBOARD_CLIENT_ID and not account_email_verified(client_id):
-                self._send_json({"error": "EMAIL_NOT_VERIFIED"}, 403)
-                return
-
-            # Plans payants : si Stripe est configure, on passe par une
-            # vraie Checkout Session hebergee par Stripe (le plan local
-            # n'est active qu'APRES confirmation du paiement, voir
-            # /api/billing/stripe-confirm) plutot que de basculer le
-            # plan instantanement. Essai (gratuit) et Enterprise (sur
-            # devis) restent toujours en bascule directe.
-            if plan_id in PAID_PLANS_WITH_CHECKOUT:
-                stripe_status = run_stripe_bridge("status")
-                if stripe_status.get("Configured"):
-                    success_url = PUBLIC_BASE_URL + "/?billing_checkout=success&session_id={CHECKOUT_SESSION_ID}"
-                    cancel_url = PUBLIC_BASE_URL + "/?billing_checkout=cancel"
-                    checkout = run_stripe_bridge(
-                        "create-checkout", plan_id=plan_id,
-                        success_url=success_url, cancel_url=cancel_url,
-                        interval=interval, client_id=client_id,
-                    )
-                    if checkout.get("Status") == "SUCCESS":
-                        self._send_json({"checkoutUrl": checkout["CheckoutUrl"], "sessionId": checkout["SessionId"]})
-                    else:
-                        self._send_json({"error": "STRIPE_CHECKOUT_FAILED", "detail": checkout.get("Detail") or checkout.get("Status")}, 400)
-                    return
-
-            result = set_billing_plan(plan_id, client_id=client_id)
-            if "error" in result:
-                self._send_json(result, 400)
-            else:
-                self._send_json(result)
+            payload, status = select_billing_plan(client_id, plan_id, interval)
+            self._send_json(payload, status)
         elif path == "/api/billing/stripe-confirm":
-            length = int(self.headers.get("Content-Length", 0))
-            raw = self.rfile.read(length) if length else b"{}"
-            try:
-                body = json.loads(raw.decode("utf-8"))
-            except Exception:
-                body = {}
-            session_id = (body.get("sessionId") or "").strip()
+            # Sans connexion (le retour de Stripe peut arriver sans cookie) mais jamais sans garde-fou : corps borne, identifiant au format Stripe verifie
+            # ICI (un identifiant invalide ne lance aucun processus PowerShell), puis plafond par adresse IP.
+            body = self._read_json_limited(HIRE_BODY_LIMITS["stripe-confirm"])
+            if body is None:
+                return
+            raw_session = body.get("sessionId")
+            session_id = raw_session.strip() if isinstance(raw_session, str) else ""
             if not session_id:
                 self._send_json({"error": "SESSION_ID_REQUIRED"}, 400)
+                return
+            if not STRIPE_SESSION_RE.fullmatch(session_id):
+                self._send_json({"error": "INVALID_SESSION_ID", "detail": "Identifiant de paiement invalide."}, 400)
+                return
+            if not hire_rate_ok("stripe-confirm", self._client_ip()):
+                self._send_json({"error": "RATE_LIMITED", "detail": "Trop de vérifications de paiement depuis cette adresse : réessayez dans un moment."}, 429)
                 return
             confirmation = run_stripe_bridge("confirm", session_id=session_id)
             if confirmation.get("Status") != "SUCCESS":
                 self._send_json({"error": "STRIPE_CONFIRM_FAILED", "detail": confirmation.get("Detail") or confirmation.get("Status")}, 400)
                 return
-            if not confirmation.get("Paid") or confirmation.get("PlanId") not in PLAN_CATALOG:
-                self._send_json({"error": "PAYMENT_NOT_CONFIRMED", "detail": confirmation.get("PaymentStatus")}, 400)
-                return
-            # Le ClientId qui a paye vient des metadata Stripe (fiable, pose
-            # a la creation de la session) — le cookie de session encore
-            # present sert seulement de repli pour d'anciennes sessions
-            # creees avant ce champ.
-            client_id = confirmation.get("ClientId") or self._resolve_client_id()
-            if not client_id:
-                self._send_account_required()
-                return
-            self._send_json(set_billing_plan(
-                confirmation["PlanId"], via_stripe=True,
-                stripe_subscription_id=confirmation.get("SubscriptionId"),
-                client_id=client_id,
-            ))
+            # Le ClientId qui a paye vient des metadata Stripe (fiable, pose a la creation de la session) — le cookie de session encore
+            # present sert seulement de repli pour d'anciennes sessions creees avant ce champ.
+            confirmation["SessionId"] = session_id
+            payload, status = activate_checkout_plan(confirmation, self._resolve_client_id())
+            self._send_json(payload, status)
         elif path == "/api/profile":
             client_id = self._resolve_client_id()
             if not client_id:
@@ -4379,7 +6031,8 @@ class Handler(BaseHTTPRequestHandler):
             if not client_id:
                 self._send_account_required()
                 return
-            self._send_json(cancel_billing_plan(client_id))
+            result = cancel_billing_plan(client_id)
+            self._send_json(result, 503 if result.get("error") == "STRIPE_UNAVAILABLE" else 200)
         elif path == "/api/billing/recharge":
             client_id = self._resolve_client_id()
             if not client_id:
@@ -4436,4 +6089,5 @@ if __name__ == "__main__":
         print("ATTENTION : aucune porte d'acces definie (.secrets\\Set-DashboardGate.ps1) — les vues operationnelles sont ouvertes a quiconque atteint ce serveur.")
     PHONE_AGENT.warm_up()
     TRUST.start(port, os.environ.get("BK_LISTEN_HOST", "127.0.0.1"))  # mesure de disponibilite toutes les 60 s
+    threading.Thread(target=_stripe_sync_loop, daemon=True).start()   # relit les abonnements Stripe (resilies, impayes) toutes les 6 h
     server.serve_forever()

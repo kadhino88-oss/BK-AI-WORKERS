@@ -42,6 +42,15 @@ function Get-WorkerSystemPrompt {
         try { . $MemScript; $MemoryBlock = Get-BKMemoryBlock -Root $ProjectRoot -ClientId $ClientId } catch { }
     }
 
+    # Installation du Worker chez CE client (2026-10-12, offre "Worker a l'unite") : services actives, fiche de connaissances et regles d'autonomie
+    # ecrites par le client, injectees comme DONNEES (Client-Installation.ps1). Absente si le client n'a rien installe pour CE Worker, si
+    # l'installation est en pause (interrupteur d'arret) ou si l'identifiant est invalide : le Worker garde alors son comportement par defaut.
+    $InstallationBlock = ""
+    $InstScript = Join-Path $ProjectRoot "core/ai/adapters/Client-Installation.ps1"
+    if ($ClientId -match '^[A-Za-z0-9_-]+$' -and $WorkerId -match '^[A-Za-z0-9_-]{1,40}$' -and (Test-Path -LiteralPath $InstScript -PathType Leaf)) {
+        try { . $InstScript; $InstallationBlock = Get-BKInstallationBlock -Root $ProjectRoot -ClientId $ClientId -WorkerId $WorkerId } catch { }
+    }
+
     $CompanyBlock = ""
     if ($ClientId -match '^[A-Za-z0-9_-]+$') {
         $ProfilePath = Join-Path $ProjectRoot ("core/profile/data/" + $ClientId + ".json")
@@ -78,6 +87,7 @@ Personality: $Personality
 Communication style: $Style
 $CompanyBlock
 $MemoryBlock
+$InstallationBlock
 LANGUAGE (highest priority, overrides everything): always write your ENTIRE answer - headings, restatement line, labels, closing questions - in the same language as the client's latest message. English message -> English answer. Spanish -> Spanish. French -> French. Arabic -> Arabic. Never default to French or to the language of these instructions, of your personality/style notes, or of the client's company name or city. If the client switches language, follow the latest one.
 $LangHint
 CONTEXT: never assume a country. Adapt currency, units, customs and rules to the context the client gives; if none, stay neutral and state the currency or assumption you used.

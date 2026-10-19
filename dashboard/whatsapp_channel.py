@@ -208,6 +208,10 @@ def _handle_message(phone, text, store, deps):
         return
     result = deps["submit_task"](text[:MAX_INBOUND_CHARS], worker_id="chloe", client_id=client_id)
     result = deps["attach_pending_action"](result)
+    # Offre "Worker a l'unite" : le Worker demande n'est pas embauche -> on le dit clairement plutot que "reessayez" (aucune mission lancee).
+    if isinstance(result, dict) and (result.get("error") == "WORKER_NOT_INCLUDED" or result.get("Status") == "WORKER_NOT_INCLUDED"):
+        send_text(phone, str(result.get("detail") or result.get("FinalSynthesis") or "Ce Worker ne fait pas partie de votre forfait.")[:1500])
+        return
     if not isinstance(result, dict) or result.get("error") or result.get("Status") != "SUCCESS":
         send_text(phone, "Je n'ai pas pu traiter cette demande pour le moment. Réessayez dans un instant.")
         return

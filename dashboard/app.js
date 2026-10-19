@@ -287,6 +287,8 @@ async function afterAccountUnlocked() {
   const action = pendingAccountAction;
   pendingAccountAction = null;
   if (action) action();
+  // Une fiche de Worker deja ouverte propose maintenant « Installer » ou « Embaucher » selon le compte qui vient de se connecter.
+  if (!profileView.hidden && currentWorkerId) loadInstallPanel(currentWorkerId);
 }
 
 async function submitAccountSignup() {
@@ -600,7 +602,9 @@ async function onboardingAnalyze() {
     });
 
     if (result.error || !result.SelectedWorkers || result.SelectedWorkers.length === 0) {
-      errorEl.textContent = "Chloé n'a identifié aucun Worker pour cette demande. Essaie de reformuler ton objectif.";
+      errorEl.textContent = result.error === "WORKER_NOT_INCLUDED" && result.detail
+        ? result.detail
+        : "Chloé n'a identifié aucun Worker pour cette demande. Essaie de reformuler ton objectif.";
       errorEl.hidden = false;
       return;
     }
@@ -655,7 +659,7 @@ async function onboardingValidate() {
     resultEl.className = "task-result" + (blocked ? " needs-chloe" : "");
     const workers = (result.SelectedWorkers || []).join(", ");
     const statusLine = blocked ? (chloeStatusLabel(result.Status) || "Résultat indisponible") : `Traité par : ${workers}`;
-    resultEl.innerHTML = `<div class="status-line">${statusLine}</div>${renderAnswer(result.FinalSynthesis || "Aucune synthèse disponible.")}`;
+    resultEl.innerHTML = `<div class="status-line">${statusLine}</div>${renderAnswer(result.error === "WORKER_NOT_INCLUDED" && result.detail ? result.detail : (result.FinalSynthesis || "Aucune synthèse disponible."))}`;
 
     onboardingSetStep(4);
   } catch (err) {
@@ -698,6 +702,8 @@ async function loadAdminOverview() {
   adminActivityTimer = setInterval(() => { if (!adminView.hidden) loadAdminActivity(); }, 30000);
   const data = await fetchJson("/api/admin/overview");
   if (data.error) return;
+  adminClientsCache = data.clients || [];
+  renderAdminHireRequests(data.hireRequests);         // demandes d'embauche de Workers (message du client : echappe a l'affichage)
 
   const statsGrid = document.getElementById("admin-stats-grid");
   statsGrid.innerHTML = `
@@ -731,11 +737,12 @@ async function loadAdminOverview() {
     row.tabIndex = 0;
     const signup = c.createdAtUtc ? new Date(c.createdAtUtc).toLocaleDateString(BK_LOCALE()) : "—";
     const creditsLabel = c.isOwner ? "Illimité" : `${c.creditsUsed}${c.creditsTotal !== null ? " / " + c.creditsTotal : ""}`;
+    const hiredLine = c.workerSlots ? ` · Workers ${(c.hiredWorkers || []).length}/${c.workerSlots} : ${(c.hiredWorkers || []).map((w) => escapeHtml(workerNameById(w))).join(", ") || "aucun"}` : "";
     row.innerHTML = `
       <div class="admin-client-row-head">
         <div>
-          <div class="admin-client-name">${c.label}${c.isOwner ? " · propriétaire" : ""}</div>
-          <div class="admin-client-meta">${c.email || "—"} · ${c.clientId} · inscrit le ${signup} · plan ${c.planName}</div>
+          <div class="admin-client-name">${escapeHtml(c.label)}${c.isOwner ? " · propriétaire" : ""}</div>
+          <div class="admin-client-meta">${escapeHtml(c.email || "—")} · ${escapeHtml(c.clientId)} · inscrit le ${signup} · plan ${escapeHtml(c.planName)}${hiredLine}</div>
         </div>
         <div class="admin-client-stats">
           <div><strong>${c.totalMissions}</strong><span>Missions</span></div>
@@ -743,13 +750,18 @@ async function loadAdminOverview() {
           <div><strong>${creditsLabel}</strong><span>Crédits</span></div>
         </div>
       </div>
+      <div class="admin-client-tools" hidden>${c.isOwner ? "" : '<button type="button" class="btn-small iw-grant-open">Attribuer des Workers (Solo / Trio)</button>'}</div>
       <div class="admin-client-detail" hidden></div>
     `;
     const head = row.querySelector(".admin-client-row-head");
     const detail = row.querySelector(".admin-client-detail");
+    const tools = row.querySelector(".admin-client-tools");
+    const grantBtn = row.querySelector(".iw-grant-open");
+    if (grantBtn) grantBtn.addEventListener("click", () => openGrantForm(c.clientId, c.email || c.label || c.clientId, null));
     const toggle = async () => {
       const opening = detail.hidden;
       detail.hidden = !opening;
+      tools.hidden = !opening;
       row.classList.toggle("open", opening);
       if (opening && !detail.dataset.loaded) {
         detail.innerHTML = '<div class="activity-empty">Chargement…</div>';
@@ -784,18 +796,64 @@ async function loadAdminOverview() {
 // ---------- BILLING (plan actif + quota reel + historique — aucun
 // paiement reel n'est jamais declenche depuis cette page) ----------
 
-// CHF, en dur car PLAN_CATALOG (cote serveur) ne porte que les credits —
-// les prix eux-memes vivent dans PRICING_PLANS (page Tarifs) plus haut.
-// Doit rester coherent avec les Price ID Stripe (prices / pricesAnnual)
-// que Kader saisit lui-meme cote serveur.
-const BILLING_PLAN_PRICES = {
-  starter: { month: 39, year: 390 },
-  business: { month: 99, year: 990 },
-  pro: { month: 139, year: 1390 },
-  scale: { month: 449, year: 4490 },
-};
+// Les prix (CHF) viennent du serveur : chaque forfait de /api/billing (availablePlans) porte son priceChf, tire de PLAN_CATALOG (server.py) — il
+// n'y a plus de liste de prix en dur ici. Quota MENSUEL fixe : jamais illimite, pas de recharge ; quand il est atteint, on passe au forfait
+// suivant (data.upgrade.next). Enterprise est sur devis (plafond de credits fixe par contrat) : on nous ecrit.
+const BK_CONTACT_EMAIL = "contact@bk-entreprise.com";
 
 let billingInterval = "month";
+
+function billingDate(iso) {
+  const d = new Date(iso);
+  return isNaN(d) ? "" : d.toLocaleDateString(BK_LOCALE(), { day: "numeric", month: "long", year: "numeric" });
+}
+
+// Bouton « Passer a la formule superieure » : le forfait suivant par POST /api/billing/plan (Stripe Checkout quand Stripe est configure,
+// aucun prelevement avant le paiement sur la page Stripe) ; Enterprise / plafond contractuel : un e-mail pre-rempli.
+function startUpgrade(up) {
+  const nxt = up && up.next;
+  if (!nxt || nxt.onQuote) {
+    const subject = encodeURIComponent(nxt ? `${nxt.name} — plafond de crédits` : "Relever mon plafond de crédits");
+    window.location.href = `mailto:${(up && up.contactEmail) || BK_CONTACT_EMAIL}?subject=${subject}`;
+    return;
+  }
+  // Le client paie au meme rythme que son abonnement (mensuel ou annuel, donne par le serveur) : un abonne annuel ne se voit pas proposer un
+  // forfait mensuel qui annulerait ses mois deja payes.
+  switchBillingPlan(nxt.planId, (up && up.interval) || billingInterval);
+}
+
+function upgradeNextHtml(up) {
+  const nxt = up && up.next;
+  if (!nxt) return "Votre plafond de crédits est fixé par votre contrat : écrivez-nous pour le relever.";
+  if (nxt.onQuote) return `<span>Prochaine formule :</span> <strong>${escapeHtml(nxt.name)}</strong> — <span>sur devis (plafond de crédits fixé par contrat)</span>`;
+  const yearly = up.interval === "year";
+  const price = nxt.priceChf ? ` <strong>${formatPrice(yearly ? nxt.priceChf.year : nxt.priceChf.month)}</strong>${yearly ? "/an" : "/mois"}` : "";
+  return `<span>Prochaine formule :</span> <strong>${escapeHtml(nxt.name)}</strong> — <strong>${Number(nxt.credits).toLocaleString(BK_LOCALE())}</strong> <span>crédits par mois</span>,${price}`;
+}
+
+// Boutons affiches sous un message « quota atteint » (402 SUBSCRIPTION_REQUIRED) : le forfait suivant avec son prix, ou « nous ecrire »,
+// plus le lien vers tous les forfaits. Sans information de montee en gamme (ancien serveur) : l'ancien bouton « Voir les abonnements ».
+function subscribeCtaHtml(result) {
+  const up = result && result.upgrade;
+  if (!up) return `<button type="button" class="btn btn-gold subscribe-cta-btn" style="margin-top:10px">Voir les abonnements &rarr;</button>`;
+  const nxt = up.next;
+  const main = !nxt
+    ? `<button type="button" class="btn btn-gold subscribe-upgrade-btn">Relever mon plafond</button>`
+    : nxt.onQuote
+      ? `<button type="button" class="btn btn-gold subscribe-upgrade-btn">Passer à <strong>${escapeHtml(nxt.name)}</strong> (sur devis)</button>`
+      : `<button type="button" class="btn btn-gold subscribe-upgrade-btn">Passer à <strong>${escapeHtml(nxt.name)}</strong>${nxt.priceChf ? ` (${formatPrice(up.interval === "year" ? nxt.priceChf.year : nxt.priceChf.month)}${up.interval === "year" ? "/an" : "/mois"})` : ""}</button>`;
+  return `<div class="subscribe-cta-row" style="margin-top:10px">${main} <button type="button" class="btn btn-ghost subscribe-cta-btn">Voir tous les forfaits</button></div>`;
+}
+
+function wireSubscribeCta(root, result, beforeNavigate) {
+  const go = () => { if (beforeNavigate) beforeNavigate(); showView("billing"); };
+  root.querySelectorAll(".subscribe-cta-btn").forEach((b) => b.addEventListener("click", go));
+  root.querySelectorAll(".subscribe-upgrade-btn").forEach((b) => b.addEventListener("click", () => {
+    const up = result && result.upgrade;
+    if (up && up.next && !up.next.onQuote) go();
+    startUpgrade(up);
+  }));
+}
 
 async function loadBilling() {
   const data = await fetchJson("/api/billing");
@@ -819,52 +877,96 @@ async function loadBilling() {
   // le bloque deja jamais (subscription_blocks_mission) ; l'interface
   // ne doit donc plus lui presenter de quota.
   if (isOperator) {
+    // La liste « Mes Workers installes » survit au remplacement du contenu : le proprietaire peut aussi installer et mettre en pause.
+    const installedSection = document.getElementById("installed-workers-section");
     document.getElementById("billing-content").innerHTML = `
       <div class="billing-current-card">
         <div class="billing-current-label">Compte</div>
         <div class="billing-current-plan">Administrateur — accès illimité</div>
         <p class="hero-sub" style="margin:10px 0 0;text-align:left">Aucun crédit, aucun plan : tes missions ne sont jamais limitées. Le suivi des clients (inscriptions, connexions, abonnements, missions) est dans l'onglet <strong>Admin</strong>.</p>
       </div>`;
+    if (installedSection) document.getElementById("billing-content").appendChild(installedSection);
+    loadInstalledWorkers();
     return;
   }
+  loadInstalledWorkers();
 
   document.getElementById("billing-plan-name").textContent = data.planName;
 
   const fill = document.getElementById("billing-usage-fill");
-  const pct = data.unlimited ? 0 : Math.min(100, data.percentUsed || 0);
+  const pct = Math.min(100, data.percentUsed || 0);
   fill.style.width = pct + "%";
   fill.classList.toggle("alert", !!data.alertThresholdReached);
 
+  // Credits utilises / inclus ce mois-ci + date de renouvellement (quota mensuel fixe ; l'essai ne se renouvelle pas).
   const line = document.getElementById("billing-usage-line");
-  line.textContent = data.unlimited
-    ? `${data.creditsUsed} missions traitées ce cycle — quota illimité (Enterprise).`
-    : `${data.creditsUsed} / ${data.creditsTotal} crédits consommés (${data.creditsRemaining} restants).`;
+  const nf = (n) => Number(n).toLocaleString(BK_LOCALE());
+  const renews = data.cancelAtPeriodEnd && data.paidUntilUtc ? ` — résilié : le forfait reste actif jusqu'au ${billingDate(data.paidUntilUtc)}, sans renouvellement.`
+    : (data.awaitingInvoice && data.paidUntilUtc ? ` — valable jusqu'au ${billingDate(data.paidUntilUtc)} ; reconduit à la réception du règlement de la facture suivante.`
+      : (data.renewsAtUtc ? ` — renouvelé le ${billingDate(data.renewsAtUtc)}.` : (data.planId === "essai" ? " — l'essai ne se renouvelle pas." : ".")));
+  line.textContent = `${nf(data.creditsUsed)} / ${nf(data.creditsTotal)} crédits consommés (${nf(data.creditsRemaining)} restants)${renews}`;
 
   document.getElementById("billing-alert").hidden = !data.alertThresholdReached;
 
+  // Des 80 % du quota : bouton « Passer a la formule superieure » (aucune montee en gamme automatique, aucun prelevement surprise).
+  const upBox = document.getElementById("billing-upgrade");
+  if (upBox) {
+    upBox.hidden = !(data.upgradeSuggested && data.upgrade);
+    if (!upBox.hidden) {
+      document.getElementById("billing-upgrade-text").innerHTML = upgradeNextHtml(data.upgrade);
+      const upBtn = document.getElementById("billing-upgrade-btn");
+      upBtn.textContent = data.upgrade.next ? "Passer à la formule supérieure" : "Relever mon plafond";
+      upBtn.onclick = () => startUpgrade(data.upgrade);
+    }
+  }
+
+  // Forfait Solo / Trio : les Workers choisis et les emplacements restants.
+  const hireBox = document.getElementById("billing-hire");
+  if (hireBox) {
+    const h = data.hire;
+    hireBox.hidden = !(h && h.restricted);
+    if (!hireBox.hidden) {
+      const names = (h.hiredWorkers || []).map((id) => { const w = allWorkers.find((x) => x.id === id); return escapeHtml(w ? w.name : id); });
+      hireBox.innerHTML = `<span>Workers de votre forfait :</span> <strong>${names.length ? names.join(", ") : "aucun pour le moment"}</strong>`
+        + (h.slotsLeft > 0 ? ` <span>— il vous reste</span> <strong>${h.slotsLeft}</strong> <span>emplacement(s) : ouvrez la fiche d'un Worker pour l'embaucher.</span>` : "");
+    }
+  }
+
   const cancelBtn = document.getElementById("billing-cancel-btn");
-  cancelBtn.hidden = data.planId === "essai";
+  cancelBtn.hidden = data.planId === "essai" || !!data.cancelAtPeriodEnd;        // deja resilie : rien a annuler de plus
+  const pendingBox = document.getElementById("billing-pending-payment");
+  if (pendingBox) pendingBox.hidden = !pendingCheckoutGet();                    // paiement revenu de Stripe mais pas encore confirme
 
   const grid = document.getElementById("billing-plans-grid");
   grid.innerHTML = "";
   data.availablePlans.forEach((plan) => {
+    const isCurrent = plan.planId === data.planId;
     const card = document.createElement("div");
-    card.className = "billing-plan-card" + (plan.planId === data.planId ? " active" : "");
-    const creditsLabel = plan.credits === null ? "Illimité" : `${plan.credits} crédits / cycle`;
-    const prices = BILLING_PLAN_PRICES[plan.planId];
-    const priceLabel = prices
-      ? `${formatPrice(prices[billingInterval])}${billingInterval === "month" ? "/mois" : "/an"}`
+    card.className = "billing-plan-card" + (isCurrent ? " active" : "");
+    const creditsLabel = plan.onQuote
+      ? "Plafond de crédits fixé par contrat"
+      : `${nf(plan.credits)} crédits / mois`;
+    const price = plan.priceChf
+      ? `${formatPrice(plan.priceChf[billingInterval])}${billingInterval === "month" ? "/mois" : "/an"}`
+      : (plan.onQuote ? "Sur devis" : "");
+    const workers = plan.workerSlots
+      ? `<div class="billing-plan-credits">${plan.workerSlots === 1 ? "1 Worker de votre choix" : `${plan.workerSlots} Workers de votre choix, Chloé comprise`}</div>`
       : "";
+    const label = isCurrent ? "Plan actif" : (plan.onQuote ? "Nous contacter" : "Choisir");
     card.innerHTML = `
       <div class="billing-plan-name">${plan.name}</div>
-      ${priceLabel ? `<div class="billing-plan-price">${priceLabel}</div>` : ""}
+      ${price ? `<div class="billing-plan-price">${price}</div>` : ""}
       <div class="billing-plan-credits">${creditsLabel}</div>
-      <button type="button" class="btn ${plan.planId === data.planId ? "btn-ghost" : "btn-gold"}" ${plan.planId === data.planId ? "disabled" : ""}>
-        ${plan.planId === data.planId ? "Plan actif" : "Choisir"}
+      ${workers}
+      <button type="button" class="btn ${isCurrent ? "btn-ghost" : "btn-gold"}" ${isCurrent ? "disabled" : ""}>
+        ${label}
       </button>
     `;
-    if (plan.planId !== data.planId) {
-      card.querySelector("button").addEventListener("click", () => switchBillingPlan(plan.planId, billingInterval));
+    if (!isCurrent) {
+      card.querySelector("button").addEventListener("click", () => {
+        if (plan.onQuote) startUpgrade({ next: plan, contactEmail: BK_CONTACT_EMAIL });
+        else switchBillingPlan(plan.planId, billingInterval);
+      });
     }
     grid.appendChild(card);
   });
@@ -905,6 +1007,10 @@ async function switchBillingPlan(planId, interval) {
     await loadBilling();
     return;
   }
+  if (result.error === "PLAN_BY_INVOICE" || result.error === "PLAN_ON_QUOTE" || result.error === "PLAN_NOT_SOLD" || result.error === "PLAN_NOT_SELECTABLE") {
+    alert(result.detail || result.error);       // message francais du serveur : activation sur facture, sur devis, ou forfait plus propose
+    return;
+  }
   if (result.error) {
     alert("Erreur : " + (result.detail || result.error));
     return;
@@ -912,49 +1018,105 @@ async function switchBillingPlan(planId, interval) {
   await loadBilling();
 }
 
-async function handleStripeCheckoutReturn() {
-  const params = new URLSearchParams(window.location.search);
-  const checkout = params.get("billing_checkout");
-  if (!checkout) return;
+// Paiement Stripe revenu mais pas encore confirme chez nous : l'identifiant de la session reste dans ce navigateur jusqu'a ce que la confirmation
+// reussisse (delai du pont, reseau coupe, onglet ferme) ; il est retente a chaque chargement et par le bouton « Verifier mon paiement ».
+const PENDING_CHECKOUT_KEY = "bk.pendingCheckoutSession";
+// Refus definitifs : retenter ne servirait a rien, on oublie l'identifiant (le message dit pourquoi).
+const CHECKOUT_FINAL_ERRORS = ["SUBSCRIPTION_NOT_ACTIVE", "PAYMENT_NOT_CONFIRMED", "INVALID_SESSION_ID", "SESSION_ID_REQUIRED"];
 
-  const sessionId = params.get("session_id");
-  window.history.replaceState({}, "", window.location.pathname);
+function pendingCheckoutGet() {
+  try { return localStorage.getItem(PENDING_CHECKOUT_KEY) || ""; } catch { return ""; }
+}
 
-  if (checkout === "success" && sessionId) {
-    showView("billing");
-    const result = await fetchJson("/api/billing/stripe-confirm", {
+function pendingCheckoutSet(sessionId) {
+  try {
+    if (sessionId) localStorage.setItem(PENDING_CHECKOUT_KEY, sessionId);
+    else localStorage.removeItem(PENDING_CHECKOUT_KEY);
+  } catch { /* stockage indisponible : la confirmation reste tentee une fois */ }
+}
+
+// Confirme la session aupres du serveur. Renvoie "ok", "retry" (on garde l'identifiant) ou "final" (refus definitif, identifiant oublie).
+async function confirmCheckoutSession(sessionId) {
+  let result;
+  try {
+    result = await fetchJson("/api/billing/stripe-confirm", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ sessionId }),
     });
-    if (result.error) {
-      alert("Le paiement n'a pas pu être confirmé : " + (result.detail || result.error));
+  } catch (e) {
+    return { state: "retry", detail: e && e.message ? e.message : "connexion impossible" };
+  }
+  if (!result || !result.error) {
+    pendingCheckoutSet("");
+    return { state: "ok", result };
+  }
+  if (CHECKOUT_FINAL_ERRORS.includes(result.error)) {
+    pendingCheckoutSet("");
+    return { state: "final", detail: result.detail || result.error };
+  }
+  return { state: "retry", detail: result.detail || result.error };
+}
+
+async function handleStripeCheckoutReturn() {
+  const params = new URLSearchParams(window.location.search);
+  const checkout = params.get("billing_checkout");
+  const sessionId = params.get("session_id");
+  if (checkout === "success" && sessionId) pendingCheckoutSet(sessionId);       // gardé jusqu'à la confirmation, avant que l'adresse soit nettoyée
+  if (checkout) window.history.replaceState({}, "", window.location.pathname);
+
+  if (checkout === "success" && sessionId) {
+    showView("billing");
+    const outcome = await confirmCheckoutSession(sessionId);
+    if (outcome.state === "ok") {
+      showToast(iwT("Paiement confirmé : votre forfait est actif."));
+    } else if (outcome.state === "final") {
+      alert("Le paiement n'a pas pu être confirmé : " + outcome.detail);
+    } else {
+      alert("Votre paiement est bien parti, mais nous n'avons pas encore pu le confirmer (" + outcome.detail + "). Rien n'est perdu : cliquez sur « Vérifier mon paiement » dans Facturation, ou rechargez la page dans un instant.");
     }
     await loadBilling();
   } else if (checkout === "cancel") {
     showView("billing");
+  } else if (!checkout && pendingCheckoutGet()) {
+    const outcome = await confirmCheckoutSession(pendingCheckoutGet());       // paiement non confirme lors d'une visite precedente
+    if (outcome.state === "ok") showToast(iwT("Paiement confirmé : votre forfait est actif."));
+    await loadBilling();
   }
 }
 
-async function cancelBillingPlan() {
-  await fetchJson("/api/billing/cancel", { method: "POST" });
+async function retryPendingCheckout() {
+  const sessionId = pendingCheckoutGet();
+  if (!sessionId) return;
+  const outcome = await confirmCheckoutSession(sessionId);
+  if (outcome.state === "ok") showToast(iwT("Paiement confirmé : votre forfait est actif."));
+  else if (outcome.state === "final") alert("Le paiement n'a pas pu être confirmé : " + outcome.detail);
+  else alert("Le paiement n'a toujours pas pu être confirmé (" + outcome.detail + "). Réessayez dans un instant ; si cela dure, écrivez-nous en indiquant le montant et la date.");
   await loadBilling();
 }
 
-async function rechargeBillingCredits() {
-  const input = document.getElementById("billing-recharge-amount");
-  const amount = parseInt(input.value, 10);
-  if (!amount || amount <= 0) return;
-  await fetchJson("/api/billing/recharge", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ amount }),
-  });
-  input.value = "";
+async function cancelBillingPlan() {
+  // CGV article 6 : la resiliation prend effet a la fin de la periode en cours ; le forfait paye reste actif jusque-la.
+  if (!confirm(iwT("Résilier l'abonnement ? Votre forfait reste actif jusqu'à la fin de la période déjà payée, puis votre compte repasse à l'essai. Aucun nouveau prélèvement."))) return;
+  const result = await fetchJson("/api/billing/cancel", { method: "POST" });
+  if (result && result.error) {
+    alert(result.detail || result.error);        // ex. STRIPE_UNAVAILABLE : rien n'a change, l'abonnement est intact
+    return;
+  }
+  if (result && result.cancelAtPeriodEnd && result.paidUntilUtc) {
+    showToast(`${iwT("Résiliation enregistrée : votre forfait reste actif jusqu'au")} ${billingDate(result.paidUntilUtc)}.`);
+  }
   await loadBilling();
 }
 
 // ---------- AUTOMATISATIONS (missions recurrentes, vrai pipeline) ----------
+
+// Statuts du dernier passage ecrits par le moteur (core/automation/AUTOMATION-ENGINE.ps1) quand la mission n'a pas ete lancee.
+const AUTOMATION_STATUS_LABELS = {
+  installation_paused: "non lancée : Worker en pause",
+  worker_not_included: "non lancée : Worker hors de votre forfait",
+  quota_exceeded: "non lancée : quota de crédits atteint",
+};
 
 const FREQUENCY_LABELS = {
   60: "Toutes les heures",
@@ -1001,7 +1163,25 @@ function handleAutomationError(result, retryAction) {
     return true;
   }
   if (result.error === "SUBSCRIPTION_REQUIRED") {
-    showAutomationError(result.detail || "Votre quota est épuisé. Souscrivez un abonnement pour continuer.");
+    const errorEl = document.getElementById("automation-error");
+    errorEl.innerHTML = `${escapeHtml(result.detail || "Votre quota est épuisé. Souscrivez un abonnement pour continuer.")} ${subscribeCtaHtml(result)}`;
+    errorEl.hidden = false;
+    wireSubscribeCta(errorEl, result);
+    return true;
+  }
+  if (result.error === "WORKER_NOT_INCLUDED") {
+    // Offre « Worker a l'unite » : le texte du serveur explique, et le client est conduit vers la fiche du Worker pour l'embaucher.
+    showAutomationError(result.detail || "Ce Worker ne fait pas partie de votre forfait.");
+    const errorEl = document.getElementById("automation-error");
+    if (result.workerId) {
+      const go = document.createElement("button");
+      go.type = "button";
+      go.className = "iw-link";
+      go.textContent = "Voir ce Worker pour l'embaucher";
+      go.addEventListener("click", () => iwGoHire(result.workerId));
+      errorEl.appendChild(document.createTextNode(" "));
+      errorEl.appendChild(go);
+    }
     return true;
   }
   showAutomationError("Erreur : " + (result.detail || result.error));
@@ -1037,12 +1217,15 @@ async function loadAutomations() {
     const freqLabel = FREQUENCY_LABELS[a.frequencyMinutes] || `Toutes les ${a.frequencyMinutes} min`;
     const lastRun = a.lastRunAtUtc ? new Date(a.lastRunAtUtc).toLocaleString(BK_LOCALE()) : "pas encore — vérifiée toutes les 15 min, ou cliquez Exécuter maintenant";
     const slackNote = a.notifySlack ? " · 🔔 notifie Slack" : "";
+    // Dernier passage non execute parce que le Worker est en pause : la carte le dit (et ne reste pas « Active » en apparence).
+    const suspended = a.enabled && a.lastRunStatus === "installation_paused";
+    const statusLabel = AUTOMATION_STATUS_LABELS[a.lastRunStatus] || a.lastRunStatus;
     card.innerHTML = `
       <div class="automation-card-main">
-        <div class="automation-card-objective">${workerNameById(a.workerId)} — ${a.objective}</div>
-        <div class="automation-card-meta">${freqLabel}${slackNote} · dernière exécution : ${lastRun}${a.lastRunStatus ? " · " + a.lastRunStatus : ""}${a.enabled && a.nextRunAtUtc ? " · prochaine : " + new Date(a.nextRunAtUtc).toLocaleString(BK_LOCALE()) : ""}</div>
+        <div class="automation-card-objective">${escapeHtml(workerNameById(a.workerId))} — ${escapeHtml(a.objective)}</div>
+        <div class="automation-card-meta">${freqLabel}${slackNote} · dernière exécution : ${lastRun}${a.lastRunStatus ? " · " + escapeHtml(statusLabel) : ""}${a.enabled && a.nextRunAtUtc ? " · prochaine : " + new Date(a.nextRunAtUtc).toLocaleString(BK_LOCALE()) : ""}</div>
       </div>
-      <span class="automation-card-status ${a.enabled ? "on" : "off"}">${a.enabled ? "Active" : "En pause"}</span>
+      <span class="automation-card-status ${a.enabled && !suspended ? "on" : "off"}">${suspended ? "Suspendue (Worker en pause)" : (a.enabled ? "Active" : "En pause")}</span>
       <div class="automation-card-actions">
         <button type="button" data-action="results">Voir les résultats${a.runCount ? " (" + a.runCount + ")" : ""}</button>
         <button type="button" data-action="run">Exécuter maintenant</button>
@@ -1146,9 +1329,9 @@ document.getElementById("automation-form").addEventListener("submit", async (e) 
     return;
   }
   if (result.error === "SUBSCRIPTION_REQUIRED") {
-    errorEl.innerHTML = `${escapeHtml(result.detail || "Votre quota est épuisé.")} <button type="button" class="btn btn-gold" id="automation-subscribe-cta-btn" style="margin-left:8px">Voir les abonnements &rarr;</button>`;
+    errorEl.innerHTML = `${escapeHtml(result.detail || "Votre quota est épuisé.")} ${subscribeCtaHtml(result)}`;
     errorEl.hidden = false;
-    document.getElementById("automation-subscribe-cta-btn").addEventListener("click", () => showView("billing"));
+    wireSubscribeCta(errorEl, result);
     return;
   }
   if (result.error) {
@@ -1199,6 +1382,8 @@ function handleOauthReturn() {
       : "La connexion a échoué (" + reason + "). Réessayez.";
     showToast(msg, false);
   }
+  // Partie de l'assistant d'installation (etape « Outils ») : on y revient, la fiche brouillon a ete enregistree avant le depart.
+  iwResumeAfterOauth();
 }
 
 const MS_SQUARES_SVG = '<svg width="16" height="16" viewBox="0 0 21 21" aria-hidden="true"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>';
@@ -1374,6 +1559,8 @@ async function loadConnectors() {
     gridEl.appendChild(card);
   });
   renderWhatsappCard(gridEl);
+  // L'assistant d'installation ouvert (etape « Outils ») rafraichit alors ce qui est connecte.
+  if (typeof onConnectorsReloaded === "function") onConnectorsReloaded();
 }
 
 // Integration generique Zapier/Make (2026-09-30) : une cle API pour
@@ -1593,71 +1780,98 @@ function openGuidedConnectForm(row, c) {
   if (first) first.focus();
 }
 
-// ---------- TARIFS (proposition — voir strategie Suisse, a valider
-// avant mise en production reelle : facturation/TVA/paiement) ----------
+// ---------- TARIFS (grille validee par le proprietaire le 2026-10-12, voir docs/PRICING.md) ----------
+//
+// MEME liste que PLAN_CATALOG (server.py) et PRICING_PLANS (seo_pages.py) : tests/pricing verifie qu'il n'existe jamais deux listes de prix
+// differentes. Chaque forfait est un quota MENSUEL FIXE de credits (jamais illimite ; Enterprise a un plafond fixe par contrat). Starter et
+// Business sont des forfaits HERITES (plus vendus) : ils n'apparaissent plus ici ni dans le choix de forfait. Aucun paquet de credits,
+// aucun forfait illimite. Rien n'est annonce qui ne soit construit : pas de telephone ni de WhatsApp pour les clients de nos clients.
 
 const PRICING_PLANS = [
   {
+    id: "essai",
     name: "Essai",
     audience: "Pour tester sans risque",
     price: "0",
     period: "3 jours",
+    credits: 15,
+    creditsLabel: "crédits d'essai",
     features: [
-      "Crédits d'essai limités",
-      "Missions limitées",
-      "Quelques Workers",
+      "Niveau Rapide uniquement",
+      "Essayez plusieurs Workers",
       "Aucune carte bancaire",
     ],
   },
   {
-    name: "Starter",
-    audience: "Indépendants & petites structures",
-    price: "39",
-    annual: "390",
+    id: "solo",
+    name: "Solo",
+    audience: "Choisissez le Worker de votre activité",
+    price: "29",
+    annual: "290",
     period: "/mois",
+    credits: 250,
+    cta: "Trouver mon Worker",
     features: [
-      "Chloé + Workers essentiels",
-      "Missions individuelles",
-      "Mémoire de base",
-      "Historique des missions",
-      "Support standard",
+      "1 Worker de votre choix",
+      "Configuré selon votre activité",
+      "Chaque action vers l'extérieur validée par vous",
+      "Changement de Worker possible tous les 30 jours",
     ],
   },
   {
-    name: "Business",
-    audience: "PME",
+    id: "trio",
+    name: "Trio",
+    audience: "Vous choisissez 3 Workers, Chloé comprise",
+    price: "59",
+    annual: "590",
+    period: "/mois",
+    credits: 500,
+    features: [
+      "3 Workers de votre choix",
+      "Chloé, l'orchestratrice, incluse",
+      "Missions avec plusieurs Workers",
+      "Configuré selon votre activité",
+    ],
+  },
+  {
+    id: "equipe",
+    name: "Équipe",
+    audience: "PME : toute l'équipe",
     price: "99",
     annual: "990",
     period: "/mois",
     popular: true,
+    credits: 900,
     features: [
-      "Tout Starter",
-      "Équipe de Workers",
+      "Chloé et les 17 Workers",
       "Missions multi-agents",
       "Automatisations",
-      "Rapports & support prioritaire",
+      "Chaque action vers l'extérieur validée par vous",
     ],
   },
   {
+    id: "pro",
     name: "Pro",
     audience: "Entreprises, usage régulier",
     price: "139",
     annual: "1390",
     period: "/mois",
+    credits: 1250,
     features: [
-      "Tout Business",
+      "Tout Équipe, avec 39 % de crédits en plus",
       "Équipes avancées",
       "Missions complexes",
-      "Quotas supérieurs",
       "Analytics & contrôles avancés",
     ],
   },
   {
+    id: "scale",
     name: "Scale",
     audience: "Entreprises, volume important",
     price: "449",
     annual: "4490",
     period: "/mois",
+    credits: 4000,
     features: [
       "Tout Pro",
       "Capacité supérieure",
@@ -1667,10 +1881,13 @@ const PRICING_PLANS = [
     ],
   },
   {
+    id: "enterprise",
     name: "Enterprise",
     audience: "Grands comptes, besoins spécifiques",
     price: null,
     period: "Sur devis",
+    credits: null,
+    creditsLabel: "Plafond de crédits mensuel fixé par contrat",
     features: [
       "Intégrations métier",
       "Gouvernance avancée",
@@ -1687,6 +1904,7 @@ function renderPricing() {
   PRICING_PLANS.forEach((plan) => {
     const card = document.createElement("div");
     card.className = "plan-card" + (plan.popular ? " is-popular" : "");
+    card.dataset.planId = plan.id;
 
     const priceHtml = plan.price === null
       ? `<div class="plan-price-row"><span class="plan-price">Sur devis</span></div>`
@@ -1696,22 +1914,147 @@ function renderPricing() {
       ? `<div class="plan-price-strike">ou ${formatPrice(plan.annual)}/an — 2 mois offerts</div>`
       : "";
 
+    // Quota de credits : un nombre fixe par mois (jamais "illimite"). Les chiffres sont dans leur propre balise : le texte autour se traduit.
+    const creditsHtml = plan.credits !== null
+      ? `<div class="plan-credits"><strong>${plan.credits.toLocaleString(BK_LOCALE())}</strong> ${plan.creditsLabel || "crédits par mois"}</div>`
+      : `<div class="plan-credits">${plan.creditsLabel}</div>`;
+
     const featuresHtml = plan.features.map((f) => `<li>${f}</li>`).join("");
+    const ctaLabel = plan.cta || (plan.price === null ? "Nous contacter" : "Discuter avec Chloé");
 
     card.innerHTML = `
-      ${plan.popular ? '<div class="plan-badge">Le plus choisi</div>' : ""}
+      ${plan.popular ? '<div class="plan-badge">Recommandé pour une PME</div>' : ""}
       <div class="plan-name">${plan.name}</div>
       <div class="plan-audience">${plan.audience}</div>
       ${priceHtml}
       ${strikeHtml}
+      ${creditsHtml}
       <ul class="plan-features">${featuresHtml}</ul>
-      <button type="button" class="plan-cta">${plan.price === null ? "Nous contacter" : "Discuter avec Chloé"}</button>
+      <button type="button" class="plan-cta">${ctaLabel}</button>
     `;
 
-    card.querySelector(".plan-cta").addEventListener("click", openChloeFab);
+    // Solo : « Choisissez le Worker de votre activite » -> l'aide « Quel Worker pour mon activite ? » juste en dessous.
+    card.querySelector(".plan-cta").addEventListener("click", plan.id === "solo" ? scrollToActivityHelper : openChloeFab);
 
     grid.appendChild(card);
   });
+
+  renderPricingScale();
+  renderActivityHelper();
+}
+
+// Echelle de credits (core/ai/LEVELS.json via /api/mission-levels) : « combien de missions pour mes credits ? ». Si les niveaux sont coupes
+// sur le serveur (BK_LEVELS=0), la liste est vide et on affiche l'ancienne regle : une mission = un credit.
+async function renderPricingScale() {
+  const box = document.getElementById("pricing-scale");
+  if (!box) return;
+  let levels = [];
+  // ?scale=public : l'echelle complete (Rapide, Equilibre, Approfondi), la meme pour tous. Sans cela un visiteur connecte a l'essai (verrouille sur
+  // Rapide) ne voyait que « 250 missions Rapide » pour Solo, alors que le niveau par defaut de Solo coute 6 credits.
+  try { levels = ((await fetchJson("/api/mission-levels?scale=public")).levels || []).filter((l) => Number(l.credits) > 0); } catch (e) { /* page statique : texte generique */ }
+  const noRecharge = "Chaque forfait est un quota mensuel fixe, renouvelé chaque mois : il n'y a ni missions illimitées, ni recharge de crédits, ni paiement à l'usage. Quand le quota est atteint, vous passez au forfait supérieur, qui a son propre quota.";
+  if (!levels.length) {
+    box.innerHTML = `<h2>Combien de missions pour mes crédits ?</h2><p>Une mission réellement traitée consomme un crédit.</p><p>${noRecharge}</p>`;
+    return;
+  }
+  const base = levels.reduce((a, b) => (b.credits < a.credits ? b : a));
+  const rows = levels.map((l) => `<li><strong>${escapeHtml(l.label)}</strong> — <span class="scale-cost">${l.credits}</span> ${l.credits > 1 ? "crédits" : "crédit"} par mission</li>`).join("");
+  box.innerHTML = `
+    <h2>Combien de missions pour mes crédits ?</h2>
+    <p>Un crédit n'est pas une mission : le coût dépend du niveau de travail que vous choisissez.</p>
+    <ul class="pricing-scale-list">${rows}</ul>
+    <p>Exemple avec <strong>250</strong> crédits (Solo) : ${levels.map((l) => `<strong>${Math.floor(250 / l.credits)}</strong> missions <em>${escapeHtml(l.label)}</em>`).join(", ou ")}.</p>
+    <p>Les missions récurrentes (automatisations) tournent toujours au niveau le plus rapide : <strong>${base.credits}</strong> ${base.credits > 1 ? "crédits" : "crédit"} chacune.</p>
+    <p>${noRecharge}</p>`;
+}
+
+// ---------- « QUEL WORKER POUR MON ACTIVITE ? » (page Tarifs) ----------
+// Donnees statiques. Chaque correspondance vient du role et des competences REELS du Worker : workers/<id>/identity/identity.json et sa fiche
+// d'installation workers/<id>/install-profile.json (idealFor, services) — rien d'invente, aucun temoignage, aucun chiffre. Le premier Worker
+// de la liste est le plus proche de l'activite ; chaque resultat ouvre la fiche du Worker (c'est la que se trouve « Embaucher » / l'installation).
+const ACTIVITY_WORKERS = [
+  { id: "boutique", label: "Boutique en ligne", workers: [
+    { id: "thomas", why: "Fiches produit, marge par canal frais inclus, mise en vente sur une marketplace" },
+    { id: "nora", why: "Répond à vos clients et trie les demandes et réclamations" },
+    { id: "maya", why: "Plan média chiffré, annonces et emails de campagne pour attirer des clients" },
+  ] },
+  { id: "commerce", label: "Restaurant ou commerce local", workers: [
+    { id: "seoya", why: "Être trouvé sur Google : articles et pages optimisés écrits en entier" },
+    { id: "emma", why: "Posts pour vos réseaux sociaux, écrits en entier, et calendrier éditorial" },
+    { id: "lea", why: "Charte graphique, logo et visuels en fichiers utilisables tout de suite" },
+  ] },
+  { id: "cabinet", label: "Cabinet ou profession libérale", workers: [
+    { id: "noah", why: "Emails prêts à envoyer, agenda, comptes-rendus de réunion" },
+    { id: "clara", why: "Contrats, NDA et CGV rédigés en entier, à faire valider par un avocat" },
+    { id: "dario", why: "Budget, trésorerie et documents préparés pour la fiduciaire" },
+  ] },
+  { id: "agence", label: "Agence ou freelance", workers: [
+    { id: "alex", why: "Prospection : prospects réels, séquences de messages, relances et préparation de rendez-vous" },
+    { id: "yanis", why: "Plan daté, répartition des rôles et suivi honnête de vos projets" },
+    { id: "noah", why: "Emails, agenda et comptes-rendus pris en charge" },
+  ] },
+  { id: "pme", label: "PME de services", workers: [
+    { id: "alex", why: "Un flux de rendez-vous qualifiés pour les services et le conseil" },
+    { id: "dario", why: "Budget, trésorerie, prix de vente et marges" },
+    { id: "sophie", why: "Annonces, tri des candidatures et entretiens structurés si vous recrutez" },
+  ] },
+  { id: "artisan", label: "Artisan", workers: [
+    { id: "alex", why: "Si vous vendez à des entreprises : prospects réels et relances" },
+    { id: "dario", why: "Prix de vente, marge et point mort" },
+    { id: "seoya", why: "Être trouvé sur Google : commerces locaux et prestataires de services" },
+  ] },
+  { id: "association", label: "Association", workers: [
+    { id: "noah", why: "Ordres du jour, comptes-rendus avec actions assignées, courriers" },
+    { id: "yanis", why: "Plan daté et suivi pour un événement ou un projet" },
+  ] },
+];
+
+function scrollToActivityHelper() {
+  const el = document.getElementById("activity-helper");
+  if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function renderActivityHelper() {
+  const chips = document.getElementById("activity-chips");
+  const result = document.getElementById("activity-result");
+  if (!chips || !result) return;
+  chips.innerHTML = "";
+  result.innerHTML = "";
+  ACTIVITY_WORKERS.forEach((a) => {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "activity-chip";
+    chip.textContent = a.label;
+    chip.setAttribute("aria-pressed", "false");
+    chip.addEventListener("click", () => {
+      chips.querySelectorAll(".activity-chip").forEach((c) => { const on = c === chip; c.classList.toggle("active", on); c.setAttribute("aria-pressed", String(on)); });
+      showActivityWorkers(a);
+    });
+    chips.appendChild(chip);
+  });
+}
+
+function showActivityWorkers(activity) {
+  const result = document.getElementById("activity-result");
+  if (!result) return;
+  const items = activity.workers.map((m, i) => {
+    const w = (typeof allWorkers !== "undefined" ? allWorkers : []).find((x) => x.id === m.id);
+    if (!w) return "";
+    return `<div class="activity-worker">
+      <img src="${escapeHtml(w.portraitUrl)}" alt="" loading="lazy">
+      <div class="activity-worker-body">
+        <div class="activity-worker-name">${escapeHtml(w.name)}${i === 0 ? ' <span class="activity-best">Le plus proche de votre activité</span>' : ""}</div>
+        <div class="activity-worker-role">${escapeHtml(w.role)}</div>
+        <div class="activity-worker-why">${escapeHtml(m.why)}</div>
+        <a href="#worker-${escapeHtml(w.id)}" class="activity-worker-link" data-worker="${escapeHtml(w.id)}">Voir la fiche de <strong>${escapeHtml(w.name)}</strong></a>
+      </div>
+    </div>`;
+  }).join("");
+  result.innerHTML = items || '<p class="activity-empty">Aucun Worker disponible pour le moment.</p>';
+  result.querySelectorAll(".activity-worker-link").forEach((link) => link.addEventListener("click", (e) => {
+    e.preventDefault();
+    openWorkerProfile(link.dataset.worker);
+  }));
 }
 
 async function bootstrap() {
@@ -2480,17 +2823,21 @@ function fillProfileCommon(w) {
 
 async function openWorkerProfile(workerId) {
   currentWorkerId = workerId;
+  loadMissionLevels();
   const w = await fetchJson(`/api/workers/${workerId}`);
   fillProfileCommon(w);
 
   document.getElementById("activity-block").hidden = false;
+  loadInstallPanel(workerId);          // « Installer ce Worker » ou « Embaucher ce Worker » selon le forfait
   await loadActivity(workerId);
 }
 
 async function openChloeProfile() {
   currentWorkerId = "chloe";
+  loadMissionLevels();
   const w = await fetchJson("/api/chloe");
   fillProfileCommon(w);
+  loadInstallPanel("chloe");           // Chloe ne s'installe ni ne s'embauche : le panneau se masque
 
   document.getElementById("profile-role").textContent = "Orchestratrice — comprend, répartit, vérifie";
   document.getElementById("activity-block").hidden = false;
@@ -2800,17 +3147,21 @@ function renderTaskFilesBlock(taskId, files) {
 // Niveau de travail (Rapide / Equilibre / Approfondi) : memorise sur l'appareil, envoye avec chaque mission.
 let missionLevels = { default: "", levels: [] };
 function currentMissionLevel() {
-  try { return localStorage.getItem("bk_mission_level") || missionLevels.default || ""; } catch (e) { return missionLevels.default || ""; }
+  let stored = "";
+  try { stored = localStorage.getItem("bk_mission_level") || ""; } catch (e) { /* stockage indisponible */ }
+  const known = (missionLevels.levels || []).some((l) => l.id === stored);
+  return known ? stored : (missionLevels.default || "");        // un niveau memorise que le forfait n'autorise plus retombe sur celui par defaut
 }
 async function loadMissionLevels() {
   const picker = document.getElementById("level-picker");
   if (!picker) return;
   try { missionLevels = await fetchJson("/api/mission-levels"); } catch (e) { return; }
   if (!missionLevels.levels || !missionLevels.levels.length) { picker.hidden = true; return; }
-  const chosen = currentMissionLevel();
+  let chosen = currentMissionLevel();
+  if (!missionLevels.levels.some((l) => l.id === chosen)) chosen = missionLevels.default;   // niveau memorise absent de la liste (essai : Rapide seulement)
   picker.innerHTML = missionLevels.levels.map((l) =>
     `<button type="button" role="radio" class="level-chip${l.id === chosen ? " active" : ""}" aria-checked="${l.id === chosen}" data-level="${escapeHtml(l.id)}" title="${escapeHtml(l.description)}">${escapeHtml(l.label)} <span class="level-cost">${l.credits} crédit${l.credits > 1 ? "s" : ""}</span></button>`
-  ).join("");
+  ).join("") + (missionLevels.locked ? '<span class="level-note">L\'essai est limité au niveau Rapide.</span>' : "");
   picker.hidden = false;
   picker.querySelectorAll(".level-chip").forEach((b) => b.addEventListener("click", () => {
     try { localStorage.setItem("bk_mission_level", b.dataset.level); } catch (e) { /* stockage indisponible : niveau par defaut */ }
@@ -2943,71 +3294,33 @@ async function runTask(objective) {
     // (202), puis on interroge GET /api/missions/async/<jobId> toutes les
     // 2 s jusqu'a DONE/ERROR. Les endpoints synchrones restent disponibles
     // cote serveur (retrocompatibilite) ; seule l'UI live passe par /async.
-    const endpoint = currentWorkerId === "chloe"
-      ? "/api/chloe/task"
-      : `/api/workers/${currentWorkerId}/task`;
-    const asyncEndpoint = endpoint + "/async";
+    // (envoi + interrogation : submitMissionAndWait, partage avec l'essai a
+    // blanc de l'assistant d'installation.)
+    const missionWorkerId = currentWorkerId;
+    const outcome = await submitMissionAndWait(missionWorkerId, objective);
 
-    let result;
-    const started = await fetchJson(asyncEndpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ objective, level: currentMissionLevel() }),
-    });
-
-    if (started.error || !started.jobId) {
-      // Garde refusee en amont (compte, abonnement, objectif...) : on
-      // traite started comme le resultat et on laisse le rendu habituel
-      // ci-dessous l'afficher.
-      result = started;
-    } else {
-      const POLL_INTERVAL_MS = 2000;
-      const MAX_POLL_ATTEMPTS = 330; // ~11 min
-      let pollFailures = 0;
-      for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt++) {
-        await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
-        let job;
-        try {
-          job = await fetchJson(`/api/missions/async/${started.jobId}`, {
-            method: "GET",
-            headers: { "Content-Type": "application/json" },
-          });
-          pollFailures = 0;
-        } catch (pollErr) {
-          // Coupure passagere (deploiement, reseau mobile, appli en arriere-plan) : la mission continue cote serveur,
-          // on reessaie au lieu d'abandonner (et de pousser le client a relancer une 2e mission payante).
-          if (++pollFailures >= 8) throw pollErr;
-          continue;
-        }
-        if (job.error === "ACCOUNT_REQUIRED") {
-          turn.remove();
-          requireAccount(() => runTask(objective));
-          return;
-        }
-        if (job.error) {
-          result = job;
-          break;
-        }
-        if (job.status === "DONE") {
-          result = job.result || {};
-          break;
-        }
-        if (job.status === "ERROR") {
-          result = { error: "SUBMIT_EXCEPTION", detail: job.error };
-          break;
-        }
-      }
-      if (result === undefined) {
-        // Plafond de securite atteint : on cesse d'interroger plutot que
-        // de boucler indefiniment. La mission continue cote serveur.
-        responseEl.className = "chat-msg chat-msg-worker needs-chloe";
-        responseEl.innerHTML = `<div class="status-line">Toujours en cours</div>
-          <p>La mission prend plus de temps que prévu. Elle continue en arrière-plan — réessayez dans un instant.</p>`;
-        turn.scrollIntoView({ behavior: "smooth", block: "end" });
-        return;
-      }
+    if (outcome.accountRequired) {
+      turn.remove();
+      requireAccount(() => runTask(objective));
+      return;
     }
+    if (outcome.timedOut) {
+      // Plafond de securite atteint : on cesse d'interroger plutot que
+      // de boucler indefiniment. La mission continue cote serveur.
+      responseEl.className = "chat-msg chat-msg-worker needs-chloe";
+      responseEl.innerHTML = `<div class="status-line">Toujours en cours</div>
+        <p>La mission prend plus de temps que prévu. Elle continue en arrière-plan — réessayez dans un instant.</p>`;
+      turn.scrollIntoView({ behavior: "smooth", block: "end" });
+      return;
+    }
+    const result = outcome.result;
 
+    if (result.error === "WORKER_NOT_INCLUDED") {
+      // Offre « Worker a l'unite » : ce Worker n'est pas dans le forfait (aucune mission lancee, aucun credit consomme).
+      iwRenderNotIncluded(responseEl, result, missionWorkerId, null);
+      turn.scrollIntoView({ behavior: "smooth", block: "end" });
+      return;
+    }
     if (result.error === "ACCOUNT_REQUIRED") {
       // La session a expire entre-temps : redemande une connexion
       // plutot que d'afficher une erreur brute. Retire ce tour en
@@ -3020,8 +3333,8 @@ async function runTask(objective) {
       responseEl.className = "chat-msg chat-msg-worker needs-chloe";
       responseEl.innerHTML = `<div class="status-line">Abonnement requis</div>
         <p>${escapeHtml(result.detail || "Votre quota est épuisé.")}</p>
-        <button type="button" class="btn btn-gold subscribe-cta-btn" style="margin-top:10px">Voir les abonnements &rarr;</button>`;
-      responseEl.querySelector(".subscribe-cta-btn").addEventListener("click", () => showView("billing"));
+        ${subscribeCtaHtml(result)}`;
+      wireSubscribeCta(responseEl, result);
       return;
     }
     if (result.error) {
@@ -3158,11 +3471,14 @@ async function runChloeFabTask(objective) {
       responseEl.className = "chat-msg chat-msg-worker needs-chloe";
       responseEl.innerHTML = `<div class="status-line">Abonnement requis</div>
         <p>${escapeHtml(result.detail || "Votre quota est épuisé.")}</p>
-        <button type="button" class="btn btn-gold subscribe-cta-btn" style="margin-top:10px">Voir les abonnements &rarr;</button>`;
-      responseEl.querySelector(".subscribe-cta-btn").addEventListener("click", () => {
-        closeChloeFab();
-        showView("billing");
-      });
+        ${subscribeCtaHtml(result)}`;
+      wireSubscribeCta(responseEl, result, closeChloeFab);
+      return;
+    }
+    if (result.error === "WORKER_NOT_INCLUDED") {
+      // Forfait Solo : Chloe n'est pas incluse ; Trio : seuls les Workers embauches travaillent (notIncludedWorkers).
+      iwRenderNotIncluded(responseEl, result, "chloe", closeChloeFab);
+      turn.scrollIntoView({ behavior: "smooth", block: "end" });
       return;
     }
     if (result.error) {
@@ -3198,6 +3514,1620 @@ document.getElementById("chloe-fab-form").addEventListener("submit", (e) => {
   input.value = "";
   runChloeFabTask(objective);
 });
+
+// ===== HIRE-UI BEGIN : offre « Worker a l'unite » (installation guidee, embauche, interrupteur de pause) =====
+// 2026-10-12 : le client installe UN Worker selon ses competences : services -> fiche de connaissances -> autonomie -> outils -> essai a blanc
+// -> activation. Contrat serveur : docs/HIRE-API.md. Regles que cette interface ne contourne jamais :
+//  - "Autonome" (auto) n'est propose QUE pour les actions que le profil classe en risque faible ; envoyer, publier, payer, supprimer et
+//    appeler demandent toujours la validation du client ;
+//  - seuls les canaux reellement disponibles (liveChannels) sont presentes comme disponibles : telephone, WhatsApp et e-mail = « bientot » ;
+//  - tout texte venant du serveur ou du client passe par escapeHtml ; aucun secret n'est jamais demande ni conserve ici ;
+//  - aucun prix n'est affiche par cette interface (les prix sont sur la page Tarifs et dans Facturation) : la demande part chez BK Entreprise,
+//    rien n'est debite ici ;
+//  - les reglages d'autonomie sont des CONSIGNES donnees au Worker (injectees dans son prompt, voir Client-Installation.ps1), jamais presentes
+//    comme une garantie de la plateforme : la validation des envois, publications, paiements, suppressions et appels est technique, a part.
+
+// BK-PURE-BEGIN (fonctions sans acces au DOM : testees telles quelles par tests/hire-ui/test_pure_logic.js)
+const IW_MODES = [
+  { id: "off", label: "Ne jamais", help: "Consigne donnée au Worker : ne jamais faire cette action." },
+  { id: "ask", label: "Demander d'abord", help: "Consigne donnée au Worker : vous demander avant d'agir et attendre votre réponse." },
+  { id: "draft", label: "Préparer et attendre ma validation", help: "Consigne donnée au Worker : préparer le résultat (brouillon, fichier) et attendre votre accord." },
+  { id: "auto", label: "Autonome", help: "Consigne donnée au Worker : le faire, puis vous le dire. Réservé aux actions sans risque (lire, analyser, rédiger)." },
+];
+const IW_RISK = { low: "Risque faible", medium: "Risque moyen", high: "Risque élevé" };
+const IW_CHANNEL_LABELS = { web: "Dans l'application", schedule: "Mission récurrente", email: "E-mail", phone: "Téléphone", whatsapp: "WhatsApp" };
+const IW_STEP_LABELS = ["Services", "Fiche", "Autonomie", "Outils", "Essai"];
+const IW_STATUS_LABELS = { draft: "Brouillon", active: "Actif", paused: "En pause" };
+// Texte de l'interrupteur d'arret : un brouillon reste « en marche » (il recoit la fiche et ses automatisations tournent) tant qu'on ne l'arrete pas.
+const IW_RUN_LABELS = { draft: "En marche", active: "Actif", paused: "En pause" };
+const IW_FIELD_MAX = 2000;
+
+// "Autonome" n'existe que pour une action de risque faible qui n'ecrit pas dans un outil (une regle avec « operations » gouverne une ecriture :
+// tache CRM, brouillon de message, carte...) : le serveur le refuse sinon (400 INSTALLATION_INVALID).
+function iwModesFor(rule) {
+  return IW_MODES.filter((m) => m.id !== "auto" || (rule && rule.risk === "low" && !(Array.isArray(rule.operations) && rule.operations.length)));
+}
+
+// Piege du focus de l'assistant : renvoie "first" ou "last" quand la touche Tab doit boucler (ou ramener le focus dans la fenetre), sinon null.
+// `items` = elements focalisables de la fenetre, `active` = element qui a le focus, `box` = la fenetre. Un element qui n'est pas dans la liste
+// (le titre qui recoit le focus a l'ouverture, ou la page derriere quand le focus s'est echappe) compte comme « avant le premier » pour Maj+Tab.
+function iwTabTarget(items, active, box, shift) {
+  if (!items || !items.length) return null;
+  const first = items[0];
+  const last = items[items.length - 1];
+  if (!box || !box.contains(active)) return shift ? "last" : "first";
+  if (shift) return (active === first || active === box || items.indexOf(active) < 0) ? "last" : null;
+  return active === last ? "first" : null;
+}
+
+function iwDefaultMode(rule) {
+  const allowed = iwModesFor(rule).map((m) => m.id);
+  return rule && allowed.includes(rule.defaultMode) ? rule.defaultMode : "ask";
+}
+
+// Etat de l'assistant a partir du profil et de la fiche deja enregistree (ou rien). Les reglages d'autonomie partent des valeurs par defaut du profil.
+function iwInitialState(profile, installation) {
+  const services = {};
+  ((profile && profile.services) || []).forEach((def) => {
+    const saved = installation && installation.services && installation.services[def.id];
+    const knowledge = {};
+    (def.knowledgeFields || []).forEach((f) => {
+      const v = saved && saved.knowledge ? saved.knowledge[f.key] : "";
+      knowledge[f.key] = typeof v === "string" ? v : "";
+    });
+    const autonomy = {};
+    (def.autonomyRules || []).forEach((r) => {
+      const m = saved && saved.autonomy ? saved.autonomy[r.category] : null;
+      autonomy[r.category] = iwModesFor(r).some((x) => x.id === m) ? m : iwDefaultMode(r);
+    });
+    services[def.id] = { enabled: !!(saved && saved.enabled), level: (saved && saved.level) || null, knowledge, autonomy };
+  });
+  return { services, notes: (installation && typeof installation.notes === "string") ? installation.notes : "" };
+}
+
+function iwEnabledDefs(profile, state) {
+  return ((profile && profile.services) || []).filter((d) => state.services[d.id] && state.services[d.id].enabled);
+}
+
+// Canaux de ce service que le profil dit REELLEMENT disponibles ("available"), dans l'ordre du profil.
+function iwLiveChannelsOf(def, profile, liveChannels) {
+  const support = (profile && profile.channelSupport) || {};
+  const live = Array.isArray(liveChannels) ? liveChannels : [];
+  return (def.channels || []).filter((c) => support[c] === "available" && live.includes(c));
+}
+
+// Canaux affiches pour un service : disponibles d'un cote, « bientot » de l'autre ; ce que le profil exclut ("no") n'est jamais montre.
+function iwChannelChips(def, profile, liveChannels) {
+  const support = (profile && profile.channelSupport) || {};
+  const live = Array.isArray(liveChannels) ? liveChannels : [];
+  return (def.channels || [])
+    .filter((c) => support[c] === "available" || support[c] === "planned")
+    .map((c) => ({ id: c, label: IW_CHANNEL_LABELS[c] || c, soon: !(support[c] === "available" && live.includes(c)) }));
+}
+
+// Configuration COMPLETE envoyee a POST /api/installations (elle remplace la precedente). Un service ni coche ni renseigne n'est pas envoye.
+function iwBuildPayload(workerId, profile, state, liveChannels) {
+  const services = {};
+  ((profile && profile.services) || []).forEach((def) => {
+    const s = state.services[def.id];
+    if (!s) return;
+    const knowledge = {};
+    Object.keys(s.knowledge || {}).forEach((k) => {
+      const v = String(s.knowledge[k] == null ? "" : s.knowledge[k]).trim();
+      if (v) knowledge[k] = v;
+    });
+    if (!s.enabled && !Object.keys(knowledge).length) return;
+    const autonomy = {};
+    (def.autonomyRules || []).forEach((r) => {
+      const wanted = s.autonomy ? s.autonomy[r.category] : null;
+      autonomy[r.category] = iwModesFor(r).some((x) => x.id === wanted) ? wanted : iwDefaultMode(r);
+    });
+    const entry = { enabled: !!s.enabled, knowledge, autonomy, channels: iwLiveChannelsOf(def, profile, liveChannels) };
+    if (s.level) entry.level = s.level;
+    services[def.id] = entry;
+  });
+  return { workerId, services, notes: String(state.notes || "").trim() };
+}
+
+// Ce qu'il manque pour activer (reflet du calcul serveur : au moins un service, champs obligatoires, outils obligatoires connectes).
+// connectorStatus : { "hubspot.controlled": true|false|null } ; null = non verifiable (compte proprietaire) -> aucun controle d'outil.
+function iwMissing(profile, state, connectorStatus) {
+  const out = [];
+  const defs = iwEnabledDefs(profile, state);
+  if (!defs.length) out.push({ kind: "service" });
+  defs.forEach((d) => {
+    const s = state.services[d.id];
+    (d.knowledgeFields || []).forEach((f) => {
+      if (f.required && !String((s.knowledge || {})[f.key] || "").trim()) out.push({ kind: "field", svc: d.label, svcId: d.id, what: f.label });
+    });
+    const known = (cid) => !connectorStatus || connectorStatus[cid] !== false;
+    (d.requiredConnectors || []).forEach((cid) => {
+      if (!known(cid)) out.push({ kind: "tool", svc: d.label, svcId: d.id, tools: [cid], any: false });
+    });
+    (d.requiredAnyOf || []).forEach((group) => {
+      if (Array.isArray(group) && group.length && !group.some(known)) out.push({ kind: "tool", svc: d.label, svcId: d.id, tools: group.slice(), any: true });
+    });
+  });
+  return out;
+}
+
+// Outils d'un service : obligatoires, « au moins un parmi », facultatifs.
+function iwToolsOf(def) {
+  return {
+    required: (def.requiredConnectors || []).slice(),
+    anyOf: (def.requiredAnyOf || []).filter((g) => Array.isArray(g) && g.length).map((g) => g.slice()),
+    optional: (def.optionalConnectors || []).slice(),
+  };
+}
+
+// Repartition des reglages d'autonomie des services coches (pour le resume avant activation).
+function iwAutonomySummary(profile, state) {
+  const n = { off: 0, ask: 0, draft: 0, auto: 0 };
+  iwEnabledDefs(profile, state).forEach((d) => {
+    (d.autonomyRules || []).forEach((r) => {
+      const m = state.services[d.id].autonomy[r.category];
+      if (n[m] !== undefined) n[m] += 1;
+    });
+  });
+  return n;
+}
+
+function iwFriendlyError(msg) {
+  const m = String(msg || "");
+  let x;
+  if ((x = m.match(/(\d+) caracteres? maximum/))) return `${x[1]} caractères au maximum.`;
+  if (/ne saisissez jamais de mot de passe/i.test(m)) return "Ne saisissez jamais de mot de passe, de clé d'API, de numéro de carte ni d'IBAN : retirez cette information.";
+  if (/autonomie complete n'est pas autorisee/i.test(m)) return "L'autonomie complète n'est pas permise pour cette action : votre validation reste obligatoire.";
+  return m ? m.charAt(0).toUpperCase() + m.slice(1) : "Valeur refusée.";
+}
+
+// Messages d'erreur du serveur (400 INSTALLATION_INVALID, "service.champ : message") -> par champ, avec l'etape ou les corriger.
+function iwParseErrors(errors, profile) {
+  const out = { fields: {}, general: [], items: [] };
+  const defs = {};
+  ((profile && profile.services) || []).forEach((d) => { defs[d.id] = d; });
+  const push = (key, step, svcLabel, msg, field) => {
+    if (key) (out.fields[key] = out.fields[key] || []).push(msg);
+    out.items.push({ key, step, svc: svcLabel || "", field: field || "", msg });
+  };
+  (Array.isArray(errors) ? errors : [errors]).filter(Boolean).forEach((raw) => {
+    const text = String(raw);
+    let m = text.match(/^([a-z0-9-]+)\.([a-z0-9_-]+) : (.*)$/);
+    if (m && defs[m[1]]) {
+      const kf = (defs[m[1]].knowledgeFields || []).find((f) => f.key === m[2]);
+      const rule = kf ? null : (defs[m[1]].autonomyRules || []).find((r) => r.category === m[2]);
+      push(m[1] + "." + m[2], kf ? 1 : 2, defs[m[1]].label, iwFriendlyError(m[3]), (kf && kf.label) || (rule && rule.label) || "");
+      return;
+    }
+    m = text.match(/^notes : (.*)$/);
+    if (m) { push("notes", 1, "", iwFriendlyError(m[1]), "Consignes générales"); return; }
+    m = text.match(/^([a-z0-9-]+) : (.*)$/);
+    if (m && defs[m[1]]) { push(m[1], 0, defs[m[1]].label, iwFriendlyError(m[2])); return; }
+    out.general.push(iwFriendlyError(text));
+    out.items.push({ key: "", step: -1, svc: "", field: "", msg: iwFriendlyError(text) });
+  });
+  return out;
+}
+// BK-PURE-END
+
+// Un seul assistant a la fois (null = ferme). iwMemory garde ce qui a ete saisi mais pas enregistre : fermer puis rouvrir ne perd rien.
+let iw = null;
+const iwMemory = {};
+let onConnectorsReloaded = null;      // appele par loadConnectors() : l'assistant rafraichit alors l'etat des outils
+const IW_RETURN_KEY = "bk_install_return";
+
+// Texte d'une boite native (confirm) : le dictionnaire du navigateur ne les voit pas, on les traduit a la main.
+const iwT = (s) => (window.bkTr ? window.bkTr(s) : s);
+// Phrase avec des valeurs (nom du Worker...) : le modele est traduit, puis les {valeurs} sont inserees.
+const iwTf = (template, vars) => iwT(template).replace(/\{(\w+)\}/g, (m, k) => (vars && vars[k] !== undefined ? vars[k] : m));
+
+function iwNow() {
+  return new Date().toLocaleTimeString(BK_LOCALE(), { hour: "2-digit", minute: "2-digit" });
+}
+
+function iwDate(iso) {
+  return iso ? new Date(iso).toLocaleString(BK_LOCALE(), { dateStyle: "medium", timeStyle: "short" }) : "";
+}
+
+async function iwLoadCatalog() {
+  try {
+    const data = await fetchJson("/api/connectors");
+    const map = {};
+    Object.entries(data.categories || {}).forEach(([category, list]) => (list || []).forEach((c) => { map[c.connectorId] = Object.assign({ category }, c); }));
+    return map;
+  } catch (e) {
+    return {};
+  }
+}
+
+function iwToolName(cid, catalog) {
+  const c = catalog && catalog[cid];
+  if (c && c.provider) return brandName(c.provider);
+  const t = humanizeTag(String(cid).split(".")[0]);
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
+
+function iwToolNames(list, catalog) {
+  return list.map((cid) => iwToolName(cid, catalog)).join(", ");
+}
+
+// ---------- ASSISTANT D'INSTALLATION ----------
+
+let iwOpening = false;
+
+// Ouverture : le serveur est interroge (profil + outils), ce qui prend un instant ; le bouton le montre et un double clic n'ouvre pas deux fenetres.
+async function openInstallWizard(workerId, startStep) {
+  if (!accountAuthenticated) { requireAccount(() => openInstallWizard(workerId, startStep)); return; }
+  if (iw || iwOpening) return;
+  iwOpening = true;
+  const trigger = document.activeElement && document.activeElement.tagName === "BUTTON" ? document.activeElement : null;
+  if (trigger) { trigger.classList.add("is-busy"); trigger.setAttribute("aria-busy", "true"); }
+  try {
+    await iwOpenNow(workerId, startStep);
+  } finally {
+    iwOpening = false;
+    if (trigger) { trigger.classList.remove("is-busy"); trigger.removeAttribute("aria-busy"); }
+  }
+}
+
+async function iwOpenNow(workerId, startStep) {
+  const opener = document.activeElement;
+  let data;
+  let catalog;
+  try {
+    [data, catalog] = await Promise.all([fetchJson(`/api/workers/${encodeURIComponent(workerId)}/install-profile`), iwLoadCatalog()]);
+  } catch (e) {
+    showToast(e.message || "Impossible d'ouvrir l'installation pour le moment. Réessayez.", false);
+    return;
+  }
+  if (data.error === "ACCOUNT_REQUIRED") { iwSessionLost(() => openInstallWizard(workerId, startStep)); return; }
+  if (data.error) { showToast(data.detail || "Ce Worker n'a pas encore de fiche d'installation.", false); return; }
+  if (!data.entitled) {
+    showToast("Ce Worker ne fait pas partie de votre forfait : embauchez-le d'abord.", false);
+    loadInstallPanel(workerId);
+    return;
+  }
+  const mem = iwMemory[workerId];
+  iw = {
+    workerId, workerName: data.workerName || workerNameById(workerId), profile: data.profile, installation: data.installation,
+    readiness: data.readiness || [], connectorStatus: data.connectorStatus || {}, liveChannels: data.liveChannels || [], catalog,
+    step: Math.max(0, Math.min(IW_STEP_LABELS.length - 1, startStep || 0)),
+    state: mem ? mem.state : iwInitialState(data.profile, data.installation),
+    dirty: mem ? mem.dirty : false, errors: null, warnings: [], savedAt: null, saving: false, trialServiceId: null, trialRunning: false, opener,
+  };
+  const worker = allWorkers.find((x) => x.id === workerId);
+  const overlay = document.createElement("div");
+  overlay.className = "iw-overlay";
+  overlay.id = "iw-overlay";
+  overlay.innerHTML = `
+    <div class="iw-box" role="dialog" aria-modal="true" aria-labelledby="iw-title">
+      <header class="iw-head">
+        ${worker && worker.portraitUrl ? `<img class="iw-portrait" src="${escapeHtml(worker.portraitUrl)}" alt="">` : ""}
+        <div class="iw-head-text">
+          <div class="iw-kicker">Installation</div>
+          <h2 id="iw-title" tabindex="-1">${escapeHtml(iw.workerName)}</h2>
+        </div>
+        <span class="iw-status-pill" id="iw-status-pill"></span>
+        <button type="button" class="iw-close" id="iw-close" aria-label="Fermer">&times;</button>
+      </header>
+      <ol class="iw-steps" id="iw-steps" aria-label="Étapes de l'installation"></ol>
+      <div class="iw-body" id="iw-body"></div>
+      <footer class="iw-foot">
+        <div class="iw-foot-top">
+          <div class="iw-savestate" id="iw-savestate" role="status" aria-live="polite"></div>
+          <button type="button" class="btn btn-ghost iw-save-btn" id="iw-save">Enregistrer le brouillon</button>
+        </div>
+        <div class="iw-foot-btns">
+          <button type="button" class="btn btn-ghost" id="iw-prev">Précédent</button>
+          <button type="button" class="btn btn-gold" id="iw-next">Suivant</button>
+        </div>
+      </footer>
+    </div>`;
+  document.body.appendChild(overlay);
+  document.body.classList.add("iw-open");
+  overlay.addEventListener("keydown", iwOnKeydown);
+  overlay.addEventListener("mousedown", (e) => { if (e.target === overlay) iwClose(); });
+  overlay.querySelector("#iw-close").addEventListener("click", () => iwClose());
+  overlay.querySelector("#iw-prev").addEventListener("click", () => iwGo(iw.step - 1));
+  overlay.querySelector("#iw-next").addEventListener("click", () => {
+    if (iw.step >= IW_STEP_LABELS.length - 1) iwFinish();
+    else iwGo(iw.step + 1);
+  });
+  overlay.querySelector("#iw-save").addEventListener("click", async () => {
+    const ok = await iwSave();
+    if (ok) showToast("Brouillon enregistré.");
+  });
+  window.addEventListener("beforeunload", iwBeforeUnload);
+  onConnectorsReloaded = () => { if (iw) iwRefreshServerState(); };
+  iwRender();
+  iwSetSaveState(iw.dirty ? "dirty" : (iw.installation ? "saved-before" : "none"));
+  const title = document.getElementById("iw-title");
+  if (title) title.focus();
+}
+
+// Reponse ACCOUNT_REQUIRED du serveur = la session est finie (30 jours, ou deconnexion dans un autre onglet). Le drapeau local est perime : sans le
+// remettre a faux, requireAccount relancerait l'action au lieu d'ouvrir la fenetre de connexion, et le bouton ne ferait rien.
+function iwSessionLost(action) {
+  accountAuthenticated = false;
+  requireAccount(action);
+}
+
+function iwBeforeUnload(e) {
+  if (iw && iw.dirty) { e.preventDefault(); e.returnValue = ""; }
+}
+
+function iwOnKeydown(e) {
+  if (e.key === "Escape") {
+    if (document.querySelector(".cg-overlay")) return;      // la fenetre « Connecter un outil » gere sa propre fermeture
+    e.preventDefault();
+    iwClose();
+    return;
+  }
+  if (e.key !== "Tab") return;
+  const box = document.querySelector("#iw-overlay .iw-box");
+  if (!box) return;
+  const items = Array.from(box.querySelectorAll("button, [href], input, select, textarea, summary, [tabindex]:not([tabindex='-1'])"))
+    .filter((el) => !el.disabled && el.offsetParent !== null);
+  // Maj+Tab depuis le titre (tabindex -1, focus a l'ouverture) ou depuis la page derriere la fenetre ramene dans la fenetre, jamais dehors.
+  const target = iwTabTarget(items, document.activeElement, box, e.shiftKey);
+  if (!target) return;
+  e.preventDefault();
+  (target === "last" ? items[items.length - 1] : items[0]).focus();
+}
+
+// Fermer ne perd jamais la saisie : elle est enregistree en brouillon ; si le serveur refuse (champ invalide, reseau, session expiree), elle est
+// gardee dans iwMemory et revient a la reouverture. opts.skipSave : ne pas tenter d'enregistrer (session expiree : on garde simplement).
+async function iwClose(opts) {
+  if (!iw) return;
+  let kept = false;
+  if (iw.dirty) {
+    if (opts && opts.skipSave) kept = true;
+    else if (!iw.saving) kept = !(await iwSave({ quiet: true }));
+    else kept = true;
+  }
+  if (!iw) return;
+  const { workerId, opener } = iw;
+  if (kept) iwMemory[workerId] = { state: iw.state, dirty: true };
+  else delete iwMemory[workerId];
+  const overlay = document.getElementById("iw-overlay");
+  if (overlay) overlay.remove();
+  document.body.classList.remove("iw-open");
+  window.removeEventListener("beforeunload", iwBeforeUnload);
+  onConnectorsReloaded = null;
+  iw = null;
+  if (kept) showToast("Vos modifications n'ont pas pu être enregistrées, mais elles sont conservées : rouvrez l'installation pour les corriger.", false);
+  if (!billingView.hidden) loadInstalledWorkers();
+  await loadInstallPanel(workerId);
+  // Le panneau vient d'etre redessine : le clavier retrouve le bouton qui avait ouvert l'assistant.
+  const target = opener && document.contains(opener) ? opener : document.getElementById("iw-open-btn");
+  if (target && target.focus) target.focus();
+}
+
+function iwSetSaveState(kind) {
+  const el = document.getElementById("iw-savestate");
+  if (!el) return;
+  const map = {
+    none: '<span>Rien d\'enregistré pour le moment</span>',
+    "saved-before": '<span>Brouillon déjà enregistré</span>',
+    dirty: '<span class="iw-dirty">Modifications non enregistrées</span>',
+    saving: '<span>Enregistrement…</span>',
+    saved: `<span>Brouillon enregistré à</span> <time>${escapeHtml(iw && iw.savedAt ? iw.savedAt : iwNow())}</time>`,
+    failed: '<span class="iw-dirty">Enregistrement refusé : corrigez les points signalés</span>',
+    "failed-general": '<span class="iw-dirty">Enregistrement non effectué : votre saisie est conservée</span>',
+  };
+  el.innerHTML = map[kind] || "";
+}
+
+function iwMarkDirty() {
+  if (!iw) return;
+  iw.dirty = true;
+  iwSetSaveState("dirty");
+}
+
+// ---------- ENREGISTREMENT (brouillon a chaque etape ; les erreurs du serveur restent a l'ecran, la saisie n'est jamais effacee) ----------
+
+async function iwSave(opts) {
+  if (!iw || iw.saving) return false;
+  const quiet = !!(opts && opts.quiet);
+  const statusBefore = iw.installation ? iw.installation.status : null;
+  if (!quiet && statusBefore === "active" && iwMissing(iw.profile, iw.state, iw.connectorStatus).some((m) => m.kind === "service" || m.kind === "field")) {
+    // Le serveur repasse une installation active en brouillon des qu'il manque un service ou un champ obligatoire : on le dit AVANT.
+    if (!confirm(iwT("Cette modification laisse un élément obligatoire vide : l'installation repassera en brouillon et ne sera plus marquée « Actif » tant que vous ne l'aurez pas complétée. Enregistrer quand même ?"))) return false;
+  }
+  iw.saving = true;
+  iwSetSaveState("saving");
+  const saveBtn = document.getElementById("iw-save");
+  if (saveBtn) saveBtn.disabled = true;
+  try {
+    const r = await fetchJson("/api/installations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(iwBuildPayload(iw.workerId, iw.profile, iw.state, iw.liveChannels)),
+    });
+    if (r.error === "ACCOUNT_REQUIRED") {
+      // Session expiree : on ferme l'assistant en gardant la saisie, la connexion se fait par-dessus, puis on rouvre a la meme etape.
+      // Le drapeau local est perime (la session est finie cote serveur) : sans le remettre a faux, requireAccount relancerait l'action au lieu
+      // d'ouvrir la fenetre de connexion.
+      const { workerId, step } = iw;
+      iw.saving = false;
+      accountAuthenticated = false;
+      iwClose({ skipSave: true });
+      requireAccount(() => openInstallWizard(workerId, step));
+      return false;
+    }
+    if (r.error === "INSTALLATION_INVALID") {
+      iw.errors = iwParseErrors(r.errors && r.errors.length ? r.errors : [r.detail], iw.profile);
+      iwSetSaveState("failed");
+      if (!quiet) iwShowErrors();
+      return false;
+    }
+    if (r.error === "WORKER_NOT_INCLUDED") {
+      iw.errors = { fields: {}, general: [r.detail || "Ce Worker ne fait pas partie de votre forfait."], items: [{ key: "", step: -1, svc: "", msg: r.detail || "" }] };
+      iwSetSaveState("failed-general");
+      if (!quiet) iwShowErrors();
+      return false;
+    }
+    if (r.error || !r.installation) {
+      iw.errors = { fields: {}, general: [r.detail || "Enregistrement impossible pour le moment. Réessayez."], items: [] };
+      iwSetSaveState("failed-general");
+      if (!quiet) iwShowErrors();
+      return false;
+    }
+    iw.installation = r.installation;
+    iw.readiness = r.installation.readiness || [];
+    iw.warnings = r.warnings || [];
+    iw.errors = null;
+    iw.dirty = false;
+    iw.savedAt = iwNow();
+    iwSetSaveState("saved");
+    iwRenderStatusPill();
+    iwClearErrors();
+    if (statusBefore === "active" && r.installation.status === "draft") {
+      showToast("Cette installation n'est plus complète : elle repasse en brouillon. Complétez-la pour la réactiver.", false);
+    }
+    return true;
+  } catch (e) {
+    iw.errors = { fields: {}, general: ["Enregistrement impossible pour le moment (réseau ou serveur). Ce que vous avez saisi est conservé."], items: [] };
+    iwSetSaveState("failed-general");
+    if (!quiet) iwShowErrors();
+    return false;
+  } finally {
+    if (iw) iw.saving = false;
+    const b = document.getElementById("iw-save");
+    if (b) b.disabled = false;
+  }
+}
+
+function iwClearErrors() {
+  document.querySelectorAll("#iw-body .iw-field-err").forEach((el) => { el.hidden = true; el.textContent = ""; });
+  document.querySelectorAll("#iw-body [aria-invalid='true']").forEach((el) => el.removeAttribute("aria-invalid"));
+  const sum = document.getElementById("iw-error-summary");
+  if (sum) sum.hidden = true;
+}
+
+// Resume des erreurs en haut de l'etape + message sous chaque champ concerne (les champs d'autres etapes sont atteignables par un bouton).
+function iwShowErrors() {
+  if (!iw || !iw.errors) return;
+  const sum = document.getElementById("iw-error-summary");
+  if (!sum) return;
+  const items = iw.errors.items.length ? iw.errors.items : iw.errors.general.map((msg) => ({ key: "", step: -1, svc: "", msg }));
+  sum.innerHTML = `<div class="iw-alert-title">${items.some((it) => it.key) ? "L'enregistrement a été refusé. Corrigez ces points, votre saisie est conservée." : "L'enregistrement n'a pas abouti. Votre saisie est conservée."}</div>
+    <ul>${items.map((it) => `<li>${it.svc ? `<strong>${escapeHtml(it.svc)}</strong> ` : ""}${it.field ? `<em>${escapeHtml(it.field)} :</em> ` : ""}<span>${escapeHtml(it.msg)}</span>${it.step >= 0 && it.step !== iw.step ? ` <button type="button" class="iw-link" data-goto="${it.step}">Corriger à l'étape « ${escapeHtml(IW_STEP_LABELS[it.step])} »</button>` : ""}</li>`).join("")}</ul>`;
+  sum.hidden = false;
+  sum.querySelectorAll("[data-goto]").forEach((b) => b.addEventListener("click", () => { iw.step = Number(b.dataset.goto); iwRender(); }));
+  Object.entries(iw.errors.fields).forEach(([key, msgs]) => {
+    const err = document.querySelector(`#iw-body [data-err-for="${CSS.escape(key)}"]`);
+    if (err) {
+      err.textContent = msgs.join(" ");
+      err.hidden = false;
+      const input = err.parentElement && err.parentElement.querySelector("textarea, input");
+      if (input) input.setAttribute("aria-invalid", "true");
+    }
+  });
+  sum.focus();
+}
+
+async function iwGo(step) {
+  if (!iw) return;
+  const target = Math.max(0, Math.min(IW_STEP_LABELS.length - 1, step));
+  if (target === iw.step) return;
+  if (iw.dirty) {
+    const ok = await iwSave();
+    if (!ok) return;           // on reste sur l'etape : les erreurs sont affichees, la saisie est intacte
+  }
+  iw.step = target;
+  iwRender();
+  const body = document.getElementById("iw-body");
+  if (body) body.scrollTop = 0;
+}
+
+async function iwFinish() {
+  if (iw.dirty) { const ok = await iwSave(); if (!ok) return; }
+  const status = iw.installation ? iw.installation.status : "draft";
+  showToast(status === "active" ? "Installation enregistrée."
+    : (status === "paused" ? "Installation enregistrée. Ce Worker reste en pause."
+      : "Installation enregistrée. Elle reste en brouillon tant que vous ne l'activez pas."));
+  iwClose();
+}
+
+// Etat des outils / de la fiche cote serveur (apres connexion d'un outil par exemple) sans toucher a ce qui est saisi.
+async function iwRefreshServerState() {
+  if (!iw) return;
+  const wid = iw.workerId;
+  try {
+    const data = await fetchJson(`/api/workers/${encodeURIComponent(wid)}/install-profile`);
+    if (!iw || iw.workerId !== wid || data.error) return;
+    iw.connectorStatus = data.connectorStatus || {};
+    iw.installation = data.installation || iw.installation;
+    iw.readiness = data.readiness || iw.readiness;
+    iw.catalog = await iwLoadCatalog();
+    if (iw.step === 3 || iw.step === 4) iwRender();
+  } catch (e) {
+    /* non bloquant : l'etat se rafraichira a la prochaine ouverture */
+  }
+}
+
+// ---------- RENDU ----------
+
+function iwRenderStatusPill() {
+  const pill = document.getElementById("iw-status-pill");
+  if (!pill) return;
+  const status = iw && iw.installation ? iw.installation.status : null;
+  pill.className = "iw-status-pill" + (status ? " is-" + status : "");
+  pill.textContent = status ? IW_STATUS_LABELS[status] : "Nouveau";
+}
+
+function iwRender() {
+  if (!iw) return;
+  iwRenderStatusPill();
+  const steps = document.getElementById("iw-steps");
+  steps.innerHTML = IW_STEP_LABELS.map((label, i) => {
+    const cls = i === iw.step ? "is-current" : (i < iw.step ? "is-done" : "");
+    return `<li class="iw-step-item ${cls}"><button type="button" class="iw-step-btn" data-step="${i}" aria-label="${escapeHtml(iwTf("Étape {n} : {label}", { n: i + 1, label: iwT(label) }))}"${i === iw.step ? ' aria-current="step"' : ""}><span class="iw-step-num" aria-hidden="true">${i + 1}</span><span class="iw-step-label">${escapeHtml(label)}</span></button></li>`;
+  }).join("");
+  steps.querySelectorAll(".iw-step-btn").forEach((b) => b.addEventListener("click", () => iwGo(Number(b.dataset.step))));
+  document.getElementById("iw-prev").hidden = iw.step === 0;
+  document.getElementById("iw-next").textContent = iw.step >= IW_STEP_LABELS.length - 1 ? "Enregistrer et fermer" : "Suivant";
+  const body = document.getElementById("iw-body");
+  body.innerHTML = '<div class="iw-alert" id="iw-error-summary" role="alert" tabindex="-1" hidden></div><div id="iw-step-content"></div>';
+  const content = document.getElementById("iw-step-content");
+  [iwRenderServices, iwRenderKnowledge, iwRenderAutonomy, iwRenderTools, iwRenderTrial][iw.step](content);
+  if (iw.errors) iwShowErrors();
+}
+
+function iwEnabledOrHint(content) {
+  content.innerHTML = `<div class="iw-empty"><p>Choisissez d'abord au moins un service à l'étape « Services ».</p>
+    <button type="button" class="btn btn-gold" id="iw-back-to-services">Choisir les services</button></div>`;
+  content.querySelector("#iw-back-to-services").addEventListener("click", () => { iw.step = 0; iwRender(); });
+}
+
+// 1. Services (competences)
+function iwRenderServices(content) {
+  const p = iw.profile;
+  const support = p.channelSupport || {};
+  const cards = (p.services || []).map((def, si) => {
+    const s = iw.state.services[def.id];
+    const tools = iwToolsOf(def);
+    const lines = [];
+    if (tools.required.length) lines.push(`<span class="iw-meta-key">Outils obligatoires</span><span class="iw-meta-val">${escapeHtml(iwToolNames(tools.required, iw.catalog))}</span>`);
+    tools.anyOf.forEach((g) => lines.push(`<span class="iw-meta-key">Au moins un de ces outils</span><span class="iw-meta-val">${escapeHtml(iwToolNames(g, iw.catalog))}</span>`));
+    if (tools.optional.length) lines.push(`<span class="iw-meta-key">Outils facultatifs</span><span class="iw-meta-val">${escapeHtml(iwToolNames(tools.optional, iw.catalog))}</span>`);
+    if (!lines.length) lines.push('<span class="iw-meta-key">Outils</span><span class="iw-meta-val iw-meta-none">Aucun outil à connecter</span>');
+    const chips = iwChannelChips(def, p, iw.liveChannels).map((c) => `<span class="iw-chip${c.soon ? " iw-chip-soon" : ""}">${escapeHtml(c.label)}${c.soon ? ' <em>bientôt</em>' : ""}</span>`).join("");
+    return `<label class="iw-service${s.enabled ? " is-on" : ""}" for="iw-svc-${si}">
+      <input type="checkbox" id="iw-svc-${si}" data-svc="${escapeHtml(def.id)}" aria-labelledby="iw-st-${si}" aria-describedby="iw-sd-${si}"${s.enabled ? " checked" : ""}>
+      <span class="iw-service-main">
+        <span class="iw-service-title" id="iw-st-${si}">${escapeHtml(def.label)}</span>
+        <span class="iw-service-desc" id="iw-sd-${si}">${escapeHtml(def.description || "")}</span>
+        <span class="iw-service-meta">${lines.map((l) => `<span class="iw-meta-line">${l}</span>`).join("")}
+          <span class="iw-meta-line"><span class="iw-meta-key">Canaux</span><span class="iw-meta-val iw-chips">${chips}</span></span></span>
+      </span>
+    </label>`;
+  }).join("");
+  const planned = (p.plannedCapabilities || []).length
+    ? `<details class="iw-planned"><summary>Ce qui n'est pas encore disponible</summary>
+        <p>Ces fonctions sont prévues mais ne sont pas construites aujourd'hui : ne comptez pas dessus.</p>
+        <ul>${p.plannedCapabilities.map((t) => `<li>${escapeHtml(t)}</li>`).join("")}</ul></details>`
+    : "";
+  const channelNote = (support.email === "planned" || support.phone === "planned" || support.whatsapp === "planned")
+    ? '<p class="iw-note">Aujourd\'hui, ce Worker travaille depuis l\'application et en missions récurrentes. Le numéro de téléphone, WhatsApp et la boîte e-mail pour vos propres clients ne sont pas encore disponibles.</p>' : "";
+  content.innerHTML = `
+    ${p.tagline ? `<p class="iw-lead">${escapeHtml(p.tagline)}</p>` : ""}
+    ${p.idealFor ? `<p class="iw-ideal"><strong>Idéal pour</strong> ${escapeHtml(p.idealFor)}</p>` : ""}
+    <h3 class="iw-h">Que voulez-vous confier à ce Worker ?</h3>
+    <p class="iw-hint">Cochez les services dont vous avez besoin. Vous pourrez en ajouter ou en retirer plus tard.</p>
+    ${channelNote}
+    <div class="iw-services">${cards}</div>
+    ${planned}`;
+  content.querySelectorAll(".iw-service input").forEach((box) => box.addEventListener("change", () => {
+    iw.state.services[box.dataset.svc].enabled = box.checked;
+    box.closest(".iw-service").classList.toggle("is-on", box.checked);
+    iwMarkDirty();
+  }));
+}
+
+// 2. Fiche de connaissances
+function iwRenderKnowledge(content) {
+  const defs = iwEnabledDefs(iw.profile, iw.state);
+  if (!defs.length) { iwEnabledOrHint(content); return; }
+  const secretNote = '<p class="iw-note iw-note-warn">Ne saisissez jamais de mot de passe, de clé d\'API, de numéro de carte ni d\'IBAN : la fiche les refuse. Les outils se connectent à l\'étape « Outils ».</p>';
+  const sections = defs.map((def) => {
+    const si = (iw.profile.services || []).indexOf(def);
+    const s = iw.state.services[def.id];
+    const fields = (def.knowledgeFields || []).map((f, fi) => {
+      const id = `iw-k-${si}-${fi}`;
+      const value = s.knowledge[f.key] || "";
+      const rows = (f.example || "").length > 90 ? 3 : 2;
+      const donor = !value.trim() ? defs.find((o) => o.id !== def.id && String(iw.state.services[o.id].knowledge[f.key] || "").trim()) : null;
+      return `<div class="iw-field">
+        <label class="iw-label" for="${id}"><span>${escapeHtml(f.label)}</span> ${f.required ? '<span class="iw-req">obligatoire</span>' : '<span class="iw-opt">facultatif</span>'}</label>
+        ${f.help ? `<div class="iw-help" id="${id}-h">${escapeHtml(f.help)}</div>` : ""}
+        <textarea id="${id}" rows="${rows}" maxlength="${IW_FIELD_MAX}" data-svc="${escapeHtml(def.id)}" data-key="${escapeHtml(f.key)}"${f.required ? ' aria-required="true"' : ""} aria-describedby="${id}-h ${id}-e" placeholder="${escapeHtml(f.example ? "Ex : " + f.example : "")}">${escapeHtml(value)}</textarea>
+        <div class="iw-field-err" id="${id}-e" data-err-for="${escapeHtml(def.id + "." + f.key)}" role="alert" hidden></div>
+        ${donor ? `<button type="button" class="iw-link iw-copy" data-copy-from="${escapeHtml(donor.id)}" data-svc="${escapeHtml(def.id)}" data-key="${escapeHtml(f.key)}" data-target="${id}">Reprendre ce que vous avez écrit pour <em>${escapeHtml(donor.label)}</em></button>` : ""}
+      </div>`;
+    }).join("");
+    return `<section class="iw-svc" aria-labelledby="iw-svc-t-${si}">
+      <h3 class="iw-svc-title" id="iw-svc-t-${si}">${escapeHtml(def.label)}</h3>
+      <div class="iw-prog" data-prog-for="${escapeHtml(def.id)}"></div>
+      ${fields}
+    </section>`;
+  }).join("");
+  content.innerHTML = `
+    <h3 class="iw-h">Dites au Worker ce qu'il doit savoir de votre entreprise</h3>
+    <p class="iw-hint">Plus la fiche est précise, plus le travail est juste. Seuls les champs marqués « obligatoire » sont indispensables pour activer.</p>
+    ${secretNote}
+    ${sections}
+    <section class="iw-svc">
+      <h3 class="iw-svc-title">Consignes générales</h3>
+      <div class="iw-field">
+        <label class="iw-label" for="iw-notes"><span>Autre chose à respecter ou à savoir</span> <span class="iw-opt">facultatif</span></label>
+        <textarea id="iw-notes" rows="3" maxlength="${IW_FIELD_MAX}" aria-describedby="iw-notes-e">${escapeHtml(iw.state.notes)}</textarea>
+        <div class="iw-field-err" id="iw-notes-e" data-err-for="notes" role="alert" hidden></div>
+      </div>
+    </section>`;
+  const updateProgress = () => {
+    defs.forEach((def) => {
+      const el = content.querySelector(`[data-prog-for="${CSS.escape(def.id)}"]`);
+      if (!el) return;
+      const req = (def.knowledgeFields || []).filter((f) => f.required);
+      const done = req.filter((f) => String(iw.state.services[def.id].knowledge[f.key] || "").trim()).length;
+      el.innerHTML = req.length ? `<span class="iw-prog-n${done === req.length ? " is-done" : ""}">${done}/${req.length}</span> <span>champs obligatoires remplis</span>` : "<span>Aucun champ obligatoire</span>";
+    });
+  };
+  updateProgress();
+  content.querySelectorAll("textarea[data-key]").forEach((ta) => ta.addEventListener("input", () => {
+    iw.state.services[ta.dataset.svc].knowledge[ta.dataset.key] = ta.value;
+    ta.removeAttribute("aria-invalid");
+    const err = document.getElementById(ta.id + "-e");
+    if (err) { err.hidden = true; err.textContent = ""; }
+    iwMarkDirty();
+    updateProgress();
+  }));
+  content.querySelector("#iw-notes").addEventListener("input", (e) => { iw.state.notes = e.target.value; iwMarkDirty(); });
+  content.querySelectorAll(".iw-copy").forEach((b) => b.addEventListener("click", () => {
+    const from = iw.state.services[b.dataset.copyFrom].knowledge[b.dataset.key] || "";
+    iw.state.services[b.dataset.svc].knowledge[b.dataset.key] = from;
+    const ta = document.getElementById(b.dataset.target);
+    if (ta) { ta.value = from; ta.focus(); }
+    b.remove();
+    iwMarkDirty();
+    updateProgress();
+  }));
+}
+
+// 3. Autonomie par categorie d'action
+function iwRenderAutonomy(content) {
+  const defs = iwEnabledDefs(iw.profile, iw.state);
+  if (!defs.length) { iwEnabledOrHint(content); return; }
+  const legend = IW_MODES.map((m) => `<li><strong>${escapeHtml(m.label)}</strong><span>${escapeHtml(m.help)}</span></li>`).join("");
+  const sections = defs.map((def) => {
+    const si = (iw.profile.services || []).indexOf(def);
+    const rules = (def.autonomyRules || []).map((rule, ri) => {
+      const allowed = iwModesFor(rule);
+      const current = iw.state.services[def.id].autonomy[rule.category];
+      const cur = allowed.find((m) => m.id === current) || allowed[0];
+      const name = `iw-m-${si}-${ri}`;
+      const examples = (rule.examples || []).slice(0, 2);
+      return `<fieldset class="iw-rule" data-svc="${escapeHtml(def.id)}" data-cat="${escapeHtml(rule.category)}">
+        <legend><span class="iw-rule-label">${escapeHtml(rule.label)}</span> <span class="iw-risk iw-risk-${escapeHtml(rule.risk || "high")}">${escapeHtml(IW_RISK[rule.risk] || IW_RISK.high)}</span></legend>
+        ${examples.length ? `<ul class="iw-examples">${examples.map((t) => `<li>${escapeHtml(t)}</li>`).join("")}</ul>` : ""}
+        <div class="iw-modes">${allowed.map((m) => `<label class="iw-mode"><input type="radio" name="${name}" value="${m.id}"${m.id === cur.id ? " checked" : ""}><span>${escapeHtml(m.label)}</span></label>`).join("")}</div>
+        <div class="iw-mode-help" aria-live="polite">${escapeHtml(cur.help)}</div>
+        ${rule.risk === "low" ? "" : '<div class="iw-mode-lock">Cette action demande toujours votre validation : « Autonome » n\'est pas proposé.</div>'}
+        <div class="iw-field-err" data-err-for="${escapeHtml(def.id + "." + rule.category)}" role="alert" hidden></div>
+      </fieldset>`;
+    }).join("");
+    return `<section class="iw-svc" aria-labelledby="iw-au-t-${si}"><h3 class="iw-svc-title" id="iw-au-t-${si}">${escapeHtml(def.label)}</h3>${rules || '<p class="iw-hint">Aucun réglage pour ce service.</p>'}</section>`;
+  }).join("");
+  content.innerHTML = `
+    <h3 class="iw-h">Quelles consignes donner au Worker ?</h3>
+    <div class="iw-law" role="note"><strong>Règle de la plateforme :</strong> envoyer, publier, payer, supprimer et appeler demandent toujours votre validation, quel que soit le réglage choisi. « Autonome » n'est proposé que pour des actions sans risque, comme lire, analyser ou rédiger.</div>
+    <p class="iw-hint">Ces réglages sont des consignes que le Worker suit dans son travail. Elles ne remplacent pas la validation que la plateforme exige pour agir vers l'extérieur.</p>
+    <ul class="iw-legend">${legend}</ul>
+    ${sections}`;
+  content.querySelectorAll(".iw-rule").forEach((fs) => fs.addEventListener("change", (e) => {
+    if (!e.target.matches("input[type='radio']")) return;
+    iw.state.services[fs.dataset.svc].autonomy[fs.dataset.cat] = e.target.value;
+    const mode = IW_MODES.find((m) => m.id === e.target.value);
+    fs.querySelector(".iw-mode-help").textContent = mode ? mode.help : "";
+    const err = fs.querySelector(".iw-field-err");
+    if (err) { err.hidden = true; err.textContent = ""; }
+    iwMarkDirty();
+  }));
+}
+
+// 4. Outils : connectes ou manquants, avec le flux de connexion existant (formulaire guide / « Se connecter avec ... »)
+function iwToolRows() {
+  const rows = new Map();
+  const add = (cid, role, svcLabel) => {
+    const r = rows.get(cid) || { cid, roles: [] };
+    r.roles.push({ role, svc: svcLabel });
+    rows.set(cid, r);
+  };
+  iwEnabledDefs(iw.profile, iw.state).forEach((d) => {
+    const t = iwToolsOf(d);
+    t.required.forEach((cid) => add(cid, "required", d.label));
+    t.anyOf.forEach((g) => g.forEach((cid) => add(cid, "any", d.label)));
+    t.optional.forEach((cid) => add(cid, "optional", d.label));
+  });
+  return Array.from(rows.values());
+}
+
+function iwRenderTools(content) {
+  const defs = iwEnabledDefs(iw.profile, iw.state);
+  if (!defs.length) { iwEnabledOrHint(content); return; }
+  const rows = iwToolRows();
+  if (!rows.length) {
+    content.innerHTML = `<h3 class="iw-h">Outils</h3><div class="iw-empty"><p>Les services choisis n'ont besoin d'aucun outil à connecter : ils travaillent depuis l'application. Vous pouvez passer à l'essai.</p></div>`;
+    return;
+  }
+  const roleText = { required: "obligatoire", any: "au choix, au moins un", optional: "facultatif" };
+  const html = rows.map((row, i) => {
+    const c = iw.catalog[row.cid];
+    const state = iw.connectorStatus[row.cid];
+    const name = iwToolName(row.cid, iw.catalog);
+    const cat = c ? (CONNECTOR_CATEGORY_LABELS[c.category] || humanizeTag(c.category || "")) : "";
+    const best = row.roles.some((r) => r.role === "required") ? "required" : (row.roles.some((r) => r.role === "any") ? "any" : "optional");
+    const who = Array.from(new Set(row.roles.map((r) => r.svc))).join(" · ");
+    let stateHtml;
+    if (state === true) stateHtml = '<span class="cstate on">Connecté</span>';
+    else if (state === null || state === undefined) stateHtml = '<span class="cstate">Non vérifiable pour ce compte</span>';
+    else stateHtml = '<span class="cstate off">Non connecté</span>';
+    let actions = "";
+    if (!c || !c.realIntegration) {
+      stateHtml = '<span class="cstate soon">Bientôt</span>';
+    } else if (state === true) {
+      if (c.connectGuide) actions = `<button type="button" class="iw-link" data-tool-guide="${i}">Modifier la connexion</button>`;
+    } else if (c.oauthProvider) {
+      const v = OAUTH_VENDOR_UI[c.oauthProvider] || { label: brandName(c.provider), svg: "" };
+      actions = `<button type="button" class="connector-oauth-btn" data-tool-oauth="${i}">${v.svg}<span>Se connecter avec ${escapeHtml(v.label)}</span></button>`;
+      if (c.connectGuide) actions += `<button type="button" class="iw-link" data-tool-guide="${i}">Connexion manuelle</button>`;
+    } else if (c.connectGuide) {
+      actions = `<button type="button" class="connector-primary-btn" data-tool-guide="${i}">Connecter</button>`;
+    } else if (!c.clientCanConfigure) {
+      stateHtml = '<span class="cstate soon">Connexion en préparation</span>';
+    }
+    return `<li class="iw-tool">
+      <div class="iw-tool-main">
+        <div class="iw-tool-name">${escapeHtml(name)}${cat ? ` <span class="iw-tool-cat">${escapeHtml(cat)}</span>` : ""}</div>
+        <div class="iw-tool-role iw-role-${best}">${escapeHtml(roleText[best])}</div>
+        <div class="iw-tool-who">${escapeHtml(who)}</div>
+        ${stateHtml}
+      </div>
+      <div class="iw-tool-actions">${actions}</div>
+    </li>`;
+  }).join("");
+  content.innerHTML = `
+    <h3 class="iw-h">Les outils dont le Worker a besoin</h3>
+    <p class="iw-hint">Connectez ce que vous utilisez déjà. Un outil facultatif non connecté n'empêche pas d'activer : le Worker prépare alors le travail dans la conversation et en fichiers.</p>
+    <p class="iw-note">Vos accès sont chiffrés et jamais réaffichés. Vous pouvez déconnecter un outil à tout moment depuis la page Automatisations.</p>
+    <ul class="iw-tools">${html}</ul>
+    <p class="iw-hint"><button type="button" class="iw-link" id="iw-open-tools-page">Gérer tous mes outils connectés</button></p>`;
+  const openGuide = (i, opener) => {
+    const c = iw.catalog[rows[i].cid];
+    if (!c || !c.connectGuide) return;
+    openGuidedConnectForm(null, c);
+    // A la fermeture de la fenetre « Connecter », le clavier retrouve sa place dans l'assistant (sinon le focus tombe sur la page).
+    const watcher = new MutationObserver(() => {
+      if (document.querySelector(".cg-overlay")) return;
+      watcher.disconnect();
+      const target = document.contains(opener) ? opener : document.getElementById("iw-title");
+      if (iw && target && (!document.activeElement || document.activeElement === document.body)) target.focus();
+    });
+    watcher.observe(document.body, { childList: true });
+  };
+  content.querySelectorAll("[data-tool-guide]").forEach((b) => b.addEventListener("click", () => openGuide(Number(b.dataset.toolGuide), b)));
+  content.querySelectorAll("[data-tool-oauth]").forEach((b) => b.addEventListener("click", async () => {
+    const c = iw.catalog[rows[Number(b.dataset.toolOauth)].cid];
+    if (!c) return;
+    // La connexion en un clic quitte la page : on enregistre le brouillon et on retiendra ou revenir (voir handleOauthReturn).
+    b.disabled = true;
+    if (iw.dirty) { const ok = await iwSave(); if (!ok) { b.disabled = false; return; } }
+    try { sessionStorage.setItem(IW_RETURN_KEY, JSON.stringify({ workerId: iw.workerId, step: 3 })); } catch (e) { /* retour direct sur la page Automatisations */ }
+    window.location.href = "/oauth/" + encodeURIComponent(c.oauthProvider) + "/start?provider=" + encodeURIComponent(c.credentialProvider);
+  }));
+  const toolsPage = content.querySelector("#iw-open-tools-page");
+  if (toolsPage) toolsPage.addEventListener("click", async () => { const ok = iw.dirty ? await iwSave() : true; if (ok) { await iwClose(); showView("automations"); } });
+}
+
+// 5. Essai a blanc, puis activation
+function iwMissingHtml(items, serverStrings) {
+  if (!items.length && serverStrings && serverStrings.length) return `<ul class="iw-missing">${serverStrings.map((t) => `<li>${escapeHtml(t)}</li>`).join("")}</ul>`;
+  if (!items.length) return "";
+  return `<ul class="iw-missing">${items.map((m) => {
+    if (m.kind === "service") return "<li>Choisissez au moins un service.</li>";
+    if (m.kind === "field") return `<li><strong>${escapeHtml(m.svc)}</strong><span>${escapeHtml(m.what)}</span><em>champ obligatoire à remplir</em></li>`;
+    return `<li><strong>${escapeHtml(m.svc)}</strong><span>${escapeHtml(iwToolNames(m.tools, iw.catalog))}</span><em>${m.any ? "connectez au moins un de ces outils" : "outil à connecter"}</em></li>`;
+  }).join("")}</ul>`;
+}
+
+function iwRenderTrial(content) {
+  const defs = iwEnabledDefs(iw.profile, iw.state);
+  if (!defs.length) { iwEnabledOrHint(content); return; }
+  const status = iw.installation ? iw.installation.status : null;
+  if (!iw.trialServiceId || !defs.some((d) => d.id === iw.trialServiceId)) iw.trialServiceId = defs[0].id;
+  const def = defs.find((d) => d.id === iw.trialServiceId);
+  const scenario = def.testScenario || {};
+  const missing = iwMissing(iw.profile, iw.state, iw.connectorStatus);
+  const fieldsMissingForTrial = missing.filter((m) => m.kind === "field" && m.svcId === def.id);
+  const options = defs.map((d) => `<option value="${escapeHtml(d.id)}"${d.id === def.id ? " selected" : ""}>${escapeHtml(d.label)}</option>`).join("");
+  const paused = status === "paused";
+  // L'essai est une vraie mission au niveau choisi pour vos missions : on dit combien de credits il consomme.
+  const trialLevel = (missionLevels.levels || []).find((l) => l.id === currentMissionLevel());
+  const trialCost = trialLevel ? `<p class="iw-hint">${escapeHtml(iwTf("Cet essai sera lancé au niveau {level} : {n} crédit(s) de votre quota.", { level: trialLevel.label, n: trialLevel.credits }))}</p>` : "";
+  content.innerHTML = `
+    <h3 class="iw-h">Essai à blanc</h3>
+    <p class="iw-hint">Avant d'activer, le Worker traite un exercice avec votre fiche. C'est une vraie mission : elle compte dans votre quota comme une mission normale. Le Worker prépare le travail ; toute action vers l'extérieur reste à valider par vous.</p>
+    ${trialCost}
+    ${paused ? '<div class="iw-alert iw-alert-info">L\'installation est en pause : sa fiche n\'est pas transmise au Worker. Pour faire l\'essai, levez la pause : l\'installation repasse en brouillon et le Worker peut de nouveau agir de lui-même.</div>' : ""}
+    <div class="iw-field">
+      <label class="iw-label" for="iw-trial-svc"><span>Service à essayer</span></label>
+      <select id="iw-trial-svc">${options}</select>
+    </div>
+    ${scenario.objective ? `<div class="iw-scenario"><div class="iw-scenario-title">Demande envoyée au Worker</div><blockquote>${escapeHtml(scenario.objective)}</blockquote></div>` : '<p class="iw-hint">Ce service n\'a pas de scénario d\'essai prévu.</p>'}
+    ${(scenario.expectedChecks || []).length ? `<div class="iw-checks"><div class="iw-scenario-title">Ce que vous devez vérifier dans la réponse</div><ul>${scenario.expectedChecks.map((t) => `<li>${escapeHtml(t)}</li>`).join("")}</ul></div>` : ""}
+    ${fieldsMissingForTrial.length ? `<div class="iw-alert iw-alert-info">Remplissez d'abord les champs obligatoires de ce service (étape « Fiche »), sinon l'essai ne vous dira rien d'utile.</div>` : ""}
+    <div class="iw-trial-actions">
+      <button type="button" class="btn btn-gold" id="iw-trial-run"${scenario.objective && !fieldsMissingForTrial.length && !paused ? "" : " disabled"}>Lancer l'essai à blanc</button>
+      ${paused ? '<button type="button" class="btn btn-ghost" id="iw-to-draft">Lever la pause (repasser en brouillon)</button>' : ""}
+    </div>
+    <div id="iw-trial-result" class="iw-trial-result" aria-live="polite"></div>
+
+    <h3 class="iw-h iw-h-act">Activation</h3>
+    <div id="iw-activation"></div>`;
+  content.querySelector("#iw-trial-svc").addEventListener("change", (e) => { iw.trialServiceId = e.target.value; iwRender(); });
+  const runBtn = content.querySelector("#iw-trial-run");
+  if (runBtn) runBtn.addEventListener("click", iwRunTrial);
+  const draftBtn = content.querySelector("#iw-to-draft");
+  if (draftBtn) draftBtn.addEventListener("click", () => iwChangeStatus("draft"));
+  iwRenderActivation();
+}
+
+function iwRenderActivation() {
+  const el = document.getElementById("iw-activation");
+  if (!el || !iw) return;
+  const status = iw.installation ? iw.installation.status : null;
+  const missing = iwMissing(iw.profile, iw.state, iw.connectorStatus);
+  const sum = iwAutonomySummary(iw.profile, iw.state);
+  const recap = `<ul class="iw-recap">
+      <li><strong>${iwEnabledDefs(iw.profile, iw.state).length}</strong> <span>service(s) choisi(s)</span></li>
+      <li><strong>${sum.auto}</strong> <span>action(s) sans risque que le Worker a pour consigne de faire seul</span></li>
+      <li><strong>${sum.draft + sum.ask}</strong> <span>action(s) qu'il a pour consigne de préparer ou de demander avant de continuer</span></li>
+      <li><strong>${sum.off}</strong> <span>action(s) qu'il a pour consigne de ne jamais faire</span></li>
+    </ul>
+    <p class="iw-note">Envoyer, publier, payer, supprimer et appeler restent toujours soumis à votre validation. Vous pouvez mettre ce Worker en pause à tout moment : depuis cette fenêtre, depuis sa fiche ou depuis la page Facturation.</p>`;
+  if (status === "active") {
+    el.innerHTML = `<div class="iw-alert iw-alert-ok"><strong>Ce Worker est actif</strong> avec cette installation.${iw.installation.installedAtUtc ? ` <span class="iw-since">Depuis le ${escapeHtml(iwDate(iw.installation.installedAtUtc))}.</span>` : ""}</div>
+      ${recap}
+      <div class="iw-trial-actions"><button type="button" class="btn btn-ghost" id="iw-pause">Mettre en pause</button></div>
+      <div class="iw-field-err" id="iw-act-err" role="alert" hidden></div>`;
+    el.querySelector("#iw-pause").addEventListener("click", () => iwChangeStatus("paused"));
+    return;
+  }
+  const blockers = iwMissingHtml(missing, missing.length ? [] : (iw.readiness || []));
+  el.innerHTML = `${recap}
+    ${blockers ? `<div class="iw-alert iw-alert-info"><div class="iw-alert-title">Il manque encore, avant de pouvoir activer :</div>${blockers}</div>` : ""}
+    <div class="iw-trial-actions">
+      <button type="button" class="btn btn-gold" id="iw-activate"${blockers ? " disabled" : ""}>${status === "paused" ? "Réactiver ce Worker" : "Activer ce Worker"}</button>
+    </div>
+    <div class="iw-field-err" id="iw-act-err" role="alert" hidden></div>`;
+  el.querySelector("#iw-activate").addEventListener("click", iwActivate);
+}
+
+async function iwRunTrial() {
+  if (!iw || iw.trialRunning) return;
+  const defs = iwEnabledDefs(iw.profile, iw.state);
+  const def = defs.find((d) => d.id === iw.trialServiceId);
+  const objective = def && def.testScenario && def.testScenario.objective;
+  const out = document.getElementById("iw-trial-result");
+  const btn = document.getElementById("iw-trial-run");
+  if (!objective || !out) return;
+  iw.trialRunning = true;
+  btn.disabled = true;
+  const workerId = iw.workerId;
+  const name = iw.workerName;
+  out.innerHTML = `<div class="task-loading"><span></span><span></span><span></span></div><p class="task-loading-text"><strong>${escapeHtml(name)}</strong> <span>fait l'essai à blanc…</span></p>`;
+  // Le Worker doit voir la fiche telle qu'elle est a l'ecran : brouillon enregistre d'abord (jamais d'activation ici).
+  const saved = await iwSave();
+  if (!iw || iw.workerId !== workerId) return;
+  if (!saved) { out.innerHTML = ""; iw.trialRunning = false; btn.disabled = false; return; }
+  const outcome = await submitMissionAndWait(workerId, objective).catch((e) => ({ result: { error: "NETWORK", detail: e.message } }));
+  if (!iw || iw.workerId !== workerId) return;
+  iw.trialRunning = false;
+  const box = document.getElementById("iw-trial-result");
+  const runBtn = document.getElementById("iw-trial-run");
+  if (runBtn) runBtn.disabled = false;
+  if (!box) return;
+  if (outcome.accountRequired) {
+    iwClose({ skipSave: true });
+    iwSessionLost(() => openInstallWizard(workerId, 4));
+    return;
+  }
+  if (outcome.timedOut) {
+    box.innerHTML = '<div class="iw-alert iw-alert-info">L\'essai prend plus de temps que prévu. Il continue en arrière-plan : son résultat apparaîtra dans l\'activité récente de la fiche du Worker.</div>';
+    return;
+  }
+  const result = outcome.result || {};
+  if (result.error === "SUBSCRIPTION_REQUIRED") {
+    // Comme toutes les cartes « quota atteint » : le forfait suivant (avec le rythme de paiement du client) en plus du lien vers tous les forfaits.
+    const up = result.upgrade && result.upgrade.next && !result.upgrade.next.onQuote ? result.upgrade : null;
+    const upgradeBtn = up ? `<button type="button" class="btn btn-gold" id="iw-upgrade-now">${escapeHtml(iwTf("Passer à {name}", { name: up.next.name }))}</button> ` : "";
+    box.innerHTML = `<div class="iw-alert iw-alert-warn"><div class="iw-alert-title">Abonnement requis</div><p>${escapeHtml(result.detail || "Votre quota est épuisé.")}</p>${upgradeBtn}<button type="button" class="btn ${up ? "btn-ghost" : "btn-gold"}" id="iw-to-billing">Voir les abonnements</button></div>`;
+    box.querySelector("#iw-to-billing").addEventListener("click", async () => { await iwClose(); showView("billing"); });
+    const upgradeNow = box.querySelector("#iw-upgrade-now");
+    if (upgradeNow) upgradeNow.addEventListener("click", async () => { await iwClose(); showView("billing"); startUpgrade(up); });
+    return;
+  }
+  if (result.error === "WORKER_NOT_INCLUDED") {
+    box.innerHTML = `<div class="iw-alert iw-alert-warn"><p>${escapeHtml(result.detail || "Ce Worker ne fait pas partie de votre forfait.")}</p></div>`;
+    return;
+  }
+  if (result.error) {
+    box.innerHTML = `<div class="iw-alert iw-alert-warn"><div class="iw-alert-title">L'essai n'a pas abouti</div><p>${escapeHtml(result.detail || result.error)}</p></div>`;
+    return;
+  }
+  const blocked = result.Authorized !== true;
+  const answer = result.Result && result.Result.Answer ? result.Result.Answer
+    : (result.ExecutionNote || "Aucune réponse enregistrée.");
+  box.innerHTML = `<div class="iw-scenario-title">Réponse du Worker</div>
+    <div class="chat-msg chat-msg-worker${blocked ? " blocked" : ""}"><div class="status-line">${escapeHtml(blocked ? (result.Reason || result.Status || "Bloqué") : "Exécuté")}</div>${renderAnswer(answer)}</div>
+    <p class="iw-hint">Le résultat est conforme à ce que vous attendiez ? Activez le Worker. Sinon, corrigez la fiche (étape « Fiche ») et relancez l'essai.</p>`;
+  if (result.Result && Array.isArray(result.Result.Files) && result.Result.Files.length) {
+    const files = renderTaskFilesBlock(result.Result.TaskId, result.Result.Files);
+    if (files) box.appendChild(files);
+  }
+  if (result.pendingAction) box.appendChild(renderPendingActionCard(result.pendingAction));
+  if (currentWorkerId === workerId) loadActivity(workerId);
+}
+
+async function iwActivate() {
+  if (!iw) return;
+  const btn = document.getElementById("iw-activate");
+  const err = document.getElementById("iw-act-err");
+  if (btn) btn.disabled = true;
+  if (err) { err.hidden = true; err.textContent = ""; }
+  const ok = await iwSave();
+  if (!ok) { if (btn) btn.disabled = false; return; }
+  const left = iwMissing(iw.profile, iw.state, iw.connectorStatus);
+  if (left.length || (iw.readiness || []).length) {
+    iwRenderActivation();
+    return;
+  }
+  await iwChangeStatus("active");
+}
+
+async function iwChangeStatus(status) {
+  if (!iw) return;
+  const before = iw.installation ? iw.installation.status : null;
+  const r = await iwSetStatus(iw.workerId, status);
+  if (!iw) return;
+  if (r.ok) {
+    iw.installation = Object.assign({}, iw.installation || {}, r.installation);
+    iw.readiness = r.installation.readiness || [];
+    iwRenderStatusPill();
+    if (status === "active") showToast("Ce Worker est actif.");
+    else if (status === "paused") showToast("Ce Worker est en pause : il n'agit plus de lui-même.");
+    // Le resultat de l'essai reste affiche : on ne redessine toute l'etape que si la pause change ce qu'elle propose.
+    if ((before === "paused") !== (status === "paused")) iwRender();
+    else iwRenderActivation();
+    loadInstallPanel(iw.workerId);
+    if (!billingView.hidden) loadInstalledWorkers();
+    return;
+  }
+  const err = document.getElementById("iw-act-err");
+  const lines = (r.errors && r.errors.length ? r.errors : [r.message]).filter(Boolean);
+  if (err) { err.textContent = lines.join(" "); err.hidden = false; }
+  else showToast(lines.join(" "), false);
+}
+
+// Statut d'une installation (active / paused / draft) : utilise par l'assistant, la fiche du Worker et la page Facturation.
+async function iwSetStatus(workerId, status) {
+  try {
+    const r = await fetchJson("/api/installations/status", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ workerId, status }),
+    });
+    if (r.error === "ACCOUNT_REQUIRED") return { ok: false, message: "Connectez-vous pour continuer." };
+    if (r.ok && r.installation) return { ok: true, installation: r.installation };
+    return { ok: false, code: r.error, message: r.detail || r.error || "Changement impossible pour le moment.", errors: r.errors || r.readiness || [] };
+  } catch (e) {
+    return { ok: false, message: e.message || "Changement impossible pour le moment." };
+  }
+}
+
+
+// ---------- MISSION : meme chemin que la fiche du Worker (POST .../async puis interrogation toutes les 2 s) ----------
+
+// Lance une mission en arriere-plan et attend son resultat. Renvoie { result } (resultat final ou erreur), { accountRequired: true } ou { timedOut: true }.
+// Utilise par la fiche (runTask) et par l'essai a blanc de l'assistant : une seule facon de faire, un seul garde-fou serveur.
+async function submitMissionAndWait(workerId, objective) {
+  const endpoint = workerId === "chloe" ? "/api/chloe/task" : `/api/workers/${workerId}/task`;
+  const started = await fetchJson(endpoint + "/async", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ objective, level: currentMissionLevel() }),
+  });
+  if (started.error === "ACCOUNT_REQUIRED") return { accountRequired: true };
+  if (started.error || !started.jobId) {
+    // Garde refusee en amont (compte, abonnement, Worker non embauche, objectif...) : c'est le resultat, rendu comme d'habitude.
+    return { result: started };
+  }
+  const POLL_INTERVAL_MS = 2000;
+  const MAX_POLL_ATTEMPTS = 330; // ~11 min
+  let pollFailures = 0;
+  for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt++) {
+    await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
+    let job;
+    try {
+      job = await fetchJson(`/api/missions/async/${started.jobId}`, {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      });
+      pollFailures = 0;
+    } catch (pollErr) {
+      // Coupure passagere (deploiement, reseau mobile, appli en arriere-plan) : la mission continue cote serveur,
+      // on reessaie au lieu d'abandonner (et de pousser le client a relancer une 2e mission payante).
+      if (++pollFailures >= 8) throw pollErr;
+      continue;
+    }
+    if (job.error === "ACCOUNT_REQUIRED") return { accountRequired: true };
+    if (job.error) return { result: job };
+    if (job.status === "DONE") return { result: job.result || {} };
+    if (job.status === "ERROR") {
+      // Worker non embauche (verifie une seconde fois par le job) : l'interface propose alors d'embaucher, pas un message technique.
+      if (job.errorCode === "WORKER_NOT_INCLUDED") return { result: { error: "WORKER_NOT_INCLUDED", detail: job.error, workerId } };
+      return { result: { error: "SUBMIT_EXCEPTION", detail: job.error } };
+    }
+  }
+  return { timedOut: true };
+}
+
+// ---------- FICHE DU WORKER : panneau « Installer » (Worker du forfait) ou « Embaucher » (Worker hors forfait) ----------
+
+function iwStatusPill(status) {
+  return `<span class="iw-status-pill is-${escapeHtml(status)}">${escapeHtml(IW_STATUS_LABELS[status] || status)}</span>`;
+}
+
+function iwServiceChips(rec) {
+  const labels = Object.values((rec && rec.services) || {}).filter((s) => s.enabled).map((s) => s.label);
+  if (!labels.length) return '<span class="iw-meta-none">Aucun service choisi</span>';
+  return labels.map((l) => `<span class="iw-chip">${escapeHtml(l)}</span>`).join("");
+}
+
+// Interrupteur d'arret (kill switch) : coche = en marche ; decocher = pause immediate. Offert pour TOUT statut : un brouillon recoit la fiche et ses
+// automatisations tournent, il doit donc pouvoir etre arrete lui aussi. La reprise remet l'installation la ou la pause l'a prise (pausedFrom : brouillon
+// ou actif). Utilise sur la fiche du Worker et dans Facturation.
+function iwPauseSwitchEl(rec, workerName, opts) {
+  const label = document.createElement("label");
+  label.className = "switch iw-pause";
+  label.title = "Interrupteur d'arrêt : met ce Worker en pause tout de suite";
+  let current = rec;
+  const running = rec.status !== "paused";
+  const blocked = !running && rec.entitled === false;
+  label.innerHTML = `<input type="checkbox" role="switch" class="iw-pause-input"${running ? " checked" : ""}${blocked ? " disabled" : ""}><span class="switch-track"></span><span class="iw-sr">${escapeHtml(workerName)} : </span><span class="switch-label iw-pause-text">${IW_RUN_LABELS[rec.status] || IW_RUN_LABELS.paused}</span>`;
+  const input = label.querySelector("input");
+  input.addEventListener("change", async () => {
+    const want = input.checked ? (current.pausedFrom === "draft" ? "draft" : "active") : "paused";
+    input.disabled = true;
+    const r = await iwSetStatus(rec.workerId, want);
+    input.disabled = false;
+    if (r.ok) {
+      current = Object.assign({}, current, r.installation);
+      label.querySelector(".iw-pause-text").textContent = IW_RUN_LABELS[r.installation.status] || IW_RUN_LABELS.paused;
+      if (opts && opts.onChange) opts.onChange(r.installation);
+      showToast(want === "paused" ? "Ce Worker est en pause : il n'agit plus de lui-même."
+        : (want === "draft" ? "Ce Worker n'est plus en pause." : "Ce Worker est de nouveau actif."));
+    } else {
+      input.checked = !input.checked;                       // l'interrupteur reste fidele a l'etat reel du serveur
+      const lines = (r.errors && r.errors.length ? r.errors : [r.message]).filter(Boolean);
+      if (opts && opts.onError) opts.onError(lines);
+      else showToast(lines.join(" "), false);
+    }
+  });
+  return label;
+}
+
+async function loadInstallPanel(workerId) {
+  const block = document.getElementById("install-block");
+  const panel = document.getElementById("install-panel");
+  const title = document.getElementById("install-title");
+  if (!block || !panel) return;
+  if (!workerId || workerId === "chloe") { block.hidden = true; panel.dataset.rendered = ""; panel.dataset.worker = workerId || ""; return; }       // Chloe n'est ni embauchee ni installee ; une reponse tardive du Worker precedent ne reaffiche rien
+  panel.dataset.worker = workerId;
+  if (!accountAuthenticated) {
+    block.hidden = false;
+    panel.dataset.rendered = "";
+    title.textContent = "Installer ce Worker";
+    panel.innerHTML = `<p class="iw-lead">Installez ce Worker chez vous : choisissez ses services, renseignez votre entreprise, réglez son autonomie et faites un essai avant de l'activer. Rien n'est envoyé ni publié sans votre validation.</p>
+      <button type="button" class="btn btn-gold" id="iw-guest-btn">Créer mon compte ou me connecter</button>`;
+    panel.querySelector("#iw-guest-btn").addEventListener("click", () => requireAccount(() => loadInstallPanel(workerId)));
+    return;
+  }
+  let data;
+  let hired;
+  // Une autre fiche que celle deja affichee : on ne laisse jamais le panneau du Worker precedent pendant le chargement.
+  if (panel.dataset.rendered !== workerId) {
+    block.hidden = false;
+    title.textContent = "Installer ce Worker";
+    panel.innerHTML = '<p class="iw-hint">Chargement…</p>';
+  }
+  try {
+    [data, hired] = await Promise.all([fetchJson(`/api/workers/${encodeURIComponent(workerId)}/install-profile`), fetchJson("/api/workers/hired")]);
+  } catch (e) {
+    if (panel.dataset.worker !== workerId) return;
+    block.hidden = false;
+    panel.innerHTML = `<p class="iw-note">${escapeHtml(e.message || "Chargement impossible.")}</p><button type="button" class="btn btn-ghost" id="iw-retry-btn">Réessayer</button>`;
+    panel.querySelector("#iw-retry-btn").addEventListener("click", () => loadInstallPanel(workerId));
+    return;
+  }
+  if (panel.dataset.worker !== workerId) return;       // l'utilisateur a ouvert une autre fiche entre-temps
+  if (data.error) { block.hidden = true; panel.dataset.rendered = ""; return; }    // Worker sans fiche d'installation (ou session expiree) : rien a proposer
+  block.hidden = false;
+  panel.dataset.rendered = workerId;
+  if (data.entitled) iwRenderInstallPanel(panel, title, workerId, data, hired || {});
+  else iwRenderHirePanel(panel, title, workerId, data, hired || {});
+}
+
+function iwRenderInstallPanel(panel, title, workerId, data, hired) {
+  title.textContent = "Installer ce Worker";
+  const rec = data.installation;
+  const p = data.profile || {};
+  const hire = hired.hire || {};
+  let html = p.tagline ? `<p class="iw-lead">${escapeHtml(p.tagline)}</p>` : "";
+  if (!rec) {
+    html += `<ol class="iw-howto">
+        <li>Choisir les services</li><li>Remplir la fiche de votre entreprise</li><li>Régler l'autonomie de chaque action</li><li>Connecter vos outils</li><li>Faire un essai à blanc, puis activer</li></ol>
+      <p class="iw-note">Rien n'est activé tant que vous ne l'avez pas décidé. Envoyer, publier, payer, supprimer et appeler demandent toujours votre validation.</p>
+      <div class="iw-state-actions"><button type="button" class="btn btn-gold" id="iw-open-btn">Installer ce Worker</button></div>`;
+  } else {
+    const missing = rec.status !== "active" && (data.readiness || []).length
+      ? `<div class="iw-state-line"><span class="iw-meta-key">Il manque encore</span><ul class="iw-missing iw-missing-inline">${data.readiness.map((t) => `<li>${escapeHtml(t)}</li>`).join("")}</ul></div>` : "";
+    html += `<div class="iw-state">
+        <div class="iw-state-line">${iwStatusPill(rec.status)}${rec.status === "draft" ? '<span class="iw-meta-none">Pas encore activé</span>' : ""}</div>
+        <div class="iw-state-line"><span class="iw-meta-key">Services</span><span class="iw-chips">${iwServiceChips(rec)}</span></div>
+        <div class="iw-state-line"><span class="iw-meta-key">Dernière modification</span><time>${escapeHtml(iwDate(rec.updatedAtUtc))}</time></div>
+        ${missing}
+        ${rec.status === "paused" ? '<p class="iw-note">En pause : la fiche n\'est plus transmise au Worker, ses automatisations planifiées sont suspendues (y compris celles de Chloé qui l\'appelleraient) et rien n\'est validé automatiquement. Vos missions lancées à la main fonctionnent toujours.</p>' : ""}
+        <div class="iw-state-actions" id="iw-state-actions"></div>
+        <div class="iw-field-err" id="iw-panel-err" role="alert" hidden></div>
+      </div>`;
+  }
+  // Un client en essai peut demander a garder ce seul Worker apres l'essai (demande d'embauche, aucun paiement ici).
+  const trial = hire.planId === "essai" && !(hired.openRequests || []).includes(workerId);
+  if (trial) {
+    html += `<details class="iw-keep"><summary>Garder seulement ce Worker après l'essai</summary>
+      <p class="iw-note">Pendant l'essai, vous pouvez tester tous les Workers. Pour n'en garder qu'un, envoyez une demande à BK Entreprise.</p>
+      <div id="iw-request-slot"></div></details>`;
+  } else if (hire.planId === "essai" && (hired.openRequests || []).includes(workerId)) {
+    html += '<p class="iw-note iw-note-ok">Votre demande pour garder ce Worker a bien été transmise à BK Entreprise.</p>';
+  }
+  panel.innerHTML = html;
+  const openBtn = panel.querySelector("#iw-open-btn");
+  if (openBtn) openBtn.addEventListener("click", () => openInstallWizard(workerId, 0));
+  if (rec) {
+    const actions = panel.querySelector("#iw-state-actions");
+    const err = panel.querySelector("#iw-panel-err");
+    // Interrupteur d'arret offert pour tout statut (brouillon, actif, en pause).
+    {
+      actions.appendChild(iwPauseSwitchEl(Object.assign({ entitled: data.entitled }, rec), data.workerName, {
+        onChange: async () => {
+          await loadInstallPanel(workerId);
+          const sw = document.querySelector("#install-panel .iw-pause-input");      // le panneau est redessine : le clavier retrouve l'interrupteur
+          if (sw) sw.focus();
+        },
+        onError: (lines) => { err.textContent = lines.join(" "); err.hidden = false; },
+      }));
+    }
+    const edit = document.createElement("button");
+    edit.type = "button";
+    edit.className = "btn btn-ghost";
+    edit.id = "iw-open-btn";
+    edit.textContent = rec.status === "draft" ? "Poursuivre l'installation" : "Modifier l'installation";
+    edit.addEventListener("click", () => openInstallWizard(workerId, 0));
+    actions.appendChild(edit);
+    const del = document.createElement("button");
+    del.type = "button";
+    del.className = "iw-link iw-danger";
+    del.textContent = "Supprimer cette installation";
+    del.addEventListener("click", async () => {
+      if (!confirm(iwT("Supprimer cette installation ? La fiche que vous avez remplie pour ce Worker sera effacée. Vous pourrez en refaire une plus tard."))) return;
+      del.disabled = true;
+      try {
+        const r = await fetchJson("/api/installations/delete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ workerId }) });
+        if (r.error) { err.textContent = r.detail || r.error; err.hidden = false; del.disabled = false; return; }
+        delete iwMemory[workerId];
+        showToast("Installation supprimée.");
+        loadInstallPanel(workerId);
+        if (!billingView.hidden) loadInstalledWorkers();
+      } catch (e) { err.textContent = e.message; err.hidden = false; del.disabled = false; }
+    });
+    actions.appendChild(del);
+  }
+  const slot = panel.querySelector("#iw-request-slot");
+  if (slot) iwRenderRequestForm(slot, workerId, data.workerName, hired);
+}
+
+// Demande d'embauche (POST /api/workers/<id>/hire-request) : une par client et par Worker, message facultatif.
+function iwRenderRequestForm(slot, workerId, workerName, hired) {
+  if ((hired.openRequests || []).includes(workerId)) {
+    slot.innerHTML = '<p class="iw-note iw-note-ok">Votre demande pour ce Worker a bien été transmise à BK Entreprise.</p>';
+    return;
+  }
+  slot.innerHTML = `<div class="iw-field">
+      <label class="iw-label" for="iw-req-msg"><span>Message pour BK Entreprise</span> <span class="iw-opt">facultatif</span></label>
+      <textarea id="iw-req-msg" rows="2" maxlength="500" aria-describedby="iw-req-e"></textarea>
+      <div class="iw-field-err" id="iw-req-e" role="alert" hidden></div>
+    </div>
+    <button type="button" class="btn btn-ghost" id="iw-req-btn">Envoyer la demande</button>
+    <p class="iw-note">Aucun paiement n'est demandé ici et aucun prix n'est affiché : le tarif vous est communiqué avant toute facture.</p>`;
+  const btn = slot.querySelector("#iw-req-btn");
+  const err = slot.querySelector("#iw-req-e");
+  btn.addEventListener("click", async () => {
+    btn.disabled = true;
+    err.hidden = true;
+    try {
+      const r = await fetchJson(`/api/workers/${encodeURIComponent(workerId)}/hire-request`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: slot.querySelector("#iw-req-msg").value.trim() }),
+      });
+      if (r.error === "ACCOUNT_REQUIRED") { btn.disabled = false; iwSessionLost(() => loadInstallPanel(workerId)); return; }
+      if (r.error) {
+        err.textContent = r.error === "ALREADY_INCLUDED" ? "Ce Worker fait déjà partie de votre forfait. Rechargez la page." : (r.detail || "Demande impossible pour le moment. Réessayez plus tard.");
+        err.hidden = false;
+        btn.disabled = false;
+        return;
+      }
+      slot.innerHTML = `<p class="iw-note iw-note-ok">${r.alreadyRequested ? "Vous aviez déjà demandé ce Worker : la demande est toujours en attente." : "Demande envoyée."} <span class="iw-ref">Référence</span> <code>${escapeHtml(r.requestId || "")}</code></p>
+        <p class="iw-note">Votre demande est transmise à BK Entreprise. Rien n'est débité ici : un Worker n'est ajouté à votre forfait qu'après une facture réglée.</p>`;
+    } catch (e) {
+      err.textContent = e.message || "Demande impossible pour le moment.";
+      err.hidden = false;
+      btn.disabled = false;
+    }
+  });
+}
+
+// Worker hors forfait (Solo / Trio) : l'embaucher s'il reste un emplacement, remplacer un Worker (une fois par 30 jours) ou envoyer une demande.
+function iwRenderHirePanel(panel, title, workerId, data, hired) {
+  title.textContent = "Embaucher ce Worker";
+  const hire = hired.hire || {};
+  const name = data.workerName || workerNameById(workerId);
+  const planName = hired.planName || "";
+  const hiredNames = (hire.hiredWorkers || []).map((w) => workerNameById(w));
+  const p = data.profile || {};
+  let html = p.tagline ? `<p class="iw-lead">${escapeHtml(p.tagline)}</p>` : "";
+  html += `<p><strong>${escapeHtml(name)}</strong> <span>ne fait pas partie de votre forfait</span> <strong>(${escapeHtml(planName)})</strong>.</p>`;
+  if (hire.workerSlots) {
+    html += `<div class="iw-state-line"><span class="iw-meta-key">Emplacements utilisés</span><strong>${(hire.hiredWorkers || []).length} / ${hire.workerSlots}</strong>
+      <span class="iw-chips">${hiredNames.map((n) => `<span class="iw-chip">${escapeHtml(n)}</span>`).join("")}</span></div>`;
+  }
+  html += '<div id="iw-hire-actions"></div><div id="iw-request-slot"></div>';
+  panel.innerHTML = html;
+  const actions = panel.querySelector("#iw-hire-actions");
+  const slot = panel.querySelector("#iw-request-slot");
+  const msg = (cls, text) => { const m = document.createElement("div"); m.className = cls; m.setAttribute("role", "alert"); m.textContent = text; return m; };
+
+  const hireNow = async (replaceId, box) => {
+    const err = box.querySelector(".iw-field-err");
+    box.querySelectorAll("button").forEach((b) => { b.disabled = true; });
+    err.hidden = true;
+    try {
+      const r = await fetchJson("/api/workers/hire", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(replaceId ? { workerId, replaceWorkerId: replaceId } : { workerId }),
+      });
+      if (r.error === "ACCOUNT_REQUIRED") { iwSessionLost(() => loadInstallPanel(workerId)); return; }
+      if (r.error) {
+        let text = r.detail || "Embauche impossible pour le moment.";
+        if (r.error === "SWAP_COOLDOWN" && r.nextSwapAtUtc) text += " Prochain remplacement possible le " + iwDate(r.nextSwapAtUtc) + ".";
+        err.textContent = text;
+        err.hidden = false;
+        box.querySelectorAll("button").forEach((b) => { b.disabled = false; });
+        if (r.error === "NO_SLOT_LEFT" || r.error === "SWAP_COOLDOWN") loadInstallPanel(workerId);
+        return;
+      }
+      showToast(r.replaced ? iwTf("{name} remplace {old} : l'installation de {old} est mise en pause.", { name, old: workerNameById(r.replaced) })
+        : iwTf("{name} fait maintenant partie de votre forfait.", { name }));
+      await loadInstallPanel(workerId);
+      if (!billingView.hidden) loadBilling();
+    } catch (e) {
+      err.textContent = e.message || "Embauche impossible pour le moment.";
+      err.hidden = false;
+      box.querySelectorAll("button").forEach((b) => { b.disabled = false; });
+    }
+  };
+
+  if (hire.slotsLeft > 0) {
+    actions.innerHTML = `<p class="iw-note">Embaucher ce Worker utilise un de vos emplacements. Vous pourrez ensuite l'installer et lui confier des missions.</p>
+      <div class="iw-confirm" id="iw-hire-box"><button type="button" class="btn btn-gold" id="iw-hire-btn"><span>Embaucher</span> <strong>${escapeHtml(name)}</strong></button>
+      <div class="iw-field-err" role="alert" hidden></div></div>`;
+    const box = actions.querySelector("#iw-hire-box");
+    box.querySelector("#iw-hire-btn").addEventListener("click", () => {
+      if (confirm(iwTf("Embaucher {name} ? Il prend l'un de vos emplacements.", { name }))) hireNow(null, box);
+    });
+  } else if (hire.workerSlots && hire.canSwapNow) {
+    actions.innerHTML = `<fieldset class="iw-swap"><legend>Remplacer l'un de vos Workers par celui-ci</legend>
+      <p class="iw-note">Le Worker remplacé est mis en pause (son installation est conservée). Un remplacement est possible une fois tous les 30 jours.</p>
+      <div class="iw-swap-list">${(hire.hiredWorkers || []).map((w, i) => `<label class="iw-mode"><input type="radio" name="iw-swap" value="${escapeHtml(w)}"${i === 0 ? " checked" : ""}><span>${escapeHtml(workerNameById(w))}</span></label>`).join("")}</div>
+      <div class="iw-confirm" id="iw-hire-box"><button type="button" class="btn btn-gold" id="iw-swap-btn"><span>Remplacer et embaucher</span> <strong>${escapeHtml(name)}</strong></button>
+      <div class="iw-field-err" role="alert" hidden></div></div></fieldset>`;
+    const box = actions.querySelector("#iw-hire-box");
+    box.querySelector("#iw-swap-btn").addEventListener("click", () => {
+      const sel = actions.querySelector("input[name='iw-swap']:checked");
+      if (sel && confirm(iwTf("Remplacer {old} par {name} ? {old} sera mis en pause et vous ne pourrez plus changer de Worker pendant 30 jours.", { name, old: workerNameById(sel.value) }))) hireNow(sel.value, box);
+    });
+  } else if (hire.workerSlots) {
+    actions.appendChild(msg("iw-note", "Tous vos emplacements sont pris et vous avez déjà remplacé un Worker récemment."));
+    if (hire.nextSwapAtUtc) {
+      const when = document.createElement("p");
+      when.className = "iw-note";
+      when.innerHTML = `<span>Prochain remplacement possible le</span> <time>${escapeHtml(iwDate(hire.nextSwapAtUtc))}</time>`;
+      actions.appendChild(when);
+    }
+  }
+  if (hire.workerSlots && hire.slotsLeft > 0) return;     // un emplacement libre : l'embauche directe suffit
+  const intro = document.createElement("h3");
+  intro.className = "iw-h iw-h-small";
+  intro.textContent = "Besoin d'un autre Worker ou d'un forfait plus large ?";
+  slot.parentNode.insertBefore(intro, slot);
+  iwRenderRequestForm(slot, workerId, name, hired);
+}
+
+// Ouvre la fiche d'un Worker et amene le client sur le panneau « Embaucher » (utilise par les refus de mission).
+async function iwGoHire(workerId) {
+  if (!workerId || workerId === "chloe") { showView("billing"); return; }
+  if (currentWorkerId !== workerId || profileView.hidden) await openWorkerProfile(workerId);
+  const block = document.getElementById("install-block");
+  if (block && !block.hidden) {
+    block.scrollIntoView({ behavior: "smooth", block: "start" });
+    const focusable = block.querySelector("button, textarea, input");
+    if (focusable) focusable.focus({ preventScroll: true });
+  }
+}
+
+// Refus 403 WORKER_NOT_INCLUDED d'une mission : le texte du serveur + une action « Embaucher », jamais un message technique.
+function iwRenderNotIncluded(responseEl, result, workerId, closeFab) {
+  responseEl.className = "chat-msg chat-msg-worker needs-chloe";
+  responseEl.innerHTML = `<div class="status-line">Non inclus dans votre forfait</div>
+    <p>${escapeHtml(result.detail || "Ce Worker ne fait pas partie de votre forfait.")}</p>
+    <div class="iw-notice-actions"></div>`;
+  const actions = responseEl.querySelector(".iw-notice-actions");
+  const targets = [];
+  if (result.workerId && result.workerId !== "chloe") targets.push(result.workerId);
+  else if (workerId && workerId !== "chloe") targets.push(workerId);
+  (result.notIncludedWorkers || []).forEach((w) => { const id = String(w).toLowerCase(); if (id && id !== "chloe" && !targets.includes(id)) targets.push(id); });
+  targets.slice(0, 3).forEach((id) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "btn btn-gold";
+    b.innerHTML = `<span>Embaucher</span> <strong>${escapeHtml(workerNameById(id))}</strong>`;
+    b.addEventListener("click", () => { if (closeFab) closeFab(); iwGoHire(id); });
+    actions.appendChild(b);
+  });
+  const plan = document.createElement("button");
+  plan.type = "button";
+  plan.className = "btn btn-ghost";
+  plan.textContent = "Voir mon forfait";
+  plan.addEventListener("click", () => { if (closeFab) closeFab(); showView("billing"); });
+  actions.appendChild(plan);
+}
+
+// ---------- FACTURATION : « Mes Workers installes » avec l'interrupteur de pause ----------
+
+async function loadInstalledWorkers() {
+  const section = document.getElementById("installed-workers-section");
+  if (!section) return;
+  if (!accountAuthenticated) { section.hidden = true; return; }
+  const list = document.getElementById("installed-workers-list");
+  const summary = document.getElementById("installed-workers-summary");
+  let data;
+  let hired;
+  try {
+    [data, hired] = await Promise.all([fetchJson("/api/installations"), fetchJson("/api/workers/hired")]);
+  } catch (e) {
+    section.hidden = false;
+    summary.innerHTML = "";
+    list.innerHTML = `<p class="iw-note">${escapeHtml(e.message || "Chargement impossible.")}</p>`;
+    return;
+  }
+  if (data.error) { section.hidden = true; return; }
+  section.hidden = false;
+  const hire = (hired && hired.hire) || {};
+  // Forfait Solo / Trio : combien d'emplacements, quels Workers, quand le prochain remplacement est possible.
+  if (hire.restricted) {
+    const names = (hire.hiredWorkers || []).map((w) => `<span class="iw-chip">${escapeHtml(workerNameById(w))}</span>`).join("");
+    let swap = "";
+    if (hire.slotsLeft === 0) {
+      swap = hire.canSwapNow
+        ? '<span class="iw-meta-line">Un remplacement est possible dès maintenant : ouvrez la fiche du Worker que vous voulez.</span>'
+        : (hire.nextSwapAtUtc ? `<span class="iw-meta-line"><span>Prochain remplacement possible le</span> <time>${escapeHtml(iwDate(hire.nextSwapAtUtc))}</time></span>` : "");
+    }
+    summary.innerHTML = `<div class="iw-state-line"><span class="iw-meta-key">Votre forfait</span><strong>${escapeHtml(hired.planName || "")}</strong></div>
+      <div class="iw-state-line"><span class="iw-meta-key">Emplacements utilisés</span><strong>${(hire.hiredWorkers || []).length} / ${hire.workerSlots}</strong><span class="iw-chips">${names}</span></div>
+      ${swap ? `<div class="iw-state-line">${swap}</div>` : ""}
+      ${hire.chloeIncluded ? "" : '<div class="iw-state-line"><span class="iw-meta-line">Chloé, l\'orchestratrice, n\'est pas incluse dans ce forfait : confiez vos missions directement à vos Workers.</span></div>'}`;
+  } else {
+    summary.innerHTML = "";
+  }
+  const items = data.installations || [];
+  if (!items.length) {
+    list.innerHTML = `<div class="iw-empty"><p>Aucun Worker installé pour le moment. Ouvrez la fiche d'un Worker et choisissez « Installer ce Worker » pour commencer.</p>
+      <button type="button" class="btn btn-gold" id="iw-to-catalog">Voir les Workers</button></div>`;
+    list.querySelector("#iw-to-catalog").addEventListener("click", () => showView("workers"));
+    return;
+  }
+  list.innerHTML = "";
+  items.forEach((rec) => {
+    const worker = allWorkers.find((x) => x.id === rec.workerId);
+    const name = rec.workerName || (worker ? worker.name : rec.workerId);
+    const card = document.createElement("article");
+    card.className = "iw-card";
+    card.innerHTML = `${worker && worker.portraitUrl ? `<img class="iw-card-portrait" src="${escapeHtml(worker.portraitUrl)}" alt="">` : ""}
+      <div class="iw-card-main">
+        <div class="iw-card-head"><h3 class="iw-card-name">${escapeHtml(name)}</h3>${iwStatusPill(rec.status)}${rec.entitled === false ? '<span class="iw-badge-warn">Hors forfait</span>' : ""}</div>
+        <div class="iw-state-line"><span class="iw-meta-key">Services</span><span class="iw-chips">${iwServiceChips(rec)}</span></div>
+        <div class="iw-state-line"><span class="iw-meta-key">Dernière modification</span><time>${escapeHtml(iwDate(rec.updatedAtUtc))}</time></div>
+        ${rec.status === "draft" ? '<div class="iw-state-line"><span class="iw-meta-none">Pas encore activé</span></div>' : ""}
+        <div class="iw-field-err iw-card-msg" role="alert" hidden></div>
+      </div>
+      <div class="iw-card-actions"></div>`;
+    const actions = card.querySelector(".iw-card-actions");
+    const msg = card.querySelector(".iw-card-msg");
+    // Interrupteur d'arret offert pour tout statut (brouillon, actif, en pause).
+    {
+      actions.appendChild(iwPauseSwitchEl(rec, name, {
+        onChange: (updated) => {
+          // Mise a jour sur place (pas de redessin) : le focus reste sur l'interrupteur.
+          const pill = card.querySelector(".iw-status-pill");
+          pill.className = "iw-status-pill is-" + updated.status;
+          pill.textContent = IW_STATUS_LABELS[updated.status] || updated.status;
+          const when = card.querySelector("time");
+          if (when) when.textContent = iwDate(updated.updatedAtUtc);
+          msg.hidden = true;
+        },
+        onError: (lines) => { msg.innerHTML = `<span>${escapeHtml(lines.join(" "))}</span> <span>Ouvrez l'installation pour terminer.</span>`; msg.hidden = false; },
+      }));
+    }
+    const open = document.createElement("button");
+    open.type = "button";
+    open.className = "btn btn-ghost";
+    open.textContent = rec.status === "draft" ? "Poursuivre" : "Ouvrir";
+    open.addEventListener("click", async () => {
+      await openWorkerProfile(rec.workerId);
+      const block = document.getElementById("install-block");
+      if (block && !block.hidden) block.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    actions.appendChild(open);
+    list.appendChild(card);
+  });
+}
+
+// ---------- RETOUR D'UNE CONNEXION « Se connecter avec ... » : on revient dans l'assistant, a l'etape Outils ----------
+
+async function iwResumeAfterOauth() {
+  let saved = null;
+  try {
+    saved = JSON.parse(sessionStorage.getItem(IW_RETURN_KEY) || "null");
+    sessionStorage.removeItem(IW_RETURN_KEY);
+  } catch (e) { saved = null; }
+  if (!saved || !saved.workerId || !accountAuthenticated) return;
+  await openWorkerProfile(saved.workerId);
+  openInstallWizard(saved.workerId, saved.step || 3);
+}
+
+// ---------- PROPRIETAIRE : demandes d'embauche et attribution des Workers apres facture reglee ----------
+
+let adminClientsCache = [];
+
+function renderAdminHireRequests(requests) {
+  const list = document.getElementById("admin-hire-list");
+  if (!list) return;
+  const rows = Array.isArray(requests) ? requests : [];
+  if (!rows.length) { list.innerHTML = '<div class="activity-empty">Aucune demande d\'embauche en attente.</div>'; return; }
+  list.innerHTML = rows.map((r, i) => `<div class="admin-activity-row iw-hire-row">
+      <span class="admin-activity-when">${escapeHtml(r.createdAtUtc ? new Date(r.createdAtUtc).toLocaleString(BK_LOCALE()) : "")}</span>
+      <span class="admin-activity-kind">${escapeHtml(r.workerName || r.workerId || "")}</span>
+      <span class="admin-activity-who">${escapeHtml(r.clientLabel || r.clientId || "")}</span>
+      <span class="admin-activity-text">${r.message ? escapeHtml(r.message) : '<em class="iw-meta-none">sans message</em>'} <button type="button" class="btn-small iw-grant-btn" data-i="${i}">Attribuer</button></span>
+    </div>`).join("");
+  list.querySelectorAll(".iw-grant-btn").forEach((b) => b.addEventListener("click", () => {
+    const r = rows[Number(b.dataset.i)];
+    openGrantForm(r.clientId, r.clientLabel || r.clientId, r.workerId);
+  }));
+}
+
+// Formulaire d'attribution (POST /api/admin/grant-workers). Le proprietaire confirme lui-meme que la facture est reglee : rien n'est facture ici.
+function openGrantForm(clientId, clientLabel, presetWorker) {
+  const card = document.getElementById("admin-grant-card");
+  if (!card) return;
+  const client = adminClientsCache.find((c) => c.clientId === clientId) || {};
+  const current = Array.isArray(client.hiredWorkers) ? client.hiredWorkers : [];
+  const chosen = new Set(current);
+  if (presetWorker) chosen.add(presetWorker);
+  const planGuess = chosen.size > 1 || client.workerSlots === 3 ? "trio" : "solo";
+  const workers = allWorkers.filter((w) => w.id !== "chloe");
+  card.hidden = false;
+  card.innerHTML = `<h3 class="iw-h iw-h-small">Attribuer des Workers à <span>${escapeHtml(clientLabel)}</span></h3>
+    <p class="iw-note">Le client est <code>${escapeHtml(clientId)}</code>. Cette liste remplace celle du client ; les installations des Workers retirés sont mises en pause.</p>
+    <div class="iw-field"><label class="iw-label" for="iw-grant-plan"><span>Forfait</span></label>
+      <select id="iw-grant-plan"><option value="solo"${planGuess === "solo" ? " selected" : ""}>Solo : 1 Worker au choix</option><option value="trio"${planGuess === "trio" ? " selected" : ""}>Trio : 3 Workers au choix, Chloé incluse</option></select></div>
+    <fieldset class="iw-grant-workers"><legend>Workers du forfait <span class="iw-grant-count"></span></legend>
+      ${workers.map((w) => `<label class="iw-mode"><input type="checkbox" value="${escapeHtml(w.id)}"${chosen.has(w.id) ? " checked" : ""}><span>${escapeHtml(w.name)}</span></label>`).join("")}</fieldset>
+    <label class="iw-check"><input type="checkbox" id="iw-grant-cycle" checked> <span>Nouveau cycle de crédits (facture réglée)</span></label>
+    <div class="iw-field"><label class="iw-label" for="iw-grant-months"><span>Mois couverts par cette facture</span></label>
+      <input type="number" id="iw-grant-months" min="1" max="24" step="1" value="1" aria-describedby="iw-grant-months-h">
+      <div class="iw-hint" id="iw-grant-months-h">Au-delà, le forfait retombe à l'Essai (5 jours de grâce) tant que vous ne l'avez pas reconduit avec la facture suivante.</div></div>
+    <label class="iw-check"><input type="checkbox" id="iw-grant-paid"> <span>Je confirme que la facture de ce client est réglée</span></label>
+    <div class="iw-trial-actions"><button type="button" class="btn btn-gold" id="iw-grant-go" disabled>Attribuer</button><button type="button" class="btn btn-ghost" id="iw-grant-cancel">Annuler</button></div>
+    <div class="iw-field-err" id="iw-grant-msg" role="alert" hidden></div>`;
+  const plan = card.querySelector("#iw-grant-plan");
+  const paid = card.querySelector("#iw-grant-paid");
+  const go = card.querySelector("#iw-grant-go");
+  const msg = card.querySelector("#iw-grant-msg");
+  const sync = () => {
+    const slots = plan.value === "trio" ? 3 : 1;
+    const picked = card.querySelectorAll(".iw-grant-workers input:checked").length;
+    card.querySelector(".iw-grant-count").textContent = `${picked} / ${slots}`;
+    go.disabled = !(paid.checked && picked >= 1 && picked <= slots);
+  };
+  card.querySelectorAll("input, select").forEach((el) => el.addEventListener("change", sync));
+  sync();
+  card.querySelector("#iw-grant-cancel").addEventListener("click", () => { card.hidden = true; card.innerHTML = ""; });
+  go.addEventListener("click", async () => {
+    go.disabled = true;
+    msg.hidden = true;
+    const picked = Array.from(card.querySelectorAll(".iw-grant-workers input:checked")).map((b) => b.value);
+    try {
+      const r = await fetchJson("/api/admin/grant-workers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clientId, planId: plan.value, workers: picked, newCycle: card.querySelector("#iw-grant-cycle").checked,
+          paidMonths: Math.max(1, Math.min(24, parseInt(card.querySelector("#iw-grant-months").value, 10) || 1)) }),
+      });
+      if (r.error) {
+        msg.textContent = r.detail || r.error;
+        msg.hidden = false;
+        sync();
+        return;
+      }
+      showToast(`Forfait ${r.planName} attribué à ${clientLabel}.`);
+      card.hidden = true;
+      card.innerHTML = "";
+      loadAdminOverview();
+    } catch (e) {
+      msg.textContent = e.message || "Attribution impossible.";
+      msg.hidden = false;
+      sync();
+    }
+  });
+  card.scrollIntoView({ behavior: "smooth", block: "center" });
+  plan.focus({ preventScroll: true });
+}
+// ===== HIRE-UI END =====
 
 // ---------- NAVIGATION ----------
 
@@ -3271,7 +5201,7 @@ document.getElementById("nav-admin").addEventListener("click", (e) => {
 });
 document.getElementById("admin-back-btn").addEventListener("click", () => showView("home"));
 document.getElementById("billing-cancel-btn").addEventListener("click", cancelBillingPlan);
-document.getElementById("billing-recharge-btn").addEventListener("click", rechargeBillingCredits);
+document.getElementById("billing-pending-btn").addEventListener("click", retryPendingCheckout);
 document.querySelectorAll("#billing-interval-toggle button").forEach((btn) => {
   btn.addEventListener("click", () => {
     billingInterval = btn.dataset.interval;
@@ -3991,13 +5921,13 @@ async function renderWhatsappCard(gridEl) {
   });
   document.getElementById("account-delete-btn").addEventListener("click", async () => {
     msg.hidden = true;
-    const pw = prompt("Suppression DÉFINITIVE de votre compte, de vos missions et de vos connexions.\nEntrez votre mot de passe pour confirmer :");
+    const pw = prompt("Suppression DÉFINITIVE de votre compte, de vos missions et de vos connexions. Un forfait déjà résilié mais encore valable s'arrête aussitôt : le temps déjà payé n'est pas remboursé.\nEntrez votre mot de passe pour confirmer :");
     if (!pw) return;
     const r = await fetchJson("/api/account/delete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password: pw }) });
     if (r.ok) { location.href = "/"; return; }
     const texts = {
       INVALID_PASSWORD: "Mot de passe incorrect.",
-      ACTIVE_SUBSCRIPTION: "Résiliez d'abord votre abonnement (section Plans ci-dessus), puis supprimez votre compte.",
+      ACTIVE_SUBSCRIPTION: "Votre abonnement est encore renouvelé : résiliez-le d'abord avec « Annuler l'abonnement » (en haut de cette page), puis supprimez votre compte. Une fois la résiliation enregistrée, vous pouvez supprimer votre compte tout de suite.",
       TOO_MANY_ATTEMPTS: "Trop de tentatives. Réessayez plus tard.",
     };
     say(texts[r.error] || "Suppression impossible (" + (r.error || "erreur") + ").", false);

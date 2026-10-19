@@ -26,6 +26,55 @@ $ErrorActionPreference = "Stop"
 if ($PSVersionTable.PSVersion.Major -ge 7) { $PSDefaultParameterValues["ConvertFrom-Json:DateKind"] = "String" }
 $Root = if ($env:BK_ROOT) { $env:BK_ROOT } else { "C:/Users/FEUCOM/BK-AI-WORKERS" }
 
+# Offre "Worker a l'unite" (2026-10-12), SECOND verrou (le premier est dans dashboard/server.py) : BK_ALLOWED_WORKERS = Workers embauches par
+# le client, separes par des virgules ; "-" = aucun ; absente = tous les Workers. Un Worker qui n'y figure pas (ou un routage libre sans
+# Worker precis) ne demarre aucune mission : rien n'est execute, aucune trace dans runtime/tasks, donc aucun credit consomme. Chloe passe :
+# c'est son orchestration (chloe/Invoke-Chloe-Orchestration.ps1) qui n'a le droit de choisir que parmi les Workers embauches.
+$AllowedRaw = [string]$env:BK_ALLOWED_WORKERS
+if (-not [string]::IsNullOrWhiteSpace($AllowedRaw)) {
+    $AllowedList = @($AllowedRaw.ToLowerInvariant().Split(",") | ForEach-Object { $_.Trim() } | Where-Object { $_ -match '^[a-z]{2,20}$' })
+    $WantedWorker = $WorkerId.Trim().ToLowerInvariant()
+    if ($WantedWorker -ne "chloe" -and ([string]::IsNullOrWhiteSpace($WantedWorker) -or $AllowedList -notcontains $WantedWorker)) {
+        $RefusedText = "Ce Worker ne fait pas partie de vos Workers embauchés : aucune mission n'a été lancée et aucun crédit n'a été consommé. Embauchez-le, ou remplacez l'un de vos Workers, pour lui confier des missions."
+        $Refused = [ordered]@{
+            TaskId = $null
+            Request = $Request
+            Worker = $WorkerId.ToUpper()
+            Status = "WORKER_NOT_INCLUDED"
+            Authorized = $false
+            Reason = $RefusedText
+            FinalSynthesis = $RefusedText
+            ClientId = $ClientId
+            CreatedAtUtc = [DateTime]::UtcNow.ToString("o")
+        }
+        [System.IO.File]::WriteAllText($OutFile, ($Refused | ConvertTo-Json -Depth 5), [System.Text.UTF8Encoding]::new($false))
+        exit 0
+    }
+}
+
+# Niveau de la mission et son cout en credits (core/ai/LEVELS.json : Rapide 1 / Equilibre 6 / Approfondi 12) : sans niveau (BK_LEVELS=0, ou
+# mission lancee sans variable) = ancien comportement, 1 credit. Valable pour un Worker comme pour CHACUN des Workers appeles par Chloe :
+# chaque appel de Worker tourne a ce niveau, donc coute ce niveau (sinon une mission Approfondi de Chloe ne couterait qu'un credit par Worker).
+# Seule une mission LIVREE coute ce cout (Get-BKMissionCredits) : refusee par la securite ou traitee par le repli local parce que le fournisseur d'IA
+# etait indisponible (Result.Degraded), elle est tracee a 0 credit.
+$MissionLevelName = [string]$env:BK_MISSION_LEVEL
+$MissionCredits = 1
+if ($MissionLevelName -match '^[a-z]{3,20}$') {
+    try {
+        $LvProp = (Get-Content -LiteralPath (Join-Path $Root "core/ai/LEVELS.json") -Raw -Encoding UTF8 | ConvertFrom-Json).levels.PSObject.Properties[$MissionLevelName]
+        if ($LvProp -and [int]$LvProp.Value.credits -gt 0) { $MissionCredits = [int]$LvProp.Value.credits }
+    } catch { }
+}
+
+function Get-BKMissionCredits {
+    # Credits a facturer pour UNE trace de mission : le cout du niveau si le Worker a reellement repondu, 0 sinon.
+    param([int]$LevelCost, $WorkerResult, [bool]$Succeeded)
+    if (-not $Succeeded -or $null -eq $WorkerResult) { return 0 }
+    $DegradedProp = $WorkerResult.PSObject.Properties["Degraded"]
+    if ($null -ne $DegradedProp -and [bool]$DegradedProp.Value) { return 0 }
+    return $LevelCost
+}
+
 . (Join-Path $Root "core/security/identity-auth/runtime.ps1")
 . (Join-Path $Root "core/security/session-token-security/runtime.ps1")
 . (Join-Path $Root "core/security/rbac/RBAC.ps1")
@@ -116,6 +165,8 @@ if ($WorkerId.ToLowerInvariant() -eq "chloe") {
                 Mode = $Mode
                 Result = $Item.Result
                 CreatedAtUtc = [DateTime]::UtcNow.ToString("o")
+                Level = $MissionLevelName
+                Credits = (Get-BKMissionCredits -LevelCost $MissionCredits -WorkerResult $Item.Result -Succeeded ($Item.Status -eq "SUCCESS"))
             }
             [System.IO.File]::WriteAllText(
                 (Join-Path $ChloeRuntimeDir ("$($Item.TaskId).json")),
@@ -195,16 +246,6 @@ elseif (-not [string]::IsNullOrWhiteSpace($WorkerId)) {
 
     $WorkerResult = ($WorkerJson | Select-Object -Last 1) | ConvertFrom-Json -ErrorAction SilentlyContinue
 
-    # Niveau de la mission et son cout en credits (core/ai/LEVELS.json) : sans niveau = ancien comportement, 1 credit.
-    $MissionLevelName = [string]$env:BK_MISSION_LEVEL
-    $MissionCredits = 1
-    if ($MissionLevelName -match '^[a-z]{3,20}$') {
-        try {
-            $LvProp = (Get-Content -LiteralPath (Join-Path $Root "core/ai/LEVELS.json") -Raw -Encoding UTF8 | ConvertFrom-Json).levels.PSObject.Properties[$MissionLevelName]
-            if ($LvProp -and [int]$LvProp.Value.credits -gt 0) { $MissionCredits = [int]$LvProp.Value.credits }
-        } catch { }
-    }
-
     $Result = [ordered]@{
         TaskId = $TaskId
         Request = $Request
@@ -221,7 +262,7 @@ elseif (-not [string]::IsNullOrWhiteSpace($WorkerId)) {
         Result = $WorkerResult
         CreatedAtUtc = [DateTime]::UtcNow.ToString("o")
         Level = $MissionLevelName
-        Credits = $MissionCredits
+        Credits = (Get-BKMissionCredits -LevelCost $MissionCredits -WorkerResult $WorkerResult -Succeeded ($null -ne $WorkerResult -and $WorkerResult.Status -eq "SUCCESS"))
     }
 
     # Enregistre aussi une trace dans runtime/tasks/ pour que ce Worker

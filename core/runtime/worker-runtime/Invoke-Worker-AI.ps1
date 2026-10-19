@@ -220,6 +220,8 @@ $result=[ordered]@{
     FallbackReason=$(Get-ProviderField $ProviderResult 'fallback_reason')
     Answer=$(Get-ProviderField $ProviderResult 'answer')
     Usage=$(Get-ProviderField $ProviderResult 'usage')
+    # Mission arretee a son plafond de cout par niveau (ANTHROPIC-ADAPTER.ps1) : la reponse est partielle et le dit.
+    CostCapped=[bool]$(Get-ProviderField $ProviderResult 'cost_capped')
     Files=@(@($(Get-ProviderField $ProviderResult 'files')) | Where-Object { $null -ne $_ })
     Recommendations=$(Get-ProviderField $ProviderResult 'recommendations')
     NextAction=$(Get-ProviderField $ProviderResult 'next_action')

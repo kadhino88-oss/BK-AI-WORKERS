@@ -1,0 +1,29 @@
+{
+  "_comment": "Table des tarifs IA (2026-10-12) : UNE seule source, lue par dashboard/server.py (resume des couts) ET par core/ai/adapters/Mission-Cost.ps1 (plafond de cout par mission de l'adaptateur Anthropic). Ne jamais recopier ces prix ailleurs. Prix en USD par million de jetons, releves sur platform.claude.com/docs/en/about-claude/pricing le 2026-10-12 (etude de marche, docs/ETUDE-MARCHE-PRIX-2026-10.md section 2.1). Un modele absent de cette table n'a PAS de cout affiche et PAS de plafond applique (jamais devine).",
+  "fxChfPerUsd": 0.83107,
+  "_fx_comment": "Taux de change fixe : 1 USD = 0,83107 CHF (BCE, 2026-10-09, etude de marche section 2.1). Une constante volontairement : le plafond d'une mission ne doit pas dependre d'un appel reseau. A rafraichir a la main si le dollar bouge de plus de 5 % (un dollar plus fort de 10 % deplace tous les couts IA de 10 %).",
+  "fxDate": "2026-10-09",
+  "webSearchUsdPer1000": 10.0,
+  "_web_comment": "Recherche web Anthropic : 10 USD les 1 000 recherches (usage.server_tool_use.web_search_requests), EN PLUS des jetons des resultats. La lecture de page (web_fetch) et l'execution de code utilisee avec elles n'ont pas de frais propres.",
+  "cacheDefaults": {
+    "writeMultiplier": 1.25,
+    "readMultiplier": 0.1,
+    "_comment": "Applique aux modeles dont les prix de cache ne sont pas listes ci-dessous : ecriture du cache (5 min) = 1,25 x le prix d'entree, lecture = 0,1 x. Volontairement prudent pour les modeles 5.5 (lecture reelle a 5 % de l'entree, listee ligne par ligne)."
+  },
+  "models": {
+    "claude-fable-5-1": { "input": 10.00, "output": 50.00 },
+    "claude-fable-5": { "input": 10.00, "output": 50.00 },
+    "claude-opus-5-5": { "input": 4.00, "output": 20.00, "cacheWrite": 5.00, "cacheRead": 0.20 },
+    "claude-opus-5": { "input": 5.00, "output": 25.00 },
+    "claude-opus-4-8": { "input": 5.00, "output": 25.00 },
+    "claude-opus-4-7": { "input": 5.00, "output": 25.00 },
+    "claude-opus-4-6": { "input": 5.00, "output": 25.00 },
+    "claude-sonnet-5-5": { "input": 2.00, "output": 10.00, "cacheWrite": 2.50, "cacheRead": 0.10 },
+    "claude-sonnet-5": { "input": 2.00, "output": 10.00 },
+    "claude-sonnet-4-6": { "input": 3.00, "output": 15.00 },
+    "claude-haiku-5-5": { "input": 0.10, "output": 0.50, "cacheWrite": 0.125, "cacheRead": 0.01, "longContextAbove": 100000, "longContextMultiplier": 5, "_comment": "Haiku 5.5 : x5 sur TOUT (entree et sortie) quand le prompt depasse 100 000 jetons (etude section 2.1)." },
+    "claude-haiku-4-5": { "input": 1.00, "output": 5.00 },
+    "gpt-4o": { "input": 2.50, "output": 10.00 },
+    "gpt-4o-mini": { "input": 0.15, "output": 0.60 }
+  }
+}

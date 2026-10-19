@@ -173,9 +173,55 @@ function Invoke-AutomationRun {
     dashboard/Submit-Task.ps1 (identite/session/token + gate d'autonomie
     + dispatch Worker ou Chloe + trace runtime/tasks/).
     #>
-    param([Parameter(Mandatory=$true)]$Automation)
+    param(
+        [Parameter(Mandatory=$true)]$Automation,
+        # Passage AUTOMATIQUE (cron ou tick) et non clic sur "Executer maintenant" : seul un passage automatique est coupe par la pause de
+        # l'installation du Worker (interrupteur d'arret, voir dashboard/installations.py) ; une mission lancee a la main reste possible.
+        [switch]$Scheduled
+    )
 
     Initialize-AutomationStore
+    $AllowedWorkersEnv = $null
+    # Niveau de travail des automatisations (core/ai/LEVELS.json) : TOUJOURS Rapide, 1 credit, pour que le quota mensuel du client reste
+    # parlant (une mission recurrente ne doit jamais couter 6 ou 12 credits). Vide = niveaux coupes (BK_LEVELS=0) ou verificateur absent :
+    # ancien comportement (modele leger, 1 credit). La valeur vient de dashboard/quota-check.py (server.automation_level).
+    $MissionLevelEnv = $null
+    # Plafond du nombre de Workers qu'une automatisation de Chloe peut appeler (BK_MAX_WORKERS) : solde de credits // cout du niveau, donne par
+    # dashboard/quota-check.py (server.chloe_worker_cap). Absent = pas de plafond.
+    $MaxWorkersEnv = $null
+
+    # Saute cette execution SANS lancer de mission : trace le saut comme une execution normale (meme forme de RunRecord, meme dossier runs/<id>/, lu par
+    # Get-AutomationRuns), avance l'echeance, et renvoie l'enregistrement (le pont lira son statut).
+    function Write-AutomationSkip([string]$SkipStatus, $SkipDetail) {
+        $SkipRecord = [ordered]@{
+            automationId = $Automation.id
+            ranAtUtc     = [DateTime]::UtcNow.ToString("o")
+            status       = $SkipStatus
+            detail       = $SkipDetail
+        }
+        $SkipDir = Join-Path $Script:AutomationRunsDir $Automation.id
+        if (-not (Test-Path -LiteralPath $SkipDir -PathType Container)) {
+            New-Item -ItemType Directory -Path $SkipDir -Force | Out-Null
+        }
+        $SkipFile = Join-Path $SkipDir ("run-" + [DateTime]::UtcNow.ToString("yyyyMMdd-HHmmss") + ".json")
+        ($SkipRecord | ConvertTo-Json -Depth 20) | Set-Content -LiteralPath $SkipFile -Encoding UTF8
+
+        Invoke-BKStateLocked {
+            $Automations = @(Get-Automations)
+            foreach ($A in $Automations) {
+                if ($A.id -eq $Automation.id) {
+                    $A.lastRunAtUtc  = $SkipRecord.ranAtUtc
+                    $A.lastRunStatus = $SkipStatus
+                    $A.nextRunAtUtc  = [DateTime]::UtcNow.AddMinutes($A.frequencyMinutes).ToString("o")
+                    $A.runCount      = [int]$A.runCount + 1
+                }
+            }
+            Save-Automations -Automations $Automations
+        } | Out-Null
+
+        return $SkipRecord
+    }
+    $VerdictObtained = $false
 
     # -----------------------------------------------------------------
     # Garde-fou quota (correctif securite).
@@ -196,44 +242,35 @@ function Invoke-AutomationRun {
         $QuotaScript = Join-Path $Script:AutomationRoot "dashboard/quota-check.py"
         $PyCmd = if ($env:BK_PYTHON) { $env:BK_PYTHON } else { "python3" }
         if (Test-Path -LiteralPath $QuotaScript -PathType Leaf) {
-            $QuotaLine = & $PyCmd $QuotaScript $QuotaClientId 2>$null | Select-Object -Last 1
+            $QuotaMode = if ($Scheduled) { "scheduled" } else { "manual" }
+            $QuotaLine = & $PyCmd $QuotaScript $QuotaClientId ([string]$Automation.workerId) $QuotaMode 2>$null | Select-Object -Last 1
             if ($QuotaLine) {
                 $QuotaVerdict = $QuotaLine | ConvertFrom-Json
+                # Un verdict n'est valable que s'il porte un `blocked` booleen et AUCUN champ `error` : quand le verificateur plante (import de server.py
+                # impossible, exception dans la facturation), quota-check.py repond {"blocked": false, "error": "..."} - fail-open pour le QUOTA, mais ce n'est
+                # pas un verdict sur les DROITS d'acces : le repli ci-dessous (forfait restreint) doit alors s'appliquer comme sans reponse.
+                $VerdictObtained = ($QuotaVerdict.PSObject.Properties.Name -contains "blocked") -and ($QuotaVerdict.blocked -is [bool]) -and
+                                   -not ($QuotaVerdict.PSObject.Properties.Name -contains "error")
+                if (-not $QuotaVerdict.blocked -and $QuotaVerdict.PSObject.Properties.Name -contains "allowedWorkers" -and $QuotaVerdict.allowedWorkers) {
+                    # Offre "Worker a l'unite" : liste des Workers embauches, relue par Submit-Task.ps1 et Chloe (BK_ALLOWED_WORKERS).
+                    $AllowedWorkersEnv = [string]$QuotaVerdict.allowedWorkers
+                }
+                if (-not $QuotaVerdict.blocked -and $QuotaVerdict.PSObject.Properties.Name -contains "level" -and $QuotaVerdict.level) {
+                    $MissionLevelEnv = [string]$QuotaVerdict.level
+                }
+                if (-not $QuotaVerdict.blocked -and $QuotaVerdict.PSObject.Properties.Name -contains "maxWorkers" -and $QuotaVerdict.maxWorkers) {
+                    $MaxWorkersEnv = [string]$QuotaVerdict.maxWorkers
+                }
                 if ($QuotaVerdict.blocked) {
-                    # Quota epuise : on NE soumet PAS la tache. On trace le
-                    # saut avec le MEME mecanisme de persistance qu'un run
-                    # normal (meme forme de RunRecord + meme dossier runs/<id>/,
-                    # lu par Get-AutomationRuns), au statut quota_exceeded, on
-                    # avance l'echeance comme un passage normal, puis on
-                    # retourne tot un objet de la meme forme que le retour
-                    # habituel (le pont lira $RunResult.status = "quota_exceeded").
-                    $SkipRecord = [ordered]@{
-                        automationId = $Automation.id
-                        ranAtUtc     = [DateTime]::UtcNow.ToString("o")
-                        status       = "quota_exceeded"
-                        detail       = $QuotaVerdict.detail
+                    $SkipStatus = switch ([string]$QuotaVerdict.code) {
+                        "WORKER_NOT_INCLUDED" { "worker_not_included" }
+                        "INSTALLATION_PAUSED" { "installation_paused" }
+                        default { "quota_exceeded" }
                     }
-                    $SkipDir = Join-Path $Script:AutomationRunsDir $Automation.id
-                    if (-not (Test-Path -LiteralPath $SkipDir -PathType Container)) {
-                        New-Item -ItemType Directory -Path $SkipDir -Force | Out-Null
-                    }
-                    $SkipFile = Join-Path $SkipDir ("run-" + [DateTime]::UtcNow.ToString("yyyyMMdd-HHmmss") + ".json")
-                    ($SkipRecord | ConvertTo-Json -Depth 20) | Set-Content -LiteralPath $SkipFile -Encoding UTF8
-
-                    Invoke-BKStateLocked {
-                        $Automations = @(Get-Automations)
-                        foreach ($A in $Automations) {
-                            if ($A.id -eq $Automation.id) {
-                                $A.lastRunAtUtc  = $SkipRecord.ranAtUtc
-                                $A.lastRunStatus = "quota_exceeded"
-                                $A.nextRunAtUtc  = [DateTime]::UtcNow.AddMinutes($A.frequencyMinutes).ToString("o")
-                                $A.runCount      = [int]$A.runCount + 1
-                            }
-                        }
-                        Save-Automations -Automations $Automations
-                    } | Out-Null
-
-                    return $SkipRecord
+                    # Quota epuise, Worker non embauche ou en pause : on NE soumet PAS la tache. On trace le saut avec le MEME mecanisme de
+                    # persistance qu'un run normal (statut quota_exceeded / worker_not_included / installation_paused), on avance l'echeance comme
+                    # un passage normal, puis on retourne tot un objet de la meme forme que le retour habituel.
+                    return (Write-AutomationSkip $SkipStatus $QuotaVerdict.detail)
                 }
             }
         }
@@ -244,6 +281,30 @@ function Invoke-AutomationRun {
         # echouer l'automatisation — le quota est indicatif. On laisse
         # passer et on execute normalement.
         Write-Verbose "Verification de quota ignoree (echec non bloquant) : $($_.Exception.Message)"
+    }
+
+    # Le QUOTA reste indicatif (fail-open ci-dessus), mais les DROITS d'acces d'un forfait restreint (Solo, Trio : seuls les Workers embauches) ne
+    # s'ouvrent jamais par defaut. Sans verdict du verificateur (python absent, import impossible, sortie vide...), on lit directement l'etat de
+    # facturation du client : forfait restreint, ou fichier illisible -> l'execution est sautee (worker_not_included) au lieu de lancer un Worker
+    # qui n'est peut-etre pas embauche. Aucun fichier de facturation (compte a l'essai) ou forfait classique : on continue comme avant.
+    if (-not $VerdictObtained) {
+        $RestrictedReason = $null
+        try {
+            $BillingClientId = Get-AutomationClientId $Automation
+            if ($BillingClientId -match '^CLI-CUST-[A-F0-9]{8}$') {
+                $BillingFile = Join-Path $Script:AutomationRoot ("core/billing/data/" + $BillingClientId + ".json")
+                if (Test-Path -LiteralPath $BillingFile -PathType Leaf) {
+                    $BillingState = Get-Content -LiteralPath $BillingFile -Raw -Encoding UTF8 | ConvertFrom-Json
+                    if (@("solo", "trio") -contains [string]$BillingState.planId) { $RestrictedReason = "forfait " + [string]$BillingState.planId }
+                }
+            }
+        }
+        catch {
+            $RestrictedReason = "etat de facturation illisible"
+        }
+        if ($RestrictedReason) {
+            return (Write-AutomationSkip "worker_not_included" ("Les droits d'acces aux Workers n'ont pas pu etre verifies ($RestrictedReason) : l'execution est sautee par prudence, elle reprendra au prochain passage."))
+        }
     }
 
     $OutFile = Join-Path $Script:AutomationRunsDir ("tmp-" + [guid]::NewGuid().ToString("N") + ".json")
@@ -277,6 +338,17 @@ function Invoke-AutomationRun {
     $Detail = $null
     $StdOutFile = [System.IO.Path]::GetTempFileName()
     $StdErrFile = [System.IO.Path]::GetTempFileName()
+    # Le sous-processus herite de l'environnement : on lui transmet la liste des Workers embauches (offre "Worker a l'unite"), ou on retire
+    # toute valeur heritee quand le client a acces a tous les Workers. L'ancienne valeur est restauree apres l'appel.
+    $PreviousAllowedWorkers = $env:BK_ALLOWED_WORKERS
+    if ($AllowedWorkersEnv) { $env:BK_ALLOWED_WORKERS = $AllowedWorkersEnv } else { Remove-Item Env:BK_ALLOWED_WORKERS -ErrorAction SilentlyContinue }
+    # Meme principe pour le niveau : la mission recurrente tourne au niveau Rapide (Submit-Task.ps1 la compte alors 1 credit), ou sans niveau
+    # (ancien comportement) ; une valeur heritee du processus appelant n'est jamais utilisee.
+    $PreviousMissionLevel = $env:BK_MISSION_LEVEL
+    if ($MissionLevelEnv -match '^[a-z]{3,20}$') { $env:BK_MISSION_LEVEL = $MissionLevelEnv } else { Remove-Item Env:BK_MISSION_LEVEL -ErrorAction SilentlyContinue }
+    # Plafond de Workers pour Chloe (voir plus haut) : meme principe, jamais de valeur heritee.
+    $PreviousMaxWorkers = $env:BK_MAX_WORKERS
+    if ($MaxWorkersEnv -match '^[0-9]{1,4}$') { $env:BK_MAX_WORKERS = $MaxWorkersEnv } else { Remove-Item Env:BK_MAX_WORKERS -ErrorAction SilentlyContinue }
     try {
         $Proc = Start-Process -FilePath $PsExe -ArgumentList $ArgLine -NoNewWindow -Wait -PassThru `
             -RedirectStandardOutput $StdOutFile `
@@ -302,6 +374,9 @@ function Invoke-AutomationRun {
         $Detail = $_.Exception.Message
     }
     finally {
+        if ($null -ne $PreviousAllowedWorkers) { $env:BK_ALLOWED_WORKERS = $PreviousAllowedWorkers } else { Remove-Item Env:BK_ALLOWED_WORKERS -ErrorAction SilentlyContinue }
+        if ($null -ne $PreviousMissionLevel) { $env:BK_MISSION_LEVEL = $PreviousMissionLevel } else { Remove-Item Env:BK_MISSION_LEVEL -ErrorAction SilentlyContinue }
+        if ($null -ne $PreviousMaxWorkers) { $env:BK_MAX_WORKERS = $PreviousMaxWorkers } else { Remove-Item Env:BK_MAX_WORKERS -ErrorAction SilentlyContinue }
         if (Test-Path -LiteralPath $OutFile -PathType Leaf) { Remove-Item -LiteralPath $OutFile -Force -ErrorAction SilentlyContinue }
         Remove-Item -LiteralPath $StdOutFile -Force -ErrorAction SilentlyContinue
         Remove-Item -LiteralPath $StdErrFile -Force -ErrorAction SilentlyContinue
@@ -380,7 +455,7 @@ function Invoke-AutomationTick {
     foreach ($A in $Automations) {
         $NextRun = [DateTime]::Parse($A.nextRunAtUtc, $null, [System.Globalization.DateTimeStyles]::RoundtripKind)
         if ($NextRun -le $Now) {
-            $Result = Invoke-AutomationRun -Automation $A
+            $Result = Invoke-AutomationRun -Automation $A -Scheduled
             $Ran += [pscustomobject]@{ AutomationId = $A.id; Status = $Result.status }
         }
     }
