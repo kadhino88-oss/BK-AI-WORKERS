@@ -95,6 +95,7 @@ _SHARED_STYLE = (
     ".plan-card .pprice{font-size:1.6rem;font-weight:800}"
     ".plan-card .pprice span{font-size:.9rem;font-weight:400;color:var(--ink-muted)}"
     ".plan-card .pcredits{font-size:13px;color:var(--ink-muted);margin-top:6px}"
+    ".plan-card .pusage{font-size:12.5px;color:var(--ink-muted);margin-top:4px}"
     ".plan-card ul{padding-left:18px;margin:12px 0 0;font-size:13px;color:var(--ink-muted)}"
     "details.faq-item{border:1px solid var(--card-border);border-radius:var(--radius-sm);padding:12px 16px;margin-bottom:10px}"
     "details.faq-item summary{font-weight:700;cursor:pointer}"
@@ -240,6 +241,23 @@ PRICING_PLANS = [
 ]
 
 
+def _usage_on(usage):
+    """True quand les limites de session et de semaine s'appliquent REELLEMENT (BK_USAGE_WINDOWS=1, GET /api/usage-limits renvoie enforced). Tant que
+    ce n'est pas le cas, aucune page ne les annonce : rien n'est affiche qui ne soit construit et applique."""
+    return bool(isinstance(usage, dict) and usage.get("enforced") and isinstance(usage.get("plans"), dict) and usage["plans"])
+
+
+def _usage_limits_html(usage):
+    """Bloc « limites d'usage » de la page Tarifs : vide tant que les limites ne s'appliquent pas."""
+    if not _usage_on(usage):
+        return ""
+    hours = int(usage.get("sessionHours") or 4)
+    return (f"<h2>Les limites d'usage de votre forfait</h2><p>Chaque forfait a un prix mensuel et des limites d'usage : un quota par session de {hours} heures, "
+            "qui s'ouvre à votre première mission et se renouvelle seul, un quota par semaine, et le quota du mois. Aucun forfait n'est illimité.</p>"
+            "<p>Quand une limite est atteinte, vos missions reprennent à l'heure de renouvellement affichée dans votre compte, ou tout de suite si vous passez "
+            "au forfait supérieur, qui a ses propres limites plus larges.</p>")
+
+
 def _credit_scale_html(levels):
     """Bloc « combien de missions ? » de la page Tarifs, d'apres core/ai/LEVELS.json (liste publique des niveaux, vide si BK_LEVELS=0)."""
     rows = [l for l in (levels or {}).get("levels", []) if isinstance(l.get("credits"), int) and l["credits"] > 0]
@@ -254,7 +272,7 @@ def _credit_scale_html(levels):
             "ni paiement à l'usage. Quand le quota est atteint, vous passez au forfait supérieur, qui a son propre quota.</p>")
 
 
-def render_tarifs_page(levels=None):
+def render_tarifs_page(levels=None, usage=None):
     cards = ""
     for p in PRICING_PLANS:
         price_html = (
@@ -266,11 +284,14 @@ def render_tarifs_page(levels=None):
             credits = f'<div class="pcredits"><strong>{p["credits"]}</strong> {p.get("credits_label") or "crédits par mois"}</div>'
         else:
             credits = f'<div class="pcredits">{p["credits_label"]}</div>'
+        limits = (usage or {}).get("plans", {}).get(p["id"]) if _usage_on(usage) else None
+        usage_html = (f'<div class="pusage"><strong>{limits["session"]}</strong> crédits par session de {int(usage.get("sessionHours") or 4)} h · '
+                      f'<strong>{limits["week"]}</strong> par semaine</div>') if limits else ""
         feats = "".join(f"<li>{f}</li>" for f in p["features"])
         cards += (
             f'<div class="plan-card{" popular" if p.get("popular") else ""}">'
             f'<div class="pname">{p["name"]}</div><div class="paud">{p["audience"]}</div>'
-            f"{price_html}{annual}{credits}<ul>{feats}</ul></div>"
+            f"{price_html}{annual}{credits}{usage_html}<ul>{feats}</ul></div>"
         )
     body = f"""
       <h1>Tarifs BK-AI-WORKERS</h1>
@@ -279,6 +300,7 @@ def render_tarifs_page(levels=None):
       sans engagement minimum. Prix en CHF (devise de facturation), hors taxes. Abonnement annuel : 2 mois offerts. Disponible dans le monde entier.</p>
       <div class="plans-grid">{cards}</div>
       {_credit_scale_html(levels)}
+      {_usage_limits_html(usage)}
       <p>Quel Worker pour votre activité ? <a href="/workers.html">Parcourez les 17 Workers</a> : chacun indique son métier et ses compétences.</p>
       <div class="cta-row">
         <a class="btn btn-gold" href="/#nav-onboarding">Démarrer l'essai gratuit</a>
@@ -325,8 +347,16 @@ FAQ_ITEMS = [
 ]
 
 
-def render_faq_page():
-    items = "".join(f"<details class='faq-item'><summary>{q}</summary><p>{a}</p></details>" for q, a in FAQ_ITEMS)
+FAQ_USAGE_ITEM = (
+    "Que se passe-t-il quand j'atteins une limite d'usage ?",
+    "Votre forfait a un quota par session de 4 heures, un quota par semaine et un quota par mois. Quand l'un d'eux est atteint, la mission est refusée avec le nom "
+    "de la limite et l'heure exacte de son renouvellement. Un projet en cours ne se perd pas : il se met en pause avec tout son état et reprend tout seul au "
+    "renouvellement, ou tout de suite si vous passez au forfait supérieur. Vous voyez à tout moment ce qu'il vous reste, dans Facturation et dans la barre du haut.")
+
+
+def render_faq_page(usage=None):
+    items = "".join(f"<details class='faq-item'><summary>{q}</summary><p>{a}</p></details>"
+                    for q, a in (FAQ_ITEMS + [FAQ_USAGE_ITEM] if _usage_on(usage) else FAQ_ITEMS))
     body = f"""
       <h1>Questions fréquentes</h1>
       <p class="u">Comment ça marche, concrètement — sans jargon.</p>
@@ -530,7 +560,10 @@ def render_analytics_page():
     )
 
 
-def render_facturation_page():
+def render_facturation_page(usage=None):
+    usage_html = ("<p>En plus du quota du mois, chaque forfait a deux limites d'usage : un quota par session de 4 heures (il s'ouvre à votre première mission et "
+                  "se renouvelle seul) et un quota par semaine. Quand une limite est atteinte, la mission est refusée avec l'heure exacte de renouvellement, et un projet "
+                  "en cours se met en pause pour reprendre tout seul. Vous les voyez à tout moment dans votre compte.</p>") if _usage_on(usage) else ""
     body = """
       <h1>Facturation</h1>
       <p class="u">Des crédits, un usage transparent, aucun engagement forcé.</p>
@@ -540,6 +573,7 @@ def render_facturation_page():
       à 80 % du quota. Il n'y a ni missions illimitées, ni recharge de crédits, ni paiement à l'usage :
       quand le quota est atteint, vous passez au forfait supérieur, qui a son propre quota, et rien n'est
       facturé sans votre accord.</p>
+      <!--USAGE-->
       <h2>Paiement</h2>
       <p>Le paiement est traité par carte bancaire via Stripe, dû d'avance. BK-ENTREPRISE ne voit ni
       ne conserve les données de carte.</p>
@@ -551,7 +585,7 @@ def render_facturation_page():
         <a class="btn btn-gold" href="/tarifs.html">Voir les plans</a>
         <a class="btn btn-ghost" href="/cgv.html">Lire les CGV</a>
       </div>
-    """
+    """.replace("<!--USAGE-->", usage_html)
     return _page(
         "Facturation — Crédits & paiement | BK-AI-WORKERS",
         "Comment fonctionne la facturation BK-AI-WORKERS : quota mensuel de crédits, paiement Stripe, "

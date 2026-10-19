@@ -3054,9 +3054,12 @@ def _picker_plans(current_plan_id, state):
     for pid, p in PLAN_CATALOG.items():
         if pid == "essai" or (p.get("legacy") and pid != current_plan_id):
             continue
-        out.append({"planId": pid, "name": p["name"], "credits": plan_monthly_credits(pid, state if pid == current_plan_id else None),
-                    "priceChf": p.get("priceChf"), "onQuote": bool(p.get("onQuote")), "legacy": bool(p.get("legacy")),
-                    "workerSlots": p.get("workerSlots"), "chloeIncluded": pid in inst.PLANS_WITH_CHLOE if p.get("workerSlots") else True})
+        item = {"planId": pid, "name": p["name"], "credits": plan_monthly_credits(pid, state if pid == current_plan_id else None),
+                "priceChf": p.get("priceChf"), "onQuote": bool(p.get("onQuote")), "legacy": bool(p.get("legacy")),
+                "workerSlots": p.get("workerSlots"), "chloeIncluded": pid in inst.PLANS_WITH_CHLOE if p.get("workerSlots") else True}
+        if USAGE.enforced and item["credits"] and not p.get("contractual"):
+            item["limits"] = USAGE.next_limits(item["credits"])        # plafonds de session et de semaine de ce forfait (jamais annonces tant qu'ils ne s'appliquent pas)
+        out.append(item)
     return out
 
 
@@ -4206,6 +4209,15 @@ def refused_for_hiring(result):
     return None
 
 
+def _seo_usage():
+    """Plafonds de session / semaine par forfait pour les pages statiques (Tarifs, FAQ, Facturation) ; None tant qu'ils ne s'appliquent pas
+    (BK_USAGE_WINDOWS=1) : aucune page n'annonce une limite qui ne soit pas appliquee."""
+    try:
+        return USAGE.public_limits() if USAGE.enforced else None
+    except Exception:  # noqa: BLE001 - une page statique ne casse jamais pour ca
+        return None
+
+
 def refused_for_usage(result):
     """Corps de la reponse 402 si le resultat de submit_task est un refus de la reservation d'usage (session, semaine ou mois : une autre mission a
     consomme le reste entre le controle de la route et la reservation), sinon None. Les routes le renvoient tel quel, le job asynchrone l'enregistre."""
@@ -4757,11 +4769,11 @@ class Handler(BaseHTTPRequestHandler):
         elif path == "/analytics.html":
             self._send_html(seo_pages.render_analytics_page())
         elif path == "/facturation.html":
-            self._send_html(seo_pages.render_facturation_page())
+            self._send_html(seo_pages.render_facturation_page(_seo_usage()))
         elif path == "/tarifs.html":
-            self._send_html(seo_pages.render_tarifs_page(public_mission_levels()))
+            self._send_html(seo_pages.render_tarifs_page(public_mission_levels(), _seo_usage()))
         elif path == "/faq.html":
-            self._send_html(seo_pages.render_faq_page())
+            self._send_html(seo_pages.render_faq_page(_seo_usage()))
         elif path == "/cgv.html":
             self._send_html(seo_pages.render_cgv_page())
         elif path == "/mentions-legales.html":

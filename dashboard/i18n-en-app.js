@@ -311,3 +311,57 @@ Object.assign(window.BK_EN, {
   [", sans renouvellement.", ", with no renewal."],
   [" crédits par mois, mais votre résiliation y met fin le ", " credits per month, but your cancellation ends it on "]
 );
+
+/* Limites d'usage : session (4 h), semaine, mois (docs/PRICING.md section 6). Les textes avec valeurs sont des modeles {valeur} : app.js les traduit avec iwTf. */
+Object.assign(window.BK_EN, {
+  "Vos limites d'usage": "Your usage limits",
+  "En plus du quota du mois, votre forfait a une limite par session de 4 heures et une limite par semaine. Elles se renouvellent d'elles-mêmes : rien à faire.": "On top of the monthly quota, your plan has a limit per 4-hour session and a weekly limit. They renew by themselves: nothing to do.",
+  "Semaine": "Week", "crédits": "credits", "restants": "left", "Se renouvelle": "Renews",
+  "Démarre à votre prochaine mission.": "Starts with your next mission.",
+  "{used} sur {limit} crédits utilisés, {left} restants": "{used} of {limit} credits used, {left} left",
+  "Plus de {pct} % de votre quota de session est utilisé.": "Over {pct}% of your session quota is used.",
+  "Plus de {pct} % de votre quota de la semaine est utilisé.": "Over {pct}% of your weekly quota is used.",
+  "Quota de session atteint : vos missions reprennent {when}.": "Session quota reached: your missions resume {when}.",
+  "Quota de la semaine atteint : vos missions reprennent {when}.": "Weekly quota reached: your missions resume {when}.",
+  "Quota de session atteint": "Session quota reached", "Quota de la semaine atteint": "Weekly quota reached",
+  "Prochain renouvellement :": "Next renewal:",
+  "{name} : plafonds de session et de semaine fixés par contrat.": "{name}: session and weekly limits set by contract.",
+  "Forfait {name} : {session} crédits par session, {week} par semaine, {month} par mois.": "{name} plan: {session} credits per session, {week} per week, {month} per month.",
+  "Votre plafond est fixé par contrat : écrivez-nous pour le relever.": "Your limit is set by contract: write to us to raise it.",
+  "/mois": "/month",
+  "Usage : session {s} %, semaine {w} %.": "Usage: session {s}%, week {w}%.",
+  "Renouvellement {when}.": "Renewal {when}.", "Ouvrir la facturation.": "Open billing.",
+  "crédits par session de": "credits per session of", "par semaine": "per week",
+  "Les limites d'usage de votre forfait": "The usage limits of your plan",
+  "Chaque forfait a un prix mensuel et des limites d'usage : un quota de {h} heures par session, qui s'ouvre à votre première mission et se renouvelle seul, un quota par semaine, et le quota du mois. Aucun forfait n'est illimité.": "Each plan has a monthly price and usage limits: a quota per {h}-hour session, which opens with your first mission and renews by itself, a weekly quota, and the monthly quota. No plan is unlimited.",
+  "Quand une limite est atteinte, vos missions reprennent à l'heure de renouvellement affichée dans votre compte, ou tout de suite si vous passez au forfait supérieur, qui a ses propres limites plus larges.": "When a limit is reached, your missions resume at the renewal time shown in your account, or right away if you move up to the next plan, which has its own, larger limits.",
+  "Que se passe-t-il quand j'atteins une limite d'usage ?": "What happens when I reach a usage limit?",
+  "Votre forfait a un quota par session de 4 heures, un quota par semaine et un quota par mois. Quand l'un d'eux est atteint, la mission est refusée avec le nom de la limite et l'heure exacte de son renouvellement. Un projet en cours ne se perd pas : il se met en pause avec tout son état et reprend tout seul au renouvellement, ou tout de suite si vous passez au forfait supérieur. Vous voyez à tout moment ce qu'il vous reste, dans Facturation et dans la barre du haut.": "Your plan has a quota per 4-hour session, a weekly quota and a monthly quota. When one of them is reached, the mission is refused with the name of the limit and the exact time it renews. A project in progress is not lost: it pauses with all its state and resumes by itself at the renewal, or right away if you move up to the next plan. You can see at any time what you have left, in Billing and in the top bar.",
+  "non lancée : quota de session ou de semaine atteint, reprise au prochain passage": "not started: session or weekly quota reached, will resume at the next run"
+});
+/* Messages du serveur (dashboard/usage_wiring.py, block_message) : fragments, la phrase contient des nombres et une heure. */
+(window.BK_EN_FRAG = window.BK_EN_FRAG || []).push(
+  ["Vous avez utilisé votre quota de session (", "You have used your session quota ("],
+  ["Vous avez utilisé votre quota de la semaine (", "You have used your weekly quota ("],
+  [" crédits).", " credits)."],
+  [" crédit(s) dans votre quota de session, ce niveau en demande ", " credit(s) left in your session quota, this level needs "],
+  [" crédit(s) dans votre quota de la semaine, ce niveau en demande ", " credit(s) left in your weekly quota, this level needs "],
+  [" Il se renouvelle à ", " It renews at "],
+  [" Il se renouvelle demain à ", " It renews tomorrow at "],
+  [" Il se renouvelle le ", " It renews on "],
+  [" (dans ", " (in "],
+  [" j ", " d "],
+  ["Ce niveau dépasse le quota de session de votre forfait.", "This level exceeds the session quota of your plan."],
+  ["Ce niveau dépasse le quota de la semaine de votre forfait.", "This level exceeds the weekly quota of your plan."],
+  ["Choisissez un niveau plus rapide, attendez le renouvellement ou passez au forfait ", "Choose a faster level, wait for the renewal or move up to the "],
+  ["Choisissez un niveau plus rapide, attendez le renouvellement.", "Choose a faster level or wait for the renewal."],
+  [" crédits par session)", " credits per session)"],
+  [" crédits par semaine)", " credits per week)"],
+  [" Pour continuer sans attendre, passez à Enterprise, sur devis, avec des plafonds fixés par contrat : écrivez-nous à ", " To continue without waiting, move up to Enterprise (on quote, with limits set by contract): write to us at "],
+  [" pour relever ce plafond", " to raise this limit"],
+  [" lundi ", " Monday "], [" mardi ", " Tuesday "], [" mercredi ", " Wednesday "], [" jeudi ", " Thursday "], [" vendredi ", " Friday "],
+  [" samedi ", " Saturday "], [" dimanche ", " Sunday "],
+  [" January à ", " January at "], [" February à ", " February at "], [" March à ", " March at "], [" April à ", " April at "], [" May à ", " May at "],
+  [" June à ", " June at "], [" July à ", " July at "], [" August à ", " August at "], [" September à ", " September at "], [" October à ", " October at "],
+  [" November à ", " November at "], [" December à ", " December at "]
+);

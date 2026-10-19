@@ -54,6 +54,10 @@
       <a href="#" id="nav-admin" hidden>Admin</a>
     </nav>
     <div class="topbar-actions">
+      <button class="usage-chip" id="usage-chip" type="button" hidden>
+        <span class="usage-chip-ring" aria-hidden="true"></span>
+        <span class="usage-chip-text"></span>
+      </button>
       <button class="lang-toggle" id="lang-toggle" type="button" data-no-i18n="1" aria-label="Switch language">EN</button>
       <button class="btn btn-ghost" id="nav-chloe-btn">Discuter avec Chloé</button>
       <button class="btn btn-gold" id="topbar-account-btn">Se connecter</button>
@@ -473,6 +477,7 @@
       <div class="pricing-grid" id="pricing-grid"></div>
 
       <div class="pricing-scale" id="pricing-scale"></div>
+      <div class="pricing-scale pricing-usage" id="pricing-usage" hidden></div>
 
       <section class="activity-helper" id="activity-helper" aria-labelledby="activity-helper-title">
         <h2 id="activity-helper-title">Quel Worker pour mon activité ?</h2>
@@ -520,6 +525,16 @@
             </div>
             <button type="button" class="btn btn-ghost" id="billing-cancel-btn">Annuler l'abonnement</button>
           </div>
+          <section class="usage-windows" id="usage-windows" aria-labelledby="usage-windows-title" hidden>
+            <h3 class="usage-windows-title" id="usage-windows-title">Vos limites d'usage</h3>
+            <p class="usage-windows-sub">En plus du quota du mois, votre forfait a une limite par session de 4 heures et une limite par semaine. Elles se renouvellent d'elles-mêmes : rien à faire.</p>
+            <div class="usage-meters" id="usage-meters"></div>
+            <div class="usage-banner" id="usage-banner" role="status" hidden></div>
+            <div class="billing-upgrade usage-upgrade" id="usage-upgrade" hidden>
+              <p id="usage-upgrade-text"></p>
+              <button type="button" class="btn btn-gold" id="usage-upgrade-btn">Passer à la formule supérieure</button>
+            </div>
+          </section>
           <div class="billing-usage-track">
             <div class="billing-usage-fill" id="billing-usage-fill"></div>
           </div>
