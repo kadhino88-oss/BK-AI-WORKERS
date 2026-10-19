@@ -369,7 +369,8 @@ class AutomationLevel(unittest.TestCase):
         self.assertEqual(v0["blocked"], False, v0)
         res, p = self.run_automation(worker="alex", BK_USAGE_WINDOWS="1")
         self.assertEqual(len(self.tasks()), 1, "aucune mission lancee : seule la trace posee par le test reste")
-        autos = json.load(open(os.path.join(self.root, "core", "automation", "data", "automations.json"), encoding="utf-8-sig"))
+        with open(os.path.join(self.root, "core", "automation", "data", "automations.json"), encoding="utf-8-sig") as f:
+            autos = json.load(f)
         self.assertEqual((autos[0]["lastRunStatus"], autos[0]["runCount"]), ("usage_limit", 1), p.stdout[-300:] + p.stderr[-300:])
         # de la place : le debit est fait par quota-check, une fois, apres tous les autres controles
         shutil.rmtree(os.path.join(self.root, "runtime"), ignore_errors=True)

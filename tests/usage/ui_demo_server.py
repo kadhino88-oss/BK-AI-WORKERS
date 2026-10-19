@@ -57,15 +57,15 @@ def main():
         bob, b_id = e2e.signup(port, "bob@mail-test.example", "198.51.100.12")
         owner = e2e.Client(port, "198.51.100.99")
         assert owner.post("/api/gate/login", {"password": e2e.GATE_PASSWORD})[0] == 200
-        assert owner.post("/api/admin/set-plan", {"clientId": a_id, "planId": "solo"})[0] == 200
-        assert owner.post("/api/admin/set-plan", {"clientId": b_id, "planId": "equipe"})[0] == 200
-        # alice (Solo : 23 par session) : 12 + 6 + 1 + 1 = 20 -> 87 %
-        for level in ("approfondi", "equilibre", "rapide", "rapide"):
+        assert owner.post("/api/admin/set-plan", {"clientId": a_id, "planId": "equipe"})[0] == 200
+        assert owner.post("/api/admin/set-plan", {"clientId": b_id, "planId": "pro"})[0] == 200
+        # alice (Equipe : 83 par session) : 6 x 12 = 72 -> 87 % (alerte des 80 %)
+        for level in ("approfondi",) * 6:
             st, out = alice.post("/api/workers/alex/task", {"objective": "Prepare un plan", "level": level})
             assert st == 200, (st, out)
         with open(info_path, "w", encoding="utf-8") as f:
-            json.dump({"url": f"http://127.0.0.1:{port}", "alice": {"email": "alice@mail-test.example", "password": e2e.PASSWORD, "plan": "solo"},
-                       "bob": {"email": "bob@mail-test.example", "password": e2e.PASSWORD, "plan": "equipe"}, "root": root, "pid": server.pid}, f)
+            json.dump({"url": f"http://127.0.0.1:{port}", "alice": {"email": "alice@mail-test.example", "password": e2e.PASSWORD, "plan": "equipe"},
+                       "bob": {"email": "bob@mail-test.example", "password": e2e.PASSWORD, "plan": "pro"}, "root": root, "pid": server.pid}, f)
         print("pret", port, flush=True)
         deadline = time.time() + minutes * 60
         while time.time() < deadline and server.poll() is None and not os.path.exists(info_path + ".stop"):
