@@ -97,6 +97,22 @@ class ApprovalTests(unittest.TestCase):
         report = open(os.path.join(e.svc.store.project_dir(pid), "final-report.md"), encoding="utf-8").read()
         self.assertIn("EXECUTED", report)
 
+    def test_a_step_that_requires_the_approvals_of_another_waits_for_it_even_without_a_dependency(self):
+        plan = copy.deepcopy(fake_runner.default_plan({}))
+        plan["steps"] = [dict(plan["steps"][0], id="S1", worker="emma", criteriaIds=["C1"], expectedOutputs=["site/index.html"]),
+                         dict(plan["steps"][1], id="S2", worker="lucas", criteriaIds=["C2"], expectedOutputs=["site/about.html"], requiresApprovalsFrom=["S1"])]
+        scen = {"plan": {"actions": [{"tool": "project_plan", "input": {"action": "set", "plan": plan}}], "complete": {"status": "DONE", "summary": "Plan pret."}},
+                "S1": {"actions": work("site/index.html") + [ask()]}}
+        e = self.env(scenario=scen, gate=False)
+        pid = e.create()
+        st = e.drive(pid, lambda s: s["status"] == "WAITING_APPROVAL", timeout=60)
+        self.assertEqual(st["steps"]["S1"]["status"], "DONE")
+        self.assertEqual((st["steps"]["S2"]["status"], st["steps"]["S2"]["blockedReason"]), ("BLOCKED", "APPROVAL"))     # S2 n'a pas démarré
+        self.assertFalse(os.path.exists(e.wspath(pid, "site/about.html")))
+        e.svc.approve_approval(CLIENT, pid, self.items(e, pid)[0]["id"])
+        self.settle(e)
+        self.assertEqual(e.run_to_done(pid)["status"], "DONE")
+
     def test_a_second_approval_of_the_same_action_never_executes_twice(self):
         e = self.env([ask()])
         pid = e.create()

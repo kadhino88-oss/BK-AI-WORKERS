@@ -242,7 +242,7 @@ class PipelineTests(unittest.TestCase):
         e = self.env(cass, connectors=("slack",), limits={"approvals": {"executeSpacingSec": 0}}, tick_sec=0.2)
         pid = e.create(goal="Annoncer l'ouverture du cabinet sur Slack puis ecrire la page d'accueil")
         st = e.drive(pid, lambda s: s["status"] == "WAITING_APPROVAL", timeout=240)
-        self.assertEqual(st["steps"]["S2"]["blockedReason"], "APPROVAL")
+        self.assertEqual(st["steps"]["S2"]["blockedReason"], "APPROVAL", json.dumps({k: (v["status"], v.get("blockedReason"), v.get("error")) for k, v in st["steps"].items()}))
         self.assertEqual(e.connector_calls, [])                                                       # rien n'est parti sans le client
         rows = e.svc.list_approvals(CLIENT, pid)["approvals"]
         self.assertEqual(len(rows), 1)

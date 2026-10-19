@@ -1245,6 +1245,11 @@ class StepMixin:
                 return "failed"
             return "wait"
         for src in spec.get("requiresApprovalsFrom") or []:
+            ss = steps.get(src)
+            if ss and not (ss["status"] in SATISFIED or (ss["status"] == "PARTIAL" and ss.get("final"))):
+                if ss["status"] == "FAILED":
+                    return "failed"
+                return "wait"                                   # les actions n'existent qu'une fois l'étape source terminée : on l'attend avant de regarder les validations
             mine = [a for a in approvals if a.get("stepId") == src]
             if any(a.get("status") == "EXPIRED" for a in mine) and not any(a.get("status") in ("EXECUTED",) for a in mine):
                 return "approval_expired"
