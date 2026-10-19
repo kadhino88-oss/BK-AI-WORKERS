@@ -410,3 +410,20 @@ class ViewMixin:
                 with open(report, "rb") as f:
                     z.writestr(info, f.read())
         return buf.getvalue(), f"{(st.get('title') or 'projet')[:40]}".replace(" ", "-").replace("/", "-")
+
+    # ------------------------------------------------------------------ export des données du compte (RGPD)
+    def export_client(self, client_id):
+        """Objectifs, plans, livrables (liste), validations et journaux d'un client, sans le contenu des fichiers (téléchargeables en zip)."""
+        out = []
+        for pid in self.store.ids_of_client(client_id):
+            try:
+                st = self.store.state(pid)
+            except ps.ProjectError:
+                continue
+            out.append({"summary": self.project_summary(st), "goal": st.get("goal"), "plan": self.read_plan(pid),
+                        "deliverables": (self.store.read_json(pid, "deliverables.json", {}) or {}).get("items") or [],
+                        "approvals": [pa.public_view(i) for i in pa.load_items(self.store, pid)],
+                        "decisions": self.store.read_jsonl(pid, "decisions.jsonl"), "events": self.store.read_jsonl(pid, "events.jsonl")[-1000:],
+                        "budget": st.get("budget")})
+        return {"projects": out}
+

@@ -67,6 +67,8 @@ class ActionMixin:
 
     def upgrade_hint(self, client_id):
         try:
+            if self._upgrade_fn:
+                return self._upgrade_fn(client_id)
             return (self.plan_view(client_id) or {}).get("upgrade")
         except Exception:  # noqa: BLE001
             return None
@@ -758,3 +760,26 @@ class ActionMixin:
         day = self.now() - 86400
         spend = sum(float(r["chfSpent"] or 0) for r in rows if (ps.parse_iso(r["updatedUtc"]) or 0) >= day)
         return {"projects": rows, "running": self.running_count(), "control": self.read_control(), "chfActiveToday": round(spend, 4)}
+
+    # ------------------------------------------------------------------ suppression de compte
+    def purge_client(self, client_id):
+        """Suppression de compte : arrête les lanceurs du client et supprime tous ses projets (runtime/projects/<ClientId>). Jamais d'exception."""
+        if not ps.CLIENT_ID_RE.match(client_id or ""):
+            return 0
+        n = 0
+        for pid in list(self.store.ids_of_client(client_id)):
+            try:
+                self.abort_running_steps(pid, "CANCELLED")
+            except Exception as e:  # noqa: BLE001
+                sys.stderr.write(f"projects purge_client abort: {type(e).__name__}\n")
+            self._live.pop(pid, None)
+            self._last_maint.pop(pid, None)
+            n += 1
+        import shutil
+        try:
+            shutil.rmtree(self.store.client_dir(client_id), ignore_errors=True)
+        except ps.ProjectError:
+            pass
+        self.store.refresh_index()
+        return n
+
