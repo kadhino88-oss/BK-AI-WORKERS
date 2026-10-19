@@ -36,6 +36,8 @@ foreach ($c in $cases) {
     }
     $out += $r
 }
+$resume = Get-StripeResumeFields
+$out += @{ name = "resume"; ok = $true; fields = $resume; body = (ConvertTo-StripeFormBody -Fields $resume) }
 [System.IO.File]::WriteAllText($env:T_OUT, ($out | ConvertTo-Json -Depth 6 -AsArray), [System.Text.UTF8Encoding]::new($false))
 '''
 
@@ -60,6 +62,8 @@ def cases():
             case("coupon-month", Interval="month", AmountCents=2900, LaunchCoupon="  LANCEMENT30 "),
             case("coupon-year", Interval="year", AmountCents=29000, LaunchCoupon="LANCEMENT30"),
             case("no-coupon", Interval="month", AmountCents=2900),
+            case("customer", Interval="month", AmountCents=2900, CustomerId="cus_ABC123"),
+            case("bad-customer", Interval="month", AmountCents=2900, CustomerId="cus_x&mode=payment"),
             case("injection", Interval="month", AmountCents=2900, PlanName="Solo&line_items[1][price]=price_x&mode=payment"),
             case("empty-name", Interval="month", AmountCents=2900, PlanName="&=[]")]
     return out
@@ -132,6 +136,25 @@ class StripeFields(unittest.TestCase):
         self.assertEqual(self.f("coupon-month")["discounts[0][coupon]"], "LANCEMENT30")
         self.assertNotIn("discounts[0][coupon]", self.f("coupon-year"))
         self.assertNotIn("discounts[0][coupon]", self.f("no-coupon"))
+
+    def test_a_known_stripe_customer_is_reused_and_a_malformed_one_is_dropped(self):
+        # 2e revue : sans client Stripe, chaque abonnement en creait un nouveau et le credit de prorata d'une montee en gamme restait sur l'ancien.
+        self.assertEqual(self.f("customer")["customer"], "cus_ABC123")
+        self.assertNotIn("customer", self.f("solo-month"))
+        bad = self.f("bad-customer")
+        self.assertNotIn("customer", bad)
+        self.assertNotIn("mode=payment", self.r["bad-customer"]["body"])
+
+    def test_resuming_a_cancelled_subscription_only_clears_cancel_at_period_end(self):
+        self.assertEqual(self.f("resume"), {"cancel_at_period_end": "false"})
+        self.assertEqual(self.r["resume"]["body"], "cancel_at_period_end=false")
+
+    def test_the_bridge_exposes_the_subscription_read_and_resume_actions_and_the_customer(self):
+        with open(os.path.join(REPO, "dashboard", "Stripe-Bridge.ps1"), encoding="utf-8-sig") as f:
+            bridge = f.read()
+        for action in ("get-subscription", "resume-subscription"):
+            self.assertIn(f'"{action}"', bridge)
+        self.assertIn("-CustomerId $CustomerId", bridge)
 
     def test_the_plan_name_cannot_inject_form_fields(self):
         f = self.f("injection")

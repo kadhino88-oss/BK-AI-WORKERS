@@ -17,6 +17,7 @@ attribution par le proprietaire apres facture reglee : fonctions pures sur l'eta
 (refus HTTP 403 WORKER_NOT_INCLUDED sur toutes les routes qui demarrent une mission) et dans les scripts PowerShell (BK_ALLOWED_WORKERS).
 Documentation des routes : docs/HIRE-API.md.
 """
+import bisect
 import datetime
 import json
 import os
@@ -40,10 +41,13 @@ SECRET_RE = re.compile(
     r"|(?i:\bbearer\s+[0-9A-Za-z._~+/=-]{20,})"
     r"|(?i:(?:password|mot de passe|mdp|api[ _-]?key|cl[eé] api|secret|token|iban))\s*[:=]\s*\S{6,}"
     r"|\b[A-Z]{2}\d{2} ?(?:[A-Z0-9]{4} ?){3,7}[A-Z0-9]{1,4}\b")
-# Numero de carte : 13 a 19 chiffres ET somme de Luhn valide (sinon un numero de commande ou de telephone etait refuse). Un SIRET ecrit dans son
-# groupement officiel (3-3-3-5 chiffres) n'est pas une carte non plus.
-_CARD_CANDIDATE_RE = re.compile(r"\b(?:\d[ -]?){13,19}\b")
-_SIRET_GROUPING_RE = re.compile(r"^\d{3} \d{3} \d{3} \d{5}$")
+# Numero de carte : 13 a 19 chiffres ET somme de Luhn valide (sinon un numero de commande ou de telephone etait refuse). Le texte est lu par SUITES de
+# groupes de chiffres separes par un espace ou un tiret : chaque suite de groupes entiers qui totalise 13 a 19 chiffres est testee, pas seulement la
+# plus longue fenetre gloutonne (une carte suivie de son cryptogramme, de sa date d'expiration ou d'un numero de facture etait sinon acceptee : la
+# fenetre de 19 chiffres tombait sur la carte ET les chiffres voisins, et la somme de Luhn de cet ensemble echoue). Un SIRET (14 chiffres, valide
+# Luhn par construction) n'est pas une carte : ecrit en 3-3-3-5 chiffres, ou precede du mot SIRET.
+_DIGIT_RUN_RE = re.compile(r"(?<!\d)\d+(?:[ -]\d+)*(?!\d)")
+_DIGIT_GROUP_RE = re.compile(r"\d+")
 _LOCK = threading.Lock()
 
 
@@ -57,17 +61,53 @@ def _luhn_ok(digits):
     return total % 10 == 0
 
 
+def _card_number_in(text):
+    """True si une suite de groupes de chiffres entiers (13 a 19 chiffres au total) du texte passe la somme de Luhn.
+
+    Cout lineaire : les sommes de Luhn de TOUTES les tranches d'une suite se lisent en O(1) dans des sommes cumulees (chiffre non double / double,
+    selon la parite de sa position). Recalculer la somme de chaque tranche chiffre par chiffre coutait ~0,1 ms par groupe : un champ de 2000
+    caracteres « 1 1 1 1 ... » (1000 groupes d'un chiffre) bloquait le serveur 0,1 s, et 100 champs d'une meme requete une dizaine de secondes."""
+    for run in _DIGIT_RUN_RE.finditer(text):
+        run_text = run.group()
+        groups = [m.span() for m in _DIGIT_GROUP_RE.finditer(run_text)]
+        off = [0]                                              # off[k] = nombre de chiffres qui precedent le groupe k
+        for start, end in groups:
+            off.append(off[-1] + end - start)
+        if off[-1] < 13:
+            continue
+        und, dbl = ([0], [0]), ([0], [0])                      # sommes cumulees par parite de la position du chiffre dans la suite
+        for k, ch in enumerate("".join(run_text[s:e] for s, e in groups)):
+            n = int(ch)
+            doubled = n * 2 - 9 if n > 4 else n * 2
+            for parity in (0, 1):
+                und[parity].append(und[parity][-1] + (n if parity == k % 2 else 0))
+                dbl[parity].append(dbl[parity][-1] + (doubled if parity == k % 2 else 0))
+        count = len(groups)
+        for i in range(count):
+            first = off[i]
+            j = bisect.bisect_left(off, first + 13, i + 1)     # premier groupe dont la fin porte la tranche a 13 chiffres ou plus
+            while j <= count and off[j] - first <= 19:
+                last = off[j]
+                if (j - i == 4 and (off[i + 1] - first, off[i + 2] - off[i + 1], off[i + 3] - off[i + 2], last - off[i + 3]) == (3, 3, 3, 5)) \
+                        or (j - i == 2 and (off[i + 1] - first, last - off[i + 1]) == (9, 5)):
+                    j += 1
+                    continue                                   # SIRET dans son groupement officiel (3-3-3-5) ou SIREN + NIC (9-5)
+                if last - first == 14:
+                    at = run.start() + groups[i][0]
+                    if "sire" in text[max(0, at - 16):at].lower():
+                        j += 1
+                        continue                               # « SIRET 44306184100047 », « N° SIREN/SIRET : ... »
+                q = (last - 1) % 2                             # le dernier chiffre n'est pas double ; un sur deux en remontant l'est
+                if (und[q][last] - und[q][first] + dbl[1 - q][last] - dbl[1 - q][first]) % 10 == 0:
+                    return True
+                j += 1
+    return False
+
+
 def contains_secret(text):
     """True si le texte ressemble a un secret (mot de passe, cle d'API, jeton, cle privee, IBAN) ou a un numero de carte bancaire."""
     text = str(text or "")
-    if SECRET_RE.search(text):
-        return True
-    for m in _CARD_CANDIDATE_RE.finditer(text):
-        raw = m.group().strip()
-        digits = re.sub(r"\D", "", raw)
-        if 13 <= len(digits) <= 19 and not _SIRET_GROUPING_RE.match(raw) and _luhn_ok(digits):
-            return True
-    return False
+    return bool(SECRET_RE.search(text)) or _card_number_in(text)
 
 
 def _now():

@@ -277,7 +277,8 @@ def main():
         seed_usage(a_id, 5)                                            # plus aucun credit
         st, out = alice.post("/api/workers/alex/task", {"objective": "bonjour", "level": "rapide"})
         check("quota epuise : message avec credits inclus, date de renouvellement et forfait suivant",
-              st == 402 and "le forfait Équipe inclut 900 crédits par mois, renouvelés le" in out["detail"]
+              st == 402 and "le forfait Équipe inclut 900 crédits par mois, valable jusqu'au" in out["detail"]      # active sur facture : rien ne se renouvelle avant le reglement suivant
+              and "il se reconduit à la réception du règlement de la facture suivante" in out["detail"]
               and "passez au forfait Pro (1 250 crédits par mois, CHF 139 par mois)" in out["detail"], (st, out))
         card = out["upgrade"]
         check("... et la carte : forfait actuel, credits inclus, renouvellement, forfait suivant avec son prix",
@@ -300,7 +301,10 @@ def main():
         check("plafond atteint : 402 et « ecrivez-nous pour relever le plafond de votre contrat »",
               st == 402 and "relever le plafond de votre contrat" in out["detail"] and out["upgrade"]["next"] is None, (st, out))
         st, out = owner.post("/api/admin/set-plan", {"clientId": b_id, "planId": "enterprise"})
-        check("Enterprise sans plafond saisi : le plafond par defaut documente (10 000), jamais illimite", st == 200 and out["credits"] == 10000, (st, out))
+        check("Enterprise reconduit sans repeter le plafond : celui du contrat (12 000) est garde, jamais ramene a 10 000 (2e revue)", st == 200 and out["credits"] == 12000, (st, out))
+        st, out = owner.post("/api/admin/set-plan", {"clientId": b_id, "planId": "scale"})
+        st, out = owner.post("/api/admin/set-plan", {"clientId": b_id, "planId": "enterprise"})
+        check("Enterprise active pour la premiere fois sans plafond saisi : le plafond par defaut documente (10 000), jamais illimite", st == 200 and out["credits"] == 10000, (st, out))
         clear_usage()
         seed_usage(a_id, 900, created=now_iso())                       # alice (Equipe) a tout consomme
         st, out = alice.post("/api/workers/alex/task", {"objective": "", "level": "rapide"})

@@ -28,7 +28,8 @@
 # BK_MISSION_LEVEL pour que la mission tourne reellement a ce niveau et soit comptee 1 credit.
 # En cas d'erreur inattendue : {"blocked": false, "error": "..."} — le quota est
 # indicatif (aucun PSP branche), donc on ne bloque JAMAIS une automatisation
-# a cause d'un bug du verificateur : on laisse passer et on trace.
+# a cause d'un bug du verificateur : on laisse passer et on trace. Ce n'est PAS un verdict sur les droits d'acces : le moteur
+# (AUTOMATION-ENGINE.ps1) ignore toute reponse qui porte un champ "error" et applique alors son repli (forfait Solo/Trio : execution sautee).
 import sys
 import os
 import json

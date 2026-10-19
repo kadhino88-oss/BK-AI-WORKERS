@@ -246,7 +246,11 @@ function Invoke-AutomationRun {
             $QuotaLine = & $PyCmd $QuotaScript $QuotaClientId ([string]$Automation.workerId) $QuotaMode 2>$null | Select-Object -Last 1
             if ($QuotaLine) {
                 $QuotaVerdict = $QuotaLine | ConvertFrom-Json
-                $VerdictObtained = $true
+                # Un verdict n'est valable que s'il porte un `blocked` booleen et AUCUN champ `error` : quand le verificateur plante (import de server.py
+                # impossible, exception dans la facturation), quota-check.py repond {"blocked": false, "error": "..."} - fail-open pour le QUOTA, mais ce n'est
+                # pas un verdict sur les DROITS d'acces : le repli ci-dessous (forfait restreint) doit alors s'appliquer comme sans reponse.
+                $VerdictObtained = ($QuotaVerdict.PSObject.Properties.Name -contains "blocked") -and ($QuotaVerdict.blocked -is [bool]) -and
+                                   -not ($QuotaVerdict.PSObject.Properties.Name -contains "error")
                 if (-not $QuotaVerdict.blocked -and $QuotaVerdict.PSObject.Properties.Name -contains "allowedWorkers" -and $QuotaVerdict.allowedWorkers) {
                     # Offre "Worker a l'unite" : liste des Workers embauches, relue par Submit-Task.ps1 et Chloe (BK_ALLOWED_WORKERS).
                     $AllowedWorkersEnv = [string]$QuotaVerdict.allowedWorkers
