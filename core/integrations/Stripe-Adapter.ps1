@@ -329,8 +329,15 @@ function Remove-StripeSubscription {
             TimeoutSec = 20
         }
         if ($Fields.Count -gt 0) {
-            $Params["ContentType"] = "application/x-www-form-urlencoded"
-            $Params["Body"] = ConvertTo-StripeFormBody -Fields $Fields
+            if ($AtPeriodEnd) {
+                $Params["ContentType"] = "application/x-www-form-urlencoded"
+                $Params["Body"] = ConvertTo-StripeFormBody -Fields $Fields
+            }
+            else {
+                # DELETE : les parametres (prorate, invoice_now) vont dans l'URL, comme le font les SDK officiels de Stripe ; la documentation de
+                # l'API ne montre aucun corps de requete pour DELETE (controle sur papier du 2026-10-19).
+                $Params["Uri"] = $Params["Uri"] + "?" + (ConvertTo-StripeFormBody -Fields $Fields)
+            }
         }
         $Response = Invoke-RestMethod @Params
 
