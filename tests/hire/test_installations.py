@@ -327,6 +327,56 @@ class ReviewFixes(StoreCase):
                      "Commande 123456789012", "Prix 1 200 000 CHF", "Le 2026-10-12 14:30", "Ref 1234 5678 9012 3456 7", "IDE CHE-123.456.789"):
             self.assertFalse(inst.contains_secret(fine), fine)
 
+    @staticmethod
+    def naive_card_number_in(text):
+        """Reference lente et evidente (somme de Luhn recalculee pour chaque tranche) : la version rapide de installations.py doit toujours la suivre."""
+        import re
+        for run in re.finditer(r"(?<!\d)\d+(?:[ -]\d+)*(?!\d)", text):
+            groups = list(re.finditer(r"\d+", run.group()))
+            for i in range(len(groups)):
+                total = 0
+                for j in range(i, len(groups)):
+                    total += len(groups[j].group())
+                    if total > 19:
+                        break
+                    if total < 13:
+                        continue
+                    span = groups[i:j + 1]
+                    if [len(g.group()) for g in span] in ([3, 3, 3, 5], [9, 5]):
+                        continue
+                    if total == 14:
+                        start = run.start() + span[0].start()
+                        if "sire" in text[max(0, start - 16):start].lower():
+                            continue
+                    if inst._luhn_ok("".join(g.group() for g in span)):
+                        return True
+        return False
+
+    def test_the_fast_card_scanner_agrees_with_the_slow_reference_on_random_text(self):
+        import random
+        rnd = random.Random(20261019)
+        pieces = ["4111", "1111", "5500", "0000", "0004", "378282246310005", "123", "12", "2026", "7", "SIRET ", "siren ", "N° ", "x", ".", "/", ", ",
+                  "443", "061", "841", "00047", "443061841", "44306184100047", "9", "0", "4", "42", "99999", "123456789", "abc ", "\n", "1 1 1 1 1 1 1 1 1 1 1 1 1 1"]
+        seps = [" ", " ", " ", "-", "", " - ", "  "]
+        positives = 0
+        for _ in range(4000):
+            text = "".join(rnd.choice(pieces) + rnd.choice(seps) for _ in range(rnd.randint(1, 9)))
+            expected = self.naive_card_number_in(text)
+            positives += expected
+            self.assertEqual(inst._card_number_in(text), expected, repr(text))
+        self.assertGreater(positives, 100)                               # le tirage contient bien des cartes : le test ne compare pas que des faux
+
+    def test_a_field_made_of_single_digits_does_not_stall_the_server(self):
+        # 2e revue (suite) : la Luhn recalculee par tranche coutait ~0,1 ms par groupe de chiffres ; 2000 caracteres « 1 1 1 1 ... » bloquaient donc le
+        # serveur 0,1 s, et une requete peut porter des dizaines de champs (corps jusqu'a 200 Ko), le tout sous le verrou global de l'interpreteur.
+        import time
+        field = "1 " * 1000
+        start = time.time()
+        for _ in range(40):
+            self.assertFalse(inst.contains_secret(field))
+            self.assertFalse(inst.contains_secret(field.replace(" ", "-")))
+        self.assertLess(time.time() - start, 4.0)                        # ~1 s ici ; la version lente en demandait ~10
+
     def test_a_mistyped_knowledge_or_autonomy_is_a_validation_error_not_a_crash(self):
         for field, junk in (("knowledge", "abc"), ("knowledge", ["a"]), ("knowledge", 3), ("autonomy", ["x"]), ("autonomy", "auto"), ("autonomy", 5)):
             bad = good_alex()

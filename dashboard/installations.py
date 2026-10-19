@@ -17,6 +17,7 @@ attribution par le proprietaire apres facture reglee : fonctions pures sur l'eta
 (refus HTTP 403 WORKER_NOT_INCLUDED sur toutes les routes qui demarrent une mission) et dans les scripts PowerShell (BK_ALLOWED_WORKERS).
 Documentation des routes : docs/HIRE-API.md.
 """
+import bisect
 import datetime
 import json
 import os
@@ -61,26 +62,45 @@ def _luhn_ok(digits):
 
 
 def _card_number_in(text):
-    """True si une suite de groupes de chiffres entiers (13 a 19 chiffres au total) du texte passe la somme de Luhn."""
+    """True si une suite de groupes de chiffres entiers (13 a 19 chiffres au total) du texte passe la somme de Luhn.
+
+    Cout lineaire : les sommes de Luhn de TOUTES les tranches d'une suite se lisent en O(1) dans des sommes cumulees (chiffre non double / double,
+    selon la parite de sa position). Recalculer la somme de chaque tranche chiffre par chiffre coutait ~0,1 ms par groupe : un champ de 2000
+    caracteres « 1 1 1 1 ... » (1000 groupes d'un chiffre) bloquait le serveur 0,1 s, et 100 champs d'une meme requete une dizaine de secondes."""
     for run in _DIGIT_RUN_RE.finditer(text):
-        groups = list(_DIGIT_GROUP_RE.finditer(run.group()))
-        for i in range(len(groups)):
-            total = 0
-            for j in range(i, len(groups)):
-                total += len(groups[j].group())
-                if total > 19:
-                    break
-                if total < 13:
-                    continue
-                span = groups[i:j + 1]
-                if [len(g.group()) for g in span] in ([3, 3, 3, 5], [9, 5]):
-                    continue                                    # SIRET dans son groupement officiel (3-3-3-5) ou SIREN + NIC (9-5)
-                if total == 14:
-                    start = run.start() + span[0].start()
-                    if "sire" in text[max(0, start - 16):start].lower():
-                        continue                                # « SIRET 44306184100047 », « N° SIREN/SIRET : ... »
-                if _luhn_ok("".join(g.group() for g in span)):
+        run_text = run.group()
+        groups = [m.span() for m in _DIGIT_GROUP_RE.finditer(run_text)]
+        off = [0]                                              # off[k] = nombre de chiffres qui precedent le groupe k
+        for start, end in groups:
+            off.append(off[-1] + end - start)
+        if off[-1] < 13:
+            continue
+        und, dbl = ([0], [0]), ([0], [0])                      # sommes cumulees par parite de la position du chiffre dans la suite
+        for k, ch in enumerate("".join(run_text[s:e] for s, e in groups)):
+            n = int(ch)
+            doubled = n * 2 - 9 if n > 4 else n * 2
+            for parity in (0, 1):
+                und[parity].append(und[parity][-1] + (n if parity == k % 2 else 0))
+                dbl[parity].append(dbl[parity][-1] + (doubled if parity == k % 2 else 0))
+        count = len(groups)
+        for i in range(count):
+            first = off[i]
+            j = bisect.bisect_left(off, first + 13, i + 1)     # premier groupe dont la fin porte la tranche a 13 chiffres ou plus
+            while j <= count and off[j] - first <= 19:
+                last = off[j]
+                if (j - i == 4 and (off[i + 1] - first, off[i + 2] - off[i + 1], off[i + 3] - off[i + 2], last - off[i + 3]) == (3, 3, 3, 5)) \
+                        or (j - i == 2 and (off[i + 1] - first, last - off[i + 1]) == (9, 5)):
+                    j += 1
+                    continue                                   # SIRET dans son groupement officiel (3-3-3-5) ou SIREN + NIC (9-5)
+                if last - first == 14:
+                    at = run.start() + groups[i][0]
+                    if "sire" in text[max(0, at - 16):at].lower():
+                        j += 1
+                        continue                               # « SIRET 44306184100047 », « N° SIREN/SIRET : ... »
+                q = (last - 1) % 2                             # le dernier chiffre n'est pas double ; un sur deux en remontant l'est
+                if (und[q][last] - und[q][first] + dbl[1 - q][last] - dbl[1 - q][first]) % 10 == 0:
                     return True
+                j += 1
     return False
 
 
