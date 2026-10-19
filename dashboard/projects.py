@@ -86,7 +86,7 @@ class ProjectService(StepMixin, ActionMixin, ViewMixin, HousekeepingMixin):
         self.tick_sec = float(tick_sec)
         self.sleep = sleep
         self.connectors_active = connectors_active or (lambda client_id: pa.active_connectors(self.root, client_id))
-        self.store = ProjectStore(root, write_json=write_json, now=now)
+        self.store = ProjectStore(root, write_json=write_json, now=now, create=self.enabled)
         self.limits = cfg.load_limits(root)
         self.cfg = {"phases": cfg.load_phases(root), "levels": cfg.load_levels(root)}
         self.credit_cost = float(self.limits["budget"]["creditCostChf"])

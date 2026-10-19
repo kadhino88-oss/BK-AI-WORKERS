@@ -1416,6 +1416,17 @@ class StepMixin:
                         t.transition(self._resume_target(t.state), "QUOTA_RESUME")
                         t.event("quota_resume", "Votre quota est de nouveau disponible : le projet reprend.")
             return
+        # une étape RUNNING dont le lanceur a disparu sans que le superviseur l'ait vu (processus tué de l'extérieur) : même traitement qu'au démarrage
+        if status in ("PLANNING", "RUNNING", "VERIFYING") and now - last.get("orphans", 0) >= 30:
+            last["orphans"] = now
+            gap = float(self.limits["step"]["noHeartbeatSec"])
+            with self._procs_lock:
+                live = {sid for (p, sid) in self._procs if p == pid}
+            lost = [sid for sid, s in st["steps"].items() if s.get("status") == "RUNNING" and sid not in live
+                    and now - (ps.parse_iso(s.get("beatUtc")) or ps.parse_iso(s.get("startedUtc")) or now) >= gap]
+            if lost:
+                self._reap_project(pid)
+                return
         # approvals : échéances et rappels (toutes les 30 s), ingestion en direct des articles des étapes en cours (toutes les 10 s)
         ap = st.get("approvals") or {}
         if (ap.get("pending") or ap.get("counts", {}).get("PENDING")) and now - last.get("approvals", 0) >= 30:

@@ -225,7 +225,7 @@ class Txn:
 
 
 class ProjectStore:
-    def __init__(self, root, *, write_json=None, now=time.time):
+    def __init__(self, root, *, write_json=None, now=time.time, create=True):
         self.root = root
         self.base = os.path.join(root, "runtime", "projects")
         self.now = now
@@ -238,7 +238,8 @@ class ProjectStore:
         self._local = threading.local()
         self.hooks = []                  # fn(store, pid, state, events, transitions) appelées après chaque transaction validée
         self.boot_utc = iso(now())
-        os.makedirs(self.base, exist_ok=True)
+        if create:                       # dormant (BK_PROJECTS=0) : aucun dossier n'est créé
+            os.makedirs(self.base, exist_ok=True)
         self._real_base = os.path.realpath(self.base)
         self._dirs_ok = set()
 

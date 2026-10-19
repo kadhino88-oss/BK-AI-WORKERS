@@ -145,6 +145,23 @@ class CrashTests(unittest.TestCase):
         self.assertIn("redémarrage", self.read(e, pid, "steps", "S1", "2", "context.md"))
         self.assertEqual(sum(1 for r in e.svc.store.read_jsonl(pid, "cost-ledger.jsonl") if r["stepId"] == "S1"), 2)
 
+    def test_a_step_whose_runner_vanished_without_the_supervisor_noticing_is_recovered_at_runtime(self):
+        e = self.env(scenario={"S1:1": {"hang": True, "chf": 0.04}})
+        pid = e.create()
+        e.drive(pid, lambda s: s["steps"].get("S1", {}).get("status") == "RUNNING")
+        time.sleep(1.5)
+        with e.svc._procs_lock:
+            sp = e.svc._procs.pop((pid, "S1"))                                             # le superviseur « oublie » le processus
+        e.svc.kill_popen(sp.popen)
+        with e.svc.store.txn(pid) as t:
+            t.state["steps"]["S1"]["beatUtc"] = ps.iso(time.time() - 600)                  # aucun battement depuis 10 minutes
+        e.set_scenario({})
+        st = e.run_to_done(pid)
+        self.assertEqual(st["status"], "DONE")
+        self.assertEqual(st["steps"]["S1"]["attempts"], 2)
+        s1 = [r for r in e.svc.store.read_jsonl(pid, "cost-ledger.jsonl") if r["stepId"] == "S1"]
+        self.assertEqual(s1[0]["chf"], 0.04)
+
     def test_an_interrupted_step_that_was_already_interrupted_twice_fails_instead_of_looping(self):
         e = self.env(scenario={"S1": {"hang": True}}, limits={"step": {"maxReplans": 0}})
         pid = e.create()

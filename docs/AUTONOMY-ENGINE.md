@@ -241,7 +241,7 @@ Ces lanceurs sont **en plus** des 6 missions asynchrones (`ASYNC_MAX_GLOBAL`) : 
 
 ### 2.8 Durée, inactivité, rétention
 
-- **Étape** : échéance douce **480 s** (le lanceur cesse de lancer de nouveaux appels et finalise), arrêt dur **540 s**. Appel API individuel : `callTimeoutSec` de la phase.
+- **Étape** : échéance douce **480 s** (le lanceur cesse de lancer de nouveaux appels et finalise), arrêt dur **540 s** (le superviseur tue le groupe de processus `killGraceSec` = 15 s après `hardDeadlineUtc`, réglable). Le coût d'une étape sans aucun `cost.json` lisible est 0 (aucune réponse reçue : rien n'a été dépensé) ; si des appels ont eu lieu sans prix connu, il est réglé au plafond de l'étape. Appel API individuel : `callTimeoutSec` de la phase.
 - **Projet** : mesuré en heures. `maxDurationHours` par plan (Solo/Trio 72 h de projet actif, Équipe/Pro 168 h, Scale/Enterprise 336 h ; les temps `WAITING_*` ne comptent pas). Un projet `WAITING_INPUT/APPROVAL` sans réponse depuis **14 jours** passe `CANCELLED` (raison `IDLE_EXPIRED`) après deux rappels (J+3, J+10) ; `WAITING_QUOTA` n'expire pas (la reprise est automatique).
 - **Rétention** : projets terminés (`DONE/CANCELLED/FAILED`) : `workspace/` conservé **90 jours**, puis purgé (le journal et le rapport final restent 12 mois, sans fichiers). Le client peut supprimer immédiatement (`DELETE /api/projects/<id>`). Suppression de compte : `shutil.rmtree(runtime/projects/<ClientId>)` ajouté à `_purge_client_mission_artifacts`.
 - **Disque** : par projet 100 Mo (Scale/Enterprise 300 Mo), par client 1 Go (Scale 5 Go) ; au-delà, `workspace_write` renvoie `WORKSPACE_FULL` au modèle (qui supprime ou compresse) et l'API renvoie `413`.
@@ -1036,7 +1036,7 @@ Authentification : `self._resolve_client_id()` (cookie `bk_account` ou porte pro
 
 ### 7.6 Limites de débit (par client ; `hire_rate_ok`-like, `_recent`)
 
-`POST /api/projects` 6/h · `messages` 60/h · décisions d'approbation 300/h (lots comptés pour leur nombre d'éléments) · `pause/resume/cancel/retry-step/budget/accept-gaps` 60/h · `GET progress` 120/min · `GET` autres 120/min · téléchargements et zip 120/h et 10 zip/h · `site/preview` 20/h · `POST /api/chloe/triage` 20/h · routes administration : `hire_rate_ok("grant","owner")` existant. Dépassement → `429 RATE_LIMITED` avec `Retry-After`.
+`POST /api/projects` 6/h (créations acceptées : une saisie refusée par la validation rend sa place ; au plus 60 tentatives/h, clé `createAttempts`) · `messages` 60/h · décisions d'approbation 300/h (lots comptés pour leur nombre d'éléments) · `pause/resume/cancel/retry-step/budget/accept-gaps` 60/h · `GET progress` 120/min · `GET` autres 120/min · téléchargements et zip 120/h et 10 zip/h · `site/preview` 20/h · `POST /api/chloe/triage` 20/h · routes administration : `hire_rate_ok("grant","owner")` existant. Dépassement → `429 RATE_LIMITED` avec `Retry-After`.
 
 ### 7.7 Interface du lanceur d'étape (PowerShell) — pour le constructeur « moteur »
 
