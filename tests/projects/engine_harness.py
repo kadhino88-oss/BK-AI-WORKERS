@@ -155,7 +155,8 @@ class Env:
         self.set_scenario(scenario)
         os.environ["FAKE_SCENARIO"] = self.scenario_path
         os.environ["BK_ROOT"] = self.root
-        self.runner_cmd = runner_cmd or (lambda i, o: [sys.executable, FAKE_RUNNER, i, o])
+        # le dernier argument imite la ligne de commande du vrai lanceur : sous Linux, le moteur ne tue un processus orphelin que si /proc/<pid>/cmdline la contient
+        self.runner_cmd = runner_cmd or (lambda i, o: [sys.executable, FAKE_RUNNER, i, o, "Project-StepRunner"])
         self.tick_sec = tick_sec
         self.enabled = enabled
         self.allowlist = allowlist

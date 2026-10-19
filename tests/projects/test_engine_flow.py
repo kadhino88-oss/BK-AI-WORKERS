@@ -232,7 +232,7 @@ class FlowTests(unittest.TestCase):
         pid = e.create()
         e.drive(pid, lambda s: s["steps"].get("S1", {}).get("status") == "RUNNING")
         e.svc.pause(CLIENT, pid)
-        time.sleep(1.5)
+        e.drive(pid, lambda s: s["steps"]["S1"]["status"] == "DONE", timeout=30)         # l'etape lancee se termine (la duree depend de la machine)
         for _ in range(10):
             e.svc.tick()
             time.sleep(0.05)

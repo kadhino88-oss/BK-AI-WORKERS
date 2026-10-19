@@ -572,10 +572,6 @@ def tool_project_plan(ctx, inp):
 
 
 # ------------------------------------------------------------------ approbations (écrites par request_approval, ingérées par Python)
-def _ops_snapshot():
-    return _read_json(os.path.join(ROOT, "core", "projects", "CONNECTOR-OPS.json"), {}) or {}
-
-
 def tool_request_approval(ctx, inp):
     import projects_approvals as pa
     kind = inp.get("kind", "connector")

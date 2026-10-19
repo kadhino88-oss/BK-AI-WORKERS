@@ -137,7 +137,10 @@ class StepMixin:
                     connectors=need)
             return ("BLOCKED",)
         b = st["budget"]
-        reserved_running = sum(int(s.get("reservedCredits") or 0) for s in st["steps"].values() if s.get("status") == "RUNNING")
+        with self._procs_lock:
+            live = {sid_ for (p_, sid_) in self._procs if p_ == t.pid}
+        # seules les réservations d'étapes dont le lanceur tourne vraiment réduisent le plafond (une étape perdue sera réglée par la reprise, elle ne bloque rien)
+        reserved_running = sum(int(s.get("reservedCredits") or 0) for sid_, s in st["steps"].items() if s.get("status") == "RUNNING" and sid_ in live)
         cap_left = int(b.get("creditsCap") or 0) - int(b.get("creditsCharged") or 0) - (0 if kind == "answer" else reserved_running)
         min_start = int(lim["budget"]["minStartCredits"])
         if kind == "answer":
@@ -1472,8 +1475,7 @@ class StepMixin:
                         t.event("quota_resume", "Votre quota est de nouveau disponible : le projet reprend.")
             return
         # une étape RUNNING dont le lanceur a disparu sans que le superviseur l'ait vu (processus tué de l'extérieur) : même traitement qu'au démarrage
-        if status in ("PLANNING", "RUNNING", "VERIFYING") and now - last.get("orphans", 0) >= 30:
-            last["orphans"] = now
+        if status not in ("PAUSED", "WAITING_QUOTA"):
             gap = float(self.limits["step"]["noHeartbeatSec"])
             with self._procs_lock:
                 live = {sid for (p, sid) in self._procs if p == pid}
