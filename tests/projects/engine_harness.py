@@ -126,7 +126,7 @@ class Env:
     """Un moteur complet sur un dossier temporaire."""
 
     def __init__(self, plan="equipe", usage=None, scope=None, scenario=None, connectors=(), limits=None, paused=None, runner_cmd=None, tick_sec=0.05,
-                 client=CLIENT, enabled=True, allowlist=None):
+                 client=CLIENT, enabled=True, allowlist=None, chf=None):
         self.root = tempfile.mkdtemp(prefix="bkeng-")
         for rel in ("core/projects/APPROVAL-RISK.json", "core/projects/PROJECT-LIMITS.json", "core/ai/PROJECT-PHASES.json", "core/ai/LEVELS.json",
                     "core/integrations/Connector-Dispatch.ps1", "core/projects/WORKER-CARDS.json"):
@@ -149,7 +149,10 @@ class Env:
         self.connector_result = {"Status": "SUCCESS", "Detail": "ok"}
         self.activate(connectors)
         self.scenario_path = os.path.join(self.root, "scenario.json")
-        self.set_scenario(scenario or {})
+        scenario = dict(scenario or {})
+        if chf is not None:
+            scenario["_defaults"] = {"chf": chf}                  # cout simule par defaut de chaque etape (0,02 CHF si omis)
+        self.set_scenario(scenario)
         os.environ["FAKE_SCENARIO"] = self.scenario_path
         os.environ["BK_ROOT"] = self.root
         self.runner_cmd = runner_cmd or (lambda i, o: [sys.executable, FAKE_RUNNER, i, o])

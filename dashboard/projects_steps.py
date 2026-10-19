@@ -494,7 +494,9 @@ class StepMixin:
         b = st["budget"]
         chf = cost.get("estimated_cost_chf") if isinstance(cost, dict) else None
         if not isinstance(chf, (int, float)) or isinstance(chf, bool):
-            chf = float(step.get("ceilingChf") or 0) if (isinstance(cost, dict) and cost.get("api_calls")) or step.get("status") == "RUNNING" else 0.0
+            # Pas de coût lisible : si des appels ont eu lieu sans prix connu (modèle non tarifé), on règle au plafond de l'étape (le client ne
+            # paie jamais moins que ce que nous avons dépensé) ; si aucune réponse n'est jamais arrivée (arrêt avant le premier appel), rien n'a été dépensé.
+            chf = float(step.get("ceilingChf") or 0) if isinstance(cost, dict) and cost.get("api_calls") else 0.0
         chf = max(0.0, float(chf))
         b["chfSpent"] = round(float(b.get("chfSpent") or 0) + chf, 6)
         new_total = cfg.credits_for_chf(b["chfSpent"], self.credit_cost)

@@ -7,7 +7,7 @@ Les actions passent par les VRAIS outils (project_tools.run_tool) : memes ecritu
 validations. Le comportement vient du scenario (variable FAKE_SCENARIO = chemin d'un JSON) :
     { "<kind>:<stepId>:<tentative>" | "<kind>:<stepId>" | "<stepId>" | "<kind>" : comportement, ... }   (la cle la plus precise gagne)
 Comportement : {"actions":[{"tool":..., "input":{...}}], "complete":{...step_complete...}, "status":"DONE|PARTIAL|...", "exitReason":"...",
-                "chf":0.02, "crash":true, "hang":true, "sleep":0.2, "answerText":"...", "error":"...", "exit":12, "writeResult":false}
+                "chf":0.02 (defaut : "_defaults": {"chf": ..} dans le scenario), "crash":true, "hang":true, "sleep":0.2, "answerText":"...", "error":"...", "exit":12, "writeResult":false}
 Sans scenario, des comportements par defaut produisent un projet complet et coherent (plan de 3 etapes, livrables, verdicts PASS).
 """
 import json
@@ -90,11 +90,12 @@ def main():
     scenario = read_json(os.environ.get("FAKE_SCENARIO") or "", {}) or {}
     beh = pick(scenario, inp)
     base = default_behavior(inp)
+    dflt = scenario.get("_defaults") if isinstance(scenario.get("_defaults"), dict) else {}
     if beh is None:
         beh = base
     else:                                   # ce que le scenario ne precise pas vient du comportement par defaut
         beh = dict(beh)
-        if not any(k in beh for k in ("complete", "blocked", "report", "answerText", "hang", "crash")):
+        if not any(k in beh for k in ("complete", "blocked", "report", "answerText", "hang", "crash")) and beh.get("status") not in ("FAILED", "RETRY_LATER", "BLOCKED", "NEEDS_INPUT"):
             beh["complete"] = base.get("complete")
             beh.setdefault("answerText", base.get("answerText", ""))
         if "actions" not in beh:
@@ -111,7 +112,7 @@ def main():
             print("expected an error", act)
         if beh.get("verbose"):
             print(json.dumps(out)[:300])
-    chf = float(beh.get("chf", 0.02))
+    chf = float(beh.get("chf", dflt.get("chf", 0.02)))
     usage = {"input_tokens": 1000, "output_tokens": 100, "api_calls": 2, "estimated_cost_usd": round(chf / 0.83107, 6), "estimated_cost_chf": chf,
              "cost_capped": bool(beh.get("capped")), "cost_ceiling_chf": inp.get("ceilingChf")}
     with open(os.path.join(sd, "cost.json"), "w", encoding="utf-8") as f:

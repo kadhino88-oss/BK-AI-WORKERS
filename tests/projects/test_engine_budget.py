@@ -21,7 +21,7 @@ class BudgetTests(unittest.TestCase):
 
     # ------------------------------------------------------------------ plafond du projet
     def test_project_cap_reached_stops_cleanly_and_raising_the_cap_resumes(self):
-        e = self.env()
+        e = self.env(chf=0.15)                                           # 0,15 CHF par etape = 4 credits
         pid = e.create(credits_cap=12)                                    # le plan seul consomme deja ; le plafond sera atteint en route
         st = e.drive(pid, lambda s: s["status"] in ("BUDGET_REACHED", "DONE"), timeout=60)
         self.assertEqual(st["status"], "BUDGET_REACHED")
@@ -41,7 +41,7 @@ class BudgetTests(unittest.TestCase):
         self.assertEqual(e.run_to_done(pid)["status"], "DONE")
 
     def test_accepting_the_gaps_at_the_cap_finishes_with_an_honest_report(self):
-        e = self.env()
+        e = self.env(chf=0.15)
         pid = e.create(credits_cap=12)
         e.drive(pid, lambda s: s["status"] == "BUDGET_REACHED", timeout=60)
         out = e.svc.accept_gaps(CLIENT, pid)
@@ -53,7 +53,7 @@ class BudgetTests(unittest.TestCase):
             self.assertTrue(st["doneProblems"])                           # jamais « termine » avec un trou cache
 
     def test_a_step_is_never_launched_with_less_than_the_minimum_credits_left_in_the_cap(self):
-        e = self.env()
+        e = self.env(chf=0.15)
         pid = e.create(credits_cap=7)
         st = e.drive(pid, lambda s: s["status"] == "BUDGET_REACHED", timeout=60)
         running = [k for k, v in st["steps"].items() if v["status"] == "RUNNING"]
@@ -62,8 +62,8 @@ class BudgetTests(unittest.TestCase):
     # ------------------------------------------------------------------ fenetres d'usage : WAITING_QUOTA et reprise automatique
     def test_session_window_reached_waits_with_the_renewal_time_and_resumes_by_itself(self):
         usage = FakeUsage(session=14, week=500, month=900)
-        e = self.env(usage=usage)
-        pid = e.create()
+        e = self.env(usage=usage, chf=0.15)                                          # 4 credits par etape : la session de 14 s'epuise avant la fin
+        pid = e.create(credits_cap=60)
         st = e.drive(pid, lambda s: s["status"] == "WAITING_QUOTA", timeout=60)
         self.assertEqual(st["statusReason"], "SESSION")
         self.assertEqual(st["waitingFor"], "QUOTA")
@@ -90,8 +90,8 @@ class BudgetTests(unittest.TestCase):
 
     def test_resume_at_the_simulated_resume_time_even_without_renewal_data(self):
         usage = FakeUsage(session=14)
-        e = self.env(usage=usage)
-        pid = e.create()
+        e = self.env(usage=usage, chf=0.15)
+        pid = e.create(credits_cap=60)
         st = e.drive(pid, lambda s: s["status"] == "WAITING_QUOTA", timeout=60)
         with e.svc.store.txn(pid) as t:
             t.state["resumeAtUtc"] = iso(time.time() - 1)                            # l'heure de reprise est passee
@@ -100,8 +100,8 @@ class BudgetTests(unittest.TestCase):
 
     def test_an_upgrade_resumes_the_project_at_once(self):
         usage = FakeUsage(session=14, week=500, month=900)
-        e = self.env(usage=usage)
-        pid = e.create()
+        e = self.env(usage=usage, chf=0.15)
+        pid = e.create(credits_cap=60)
         e.drive(pid, lambda s: s["status"] == "WAITING_QUOTA", timeout=60)
         usage.w["session"]["limit"] = 115                                            # montee en gamme : la fenetre s'elargit tout de suite
         usage.w["week"]["limit"] = 287
@@ -112,8 +112,8 @@ class BudgetTests(unittest.TestCase):
     def test_week_and_month_windows_bind_too(self):
         for name, reason in (("week", "WEEK"), ("month", "MONTH")):
             usage = FakeUsage(session=1000, week=14 if name == "week" else 1000, month=14 if name == "month" else 1000)
-            e = self.env(usage=usage)
-            pid = e.create()
+            e = self.env(usage=usage, chf=0.15)
+            pid = e.create(credits_cap=60)
             st = e.drive(pid, lambda s: s["status"] == "WAITING_QUOTA", timeout=60)
             self.assertEqual(st["statusReason"], reason)
             self.assertEqual(st["resumeAtUtc"], usage.w[name]["resetsAtUtc"])
@@ -221,7 +221,7 @@ class BudgetTests(unittest.TestCase):
         self.assertEqual(cm.exception.code, "PROJECT_NOT_IN_PLAN")
 
     def test_active_project_limit_queues_then_refuses_beyond_the_queue(self):
-        e = self.env(plan="solo", scenario={"PLAN1": {"hang": True, "actions": []}})
+        e = self.env(plan="solo", limits={"createPerDay": {"solo": 50}}, scenario={"PLAN1": {"hang": True, "actions": []}})
         p1 = e.create()
         out2 = e.svc.create_project(CLIENT, "Deuxieme projet", "chloe")
         self.assertEqual((out2["status"], out2["queuePosition"]), ("QUEUED", 1))
@@ -289,7 +289,7 @@ class BudgetTests(unittest.TestCase):
         with self.assertRaises(ps.ProjectError) as cm:
             e.svc.approve_plan(CLIENT, pid)
         self.assertEqual(cm.exception.code, "PROJECT_EXCEEDS_QUOTA")
-        self.assertEqual(cm.exception.extra["remaining"], 7)
+        self.assertEqual(cm.exception.extra["remaining"], 7 - e.state(pid)["budget"]["creditsCharged"])      # le solde mensuel apres le plan
         self.assertEqual(cm.exception.extra["estimate"]["creditsMin"], 70)
         self.assertEqual(len(cm.exception.extra["options"]), 3)
         self.assertEqual(e.state(pid)["status"], "WAITING_INPUT")                    # le client choisit : rien n'est parti
