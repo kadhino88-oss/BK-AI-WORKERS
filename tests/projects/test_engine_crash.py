@@ -20,6 +20,14 @@ class CrashTests(unittest.TestCase):
         self.addCleanup(e.close)
         return e
 
+    def wait_cost(self, e, pid, sid="S1", attempt=1, timeout=30):
+        """Attend que le faux lanceur ait écrit son cost.json (le démarrage de Python est plus lent sous WSL que sous Windows)."""
+        path = os.path.join(e.svc.store.project_dir(pid), "steps", sid, str(attempt), "cost.json")
+        end = time.time() + timeout
+        while time.time() < end and not os.path.isfile(path):
+            time.sleep(0.1)
+        self.assertTrue(os.path.isfile(path), "le lanceur n'a pas écrit son coût")
+
     def read(self, e, pid, *parts):
         with open(os.path.join(e.svc.store.project_dir(pid), *parts), encoding="utf-8") as f:
             return f.read()
@@ -74,7 +82,7 @@ class CrashTests(unittest.TestCase):
         e = self.env(scenario={"S1": {"hang": True, "chf": 0.05}})
         pid = e.create()
         e.drive(pid, lambda s: s["steps"].get("S1", {}).get("status") == "RUNNING")
-        time.sleep(1.5)                                                                     # le lanceur a écrit son coût (0,05 CHF)
+        self.wait_cost(e, pid)                                                              # le lanceur a écrit son coût (0,05 CHF)
         e.svc.kill_all_running("OWNER_KILLED")
         st = e.state(pid)
         self.assertEqual(st["steps"]["S1"]["status"], "READY")
@@ -122,17 +130,22 @@ class CrashTests(unittest.TestCase):
         e = self.env(scenario={"S1:1": {"hang": True, "chf": 0.075}})
         pid = e.create()
         e.drive(pid, lambda s: s["steps"].get("S1", {}).get("status") == "RUNNING")
-        time.sleep(1.5)
+        self.wait_cost(e, pid)
         with open(os.path.join(e.svc.store.project_dir(pid), "steps", "S1", "1", "pid"), encoding="utf-8") as f:
             orphan = json.load(f)["pid"]
         self.assertTrue(ps.pid_alive(orphan))
         old = e.svc
+        orphan_popen = next(iter(old._procs.values())).popen               # le serveur mort ne « récolte » plus son enfant : ici on le fait à sa place (sous Linux, un enfant tué reste zombie tant que son parent ne l'a pas attendu)
         old._stop = True                                                                    # le serveur meurt : plus de superviseur, le lanceur orphelin survit
         e.svc = e.new_service()
         e.svc.reap(boot=True)
         st = e.state(pid)
         self.assertEqual(st["steps"]["S1"]["status"], "READY")
         self.assertIn("redémarrage", st["steps"]["S1"]["resumeNote"])
+        try:
+            orphan_popen.wait(timeout=10)
+        except Exception:  # noqa: BLE001
+            pass
         deadline = time.time() + 10
         while ps.pid_alive(orphan) and time.time() < deadline:
             time.sleep(0.2)
@@ -149,7 +162,7 @@ class CrashTests(unittest.TestCase):
         e = self.env(scenario={"S1:1": {"hang": True, "chf": 0.04}})
         pid = e.create()
         e.drive(pid, lambda s: s["steps"].get("S1", {}).get("status") == "RUNNING")
-        time.sleep(1.5)
+        self.wait_cost(e, pid)
         with e.svc._procs_lock:
             sp = e.svc._procs.pop((pid, "S1"))                                             # le superviseur « oublie » le processus
         e.svc.kill_popen(sp.popen)
