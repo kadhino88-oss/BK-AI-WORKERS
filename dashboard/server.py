@@ -3279,7 +3279,8 @@ def cancel_billing_plan(client_id=DASHBOARD_CLIENT_ID):
         state["planId"] = "essai"
         # Le cycle n'est PAS remis a zero : la fenetre mensuelle en cours est conservee et ses missions restent comptees, sinon
         # s'abonner puis annuler redonnerait 15 credits d'essai gratuits a chaque fois (l'essai n'est pas renouvelable).
-        state["cycleStartUtc"] = billing_cycle(state.get("cycleStartUtc", now), old_plan.get("renews", True))[0]
+        # (_window_clock : pendant les jours de grace d'un forfait sur facture, la derniere fenetre PAYEE est gardee, pas la suivante, que personne n'a payee.)
+        state["cycleStartUtc"] = billing_cycle(state.get("cycleStartUtc", now), old_plan.get("renews", True), _window_clock(state))[0]
         state["extraCredits"] = 0
         for key in ("contractCredits", "paidUntilUtc", "cancelAtPeriodEnd", "billingInterval"):
             state.pop(key, None)

@@ -46,6 +46,15 @@ class GraceWindow(Fixture):
         out = server.get_billing(A)
         self.assertEqual((out["planId"], out["creditsRemaining"]), ("essai", 0))
 
+    def test_cancelling_in_the_grace_days_does_not_give_a_fresh_trial_either(self):
+        # Meme fuite par une autre porte : l'annulation immediate recalculait la fenetre a l'horloge reelle, donc ouvrait la fenetre suivante (non payee)
+        # et l'Essai repartait avec 15 credits neufs au lieu de garder les missions deja comptees.
+        server.set_client_plan(A, "pro")
+        write_task_record(A, 1250, "2026-10-20T00:00:00Z")
+        server._utcnow = lambda: NOW.replace(month=11, day=14)
+        out = server.cancel_billing_plan(A)
+        self.assertEqual((out["planId"], out["creditsUsed"], out["creditsRemaining"]), ("essai", 1250, 0))
+
     def test_missions_run_during_the_grace_days_count_on_the_last_paid_window(self):
         server.set_client_plan(A, "pro")
         server._utcnow = lambda: NOW.replace(month=11, day=14)
