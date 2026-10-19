@@ -71,9 +71,21 @@ class ToolError(Exception):
 REGISTRY = {}        # nom -> {"fn": callable(ctx, input) -> dict, "kinds": None | ensemble}
 
 
-def register_tool(name, fn, kinds=None):
-    """Enregistre un outil (atelier de sites : site_*). kinds = ensemble de sortes d'étape autorisées (None : execute, fix)."""
-    REGISTRY[name] = {"fn": fn, "kinds": frozenset(kinds) if kinds else frozenset(("execute", "fix"))}
+def register_tool(name, fn, kinds=None, definition=None):
+    """Enregistre un outil (atelier de sites : site_*). kinds = ensemble de sortes d'étape autorisées (None : execute, fix). definition = définition
+    d'outil côté client pour le modèle ({"name","description","input_schema"[,"input_examples"]}) : le lanceur la demande à `project-tool.py _definitions`
+    pour tout outil de input.json qui n'est pas dans sa table interne."""
+    REGISTRY[name] = {"fn": fn, "kinds": frozenset(kinds) if kinds else frozenset(("execute", "fix")), "definition": definition}
+
+
+def definitions_for(names):
+    """Définitions d'outils des noms demandés qui en portent une (outils enregistrés par d'autres modules)."""
+    out = {}
+    for n in names or []:
+        ent = REGISTRY.get(n)
+        if ent and isinstance(ent.get("definition"), dict):
+            out[n] = ent["definition"]
+    return out
 
 
 def now_iso():

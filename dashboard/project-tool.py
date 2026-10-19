@@ -41,7 +41,11 @@ def main(argv):
     except ValueError:
         sys.stdout.write(json.dumps({"ok": False, "error": "INVALID_INPUT", "detail": "L'entrée n'est pas du JSON."}) + "\n")
         return 2
-    out = project_tools.run_tool(argv[1], payload)
+    if argv[1] == "_definitions":                  # définitions des outils enregistrés par d'autres modules (site_*) : appelé par le lanceur
+        names = payload.get("names") if isinstance(payload, dict) else None
+        out = {"ok": True, "result": {"definitions": project_tools.definitions_for([n for n in names if isinstance(n, str)] if isinstance(names, list) else [])}}
+    else:
+        out = project_tools.run_tool(argv[1], payload)
     sys.stdout.write(json.dumps(out, ensure_ascii=False) + "\n")
     return 2 if out.get("error") == "UNKNOWN_TOOL" else 0
 
