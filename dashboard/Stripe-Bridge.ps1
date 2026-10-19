@@ -7,7 +7,7 @@
 # =====================================================================
 
 param(
-    [Parameter(Mandatory=$true)][ValidateSet("status", "create-checkout", "confirm", "cancel-subscription")][string]$Action,
+    [Parameter(Mandatory=$true)][ValidateSet("status", "create-checkout", "confirm", "cancel-subscription", "get-subscription", "resume-subscription")][string]$Action,
     [string]$PlanId = "",
     [string]$SessionId = "",
     [string]$SuccessUrl = "",
@@ -15,6 +15,8 @@ param(
     [string]$SubscriptionId = "",
     [ValidateSet("month", "year")][string]$Interval = "month",
     [string]$ClientId = "",
+    # Client Stripe deja connu du compte (cus_...), reutilise par la Checkout Session (voir Get-StripeCheckoutFields).
+    [string]$CustomerId = "",
     # Montant du catalogue du serveur (centimes de CHF) et nom du forfait, pour les forfaits sans Price ID Stripe (voir Stripe-Adapter.ps1).
     [long]$AmountCents = 0,
     [string]$PlanName = "",
@@ -44,9 +46,11 @@ $Result = switch ($Action) {
             [pscustomobject]@{ Configured = $false }
         }
     }
-    "create-checkout"     { New-StripeCheckoutSession -PlanId $PlanId -SuccessUrl $SuccessUrl -CancelUrl $CancelUrl -Interval $Interval -ClientId $ClientId -AmountCents $AmountCents -PlanName $PlanName }
+    "create-checkout"     { New-StripeCheckoutSession -PlanId $PlanId -SuccessUrl $SuccessUrl -CancelUrl $CancelUrl -Interval $Interval -ClientId $ClientId -AmountCents $AmountCents -PlanName $PlanName -CustomerId $CustomerId }
     "confirm"             { Get-StripeCheckoutSession -SessionId $SessionId }
     "cancel-subscription" { Remove-StripeSubscription -SubscriptionId $SubscriptionId -AtPeriodEnd:$AtPeriodEnd -Prorate:$Prorate }
+    "get-subscription"    { Get-StripeSubscription -SubscriptionId $SubscriptionId }
+    "resume-subscription" { Resume-StripeSubscription -SubscriptionId $SubscriptionId }
 }
 
 [System.IO.File]::WriteAllText(

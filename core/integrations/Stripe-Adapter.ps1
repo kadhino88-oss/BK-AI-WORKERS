@@ -60,13 +60,19 @@ function Get-StripeCheckoutFields {
         [string]$PriceId = "",
         [long]$AmountCents = 0,
         [string]$PlanName = "",
-        [string]$LaunchCoupon = ""
+        [string]$LaunchCoupon = "",
+        # Client Stripe (cus_...) deja connu pour ce compte : sans lui, chaque Checkout Session en mode abonnement cree un NOUVEAU client Stripe, et le
+        # credit de prorata d'un ancien abonnement resilie (montee en gamme) reste sur l'ancien client, jamais applique au nouvel abonnement.
+        [string]$CustomerId = ""
     )
 
     $Fields = [ordered]@{
         "mode"                          = "subscription"
         "success_url"                   = $SuccessUrl
         "cancel_url"                    = $CancelUrl
+    }
+    if ($CustomerId -match '^cus_[A-Za-z0-9_]{1,200}$') {
+        $Fields["customer"] = $CustomerId
     }
     if (-not [string]::IsNullOrWhiteSpace($PriceId)) {
         $Fields["line_items[0][price]"] = $PriceId
@@ -132,7 +138,8 @@ function New-StripeCheckoutSession {
         # Montant du catalogue du serveur (centimes de CHF) et nom du forfait : utilises quand AUCUN Price ID n'est enregistre pour ce
         # forfait (voir Get-StripeCheckoutFields). 0 = pas de montant fourni.
         [long]$AmountCents = 0,
-        [string]$PlanName = ""
+        [string]$PlanName = "",
+        [string]$CustomerId = ""
     )
 
     if (-not (Test-StripeConfigured)) {
@@ -148,7 +155,8 @@ function New-StripeCheckoutSession {
         }
 
         $Fields = Get-StripeCheckoutFields -PlanId $PlanId -SuccessUrl $SuccessUrl -CancelUrl $CancelUrl -Interval $Interval -ClientId $ClientId `
-            -PriceId ([string]$PriceId) -AmountCents $AmountCents -PlanName $PlanName -LaunchCoupon ([string]$env:BK_STRIPE_LAUNCH_COUPON)
+            -PriceId ([string]$PriceId) -AmountCents $AmountCents -PlanName $PlanName -LaunchCoupon ([string]$env:BK_STRIPE_LAUNCH_COUPON) `
+            -CustomerId $CustomerId
 
         $Body = ConvertTo-StripeFormBody -Fields $Fields
 
@@ -243,11 +251,23 @@ function Get-StripeCheckoutSession {
             SubscriptionId     = $Sub.Id
             SubscriptionStatus = $Sub.Status
             CurrentPeriodEnd   = $Sub.CurrentPeriodEnd
+            # Client Stripe qui a paye : le serveur le garde pour que les Checkout Sessions suivantes du meme compte le reutilisent.
+            CustomerId         = if ($Response.customer -is [string]) { $Response.customer } elseif ($Response.customer) { [string]$Response.customer.id } else { $null }
         }
     }
     catch {
         return [pscustomobject]@{ Status = "ERROR"; Detail = $_.Exception.Message }
     }
+}
+
+function Get-StripeErrorStatus {
+    # Code HTTP d'une erreur d'appel Stripe (404 = ressource introuvable) ; $null quand il n'y a pas de reponse HTTP (reseau, delai depasse).
+    param($ErrorRecord)
+    try {
+        if ($ErrorRecord.Exception.Response -and $ErrorRecord.Exception.Response.StatusCode) { return [int]$ErrorRecord.Exception.Response.StatusCode }
+    }
+    catch { }
+    return $null
 }
 
 function Get-StripeCancelFields {
@@ -314,6 +334,86 @@ function Remove-StripeSubscription {
         }
     }
     catch {
-        return [pscustomobject]@{ Status = "ERROR"; Detail = $_.Exception.Message }
+        return [pscustomobject]@{ Status = "ERROR"; Detail = $_.Exception.Message; HttpStatus = (Get-StripeErrorStatus -ErrorRecord $_) }
+    }
+}
+
+function Get-StripeSubscription {
+    <#
+    Relit l'etat d'un abonnement DEPUIS STRIPE (lecture seule) : Status (active, trialing, past_due, unpaid, canceled, incomplete_expired...),
+    CancelAtPeriodEnd, CurrentPeriodEnd. Le serveur s'en sert pour savoir qu'un abonnement a ete resilie, impaye ou arrete cote Stripe (tableau de
+    bord Stripe, paiement refuse) : sans cela, un forfait Stripe ne se terminerait jamais de lui-meme.
+    #>
+    param([Parameter(Mandatory=$true)][string]$SubscriptionId)
+
+    if (-not (Test-StripeConfigured)) {
+        return [pscustomobject]@{ Status = "NOT_CONFIGURED" }
+    }
+    if ($SubscriptionId -notmatch '^sub_[A-Za-z0-9_]{1,200}$') {
+        return [pscustomobject]@{ Status = "ERROR"; Detail = "INVALID_SUBSCRIPTION_ID" }
+    }
+
+    try {
+        $Secret = Get-StripeSecret
+        $Response = Invoke-RestMethod -Uri "https://api.stripe.com/v1/subscriptions/$SubscriptionId" `
+            -Method GET `
+            -Headers @{ Authorization = "Bearer $($Secret.secret_key)" } `
+            -TimeoutSec 20
+
+        $Sub = ConvertTo-StripeSubscriptionSummary -Subscription $Response
+        return [pscustomobject]@{
+            Status             = "SUCCESS"
+            SubscriptionId     = $Sub.Id
+            SubscriptionStatus = $Sub.Status
+            CancelAtPeriodEnd  = $Sub.CancelAtPeriodEnd
+            CurrentPeriodEnd   = $Sub.CurrentPeriodEnd
+        }
+    }
+    catch {
+        return [pscustomobject]@{ Status = "ERROR"; Detail = $_.Exception.Message; HttpStatus = (Get-StripeErrorStatus -ErrorRecord $_) }
+    }
+}
+
+function Get-StripeResumeFields {
+    # Champs pour reprendre un abonnement resilie en fin de periode (fonction PURE, testable sans Stripe) : cancel_at_period_end=false.
+    $Fields = [ordered]@{}
+    $Fields["cancel_at_period_end"] = "false"
+    return $Fields
+}
+
+function Resume-StripeSubscription {
+    <#
+    Annule la resiliation en fin de periode d'un abonnement encore actif : le client qui change d'avis garde SON abonnement et le temps deja paye, il
+    n'est pas facture une seconde fois (une nouvelle Checkout Session creait un nouvel abonnement et laissait le temps paye sur l'ancien).
+    #>
+    param([Parameter(Mandatory=$true)][string]$SubscriptionId)
+
+    if (-not (Test-StripeConfigured)) {
+        return [pscustomobject]@{ Status = "NOT_CONFIGURED" }
+    }
+    if ($SubscriptionId -notmatch '^sub_[A-Za-z0-9_]{1,200}$') {
+        return [pscustomobject]@{ Status = "ERROR"; Detail = "INVALID_SUBSCRIPTION_ID" }
+    }
+
+    try {
+        $Secret = Get-StripeSecret
+        $Response = Invoke-RestMethod -Uri "https://api.stripe.com/v1/subscriptions/$SubscriptionId" `
+            -Method POST `
+            -Headers @{ Authorization = "Bearer $($Secret.secret_key)" } `
+            -ContentType "application/x-www-form-urlencoded" `
+            -Body (ConvertTo-StripeFormBody -Fields (Get-StripeResumeFields)) `
+            -TimeoutSec 20
+
+        $Sub = ConvertTo-StripeSubscriptionSummary -Subscription $Response
+        return [pscustomobject]@{
+            Status             = "SUCCESS"
+            SubscriptionId     = $Sub.Id
+            SubscriptionStatus = $Sub.Status
+            CancelAtPeriodEnd  = $Sub.CancelAtPeriodEnd
+            CurrentPeriodEnd   = $Sub.CurrentPeriodEnd
+        }
+    }
+    catch {
+        return [pscustomobject]@{ Status = "ERROR"; Detail = $_.Exception.Message; HttpStatus = (Get-StripeErrorStatus -ErrorRecord $_) }
     }
 }

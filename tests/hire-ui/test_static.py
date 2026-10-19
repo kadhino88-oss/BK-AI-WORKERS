@@ -316,6 +316,21 @@ check("la page Tarifs lit l'echelle publique complete, pas celle du forfait du v
 check("la montee en gamme propose le rythme de paiement de l'abonne (annuel ou mensuel)", "up && up.interval) || billingInterval" in APP and "nxt.priceChf.year" in APP)
 check("l'annulation d'un abonnement demande une confirmation et annonce la fin de periode", "Résilier l'abonnement ?" in APP and "cancelAtPeriodEnd" in APP)
 check("aucune popularite non mesuree (« Le plus choisi ») sur la page Tarifs", "Le plus choisi" not in APP)
+# 2e revue : un paiement revenu de Stripe ne se perd plus si la confirmation echoue (delai du pont, reseau coupe, onglet ferme)
+RETURN = APP[APP.index("async function handleStripeCheckoutReturn"):APP.index("async function cancelBillingPlan")].replace("\r\n", "\n")
+check("l'identifiant de session Stripe est garde en local AVANT d'etre retire de l'adresse, et efface seulement apres confirmation ou refus definitif",
+      RETURN.index("pendingCheckoutSet(sessionId)") < RETURN.index("window.history.replaceState") < RETURN.index("confirmCheckoutSession(sessionId)")
+      and "CHECKOUT_FINAL_ERRORS" in APP and 'pendingCheckoutSet("")' in APP and "localStorage" in APP)
+check("un paiement non confirme est retente au chargement et par un bouton « Verifier mon paiement »",
+      "retryPendingCheckout" in APP and 'id="billing-pending-btn"' in HTML and "Vérifier mon paiement" in HTML and "pendingCheckoutGet()" in RETURN)
+check("une erreur reseau pendant la confirmation n'est pas une exception non rattrapee (try/catch autour de fetchJson)",
+      "async function confirmCheckoutSession" in APP and APP[APP.index("async function confirmCheckoutSession"):APP.index("async function handleStripeCheckoutReturn")].count("catch") >= 1)
+check("l'annulation affiche l'erreur du serveur (Stripe injoignable) au lieu de rien", "if (result && result.error) {" in APP[APP.index("async function cancelBillingPlan"):APP.index("// ---------- AUTOMATISATIONS")])
+check("la liste des automatisations echappe l'objectif et le libelle du dernier passage (XSS stocke)",
+      "escapeHtml(a.objective)" in APP and "${a.objective}" not in APP and "escapeHtml(statusLabel)" in APP)
+check("la suppression de compte ne dit plus de resilier un abonnement deja resilie et previent de la perte du temps paye",
+      "le temps déjà payé n'est pas remboursé" in APP and "Une fois la résiliation enregistrée, vous pouvez supprimer votre compte tout de suite" in APP)
+check("un forfait sur facture en dernier mois paye est annonce « valable jusqu'au », pas « renouvele »", "data.awaitingInvoice" in APP)
 check("les statuts « installation_paused » et « worker_not_included » ont un libelle francais", "AUTOMATION_STATUS_LABELS" in APP and "non lancée : Worker en pause" in APP)
 
 print("\n" + ("TOUT PASSE" if not failures else f"{len(failures)} ECHEC(S)"))
