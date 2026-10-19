@@ -5928,6 +5928,7 @@ async function renderWhatsappCard(gridEl) {
     const texts = {
       INVALID_PASSWORD: "Mot de passe incorrect.",
       ACTIVE_SUBSCRIPTION: "Votre abonnement est encore renouvelé : résiliez-le d'abord avec « Annuler l'abonnement » (en haut de cette page), puis supprimez votre compte. Une fois la résiliation enregistrée, vous pouvez supprimer votre compte tout de suite.",
+      STRIPE_CLEANUP_PENDING: "Un ancien abonnement est en cours d'annulation chez notre prestataire de paiement : réessayez dans quelques heures, ou écrivez-nous pour que nous le fassions tout de suite.",
       TOO_MANY_ATTEMPTS: "Trop de tentatives. Réessayez plus tard.",
     };
     say(texts[r.error] || "Suppression impossible (" + (r.error || "erreur") + ").", false);
