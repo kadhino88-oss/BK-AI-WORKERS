@@ -8,7 +8,7 @@ function Get-DefaultAIProvider {
     return [pscustomobject]@{
         ProviderName = "LocalSovereign"
         Endpoint     = "http://localhost:11434/v1"
-        Model        = "llama3-swiss-local"
+        Model        = "llama3:latest"
         LocalOnly    = $true
         Status       = "ACTIVE_SOVEREIGN"
     }
