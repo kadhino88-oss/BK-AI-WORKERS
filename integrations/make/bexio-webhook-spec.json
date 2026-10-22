@@ -1,0 +1,34 @@
+{
+  "scenario_name": "Bexio-Invoice-Extraction-Alex",
+  "target_worker": "alex",
+  "objective": "Extraire les articles, quantités et coordonnées d'un client depuis un e-mail complexe et créer un devis en mode Brouillon dans Bexio.",
+  "steps": [
+    {
+      "step": 1,
+      "module": "Custom Webhook (Catch Hook)",
+      "action": "Réception du texte ou du PDF de la demande client transmis par BK-AI-WORKERS."
+    },
+    {
+      "step": 2,
+      "module": "HTTP POST to BK-AI-WORKERS API",
+      "payload": {
+        "worker": "alex",
+        "request": "Extrais les articles, quantités et coordonnées du client: {{1.text}}"
+      }
+    },
+    {
+      "step": 3,
+      "module": "Bexio: Search Contacts",
+      "action": "Vérifie si le client existe en Suisse via son adresse e-mail ou son UID d'entreprise."
+    },
+    {
+      "step": 4,
+      "module": "Bexio: Create Invoice/Quote",
+      "action": "Injecte les lignes d'articles lues par le Worker. Le statut reste obligatoirement en 'Draft' (Brouillon) pour validation humaine."
+    }
+  ],
+  "security": {
+    "header_validation": "X-BK-Signature",
+    "description": "Assure que les appels HTTP proviennent exclusivement du serveur BK-AI-WORKERS."
+  }
+}
