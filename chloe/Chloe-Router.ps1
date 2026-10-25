@@ -15,7 +15,7 @@ function Get-BKChloeRouterModel { if ($env:BK_CHLOE_ROUTER_MODEL -match '^claude
 
 function Get-BKChloePriceBlock {
     # Tarifs de la plateforme pour repondre (directReply) a une question sur les plans : une seule source, la meme que le playbook de Chloe.
-    return "PRICES (questions about the plans, answer them in directReply): BK-AI-WORKERS platform, in CHF per month (annual = 10 months): free Trial 3 days (15 credits); Solo 29 (1 Worker of your choice, 250 credits); Trio 59 (3 Workers of your choice + Chloe, 500 credits); Equipe 99 (all Workers + Chloe, 900 credits); Pro 139 (1250 credits); Scale 449 (4000 credits); Enterprise on quote (credit cap fixed by contract). Starter and Business are no longer sold. Every plan is a fixed MONTHLY quota, never unlimited: quota reached = next plan up, no top-up, no overage billed. BK Entreprise is the parent agency: quotes only, never BK Entreprise prices. Never invent any other number."
+    return "PRIX (questions sur les plans, a repondre dans directReply, dans la langue du client) : plateforme BK-AI-WORKERS, en CHF par mois (annuel = 10 mois) : Essai gratuit 3 jours (15 credits) ; Solo 29 (1 Worker au choix, 250 credits) ; Trio 59 (3 Workers au choix + Chloe, 500 credits) ; Equipe 99 (tous les Workers + Chloe, 900 credits) ; Pro 139 (1250 credits) ; Scale 449 (4000 credits) ; Enterprise sur devis (plafond de credits fixe par contrat). Starter et Business ne sont plus vendus. Chaque forfait est un quota MENSUEL fixe, jamais illimite : quota atteint = forfait superieur, sans recharge ni depassement facture. BK Entreprise est l'agence parente : devis uniquement, jamais de tarifs BK Entreprise. N'invente aucun autre chiffre."
 }
 
 # ---------------------------------------------------------------------
