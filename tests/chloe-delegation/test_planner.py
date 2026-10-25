@@ -518,7 +518,8 @@ class PlannerCalls(unittest.TestCase):
     def test_the_planner_never_starts_a_call_that_would_not_fit_in_its_time_budget(self):
         r = self.run_plan(cassette=[plan_response(good_plan())], env={"BK_CHLOE_PLAN_DEADLINE_SEC": "60"})
         self.assertEqual((r.result["ok"], r.result["source"], r.result["fallbackReason"]), (True, "fallback", "TIMEOUT"))
-        self.assertEqual(len(r.requests()), 0, "moins de 60 s restantes : aucun appel au modele, le repli prend le relais")
+        self.assertEqual([q for q in r.requests() if q["model"] == "claude-opus-5-5" or "submit_project_plan" in q["toolNames"]], [],
+                         "moins de 60 s restantes : aucun appel au modele fort (seul l'ancien routage, peu couteux, peut encore repondre)")
         self.assertTrue(r.plan["fallback"])
 
     def test_the_command_line_contract(self):
