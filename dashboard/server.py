@@ -535,7 +535,7 @@ def detect_reply_language(text):
     return None
 
 
-def submit_task(worker_hint_text, worker_id="", plan_only=False, client_id="", level=None):
+def submit_task(worker_hint_text, worker_id="", plan_only=False, client_id="", level=None, chloe_mode=None):
     """Appelle le vrai pipeline via Submit-Task.ps1 (PowerShell).
     Le resultat est ecrit par le script dans un fichier temporaire
     dedie (evite tout parsing fragile de stdout, pollue par les
@@ -576,6 +576,12 @@ def submit_task(worker_hint_text, worker_id="", plan_only=False, client_id="", l
         # en arriere-plan (le job : chloe/Chloe-Executor.ps1 ecrit son avancement sous runtime/chloe-runs/<ClientId>/<job>/).
         child_env.pop("BK_CHLOE_RESET_NOTE", None)
         child_env.update(CHLOE_SCOPE.child_env(client_id, lvl, worker_id))
+        # « Juste une reponse rapide » (BK_PROJECTS=1) : le client a refuse le projet propose par Chloe, elle traite la demande comme une mission. Choix du client
+        # (champ mode de la requete), jamais lu dans un texte.
+        if chloe_mode == "mission" and str(worker_id or "").lower() == "chloe":
+            child_env["BK_CHLOE_MODE"] = "mission"
+        else:
+            child_env.pop("BK_CHLOE_MODE", None)
         job_ref = getattr(_JOB_CONTEXT, "job_id", "")
         if job_ref and str(worker_id or "").lower() == "chloe":
             child_env["BK_CHLOE_RUN_ID"] = job_ref
@@ -796,6 +802,11 @@ def reap_async_jobs(now=None, boot=False):
             continue
 
 
+def _chloe_mode_of(body):
+    """Champ « mode » d'une requete a Chloe : « mission » (= juste une reponse rapide, sans proposition de projet) ou rien."""
+    return "mission" if isinstance(body, dict) and str(body.get("mode") or "").strip().lower() == "mission" else None
+
+
 def submit_task_limited(objective, **kw):
     """submit_task avec le MEME plafond que les missions en arriere-plan (endpoints synchrones, API publique)."""
     cid = kw.get("client_id", "")
@@ -808,7 +819,7 @@ def submit_task_limited(objective, **kw):
         _async_release(cid)
 
 
-def submit_task_async(objective, worker_id="", client_id="", plan_only=False, level=None):
+def submit_task_async(objective, worker_id="", client_id="", plan_only=False, level=None, chloe_mode=None):
     """Lance une mission en arriere-plan, renvoie un jobId a interroger.
     Le job (runtime/async-jobs/<jobId>.json) passe de RUNNING a DONE/ERROR.
     IMPORTANT : le job n'est PAS un TASK-*.json -> aucun double comptage de
@@ -847,7 +858,7 @@ def submit_task_async(objective, worker_id="", client_id="", plan_only=False, le
         try:
             _JOB_CONTEXT.job_id = job_id
             result = submit_task(objective, worker_id=worker_id,
-                                 plan_only=plan_only, client_id=client_id, level=level)
+                                 plan_only=plan_only, client_id=client_id, level=level, **({"chloe_mode": chloe_mode} if chloe_mode else {}))
             if not plan_only:
                 try:
                     result = attach_pending_action(result)
@@ -5532,7 +5543,7 @@ class Handler(BaseHTTPRequestHandler):
             if not objective:
                 self._send_json({"error": "OBJECTIVE_REQUIRED"}, 400)
                 return
-            result = submit_task_limited(objective, worker_id="chloe", client_id=client_id, level=body.get("level"))
+            result = submit_task_limited(objective, worker_id="chloe", client_id=client_id, level=body.get("level"), chloe_mode=_chloe_mode_of(body))
             refused = refused_for_hiring(result)
             if refused:
                 self._send_json({"error": "WORKER_NOT_INCLUDED", "detail": refused, "notIncludedWorkers": result.get("NotIncludedWorkers") or []}, 403)
@@ -5564,7 +5575,7 @@ class Handler(BaseHTTPRequestHandler):
             if not objective:
                 self._send_json({"error": "OBJECTIVE_REQUIRED"}, 400)
                 return
-            res = submit_task_async(objective, worker_id="chloe", client_id=client_id, level=body.get("level"))
+            res = submit_task_async(objective, worker_id="chloe", client_id=client_id, level=body.get("level"), chloe_mode=_chloe_mode_of(body))
             self._send_json(res, 429 if res.get("error") else 202)
         elif path == "/api/chloe/triage":
             # Aiguillage « mission ou projet ? » (BK_PROJECTS=1 seulement, comme les routes du moteur de projets) : Chloe lit la demande, dit si c'est une

@@ -198,6 +198,32 @@ class CreditBudget(Fixture):
         self.assertNotIn("BK_CHLOE_RUN_ID", lea_env)
         self.assertNotIn("BK_CHLOE_RESET_NOTE", lea_env)
 
+    def test_the_quick_answer_choice_comes_from_the_request_field_only_and_only_for_chloe(self):
+        write_billing(A, "equipe")
+        self.assertEqual((server._chloe_mode_of({"mode": "mission"}), server._chloe_mode_of({"mode": " Mission "}), server._chloe_mode_of({"mode": "project"}),
+                          server._chloe_mode_of({}), server._chloe_mode_of(None), server._chloe_mode_of({"mode": ["mission"]})), ("mission", "mission", None, None, None, None))
+        calls = []
+
+        def fake_run(cmd, **kw):
+            calls.append(kw.get("env") or {})
+            return types.SimpleNamespace(returncode=0, stdout=b"", stderr=b"")
+        original, previous = server.subprocess.run, os.environ.get("BK_CHLOE_MODE")
+        server.subprocess.run = fake_run
+        os.environ["BK_CHLOE_MODE"] = "mission"            # une variable du serveur lui-meme ne decide pas a la place du client
+        try:
+            server.submit_task("Lance mon offre", worker_id="chloe", client_id=A, level="rapide", chloe_mode="mission")
+            server.submit_task("Lance mon offre", worker_id="chloe", client_id=A, level="rapide")
+            server.submit_task("Fais un logo", worker_id="lea", client_id=A, level="rapide", chloe_mode="mission")
+        finally:
+            server.subprocess.run = original
+            if previous is None:
+                os.environ.pop("BK_CHLOE_MODE", None)
+            else:
+                os.environ["BK_CHLOE_MODE"] = previous
+        self.assertEqual(calls[0].get("BK_CHLOE_MODE"), "mission")
+        self.assertNotIn("BK_CHLOE_MODE", calls[1])
+        self.assertNotIn("BK_CHLOE_MODE", calls[2])
+
     def test_the_renewal_sentence_is_made_by_the_server_never_copied(self):
         write_billing(A, "equipe")
         server.USAGE = FakeUsage(allowed=14, binding="session", resets="2026-10-20T08:00:00Z")

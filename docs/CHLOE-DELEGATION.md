@@ -19,7 +19,7 @@ Ce document décrit ce qui est construit et testé (branche `ws/chantier-chloe`)
 ## 2. Les deux modes
 
 - **Mission** (par défaut, `BK_PROJECTS` éteint ou absent) : une demande, une réponse dans la même requête (≤ 535 s). C'est le chemin décrit aux sections 3 à 8.
-- **Projet** (`BK_PROJECTS=1`) : un objectif devient un plan validé par le client, exécuté étape par étape sur des heures. Le routeur de la mission peut répondre `mode: "project"` ; Chloé **propose** alors le projet (`Status: SUGGEST_PROJECT`, rien n'est lancé, aucun crédit), et le client choisit « Lancer comme projet » ou « juste une réponse rapide » (`BK_CHLOE_MODE=mission`). `POST /api/chloe/triage` fait la même chose sans lancer de mission (Haiku, aucun crédit, 20 par heure et par client).
+- **Projet** (`BK_PROJECTS=1`) : un objectif devient un plan validé par le client, exécuté étape par étape sur des heures. Le routeur de la mission peut répondre `mode: "project"` ; Chloé **propose** alors le projet (`Status: SUGGEST_PROJECT`, rien n'est lancé, aucun crédit), et le client choisit « Lancer comme projet » ou « juste une réponse rapide » : ce second choix renvoie la même requête avec `"mode": "mission"` (`POST /api/chloe/task` et `/api/chloe/task/async`), que le serveur transmet à Chloé (`BK_CHLOE_MODE=mission`, jamais lu dans un texte). L'interface de ce choix est celle du chantier « interface projets ». `POST /api/chloe/triage` fait la même chose sans lancer de mission (Haiku, aucun crédit, 20 par heure et par client).
 
 ## 3. Le flux d'une mission (`chloe/Invoke-Chloe-Orchestration.ps1`)
 
