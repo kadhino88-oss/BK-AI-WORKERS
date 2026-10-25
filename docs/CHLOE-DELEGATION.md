@@ -124,7 +124,7 @@ Variables posées par le serveur (jamais par un client) : `BK_ALLOWED_WORKERS`, 
 
 ## 11. Tests et mesures
 
-Tout se lance dans WSL avec PowerShell 7 : `wsl -e python3 tests/chloe-delegation/test_<x>.py` (une suite à la fois ; chaque test copie le dépôt dans un dossier temporaire supprimé ensuite). Aucun réseau, aucun coût, aucun vrai secret : l'API est simulée par `tests/adapter-review/fake_api.ps1`, les Workers par `tests/chloe-delegation/stub_worker.ps1`.
+Tout se lance dans WSL avec PowerShell 7 : `wsl -e python3 tests/chloe-delegation/run_all.py` (toutes les suites, une à la fois ; `--quick` saute la plus longue) ou `wsl -e python3 tests/chloe-delegation/test_<x>.py` (une suite ; chaque test copie le dépôt dans un dossier temporaire supprimé ensuite). Aucun réseau, aucun coût, aucun vrai secret : l'API est simulée par `tests/adapter-review/fake_api.ps1`, les Workers par `tests/chloe-delegation/stub_worker.ps1`.
 
 | Suite | Ce qu'elle prouve |
 |---|---|
