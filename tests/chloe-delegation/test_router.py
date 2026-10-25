@@ -190,8 +190,9 @@ class RouterCalls(unittest.TestCase):
         self.assertIn("written in English: write every objective and any directReply in English", system)
         for line in ("- lea (Lea) - Directrice Cr", "- seoya (Séoya)", "Not for:", "Keywords:"):
             self.assertIn(line, system)
-        self.assertIn("PRICES", system)
+        self.assertIn("PRIX (questions sur les plans, a repondre dans directReply, dans la langue du client)", system)
         self.assertIn("Trio 59", system)
+        self.assertIn("Enterprise sur devis", system)
         self.assertIn("Can: ", system)
 
     def test_a_vague_request_for_a_trio_client_prefers_the_hired_workers(self):
