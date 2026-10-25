@@ -83,7 +83,7 @@ $WebMaxUses = if ($LevelCfg -and $LevelCfg.webMaxUses) { [int]$LevelCfg.webMaxUs
 $CallTimeout = if ($LevelCfg -and $LevelCfg.callTimeoutSec) { [int]$LevelCfg.callTimeoutSec } else { 240 }
 # output_config.effort : GA sur les modeles 5.x, PAS sur Haiku 4.5 (le modele historique des Workers).
 $UseEffort = ($LevelCfg -and $LevelCfg.effort -and $EffectiveModel -notlike "claude-haiku-4*")
-$MissionDeadline = (Get-Date).AddSeconds(540)   # le serveur coupe a 600 s : on rend un resultat partiel avant
+$MissionDeadline = (Get-Date).AddSeconds($(if ($env:BK_MISSION_DEADLINE_SEC -match '^[0-9]{2,3}$' -and [int]$env:BK_MISSION_DEADLINE_SEC -le 540) { [int]$env:BK_MISSION_DEADLINE_SEC } else { 540 }))   # le serveur coupe a 600 s : on rend un resultat partiel avant (Chloe donne un delai plus court a chaque Worker d'une mission multi-Workers : BK_MISSION_DEADLINE_SEC)
 # Plafond de cout de la mission (maxCostChf du niveau) et suivi du cout reel appel par appel : Mission-Cost.ps1, tarifs dans
 # core/ai/AI-PRICING.json. Sans niveau (ancien comportement) ou pour Rapide : pas de plafond, le cout est quand meme releve.
 $CostCeilingChf = if ($LevelCfg) { $LevelCfg.maxCostChf } else { $null }

@@ -41,6 +41,7 @@ class AsyncMissions(unittest.TestCase):
         server.submit_task = fake_submit
         server.attach_pending_action = lambda r: r
         server._ASYNC_ACTIVE.clear()
+        server._ASYNC_QUEUE.clear()
 
     def tearDown(self):
         self.gate.set()
@@ -57,24 +58,27 @@ class AsyncMissions(unittest.TestCase):
         self.fail("job not finished")
 
     def test_per_client_cap_then_release(self):
+        # 2026-10-19 : un serveur occupe fait ATTENDRE la mission (file d'attente), il ne la refuse plus ; la file est bornee (voir tests/chloe-delegation)
         a = server.submit_task_async("x", "chloe", "CLI-A")
         b = server.submit_task_async("x", "chloe", "CLI-A")
         c = server.submit_task_async("x", "chloe", "CLI-A")
         self.assertIn("jobId", a)
         self.assertIn("jobId", b)
-        self.assertEqual(c["error"], "TOO_MANY_RUNNING_MISSIONS")
-        self.assertIn("mission", c["detail"])
+        self.assertEqual((a["status"], b["status"], c["status"]), ("RUNNING", "RUNNING", "QUEUED"))
+        self.assertEqual(c["queuePosition"], 1)
         self.gate.set()
-        self.wait_done(a["jobId"]); self.wait_done(b["jobId"])
+        self.wait_done(a["jobId"]); self.wait_done(b["jobId"]); self.wait_done(c["jobId"])
         time.sleep(0.2)
         d = server.submit_task_async("x", "chloe", "CLI-A")        # la place est revenue
-        self.assertIn("jobId", d)
+        self.assertEqual(d["status"], "RUNNING")
 
     def test_global_cap_across_clients(self):
         ids = [server.submit_task_async("x", "chloe", f"CLI-{i}") for i in range(3)]
         self.assertTrue(all("jobId" in r for r in ids))
         over = server.submit_task_async("x", "chloe", "CLI-OTHER")
-        self.assertEqual(over["error"], "TOO_MANY_RUNNING_MISSIONS")
+        self.assertEqual(over["status"], "QUEUED", "le serveur est plein : elle attend son tour")
+        self.gate.set()
+        self.wait_done(over["jobId"])
 
     def test_slot_released_when_mission_crashes(self):
         def boom(*a, **k):
@@ -133,11 +137,14 @@ class AsyncMissions(unittest.TestCase):
         time.sleep(0.3)
         third = server.submit_task_limited("x", worker_id="chloe", client_id="CLI-F")
         self.assertEqual(third["error"], "TOO_MANY_RUNNING_MISSIONS")
-        self.assertEqual(server.submit_task_async("x", "chloe", "CLI-F")["error"], "TOO_MANY_RUNNING_MISSIONS")
+        queued = server.submit_task_async("x", "chloe", "CLI-F")
+        self.assertEqual(queued["status"], "QUEUED")      # la file d'attente n'existe que pour l'arriere-plan
         self.gate.set()
         for th in threads:
             th.join(5)
         self.assertEqual(len(results), 2)
+        self.wait_done(queued["jobId"])                    # la mission en file part quand les missions synchrones rendent leur place
+        time.sleep(0.2)
         self.assertEqual(server._ASYNC_ACTIVE.get("CLI-F", 0), 0)
 
     def test_account_deletion_removes_files_jobs_and_pending_actions(self):

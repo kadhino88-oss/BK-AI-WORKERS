@@ -51,7 +51,9 @@ class AllowedWorkers(unittest.TestCase):
     def setUp(self):
         self.root = tempfile.mkdtemp(prefix="bkallowed-")
         self.addCleanup(shutil.rmtree, self.root, True)
-        for rel in ("chloe/Invoke-Chloe-Orchestration.ps1", "orchestrator/worker-routing.json", "core/ai/Get-DefaultProvider.ps1",
+        for rel in ("chloe/Invoke-Chloe-Orchestration.ps1", "chloe/Chloe-Common.ps1", "chloe/Chloe-LegacyRouting.ps1", "chloe/Chloe-Router.ps1", "chloe/Chloe-Executor.ps1",
+                    "chloe/Chloe-Consolidate.ps1", "chloe/Chloe-Consistency.ps1", "chloe/Invoke-Chloe-WorkerCall.ps1",
+                    "orchestrator/worker-routing.json", "core/ai/Get-DefaultProvider.ps1",
                     "core/ai/BK-Secret.ps1", "core/ai/AI-PROVIDERS.json", "dashboard/Submit-Task.ps1"):
             dst = os.path.join(self.root, rel)
             os.makedirs(os.path.dirname(dst), exist_ok=True)

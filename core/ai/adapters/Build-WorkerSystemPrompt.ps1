@@ -27,6 +27,9 @@ function Get-WorkerSystemPrompt {
     # Seoya, pour un workflow SEO/GEO complet a partir d'une seule URL,
     # comparable a un outil dedie (Oscar AI) plutot qu'un conseil generique.
     $PlaybookPath = Join-Path $ProjectRoot ("workers/" + $WorkerId.ToLowerInvariant() + "/identity/playbook.md")
+    # Chloe cheffe de projet (2026-10-25) : quand les projets sont actives (BK_PROJECTS=1), son guide est chloe/identity/playbook-projects.md ; interrupteur eteint =
+    # aucun changement (ce fichier n'est jamais lu). Seule ligne de chemin modifiee ici.
+    if ($WorkerId.ToLowerInvariant() -eq "chloe" -and [string]$env:BK_PROJECTS -match '^(?i)(1|true|yes|on)$') { $PlaybookPath = Join-Path $ProjectRoot "chloe/identity/playbook-projects.md" }
     $PlaybookBlock = ""
     if (Test-Path -LiteralPath $PlaybookPath -PathType Leaf) {
         try {

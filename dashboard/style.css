@@ -3792,3 +3792,24 @@ body.iw-open { overflow: hidden; }
 .activity-worker-why { font-size: 13.5px; margin-bottom: 6px; }
 .activity-worker-link { font-size: 13px; color: var(--gold); font-weight: 700; }
 .level-note { font-size: 12px; color: var(--ink-muted); align-self: center; }
+
+/* ===== CHLOE-TEAM : une mission de Chloe repartie entre plusieurs Workers (2026-10-19) ===== */
+.chloe-team { display: grid; gap: 10px; margin-top: 10px; }
+.chloe-worker-card { border: 1px solid var(--card-border); border-left: 4px solid var(--gold); border-radius: var(--radius-sm); background: var(--card); padding: 12px 14px; }
+.chloe-worker-card.chloe-worker-ok { border-left-color: var(--ok); }
+.chloe-worker-card.chloe-worker-bad { border-left-color: var(--danger); }
+.chloe-worker-card.chloe-worker-wait { border-left-color: var(--gold); }
+.chloe-worker-head { display: flex; align-items: center; gap: 10px; }
+.chloe-worker-portrait { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; flex: none; }
+.chloe-worker-title { display: flex; flex-direction: column; min-width: 0; flex: 1 1 auto; }
+.chloe-worker-step { font-size: 12px; color: var(--ink-muted); }
+.chloe-worker-chip { font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: var(--gold-dim); white-space: nowrap; }
+.chloe-worker-ok .chloe-worker-chip { background: rgba(26, 157, 92, 0.12); color: var(--ok); }
+.chloe-worker-bad .chloe-worker-chip { background: rgba(213, 69, 63, 0.12); color: var(--danger); }
+.chloe-worker-asked { margin: 8px 0 0; font-size: 13px; color: var(--ink-muted); }
+.chloe-worker-asked span { font-weight: 600; }
+.chloe-worker-note { margin: 6px 0 0; font-size: 13px; color: var(--danger); }
+.chloe-worker-details { margin-top: 8px; }
+.chloe-worker-details > summary { cursor: pointer; font-size: 13px; font-weight: 600; }
+.chloe-worker-answer { margin-top: 6px; overflow-wrap: anywhere; }
+.chloe-hire-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
