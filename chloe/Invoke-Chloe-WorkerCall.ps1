@@ -1,4 +1,4 @@
-# =====================================================================
+﻿# =====================================================================
 # CHLOE - appel d'UN Worker dans son propre processus (2026-10-19).
 #
 # Lance par chloe/Chloe-Executor.ps1 : chaque Worker d'une mission de Chloe tourne dans un processus PowerShell a part, ce qui permet (1) de les

@@ -1,4 +1,4 @@
-# =====================================================================
+﻿# =====================================================================
 # CHLOE - cheffe de projet : le planificateur (2026-10-25, docs/AUTONOMY-ENGINE.md sections 1.2, 6c.3, 6c.4 et docs/CHLOE-DELEGATION.md).
 #
 # Transforme l'OBJECTIF du client en un plan BK-PROJECT-PLAN-V1 : des criteres d'acceptation mesurables et des etapes, chacune confiee a UN Worker choisi

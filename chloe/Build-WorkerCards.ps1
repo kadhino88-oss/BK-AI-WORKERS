@@ -1,4 +1,4 @@
-# =====================================================================
+﻿# =====================================================================
 # CHLOE - genere les CARTES des Workers (core/projects/WORKER-CARDS.json), lues par le routeur et le planificateur de Chloe
 # (docs/AUTONOMY-ENGINE.md, section 6c.2). Jamais ecrit a la main : un test regenere le fichier et compare (tests/chloe-delegation).
 #

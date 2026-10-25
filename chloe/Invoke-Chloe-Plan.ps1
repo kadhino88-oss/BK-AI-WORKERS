@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [Parameter(Mandatory=$true)][string]$InFile,
     [Parameter(Mandatory=$true)][string]$OutFile

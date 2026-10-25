@@ -1,4 +1,4 @@
-# =====================================================================
+﻿# =====================================================================
 # CHLOE - aiguillage « mission ou projet ? » (2026-10-19, docs/AUTONOMY-ENGINE.md section 6c.1). Appele par POST /api/chloe/triage (BK_PROJECTS=1).
 #
 # Un seul appel peu couteux (Haiku 5.5, SANS credit pour le client, 20 par heure) : le routeur de Chloe lit la demande, la decoupe et juge si c'est une

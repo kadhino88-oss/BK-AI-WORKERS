@@ -1,4 +1,4 @@
-# =====================================================================
+﻿# =====================================================================
 # CHLOE - routeur a modele et decomposition d'une demande (mode mission), 2026-10-19.
 #
 # Avant : mots-cles (premier appariement), repli IA qui renvoyait seulement des identifiants, et tous les Workers retenus recevaient LA MEME

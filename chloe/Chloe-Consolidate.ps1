@@ -1,4 +1,4 @@
-# =====================================================================
+﻿# =====================================================================
 # CHLOE - consolidation (2026-10-19) : qui a fait quoi, avec les fichiers et les actions a valider, par Worker.
 #
 # Deterministe, sans appel au modele : le texte de Chloe ne depend que de ce que le CODE sait (le plan fixe avant l'execution, l'etat de chaque
@@ -143,7 +143,9 @@ function New-BKChloeConsolidation {
     }
     else {
         foreach ($S in $Answered) {
-            $Parts += "### $($S.workerName) — " + (Limit-BKText -Text ([string]$S.objective) -Max 90) + $(if ($S.degraded) { " (réponse de secours)" } else { "" }) + "`n`n" + [string]$S.answer
+            # Plan sans decoupage (chaque Worker a recu la demande telle quelle) : l'en-tete ne la repete pas, il nomme seulement le Worker.
+            $Asked = if ([string]$S.objective -eq [string]$Ctx.Request) { "" } else { " — " + (Limit-BKText -Text ([string]$S.objective) -Max 90) }
+            $Parts += "### $($S.workerName)" + $Asked + $(if ($S.degraded) { " (réponse de secours)" } else { "" }) + "`n`n" + [string]$S.answer
         }
     }
     $Tail = @($OverviewLines | Where-Object { $_ -ne ("**$Intro**") })

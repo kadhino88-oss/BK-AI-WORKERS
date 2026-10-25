@@ -1,4 +1,4 @@
-# =====================================================================
+﻿# =====================================================================
 # CHLOE - fonctions communes de l'orchestration (2026-10-19, chantier "Chloe delegue a tous les Workers").
 #
 # A dot-sourcer (chloe/Invoke-Chloe-Orchestration.ps1, Chloe-Router.ps1, Chloe-Planner.ps1, Chloe-Executor.ps1...). Aucune dependance au

@@ -353,6 +353,9 @@ class Delegation(unittest.TestCase):
         self.assertEqual(sorted(r.called()), ["ALEX", "MAYA"])
         self.assertEqual(r.messages(), [], "aucun appel au routeur a modele")
         self.assertEqual(r.start_of("ALEX")["objective"], "Je veux de la prospection de nouveaux clients et une campagne de marketing")
+        text = r.result["FinalSynthesis"]
+        self.assertIn("### Alex\n", text, "chaque Worker a recu la demande telle quelle : l'en-tete nomme le Worker sans la repeter")
+        self.assertNotIn("### Alex —", text)
 
 
 if __name__ == "__main__":

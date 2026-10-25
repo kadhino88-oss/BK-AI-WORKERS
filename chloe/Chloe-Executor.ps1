@@ -1,4 +1,4 @@
-# =====================================================================
+﻿# =====================================================================
 # CHLOE - execution d'un plan de sous-taches (2026-10-19) : graphe de dependances, parallele BORNE, relais entre Workers, delais, panne partielle.
 #
 # Chaque sous-tache = un Worker, dans son propre processus (chloe/Invoke-Chloe-WorkerCall.ps1), par le meme chemin d'autorisation reel que tout

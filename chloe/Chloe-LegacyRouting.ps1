@@ -1,4 +1,4 @@
-# =====================================================================
+﻿# =====================================================================
 # CHLOE - ANCIEN ROUTAGE IA (repli du 2026-09-24), conserve tel quel pour BK_CHLOE_PLANNER=0 et pour la comparaison avec le routeur a modele
 # (tests/chloe-delegation : jeu de demandes etiquetees). Deplace ici depuis chloe/Invoke-Chloe-Orchestration.ps1, sans changement de regles ;
 # seul le modele est devenu un parametre (valeur par defaut identique a avant).

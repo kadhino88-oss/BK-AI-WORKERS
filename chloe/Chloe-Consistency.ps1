@@ -1,4 +1,4 @@
-# =====================================================================
+﻿# =====================================================================
 # CHLOE - controle de coherence entre Workers (2026-10-19, mode mission ; le moteur de projets utilise le meme gabarit,
 # chloe/prompts/consistency-review.md, dans son etape "verify" de portee consistency).
 #
