@@ -115,6 +115,7 @@ Codes   0 résultat écrit (lire ok) · 10 entrée invalide · 20 erreur interne
 | `BK_CHLOE_EXECUTOR` | processus | `inline` = les Workers tournent un par un dans le processus de Chloé |
 | `BK_CHLOE_PARALLEL` / `BK_CHLOE_SLOTS_GLOBAL` | 2 / 3 | Workers simultanés par mission / sur tout le serveur |
 | `BK_CHLOE_DEADLINE_SEC`, `_MIN_LAUNCH_SEC`, `_MIN_WORKER_SEC`, `_TAIL_SEC`, `_KILL_GRACE_SEC`, `_SLOT_WAIT_SEC` | 535, 90, 60, 40, 20, 300 | délais |
+| `BK_CHLOE_PLAN_DEADLINE_SEC` | 450 | temps total du planificateur de projet (60 à 520) : aucun appel au modèle qui ne tiendrait pas dans ce qui reste, le repli prend le relais |
 | `BK_CHLOE_CONSISTENCY` | auto | `0` coupe la relecture de cohérence ; `1` la force aussi au niveau Rapide |
 | `BK_CHLOE_ROUTER_MODEL`, `BK_CHLOE_CONSISTENCY_MODEL`, `BK_CHLOE_PLANNER_MODEL` | Haiku 5.5 / Haiku (Sonnet à l'Approfondi) / phase `plan` | modèles (nom `claude-…` seulement) |
 | `BK_CHLOE_MODE` | — | `mission` : le client a répondu « juste rapidement » |
