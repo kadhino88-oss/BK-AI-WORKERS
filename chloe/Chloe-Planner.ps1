@@ -648,9 +648,14 @@ function Invoke-BKChloePlan {
     $User = $UserBase
     $Plan = $null
 
+    # Temps total borne (l'etape « plan » du moteur est coupee a 540 s) : jamais de nouvel essai qui ne tiendrait pas dans ce qui reste.
+    $PlanStart = Get-Date
+    $PlanBudgetSec = Get-BKChloeEnvInt -Name "BK_CHLOE_PLAN_DEADLINE_SEC" -Default 450 -Min 60 -Max 520
     for ($Attempt = 1; $Attempt -le $MaxAttempts; $Attempt++) {
+        $Left = $PlanBudgetSec - ((Get-Date) - $PlanStart).TotalSeconds
+        if ($Left -lt 60) { $Errors += "Temps imparti ecoule avant l'appel $Attempt."; if (-not $FallbackReason) { $FallbackReason = "TIMEOUT" }; break }
         $Attempts = $Attempt
-        $Call = Invoke-BKChloeLlm -Model $Phase.Model -System $System -User $User -Tool $Tool -MaxTokens 9000 -TimeoutSec 240 -Retries 1 -Effort $Phase.Effort
+        $Call = Invoke-BKChloeLlm -Model $Phase.Model -System $System -User $User -Tool $Tool -MaxTokens 9000 -TimeoutSec ([int][Math]::Min(240, $Left - 10)) -Retries $(if ($Left -ge 300) { 1 } else { 0 }) -Effort $Phase.Effort
         $Totals = Add-BKUsageTotals -Total $Totals -Usage $Call.Usage
         if (-not $Call.Ok) {
             $Errors += "Appel ${Attempt} : $($Call.Error)"

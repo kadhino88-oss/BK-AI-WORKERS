@@ -17,13 +17,6 @@
 # disposition que l'espace de travail d'un projet (docs/AUTONOMY-ENGINE.md, section 2.1).
 # =====================================================================
 
-function Get-BKChloeEnvInt {
-    param([string]$Name, [int]$Default, [int]$Min, [int]$Max)
-    $N = 0
-    if ([int]::TryParse([string][Environment]::GetEnvironmentVariable($Name), [ref]$N)) { return [Math]::Max($Min, [Math]::Min($Max, $N)) }
-    return $Default
-}
-
 function New-BKChloeRunDir {
     # Dossier de la mission : plan, etat, appels en cours, espace de travail partage. Les missions de plus de 7 jours de ce client sont supprimees.
     param([string]$Root, [string]$ClientId, [string]$RunId)

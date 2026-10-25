@@ -515,6 +515,12 @@ class PlannerCalls(unittest.TestCase):
         r2 = self.run_plan(cassette=[plan_response(good_plan())])
         self.assertNotIn("RECIPES THAT MAY FIT", r2.requests()[0]["systemText"])
 
+    def test_the_planner_never_starts_a_call_that_would_not_fit_in_its_time_budget(self):
+        r = self.run_plan(cassette=[plan_response(good_plan())], env={"BK_CHLOE_PLAN_DEADLINE_SEC": "60"})
+        self.assertEqual((r.result["ok"], r.result["source"], r.result["fallbackReason"]), (True, "fallback", "TIMEOUT"))
+        self.assertEqual(len(r.requests()), 0, "moins de 60 s restantes : aucun appel au modele, le repli prend le relais")
+        self.assertTrue(r.plan["fallback"])
+
     def test_the_command_line_contract(self):
         r = self.run_plan(goal="ok", cassette=[plan_response(good_plan())])
         self.assertEqual((r.exit_code, r.result["ok"], r.result["error"]), (10, False, "INPUT_INVALID"))

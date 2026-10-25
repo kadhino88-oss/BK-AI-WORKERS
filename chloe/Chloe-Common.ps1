@@ -15,6 +15,13 @@ $Script:BKChloeHere = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Pa
 $Script:BKChloeCostScript = Join-Path $(if ($env:BK_ROOT) { [string]$env:BK_ROOT } else { Split-Path -Parent $Script:BKChloeHere }) "core/ai/adapters/Mission-Cost.ps1"
 if (-not (Get-Command New-BKMissionCost -ErrorAction SilentlyContinue) -and (Test-Path -LiteralPath $Script:BKChloeCostScript -PathType Leaf)) { try { . $Script:BKChloeCostScript } catch { } }
 
+function Get-BKChloeEnvInt {
+    param([string]$Name, [int]$Default, [int]$Min, [int]$Max)
+    $N = 0
+    if ([int]::TryParse([string][Environment]::GetEnvironmentVariable($Name), [ref]$N)) { return [Math]::Max($Min, [Math]::Min($Max, $N)) }
+    return $Default
+}
+
 function Get-BKChloeRootPath {
     if ($env:BK_ROOT) { return [string]$env:BK_ROOT }
     return (Split-Path -Parent $Script:BKChloeHere)
