@@ -2480,6 +2480,7 @@ const CHLOE_STATUS_LABELS = {
   PARTIAL_SUCCESS: "Partiellement traité",
   BLOCKED: "Bloqué",
   SUGGEST_PROJECT: "Projet proposé",
+  WORKER_NOT_INCLUDED: "Non inclus dans votre forfait",
 };
 function chloeStatusLabel(status) {
   return CHLOE_STATUS_LABELS[status] || status;
