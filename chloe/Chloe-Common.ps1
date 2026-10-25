@@ -11,6 +11,10 @@
 
 $Script:BKChloeHere = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
 
+# Aides de cout (core/ai/adapters/Mission-Cost.ps1), chargees ici pour que leurs fonctions vivent dans la portee de l'appelant (voir Import-BKChloeCostHelpers).
+$Script:BKChloeCostScript = Join-Path $(if ($env:BK_ROOT) { [string]$env:BK_ROOT } else { Split-Path -Parent $Script:BKChloeHere }) "core/ai/adapters/Mission-Cost.ps1"
+if (-not (Get-Command New-BKMissionCost -ErrorAction SilentlyContinue) -and (Test-Path -LiteralPath $Script:BKChloeCostScript -PathType Leaf)) { try { . $Script:BKChloeCostScript } catch { } }
+
 function Get-BKChloeRootPath {
     if ($env:BK_ROOT) { return [string]$env:BK_ROOT }
     return (Split-Path -Parent $Script:BKChloeHere)
@@ -47,7 +51,7 @@ function Limit-BKText {
 # Donnees encadrees ("data fences") : tout texte qui n'est pas une consigne du client est place dans une balise nommee. Les balises de
 # fermeture connues sont neutralisees DANS le texte pour qu'un contenu ne puisse pas sortir de sa balise et se faire passer pour une consigne.
 # ---------------------------------------------------------------------
-$Script:BKFenceTags = @("client_request", "worker_result", "worker_file", "worker_files", "chloe_plan", "handoff", "client_memory", "deliverable", "consistency_input")
+$Script:BKFenceTags = @("client_request", "client_goal", "client_inputs", "worker_result", "worker_file", "worker_files", "chloe_plan", "handoff", "client_memory", "deliverable", "consistency_input")
 
 function Protect-BKFenceText {
     param([string]$Text)
@@ -361,10 +365,9 @@ function Get-BKChloeApiKey {
 }
 
 function Import-BKChloeCostHelpers {
-    if (Get-Command New-BKMissionCost -ErrorAction SilentlyContinue) { return $true }
-    $P = Join-Path (Get-BKChloeRootPath) "core/ai/adapters/Mission-Cost.ps1"
-    if (Test-Path -LiteralPath $P -PathType Leaf) { try { . $P; return $true } catch { } }
-    return $false
+    # Les aides de cout (Mission-Cost.ps1) sont chargees UNE fois, au chargement de ce fichier (voir plus haut) : une dot-source faite ici, dans une
+    # fonction, definirait les fonctions dans la portee locale et les perdrait au retour (les appels du routeur et du planificateur n'etaient alors pas comptes).
+    return [bool](Get-Command New-BKMissionCost -ErrorAction SilentlyContinue)
 }
 
 function Invoke-BKChloeLlm {

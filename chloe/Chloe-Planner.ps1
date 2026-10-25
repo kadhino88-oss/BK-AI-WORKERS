@@ -427,7 +427,7 @@ function Test-BKProjectPlan {
 function New-BKFallbackProjectPlan {
     param(
         [Parameter(Mandatory=$true)][string]$Goal,
-        [Parameter(Mandatory=$true)][string[]]$WorkerIds,        # Workers retenus par l'ancien routage (dans leur ordre)
+        [AllowEmptyCollection()][string[]]$WorkerIds = @(),      # Workers retenus par l'ancien routage (dans leur ordre) ; aucun : le generaliste
         [string[]]$Allowed,
         $Cards = $null,
         $Denied = @(),
@@ -684,7 +684,8 @@ function Invoke-BKChloePlan {
     if (Get-Command Invoke-BKChloeAIRouting -ErrorAction SilentlyContinue) {
         try {
             $Excluded = @($RoutingConfig.excluded_from_routing)
-            $Ai = Invoke-BKChloeAIRouting -UserRequest $Goal -RoutingConfig $RoutingConfig -Excluded $Excluded -PreferredIds $Allowed
+            $Hired = if ($Allowed.Count -lt $Roster.Count) { $Allowed } else { $null }        # equipe complete : aucune preference a donner a l'ancien routeur
+            $Ai = Invoke-BKChloeAIRouting -UserRequest $Goal -RoutingConfig $RoutingConfig -Excluded $Excluded -PreferredIds $Hired
             if ($null -ne $Ai -and @($Ai.Workers).Count -gt 0) { $Ids = @($Ai.Workers | ForEach-Object { ([string]$_).ToLowerInvariant() }); $Source = "legacy-ai" }
         } catch { }
     }

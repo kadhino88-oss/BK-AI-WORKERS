@@ -301,6 +301,14 @@ class Delegation(unittest.TestCase):
         quick = self.chloe(REQUEST, [route_response(p)], env={"BK_PROJECTS": "1", "BK_CHLOE_MODE": "mission"})
         self.assertEqual((quick.result["Status"], len(quick.called())), ("SUCCESS", 3))
 
+    def test_the_cost_of_the_calls_chloe_makes_herself_is_counted(self):
+        # Les aides de cout sont chargees au niveau du script (et non dans une fonction, qui les perdait) : l'appel du routeur est comptabilise.
+        r = self.chloe("Cree mon logo", [route_response(plan(task("T1", "lea", "Cree le logo du cabinet de physiotherapie.")))])
+        self.assertEqual(r.result["Status"], "SUCCESS")
+        self.assertEqual(r.result["ChloeCost"]["calls"], 1)
+        self.assertGreater(r.result["ChloeCost"]["estimated_cost_usd"], 0)
+        self.assertLess(r.result["ChloeCost"]["estimated_cost_usd"], 0.01, "un appel de routage coute une fraction de centime (Haiku 5.5)")
+
     def test_a_direct_reply_costs_nothing_and_runs_no_worker(self):
         r = self.chloe("bonjour Chloe", [route_response({"mode": "direct_reply", "directReply": "Bonjour ! Que puis-je organiser pour vous ?", "subtasks": []})])
         self.assertEqual((r.result["Status"], r.called(), r.result["FinalSynthesis"]), ("SUCCESS", [], "Bonjour ! Que puis-je organiser pour vous ?"))
