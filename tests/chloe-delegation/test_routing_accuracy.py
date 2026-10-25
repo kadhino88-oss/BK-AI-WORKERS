@@ -135,6 +135,70 @@ class HarnessSynthetic(unittest.TestCase):
         self.assertEqual(len(doc["promptSha"]), 64)
 
 
+KEYWORD_DRIVER = r'''
+$ErrorActionPreference = "Stop"
+foreach ($H in @("Chloe-Common.ps1", "Chloe-LegacyRouting.ps1", "Chloe-Router.ps1")) { . (Join-Path $env:REPO "chloe/$H") }
+$Routing = Get-Content -LiteralPath (Join-Path $env:REPO "orchestrator/worker-routing.json") -Raw -Encoding UTF8 | ConvertFrom-Json
+$Cases = (Get-Content -LiteralPath $env:CASES_FILE -Raw -Encoding UTF8 | ConvertFrom-Json).cases
+$Out = @()
+foreach ($C in $Cases) {
+    $Out += [ordered]@{ id = $C.id; old = @(Get-BKChloeKeywordWorkers -Request $C.request -RoutingConfig $Routing); fold = @(Get-BKChloeKeywordWorkers -Request $C.request -RoutingConfig $Routing -FoldAccents) }
+}
+ConvertTo-Json -InputObject @($Out) -Depth 5 | Set-Content -LiteralPath $env:OUT_FILE -Encoding utf8
+'''
+
+
+def keyword_predictions():
+    """Predictions du SEUL appariement par mots-cles (aucun modele) : l'ancien (exact) et le repli du nouveau routeur (insensible aux accents)."""
+    tmp = tempfile.mkdtemp(prefix="bkkw-")
+    driver, out = os.path.join(tmp, "driver.ps1"), os.path.join(tmp, "out.json")
+    with open(driver, "w", encoding="utf-8") as f:
+        f.write(KEYWORD_DRIVER)
+    env = dict(os.environ, REPO=REPO, CASES_FILE=CASES, OUT_FILE=out)
+    p = subprocess.run([PWSH, "-NoProfile", "-NonInteractive", "-File", driver], capture_output=True, text=True, encoding="utf-8", errors="replace", env=env, timeout=240)
+    assert os.path.isfile(out), p.stdout + p.stderr
+    with open(out, encoding="utf-8-sig") as f:
+        rows = json.load(f)
+    return [{"id": r["id"], "old": {"workers": as_list(r["old"]), "mode": "mission", "direct": False}, "new": {"workers": as_list(r["fold"]), "mode": "mission"}} for r in rows]
+
+
+@unittest.skipUnless(PWSH, "pwsh (PowerShell 7) not installed")
+class KeywordBaseline(unittest.TestCase):
+    """Mesure REELLE et hors ligne (aucun modele) : ce que valait l'ancien routage quand les mots-cles seuls decident. Sert de reference chiffree a la comparaison
+    avec le routeur a modele (RecordedAccuracy, quand la cassette d'enregistrement reel existe)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.cases = load_cases()
+        cls.preds = keyword_predictions()
+        cls.old = evaluate(cls.cases, cls.preds, "old")
+        cls.fold = evaluate(cls.cases, cls.preds, "new")
+        print(f"\n  mots-cles seuls, ancien appariement : exact {cls.old['exact']:.2f}  rappel {cls.old['recall']:.2f}  precision {cls.old['precision']:.2f}  F1 {cls.old['f1']:.2f}")
+        print(f"  mots-cles seuls, sans accents       : exact {cls.fold['exact']:.2f}  rappel {cls.fold['recall']:.2f}  precision {cls.fold['precision']:.2f}  F1 {cls.fold['f1']:.2f}")
+
+    def test_there_are_enough_labelled_requests_for_all_seventeen_workers(self):
+        self.assertGreaterEqual(len(self.cases), 40)
+        covered = {w for c in self.cases for w in c["must"]}
+        self.assertEqual(covered, {"alex", "amina", "clara", "dario", "emma", "ines", "lea", "lucas", "maya", "noah", "nora", "rayan", "sam", "seoya", "sophie", "thomas", "yanis"})
+        self.assertGreaterEqual(len({c["lang"] for c in self.cases}), 4, "plusieurs langues")
+        self.assertTrue({"single", "paraphrase", "tiebreak", "multi", "lang", "direct", "adversarial"} <= {c["kind"] for c in self.cases})
+
+    def test_keywords_alone_miss_a_lot_which_is_why_the_router_reads_the_request(self):
+        self.assertLess(self.old["exact"], 0.5, "mesure du 2026-10-25 : 0,35")
+        self.assertLess(self.old["recall"], 0.7, "mesure du 2026-10-25 : 0,49")
+        multi = [r for r in self.old["rows"] if r["kind"] == "multi"]
+        self.assertLessEqual(sum(r["exact"] for r in multi), 1, "les demandes a plusieurs metiers sont presque toutes mal servies par les mots-cles")
+
+    def test_folding_accents_in_the_fallback_never_hurts(self):
+        self.assertGreaterEqual(self.fold["exact"], self.old["exact"])
+        self.assertGreaterEqual(self.fold["recall"], self.old["recall"])
+        self.assertGreaterEqual(self.fold["precision"], self.old["precision"] - 0.03)
+
+    def test_atlas_is_never_picked_by_keywords(self):
+        for p in self.preds:
+            self.assertNotIn("atlas", p["old"]["workers"] + p["new"]["workers"])
+
+
 @unittest.skipUnless(PWSH and os.path.isfile(CASSETTE), "cassette d'enregistrement reel absente (record_routing.ps1)")
 class RecordedAccuracy(unittest.TestCase):
     @classmethod
