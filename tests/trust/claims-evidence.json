@@ -118,15 +118,15 @@
     {"file": "dashboard/server.py", "match": ["PAYMENT_NOT_CONFIRMED", "Aucune donnee de\\s+carte ne transite jamais par ce serveur"]}
   ],
   "human-validation": [
-    {"file": "core/ai/adapters/ANTHROPIC-ADAPTER.ps1", "match": ["JAMAIS executee ici", "PENDING_CONFIRMATION", "-like \"READ_\\*\" -or \\$Operation -like \"SEARCH_\\*\""]},
+    {"file": "core/ai/adapters/Connector-Tool.ps1", "match": ["JAMAIS executee ici", "PENDING_CONFIRMATION", "-like \"READ_\\*\" -or \\$Operation -like \"SEARCH_\\*\""]},
     {"file": "dashboard/server.py", "match": ["/api/connector-action/confirm"]}
   ],
   "autoapprove-optin": [
-    {"file": "core/ai/adapters/ANTHROPIC-ADAPTER.ps1", "match": ["Faux par defaut", "autoapprove\\.json"]},
+    {"file": "core/ai/adapters/Connector-Tool.ps1", "match": ["Faux par defaut", "autoapprove\\.json"]},
     {"file": "dashboard/server.py", "match": ["_save_client_autoapprove"]}
   ],
   "finance-manual": [
-    {"file": "core/ai/adapters/ANTHROPIC-ADAPTER.ps1", "match": ["-in @\\(\"stripe\", \"paypal\", \"quickbooks\", \"xero\"\\)", "\\$ClientId -eq \"CLI-DASHBOARD\" -and \\$IsFinancialConnector -and -not \\(Test-ReadOnlyOperation"]},
+    {"file": "core/ai/adapters/Connector-Tool.ps1", "match": ["-in @\\(\"stripe\", \"paypal\", \"quickbooks\", \"xero\"\\)", "\\$ClientId -eq \"CLI-DASHBOARD\" -and \\$IsFinancialConnector -and -not \\(Test-ReadOnlyOperation"]},
     {"file": "dashboard/server.py", "assign_excludes": {"name": "CLIENT_CONNECTOR_PROVIDERS", "values": ["stripe", "paypal", "quickbooks", "xero"]}}
   ],
   "auth-chain": [

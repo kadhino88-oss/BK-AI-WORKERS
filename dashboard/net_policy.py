@@ -20,16 +20,12 @@ import ipaddress
 import socket
 import urllib.parse
 
-_CGNAT = ipaddress.ip_network("100.64.0.0/10")
-_PRIVATE_V4 = [ipaddress.ip_network(n) for n in ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16")]
-_ULA = ipaddress.ip_network("fc00::/7")
-_BLOCKED_V6 = [ipaddress.ip_network(n) for n in ("64:ff9b::/96", "64:ff9b:1::/48", "2002::/16", "2001::/32", "100::/64")]
-
 PRIVATE_OK = ("loopback", "private", "cgnat")      # classes d'un reseau que le proprietaire controle (http simple tolere)
 
 
 def ip_class(addr):
-    """'loopback' | 'private' | 'cgnat' | 'public' | 'blocked' pour une adresse IP (texte). Texte invalide = 'blocked'."""
+    """'loopback' | 'private' | 'cgnat' | 'public' | 'blocked' pour une adresse IP (texte). Texte invalide = 'blocked'.
+    Regles ECRITES UNE A UNE (pas de is_global/is_private du langage) pour que l'implementation PowerShell (Engine-Common.ps1) en soit le miroir exact."""
     try:
         text = str(addr).strip().strip("[]").split("%", 1)[0]
         ip = ipaddress.ip_address(text)
@@ -38,22 +34,36 @@ def ip_class(addr):
     if isinstance(ip, ipaddress.IPv6Address):
         if ip.ipv4_mapped is not None:
             ip = ip.ipv4_mapped
-        elif any(ip in net for net in _BLOCKED_V6):
-            return "blocked"
-    if ip.is_loopback:
+        else:
+            b = ip.packed
+            if ip == ipaddress.IPv6Address("::1"):
+                return "loopback"
+            if (b[0] & 0xFE) == 0xFC:                                    # fc00::/7 (dont fd7a:115c:a1e0::/48 de Tailscale)
+                return "private"
+            if (b[0] & 0xE0) == 0x20:                                    # 2000::/3 : adresses globales
+                if b[0] == 0x20 and b[1] == 0x01 and ((b[2] == 0x0D and b[3] == 0xB8) or (b[2] == 0 and b[3] == 0)):
+                    return "blocked"                                    # 2001:db8::/32 (documentation), 2001::/32 (Teredo)
+                if b[0] == 0x20 and b[1] == 0x02:
+                    return "blocked"                                    # 2002::/16 (6to4)
+                if b[0] == 0x3F and b[1] == 0xFF and (b[2] & 0xF0) == 0:
+                    return "blocked"                                    # 3fff::/20 (documentation)
+                return "public"
+            return "blocked"                                            # ::, lien local, multicast, NAT64, 100::/64, tout le reste
+    b0, b1, b2, _ = ip.packed
+    if b0 == 127:
         return "loopback"
-    if ip.is_unspecified or ip.is_multicast or ip.is_link_local:
+    if b0 == 0:
         return "blocked"
-    if isinstance(ip, ipaddress.IPv4Address):
-        if ip in _CGNAT:
-            return "cgnat"
-        if any(ip in net for net in _PRIVATE_V4):
-            return "private"
-    else:
-        if ip in _ULA:
-            return "private"
-    if ip.is_reserved or ip.is_private or not ip.is_global:
-        return "blocked"
+    if b0 == 10 or (b0 == 172 and 16 <= b1 <= 31) or (b0 == 192 and b1 == 168):
+        return "private"
+    if b0 == 100 and 64 <= b1 <= 127:
+        return "cgnat"
+    if b0 == 169 and b1 == 254:
+        return "blocked"                                                # lien local : metadonnees des clouds (169.254.169.254)
+    if b0 >= 224:
+        return "blocked"                                                # multicast, reservee, diffusion
+    if (b0, b1, b2) in ((192, 0, 0), (192, 0, 2), (192, 88, 99), (198, 51, 100), (203, 0, 113)) or (b0 == 198 and b1 in (18, 19)):
+        return "blocked"                                                # documentation, relais 6to4, tests de performance
     return "public"
 
 
