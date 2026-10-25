@@ -210,6 +210,41 @@ class CreditBudget(Fixture):
         self.assertEqual(scope.child_env(A, "equilibre", "lea"), {})
 
 
+@unittest.skipUnless(os.path.isfile(os.path.join(REPO, "dashboard", "usage.py")) and os.path.isfile(os.path.join(REPO, "core", "usage", "USAGE-LIMITS.json")),
+                     "dashboard/usage.py (chantier « limites d'usage ») pas encore fusionne : le test s'active tout seul a la fusion")
+class RealUsageService(Fixture):
+    """L'adaptateur de Chloe contre le VRAI service des fenetres d'usage (et non une doublure)."""
+
+    def test_the_session_window_of_the_real_service_bounds_the_workers_chloe_may_call(self):
+        import usage as usage_mod
+        os.makedirs(os.path.join(TMP, "core", "usage"), exist_ok=True)
+        shutil.copy2(os.path.join(REPO, "core", "usage", "USAGE-LIMITS.json"), os.path.join(TMP, "core", "usage", "USAGE-LIMITS.json"))
+        now = time.time()
+
+        def plan_view(client_id):
+            return {"planId": "equipe", "monthlyCredits": 900, "cycleStartUtc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(now - 3 * 86400)),
+                    "renewsAtUtc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(now + 27 * 86400)), "exempt": False, "override": None}
+        write_billing(A, "equipe")
+        mode = {"v": "off"}
+        svc = usage_mod.UsageService(TMP, plan_view=plan_view, mode=lambda: mode["v"])
+        server.USAGE = svc
+        self.assertEqual(server.chloe_worker_cap(A, "equilibre"), 150, "service inerte : le solde du mois")
+        mode["v"] = "shadow"
+        self.assertEqual(server.chloe_worker_cap(A, "equilibre"), 150, "ombre : rien n'est borne")
+        mode["v"] = "on"
+        budget = server.CHLOE_SCOPE.mission_budget(A, "equilibre")
+        self.assertEqual((budget["source"], budget["binding"]), ("usage", "session"))
+        self.assertEqual(budget["workers"], budget["creditsAllowed"] // 6)
+        self.assertLess(budget["workers"], 150, "la session (environ 40 % de la semaine) borne avant le mois")
+        reservation = svc.reserve(A, budget["creditsAllowed"] - 5, "mission", "TEST")
+        self.assertTrue(hasattr(reservation, "id") or hasattr(reservation, "reservationId") or reservation is not None)
+        after = server.CHLOE_SCOPE.mission_budget(A, "equilibre")
+        self.assertEqual(after["workers"], 1, "il reste 5 credits : au moins un Worker (la porte du serveur a deja verifie qu'une mission est payable)")
+        self.assertIsNotNone(after["resetsAtUtc"], "la fenetre est ouverte : l'heure de renouvellement est connue")
+        env = server.CHLOE_SCOPE.child_env(A, "equilibre", "chloe")
+        self.assertTrue(env.get("BK_CHLOE_RESET_NOTE"), "phrase de renouvellement fabriquee par le serveur")
+
+
 class AttachPendingActions(Fixture):
     def test_every_prepared_action_comes_back_with_the_worker_that_prepared_it(self):
         os.makedirs(server.PENDING_ACTIONS_DIR, exist_ok=True)
