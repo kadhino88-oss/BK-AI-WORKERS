@@ -689,7 +689,7 @@ function Invoke-BKChloePlan {
             if ($null -ne $Ai -and @($Ai.Workers).Count -gt 0) { $Ids = @($Ai.Workers | ForEach-Object { ([string]$_).ToLowerInvariant() }); $Source = "legacy-ai" }
         } catch { }
     }
-    if ($Ids.Count -eq 0 -and (Get-Command Get-BKChloeKeywordWorkers -ErrorAction SilentlyContinue)) { $Ids = @(Get-BKChloeKeywordWorkers -Request $Goal -RoutingConfig $RoutingConfig) }
+    if ($Ids.Count -eq 0 -and (Get-Command Get-BKChloeKeywordWorkers -ErrorAction SilentlyContinue)) { $Ids = @(Get-BKChloeKeywordWorkers -Request $Goal -RoutingConfig $RoutingConfig -FoldAccents) }
     $Fallback = New-BKFallbackProjectPlan -Goal $Goal -WorkerIds $Ids -Allowed $Allowed -Cards $Cards -Denied $Denied -Language $(if ($Language) { $Language } else { "fr" }) -Chain:$Chain -Source $Source
     if ($null -eq $Fallback) {
         return @{ Ok = $false; Source = "none"; Plan = $null; Errors = $Errors + "NO_WORKER_IN_SCOPE"; Warnings = $Warnings; Usage = $Totals; Attempts = $Attempts; Model = $Phase.Model; FallbackReason = $FallbackReason }

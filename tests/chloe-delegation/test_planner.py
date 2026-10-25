@@ -528,5 +528,38 @@ class PlannerCalls(unittest.TestCase):
         self.assertEqual(ok.result["schema"], "BK-CHLOE-PLAN-RESULT-V1")
 
 
+HOOK_DRIVER = r'''
+$ErrorActionPreference = "Stop"
+$env:BK_ROOT = $env:REPO
+. (Join-Path $env:REPO "core/ai/adapters/Build-WorkerSystemPrompt.ps1")
+$Out = [ordered]@{}
+foreach ($Flag in @("", "0", "1")) {
+    $env:BK_PROJECTS = $Flag
+    $Out["chloe_$Flag"] = [bool]((Get-WorkerSystemPrompt -WorkerId "chloe") -match "cheffe de projet")
+    $Out["lea_$Flag"] = (Get-WorkerSystemPrompt -WorkerId "lea").Length
+}
+$Out | ConvertTo-Json | Set-Content -LiteralPath $env:OUT_FILE -Encoding utf8
+'''
+
+
+@unittest.skipUnless(PWSH, "pwsh (PowerShell 7) not installed")
+class ProjectPlaybookSwitch(unittest.TestCase):
+    def test_chloe_reads_her_project_playbook_only_when_projects_are_on_and_no_other_worker_changes(self):
+        tmp = tempfile.mkdtemp(prefix="bkhook-")
+        self.addCleanup(shutil.rmtree, tmp, True)
+        driver, out = os.path.join(tmp, "driver.ps1"), os.path.join(tmp, "out.json")
+        with open(driver, "w", encoding="utf-8") as f:
+            f.write(HOOK_DRIVER)
+        env = dict(os.environ, REPO=REPO, OUT_FILE=out)
+        env.pop("BK_PROJECTS", None)
+        p = subprocess.run([PWSH, "-NoProfile", "-NonInteractive", "-File", driver], capture_output=True, text=True, encoding="utf-8", errors="replace", env=env, timeout=180)
+        self.assertTrue(os.path.isfile(out), p.stdout + p.stderr)
+        with open(out, encoding="utf-8-sig") as f:
+            r = json.load(f)
+        self.assertEqual((r["chloe_"], r["chloe_0"], r["chloe_1"]), (False, False, True))
+        self.assertEqual(r["lea_"], r["lea_0"])
+        self.assertEqual(r["lea_0"], r["lea_1"], "le guide des autres Workers ne change jamais")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

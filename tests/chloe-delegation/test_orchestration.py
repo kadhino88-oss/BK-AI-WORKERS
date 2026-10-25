@@ -336,6 +336,13 @@ class Delegation(unittest.TestCase):
         quick = self.chloe(REQUEST, [route_response(p)], stub, env={"BK_MISSION_LEVEL": "rapide"})
         self.assertEqual(len(quick.messages()), 1, "pas de controle de coherence pour une mission Rapide")
 
+    def test_without_the_model_the_keyword_fallback_ignores_accents_but_the_legacy_switch_keeps_the_exact_old_matching(self):
+        stub = {"default": {"answer": "ok {worker}"}}
+        r = self.chloe("Cree mon identité visuelle", None, stub)
+        self.assertEqual((r.result["PlanSource"], r.called()), ("keywords", ["LEA"]))
+        old = self.chloe("Cree mon identité visuelle", None, stub, env={"BK_CHLOE_PLANNER": "0"})
+        self.assertEqual((old.result["Status"], old.called()), ("NO_WORKER_MATCHED", []), "l'ancien appariement exact ne reconnaissait pas « identité »")
+
     def test_the_legacy_switch_restores_keyword_routing_and_the_same_request_for_everyone(self):
         r = self.chloe("Je veux de la prospection de nouveaux clients et une campagne de marketing", [route_response(plan(task("T1", "lea")))],
                        env={"BK_CHLOE_PLANNER": "0"})

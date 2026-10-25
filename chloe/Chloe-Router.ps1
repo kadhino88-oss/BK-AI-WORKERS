@@ -21,15 +21,25 @@ function Get-BKChloePriceBlock {
 # ---------------------------------------------------------------------
 # Repli par mots-cles : EXACTEMENT l'ancien appariement (limite de mot, pluriel simple), qui rend des identifiants dans l'ordre du fichier
 # ---------------------------------------------------------------------
+function ConvertTo-BKAsciiLower {
+    # Minuscules sans accents (« identité » -> « identite ») : les mots-cles de worker-routing.json sont ecrits sans accents.
+    param([string]$Text)
+    $N = ([string]$Text).ToLowerInvariant().Normalize([System.Text.NormalizationForm]::FormD)
+    return [regex]::Replace($N, '\p{Mn}', '')
+}
+
 function Get-BKChloeKeywordWorkers {
-    param([string]$Request, $RoutingConfig)
-    $Lower = ([string]$Request).ToLowerInvariant()
+    # Sans -FoldAccents : EXACTEMENT l'ancien appariement (reference de comparaison des tests de precision). Avec : le meme, insensible aux accents (repli du nouveau
+    # routeur : un client ecrit « identité visuelle », le mot-cle est « identite visuelle »).
+    param([string]$Request, $RoutingConfig, [switch]$FoldAccents)
+    $Lower = if ($FoldAccents) { ConvertTo-BKAsciiLower $Request } else { ([string]$Request).ToLowerInvariant() }
     $Excluded = @($RoutingConfig.excluded_from_routing)
     $Selected = @()
     foreach ($Prop in $RoutingConfig.workers.PSObject.Properties) {
         if ($Excluded -contains $Prop.Name) { continue }
         foreach ($Keyword in @($Prop.Value.primary)) {
-            if ($Lower -match ('(?<![a-z0-9])' + [regex]::Escape($Keyword) + 's?(?![a-z0-9])')) { $Selected += [string]$Prop.Name; break }
+            $K = if ($FoldAccents) { ConvertTo-BKAsciiLower $Keyword } else { [string]$Keyword }
+            if ($Lower -match ('(?<![a-z0-9])' + [regex]::Escape($K) + 's?(?![a-z0-9])')) { $Selected += [string]$Prop.Name; break }
         }
     }
     return $Selected

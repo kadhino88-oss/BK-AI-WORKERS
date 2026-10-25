@@ -30,7 +30,7 @@ try {
     if ($Route.Plan) { $Plan = $Route.Plan }
     $Source = if ($Plan) { "model" } else { "keywords" }
     if ($null -eq $Plan) {
-        $Ids = @(Get-BKChloeKeywordWorkers -Request $Request -RoutingConfig $Routing)
+        $Ids = @(Get-BKChloeKeywordWorkers -Request $Request -RoutingConfig $Routing -FoldAccents)
         $Plan = if ($Ids.Count -gt 0) { New-BKChloeSimplePlan -Request $Request -WorkerIds $Ids -Source "keywords" } else { [ordered]@{ mode = "direct_reply"; why = ""; subtasks = @() } }
     }
     $Level = if ($env:BK_MISSION_LEVEL -match '^[a-z]{3,20}$') { [string]$env:BK_MISSION_LEVEL } else { "" }

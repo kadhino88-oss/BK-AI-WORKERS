@@ -122,7 +122,7 @@ if ($null -ne $Plan -and $Plan.mode -eq "direct_reply") {
 }
 
 if ($null -eq $Plan) {
-    $Ids = @(Get-BKChloeKeywordWorkers -Request $Request -RoutingConfig $RoutingConfig)
+    $Ids = @(Get-BKChloeKeywordWorkers -Request $Request -RoutingConfig $RoutingConfig -FoldAccents:$PlannerOn)      # repli du routeur a modele : insensible aux accents ; BK_CHLOE_PLANNER=0 : l'ancien appariement exact
     if ($Ids.Count -eq 0 -and -not $PlannerOn) {
         # Repli IA reel de l'ancien routage (voir Invoke-BKChloeAIRouting dans chloe/Chloe-LegacyRouting.ps1).
         $AIRouting = Invoke-BKChloeAIRouting -UserRequest $Request -RoutingConfig $RoutingConfig -Excluded $Excluded -PreferredIds $AllowedWorkers
