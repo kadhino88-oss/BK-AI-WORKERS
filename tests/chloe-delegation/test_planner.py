@@ -22,7 +22,7 @@ ROSTER = ["alex", "amina", "clara", "dario", "emma", "ines", "lea", "lucas", "ma
 
 COPY_FILES = (
     "chloe/Chloe-Common.ps1", "chloe/Chloe-LegacyRouting.ps1", "chloe/Chloe-Router.ps1", "chloe/Chloe-Planner.ps1", "chloe/Invoke-Chloe-Plan.ps1",
-    "chloe/prompts/plan.md", "orchestrator/worker-routing.json", "core/ai/BK-Secret.ps1", "core/ai/AI-PRICING.json", "core/ai/LEVELS.json",
+    "chloe/prompts/plan.md", "chloe/Chloe-Triage.ps1", "orchestrator/worker-routing.json", "core/ai/BK-Secret.ps1", "core/ai/AI-PRICING.json", "core/ai/LEVELS.json",
     "core/ai/adapters/Mission-Cost.ps1", "core/projects/WORKER-CARDS.json",
 )
 
@@ -532,6 +532,75 @@ class PlannerCalls(unittest.TestCase):
         ok = self.run_plan(cassette=[plan_response(good_plan())])
         self.assertEqual(sorted(ok.result.keys()), ["attempts", "errors", "fallbackReason", "model", "ok", "plan", "schema", "source", "usage", "warnings"])
         self.assertEqual(ok.result["schema"], "BK-CHLOE-PLAN-RESULT-V1")
+
+
+TRIAGE_DRIVER = r'''
+$ErrorActionPreference = "Stop"
+if ($env:T_USE_FAKE_API -eq "1") { . (Join-Path $env:BK_ROOT "_test/fake_api.ps1") }
+& (Join-Path $env:BK_ROOT "chloe/Chloe-Triage.ps1") -Request $env:T_REQUEST -OutFile $env:T_OUT
+'''
+
+
+def triage(request, cassette=None, env=None):
+    """Lance chloe/Chloe-Triage.ps1 (POST /api/chloe/triage) dans une copie jetable du depot et rend son JSON."""
+    root = tempfile.mkdtemp(prefix="bktriage-")
+    try:
+        for rel in COPY_FILES:
+            dst = os.path.join(root, rel)
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            shutil.copy2(os.path.join(REPO, rel), dst)
+        os.makedirs(os.path.join(root, "_test"), exist_ok=True)
+        shutil.copy2(os.path.join(REPO, "tests", "adapter-review", "fake_api.ps1"), os.path.join(root, "_test", "fake_api.ps1"))
+        driver, out = os.path.join(root, "_test", "driver.ps1"), os.path.join(root, "_test", "out.json")
+        with open(driver, "w", encoding="utf-8") as f:
+            f.write(TRIAGE_DRIVER)
+        base = {k: v for k, v in os.environ.items() if not k.startswith("BK_") and not k.startswith("FAKE_")}
+        e = dict(base, BK_ROOT=root, T_REQUEST=request, T_OUT=out, BK_REPLY_LANG="")
+        if cassette is not None:
+            cp = os.path.join(root, "_test", "cassette.json")
+            with open(cp, "w", encoding="utf-8") as f:
+                json.dump({"responses": cassette}, f)
+            e.update(T_USE_FAKE_API="1", FAKE_CASSETTE=cp, FAKE_LOG=os.path.join(root, "_test", "requests.jsonl"), FAKE_KEY=FAKE_KEY, BK_SECRET_ANTHROPIC=FAKE_KEY)
+        e.update(env or {})
+        p = subprocess.run([PWSH, "-NoProfile", "-NonInteractive", "-File", driver], capture_output=True, text=True, encoding="utf-8", errors="replace", env=e, cwd=root, timeout=300)
+        assert os.path.isfile(out), p.stdout + p.stderr
+        with open(out, encoding="utf-8-sig") as f:
+            return json.load(f)
+    finally:
+        shutil.rmtree(root, ignore_errors=True)
+
+
+@unittest.skipUnless(PWSH, "pwsh (PowerShell 7) not installed")
+class Triage(unittest.TestCase):
+    """POST /api/chloe/triage : mission ou projet ? Un appel peu couteux, aucun Worker lance, droits et estimation donnes par le code."""
+
+    def test_a_single_trade_is_a_mission_with_its_price_in_credits(self):
+        mission = {"mode": "mission", "language": "fr", "why": "un seul metier", "subtasks": [{"id": "T1", "worker": "lea", "objective": "Cree le logo du cabinet de physiotherapie."}]}
+        r = triage("Cree mon logo", [route_response(mission)], env={"BK_MISSION_LEVEL": "equilibre"})
+        self.assertEqual((r["ok"], r["mode"], r["source"]), (True, "mission", "model"))
+        self.assertEqual([(w["id"], w["included"]) for w in as_list(r["workers"])], [("lea", True)])
+        self.assertEqual(r["estimate"]["missionCredits"], 6, "un Worker x le cout du niveau Equilibre")
+        self.assertEqual(as_list(r["notIncluded"]), [])
+
+    def test_a_big_request_is_proposed_as_a_project_and_the_workers_outside_the_plan_are_named(self):
+        big = {"mode": "project", "language": "fr", "why": "plusieurs metiers et livrables", "subtasks": [
+            {"id": "T1", "worker": "lea", "objective": "Cree la charte graphique."}, {"id": "T2", "worker": "emma", "objective": "Ecris les textes.", "dependsOn": ["T1"]},
+            {"id": "T3", "worker": "clara", "objective": "Redige les mentions legales."}]}
+        r = triage("Lance mon offre de bougies : charte, textes, mentions legales", [route_response(big)], env={"BK_ALLOWED_WORKERS": "lea,emma,lucas", "BK_MISSION_LEVEL": "rapide"})
+        self.assertEqual((r["ok"], r["mode"]), (True, "project"))
+        self.assertEqual([(w["id"], w["included"]) for w in as_list(r["workers"])], [("lea", True), ("emma", True), ("clara", False)])
+        self.assertEqual(as_list(r["notIncluded"]), ["clara"])
+        self.assertEqual(r["estimate"]["missionCredits"], 2, "seuls les Workers du forfait sont comptes")
+        self.assertEqual(as_list(r["estimate"]["projectCredits"]), [8, 48])
+
+    def test_a_greeting_gets_a_direct_reply_and_without_a_model_the_keywords_decide(self):
+        r = triage("Bonjour", [route_response({"mode": "direct_reply", "directReply": "Bonjour ! Que puis-je faire ?", "subtasks": []})])
+        self.assertEqual((r["mode"], r["directReply"], as_list(r["workers"])), ("direct_reply", "Bonjour ! Que puis-je faire ?", []))
+        k = triage("Je veux de la prospection de nouveaux clients")
+        self.assertEqual((k["ok"], k["mode"], k["source"]), (True, "mission", "keywords"))
+        self.assertEqual([w["id"] for w in as_list(k["workers"])], ["alex"])
+        nothing = triage("zzz qqq")
+        self.assertEqual((nothing["mode"], as_list(nothing["workers"])), ("direct_reply", []))
 
 
 HOOK_DRIVER = r'''
