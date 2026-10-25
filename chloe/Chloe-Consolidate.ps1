@@ -51,6 +51,7 @@ function New-BKChloeConsolidation {
         [array]$NotIncluded = @(),       # sous-taches du plan dont le Worker n'est pas embauche : @{ worker; displayName; objective }
         [array]$QuotaSkipped = @(),      # sous-taches non lancees faute de credits (avant le debut) : meme forme
         [string]$ResetNote = "",         # « demain a 08:00 » : moment ou les credits reviennent (quand le serveur le sait)
+        [bool]$ProjectsEnabled = $false, # projets actives : la partie non traitee faute de credits peut etre proposee comme projet (qui attend les credits)
         $Consistency = $null,
         $L,
         [string]$Lang = "fr"
@@ -104,6 +105,7 @@ function New-BKChloeConsolidation {
     $AllQuota = @($QuotaSkipped | ForEach-Object { $_.displayName }) + @($QuotaDeferred | ForEach-Object { $_.displayName })
     if ($AllQuota.Count -gt 0) {
         $Notes += $(if ($ResetNote) { $L.QuotaWindowNote -f ($AllQuota -join ", "), $ResetNote } else { $L.QuotaNote -f ($AllQuota -join ", ") })
+        if ($ProjectsEnabled) { $Notes += $L.QuotaProjectHint }
     }
     if ($NotIncluded.Count -gt 0) {
         $Notes += ($L.NotIncluded -f ((@($NotIncluded | ForEach-Object { $_.displayName })) -join ", "))

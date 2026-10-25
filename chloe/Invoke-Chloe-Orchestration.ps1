@@ -295,7 +295,7 @@ if ($WantConsistency -and ($Ctx.RunDeadline - (Get-Date)).TotalSeconds -ge 45) {
 # =================================================
 $ResetNote = ""
 if ($env:BK_CHLOE_RESET_NOTE -match '^[\p{L}\p{N} .,:;()/@°-]{3,70}$') { $ResetNote = [string]$env:BK_CHLOE_RESET_NOTE }
-$Cons = New-BKChloeConsolidation -Ctx $Ctx -Plan $Plan -NotIncluded $NotIncludedSpecs -QuotaSkipped $QuotaSkippedSpecs -ResetNote $ResetNote -Consistency $Consistency -L $L -Lang $Lang
+$Cons = New-BKChloeConsolidation -Ctx $Ctx -Plan $Plan -NotIncluded $NotIncludedSpecs -QuotaSkipped $QuotaSkippedSpecs -ResetNote $ResetNote -ProjectsEnabled $ProjectsEnabled -Consistency $Consistency -L $L -Lang $Lang
 $OverallStatus = $Cons.OverallStatus
 $FinalSynthesis = $Cons.FinalSynthesis
 

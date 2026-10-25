@@ -123,6 +123,7 @@ $Script:BKChloeLabelsFr = @{
     Consistency      = "À harmoniser entre les livrables"
     NoResult         = "Aucun résultat vérifié à livrer pour cette demande."
     Continue         = "Pour la suite, écrivez par exemple : « {0} »."
+    QuotaProjectHint = "Vous pouvez aussi lancer le tout comme projet : il attend le renouvellement de vos crédits et reprend tout seul."
     SuggestProject   = "Cette demande demande plusieurs étapes et plusieurs Workers : je vous propose de la lancer comme projet (plan validé avant tout crédit dépensé), ou de répondre juste rapidement."
     WorkerLine       = "{0} — {1}"
 }
@@ -148,6 +149,7 @@ $Script:BKChloeLabelsEn = @{
     Consistency      = "To align across the deliverables"
     NoResult         = "No verified result to deliver for this request."
     Continue         = "To continue, write for example: `"{0}`"."
+    QuotaProjectHint = "You can also run the whole thing as a project: it waits for your credits to renew and resumes by itself."
     SuggestProject   = "This request needs several steps and several Workers: I suggest running it as a project (plan approved before any credit is spent), or just answering quickly."
     WorkerLine       = "{0} — {1}"
 }
