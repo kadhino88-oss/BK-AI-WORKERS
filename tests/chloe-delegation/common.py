@@ -18,7 +18,7 @@ FAKE_KEY = "FAKE-ANTHROPIC-KEY-FOR-TESTS-ONLY"
 CLIENT = "CLI-CUST-AAAAAAAA"
 
 COPY_FILES = (
-    "chloe/Invoke-Chloe-Orchestration.ps1", "chloe/Chloe-Common.ps1", "chloe/Chloe-Router.ps1", "chloe/Chloe-Executor.ps1",
+    "chloe/Invoke-Chloe-Orchestration.ps1", "chloe/Chloe-Common.ps1", "chloe/Chloe-LegacyRouting.ps1", "chloe/Chloe-Router.ps1", "chloe/Chloe-Executor.ps1",
     "chloe/Chloe-Consolidate.ps1", "chloe/Chloe-Consistency.ps1", "chloe/Invoke-Chloe-WorkerCall.ps1", "chloe/prompts/consistency-review.md",
     "orchestrator/worker-routing.json", "core/ai/Get-DefaultProvider.ps1", "core/ai/BK-Secret.ps1", "core/ai/AI-PROVIDERS.json",
     "core/ai/AI-PRICING.json", "core/ai/LEVELS.json", "core/ai/adapters/Mission-Cost.ps1", "core/projects/WORKER-CARDS.json",
