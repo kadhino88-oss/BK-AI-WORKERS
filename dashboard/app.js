@@ -120,11 +120,14 @@ async function fetchJson(url, opts) {
     // remplace par un message comprehensible (2026-09-24).
     throw new Error(res.ok ? "Réponse vide du serveur, réessayez." : `Erreur serveur (${res.status}), réessayez.`);
   }
+  let data;
   try {
-    return JSON.parse(text);
+    data = JSON.parse(text);
   } catch {
     throw new Error("Réponse invalide du serveur, réessayez.");
   }
+  try { noteUsageActivity(url, opts, data); } catch (e) { /* les compteurs d'usage ne bloquent jamais une reponse */ }
+  return data;
 }
 
 function statusClass(status) {
@@ -283,6 +286,7 @@ function switchToOwnerLogin() {
 async function afterAccountUnlocked() {
   accountAuthenticated = true;
   syncAccountButtonLabel();
+  refreshUsage();
   document.getElementById("account-modal").hidden = true;
   const action = pendingAccountAction;
   pendingAccountAction = null;
@@ -367,6 +371,7 @@ async function submitGatePassword() {
     accountAuthenticated = true;
     isOperator = true;
     syncAdminNavVisibility();
+    applyUsage(null);       // le proprietaire n'a ni jauge ni pastille d'usage
     document.getElementById("gate-modal").hidden = true;
     const action = pendingGateAction;
     pendingGateAction = null;
@@ -834,7 +839,9 @@ function upgradeNextHtml(up) {
 // Boutons affiches sous un message « quota atteint » (402 SUBSCRIPTION_REQUIRED) : le forfait suivant avec son prix, ou « nous ecrire »,
 // plus le lien vers tous les forfaits. Sans information de montee en gamme (ancien serveur) : l'ancien bouton « Voir les abonnements ».
 function subscribeCtaHtml(result) {
-  const up = result && result.upgrade;
+  const up = quotaUpgradeOf(result);
+  // Limite de session / semaine sans forfait au-dessus (plafond fixe par contrat) : on propose d'ecrire, pas de choisir un forfait.
+  if (!up && result && result.error === "USAGE_LIMIT_REACHED") return `<div class="subscribe-cta-row" style="margin-top:10px"><button type="button" class="btn btn-gold subscribe-upgrade-btn">Relever mon plafond</button></div>`;
   if (!up) return `<button type="button" class="btn btn-gold subscribe-cta-btn" style="margin-top:10px">Voir les abonnements &rarr;</button>`;
   const nxt = up.next;
   const main = !nxt
@@ -849,7 +856,7 @@ function wireSubscribeCta(root, result, beforeNavigate) {
   const go = () => { if (beforeNavigate) beforeNavigate(); showView("billing"); };
   root.querySelectorAll(".subscribe-cta-btn").forEach((b) => b.addEventListener("click", go));
   root.querySelectorAll(".subscribe-upgrade-btn").forEach((b) => b.addEventListener("click", () => {
-    const up = result && result.upgrade;
+    const up = quotaUpgradeOf(result);
     if (up && up.next && !up.next.onQuote) go();
     startUpgrade(up);
   }));
@@ -892,6 +899,7 @@ async function loadBilling() {
   loadInstalledWorkers();
 
   document.getElementById("billing-plan-name").textContent = data.planName;
+  applyBillingUsage(data);
 
   const fill = document.getElementById("billing-usage-fill");
   const pct = Math.min(100, data.percentUsed || 0);
@@ -957,6 +965,7 @@ async function loadBilling() {
       <div class="billing-plan-name">${plan.name}</div>
       ${price ? `<div class="billing-plan-price">${price}</div>` : ""}
       <div class="billing-plan-credits">${creditsLabel}</div>
+      ${plan.limits ? `<div class="billing-plan-limits"><strong>${nf(plan.limits.session)}</strong> <span>crédits par session de</span> ${(data.usage && data.usage.sessionHours) || 4} h · <strong>${nf(plan.limits.week)}</strong> <span>par semaine</span></div>` : ""}
       ${workers}
       <button type="button" class="btn ${isCurrent ? "btn-ghost" : "btn-gold"}" ${isCurrent ? "disabled" : ""}>
         ${label}
@@ -1109,6 +1118,303 @@ async function cancelBillingPlan() {
   await loadBilling();
 }
 
+// ---------- LIMITES D'USAGE : session (4 h), semaine, mois (docs/PRICING.md, section 6) ----------
+// Comme les limites de Claude : en plus du quota du mois, une limite par SESSION de 4 heures (ouverte par la premiere mission) et une limite par
+// SEMAINE. GET /api/usage donne, par fenetre, ce qui est utilise, reserve et restant, l'heure de renouvellement et le forfait du dessus avec ses
+// limites. « enforced » dit si la session et la semaine s'appliquent REELLEMENT (BK_USAGE_WINDOWS=1) : tant que c'est faux, rien n'est affiche
+// (aucune limite annoncee qui ne soit pas appliquee). Le proprietaire (exempt) n'a ni jauge ni pastille.
+let usageState = null;
+let usagePollTimer = null;
+let usageRefreshTimer = null;
+
+function usageActive(u) {
+  return !!(u && u.ok && u.enforced && !u.exempt && u.windowsApply && u.session && u.week);
+}
+
+function usagePct(w) {
+  if (!w || !w.limit) return 0;
+  return Math.min(100, Math.round((100 * ((w.used || 0) + (w.reserved || 0))) / w.limit));
+}
+
+// ok < seuil d'alerte (80 %) <= warn < 100 % <= full : le niveau pilote la couleur ET le texte (jamais la couleur seule).
+function usageLevelOf(pct, warn) {
+  return pct >= 100 ? "full" : pct >= (warn || 80) ? "warn" : "ok";
+}
+
+function usageNumber(n) {
+  return Number(n || 0).toLocaleString(BK_LOCALE());
+}
+
+// Duree restante en toutes lettres courtes : « 35 min », « 1 h 12 », « 6 j 21 h » (arrondie vers le haut a la minute).
+function usageDurationText(ms) {
+  const en = BK_LOCALE() === "en-GB";
+  const mins = Math.max(1, Math.ceil(ms / 60000));
+  if (mins < 60) return `${mins} min`;
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  if (h < 48) return m ? `${h} h ${String(m).padStart(2, "0")}` : `${h} h`;
+  const d = Math.floor(h / 24);
+  const hh = h % 24;
+  const unit = en ? "d" : "j";
+  return hh ? `${d} ${unit} ${hh} h` : `${d} ${unit}`;
+}
+
+// Heure de renouvellement dans le fuseau du navigateur : « à 14:12 », « demain à 03:12 », « lun. 27 oct. à 10:12 ».
+function usageWhenText(iso) {
+  const d = new Date(iso);
+  if (isNaN(d)) return "";
+  const en = BK_LOCALE() === "en-GB";
+  const at = en ? "at" : "à";
+  const time = d.toLocaleTimeString(BK_LOCALE(), { hour: "2-digit", minute: "2-digit" });
+  const day = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const diff = Math.round((day(d) - day(new Date())) / 86400000);
+  if (diff <= 0) return `${at} ${time}`;
+  if (diff === 1) {
+    let tomorrow = en ? "tomorrow" : "demain";
+    try { tomorrow = new Intl.RelativeTimeFormat(BK_LOCALE(), { numeric: "auto" }).format(1, "day"); } catch (e) { /* mot par defaut */ }
+    return `${tomorrow} ${at} ${time}`;
+  }
+  return `${d.toLocaleDateString(BK_LOCALE(), { weekday: "short", day: "numeric", month: "short" })} ${at} ${time}`;
+}
+
+// « à 14:12 (dans 1 h 12) » ; les durees se recalculent seules (usageTick).
+function usageResetPhrase(iso) {
+  const ms = new Date(iso).getTime() - Date.now();
+  if (isNaN(ms)) return "";
+  const when = usageWhenText(iso);
+  return ms > 0 ? `${when} (${BK_LOCALE() === "en-GB" ? "in" : "dans"} ${usageDurationText(ms)})` : when;
+}
+
+// Un compteur de fenetre : nom, utilise / limite, barre (role progressbar, valeur lue au lecteur d'ecran), reste, renouvellement, alerte des 80 %.
+function usageMeterHtml(kind, w, title, warn) {
+  const pct = usagePct(w);
+  const level = usageLevelOf(pct, warn);
+  const used = (w.used || 0) + (w.reserved || 0);
+  const id = `usage-meter-${kind}`;
+  const valueText = iwTf("{used} sur {limit} crédits utilisés, {left} restants", { used: usageNumber(used), limit: usageNumber(w.limit), left: usageNumber(w.remaining) });
+  const when = w.opened && w.resetsAtUtc
+    ? `<span class="usage-meter-reset"><span>Se renouvelle</span> <time datetime="${escapeHtml(w.resetsAtUtc)}" data-usage-reset="${escapeHtml(w.resetsAtUtc)}" data-no-i18n="1">${escapeHtml(usageResetPhrase(w.resetsAtUtc))}</time></span>`
+    : `<span class="usage-meter-reset">${escapeHtml(iwT("Démarre à votre prochaine mission."))}</span>`;
+  let alert = "";
+  if (level === "warn") {
+    alert = `<p class="usage-meter-alert"><span aria-hidden="true">⚠️</span> ${escapeHtml(iwTf(kind === "session" ? "Plus de {pct} % de votre quota de session est utilisé." : "Plus de {pct} % de votre quota de la semaine est utilisé.", { pct: warn || 80 }))}</p>`;
+  } else if (level === "full") {
+    alert = `<p class="usage-meter-alert"><span aria-hidden="true">⛔</span> ${escapeHtml(iwTf(kind === "session" ? "Quota de session atteint : vous pourrez lancer de nouvelles missions {when}." : "Quota de la semaine atteint : vous pourrez lancer de nouvelles missions {when}.", { when: w.resetsAtUtc ? usageWhenText(w.resetsAtUtc) : "" }))}</p>`;
+  }
+  return `<div class="usage-meter" data-window="${kind}" data-level="${level}">
+    <div class="usage-meter-head"><span class="usage-meter-name" id="${id}-name">${escapeHtml(title)}</span>
+      <span class="usage-meter-figures"><strong>${usageNumber(used)}</strong> / <strong>${usageNumber(w.limit)}</strong> <span>crédits</span></span></div>
+    <div class="usage-meter-track" role="progressbar" aria-labelledby="${id}-name" aria-valuemin="0" aria-valuemax="${w.limit}" aria-valuenow="${Math.min(used, w.limit)}" aria-valuetext="${escapeHtml(valueText)}">
+      <div class="usage-meter-fill" style="width:${pct}%"></div></div>
+    <div class="usage-meter-foot"><span class="usage-meter-left"><strong>${usageNumber(w.remaining)}</strong> <span>restants</span></span>${when}</div>
+    ${alert}
+  </div>`;
+}
+
+// Objet attendu par startUpgrade() a partir de la carte de montee en gamme de /api/usage (forme plate : planId, planName, priceChf, limits...).
+function usageUpgradeArg(up) {
+  if (!up) return null;
+  if (up.next !== undefined) return up;                       // deja la forme de la facturation
+  if (!up.planId) return null;
+  return { next: { planId: up.planId, name: up.planName, priceChf: up.priceChf, onQuote: !!up.onQuote, credits: up.limits && up.limits.month, limits: up.limits },
+           interval: null, contactEmail: up.contactEmail || BK_CONTACT_EMAIL };
+}
+
+// Ligne « Pro : 115 crédits par session, 287 par semaine, 1 250 par mois » et bouton d'action (selon le forfait du dessus).
+function usageUpgradeTextAndLabel(up) {
+  const arg = usageUpgradeArg(up);
+  if (!arg || !arg.next) return { text: iwT("Votre plafond est fixé par contrat : écrivez-nous pour le relever."), label: iwT("Relever mon plafond") };
+  const n = arg.next;
+  if (n.onQuote || !n.limits) {
+    return { text: iwTf("{name} : plafonds de session et de semaine fixés par contrat.", { name: n.name }), label: iwT("Nous contacter") };
+  }
+  const price = n.priceChf ? ` (${formatPrice(n.priceChf.month)}${iwT("/mois")})` : "";
+  return {
+    text: iwTf("Forfait {name} : {session} crédits par session, {week} par semaine, {month} par mois.", { name: n.name, session: usageNumber(n.limits.session), week: usageNumber(n.limits.week), month: usageNumber(n.limits.month) }),
+    label: iwTf("Passer à {name}", { name: n.name }) + price,
+  };
+}
+
+function renderUsageMeters() {
+  const box = document.getElementById("usage-windows");
+  if (!box) return;
+  const u = usageState;
+  if (!usageActive(u)) { box.hidden = true; return; }
+  box.hidden = false;
+  const warn = u.warnPercent || 80;
+  const hours = u.sessionHours || (u.session && u.session.windowHours) || 4;
+  document.getElementById("usage-meters").innerHTML =
+    usageMeterHtml("session", u.session, iwTf("Session ({h} h)", { h: hours }), warn) +
+    usageMeterHtml("week", u.week, iwT("Semaine"), warn);
+  const worst = Math.max(usagePct(u.session), usagePct(u.week));
+  const upBox = document.getElementById("usage-upgrade");
+  const banner = document.getElementById("usage-banner");
+  banner.hidden = true;
+  if (worst >= warn && u.upgrade !== undefined) {
+    const info = usageUpgradeTextAndLabel(u.upgrade);
+    document.getElementById("usage-upgrade-text").textContent = info.text;
+    const btn = document.getElementById("usage-upgrade-btn");
+    btn.textContent = info.label;
+    btn.onclick = () => startUpgrade(usageUpgradeArg(u.upgrade));
+    upBox.hidden = false;
+  } else {
+    upBox.hidden = true;
+  }
+}
+
+// Pastille de la barre du haut : la fenetre la plus avancee (session ou semaine), cliquable (ouvre Facturation), lisible au clavier et au lecteur d'ecran.
+function renderUsageChip() {
+  const chip = document.getElementById("usage-chip");
+  if (!chip) return;
+  const u = usageState;
+  if (!usageActive(u) || !accountAuthenticated || isOperator) { chip.hidden = true; return; }
+  const sPct = usagePct(u.session);
+  const wPct = usagePct(u.week);
+  const useWeek = wPct > sPct;
+  const pct = useWeek ? wPct : sPct;
+  const level = usageLevelOf(pct, u.warnPercent);
+  chip.hidden = false;
+  chip.dataset.level = level;
+  chip.querySelector(".usage-chip-ring").style.setProperty("--p", String(pct));
+  chip.querySelector(".usage-chip-text").textContent = `${iwT(useWeek ? "Semaine" : "Session")} ${pct} %`;
+  const w = useWeek ? u.week : u.session;
+  const renew = w.opened && w.resetsAtUtc ? ` ${iwTf("Renouvellement {when}.", { when: usageWhenText(w.resetsAtUtc) })}` : "";
+  const label = `${iwTf("Usage : session {s} %, semaine {w} %.", { s: sPct, w: wPct })}${renew} ${iwT("Ouvrir la facturation.")}`;
+  chip.setAttribute("aria-label", label);
+  chip.title = label;
+}
+
+function applyUsage(u) {
+  usageState = u && !u.error ? u : null;
+  renderUsageChip();
+  renderUsageMeters();
+  usageSchedulePoll();
+}
+
+async function refreshUsage() {
+  if (!accountAuthenticated || isOperator) { applyUsage(null); return null; }
+  try {
+    const u = await fetchJson("/api/usage");
+    applyUsage(u);
+    return usageState;
+  } catch (e) {
+    return usageState;       // coupure passagere : on garde l'affichage courant
+  }
+}
+
+// Prochaine interrogation : chaque minute tant que les fenetres s'appliquent (onglet visible), toutes les 5 minutes sinon.
+function usageSchedulePoll() {
+  clearTimeout(usagePollTimer);
+  const ms = usageActive(usageState) ? 60000 : 300000;
+  usagePollTimer = setTimeout(() => { if (!document.hidden) refreshUsage(); else usageSchedulePoll(); }, ms);
+}
+
+// Apres une mission (envoi, fin d'un job en arriere-plan) ou un refus : les compteurs se rafraichissent peu apres.
+function noteUsageActivity(url, opts, data) {
+  if (!accountAuthenticated || isOperator || typeof url !== "string") return;
+  const method = ((opts && opts.method) || "GET").toUpperCase();
+  const missionStart = method === "POST" && /^\/api\/(chloe\/task|workers\/[^/]+\/task|automations\/[^/]+\/run)/.test(url);
+  const jobDone = url.startsWith("/api/missions/async/") && data && data.status && data.status !== "RUNNING";
+  if (!missionStart && !jobDone) return;
+  clearTimeout(usageRefreshTimer);
+  usageRefreshTimer = setTimeout(refreshUsage, 1200);
+}
+
+// Compte a rebours : les durees « (dans 1 h 12) » se recalculent chaque 30 s ; une fenetre arrivee a echeance relance l'interrogation.
+function usageTick() {
+  if (document.hidden) return;
+  let renewed = false;
+  document.querySelectorAll("[data-usage-reset]").forEach((el) => {
+    const iso = el.dataset.usageReset;
+    el.textContent = usageResetPhrase(iso);
+    if (new Date(iso).getTime() <= Date.now()) renewed = true;
+  });
+  if (renewed) refreshUsage();
+}
+setInterval(usageTick, 30000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden && accountAuthenticated) refreshUsage(); });
+document.addEventListener("bk:lang", () => { renderUsageChip(); renderUsageMeters(); });
+document.getElementById("usage-chip").addEventListener("click", () => showView("billing"));
+
+// Facturation : get_billing porte deja le bloc « usage » (meme corps que GET /api/usage) : pas de second appel pour l'afficher.
+function applyBillingUsage(data) {
+  if (data && data.usage) applyUsage(data.usage);
+  else applyUsage(null);
+}
+
+// ---- Refus de quota : le mois (SUBSCRIPTION_REQUIRED) ou la session / la semaine (USAGE_LIMIT_REACHED, HTTP 402) ----
+function isQuotaRefusal(result) {
+  return !!result && (result.error === "SUBSCRIPTION_REQUIRED" || result.error === "USAGE_LIMIT_REACHED");
+}
+
+function quotaRefusalTitle(result) {
+  if (result && result.error === "USAGE_LIMIT_REACHED") return result.limit === "week" ? "Quota de la semaine atteint" : "Quota de session atteint";
+  return "Abonnement requis";
+}
+
+// Carte de montee en gamme d'un refus, quelle que soit sa forme (facturation : {next:{...}} ; usage : forme plate de /api/usage).
+function quotaUpgradeOf(result) {
+  return usageUpgradeArg(result && result.upgrade);
+}
+
+// Ce que le refus ajoute sous le message du serveur : l'heure du prochain renouvellement (dans le fuseau du client, avec compte a rebours) et les
+// limites du forfait du dessus. Le message du serveur (detail) reste le texte de reference, aussi pour l'API et WhatsApp.
+function usageRefusalExtraHtml(result) {
+  if (!result || result.error !== "USAGE_LIMIT_REACHED") return "";
+  let html = "";
+  if (result.resetsAtUtc) {
+    html += `<p class="usage-limit-reset"><span>Prochain renouvellement :</span> <time datetime="${escapeHtml(result.resetsAtUtc)}" data-usage-reset="${escapeHtml(result.resetsAtUtc)}" data-no-i18n="1">${escapeHtml(usageResetPhrase(result.resetsAtUtc))}</time></p>`;
+  }
+  const arg = quotaUpgradeOf(result);
+  if (arg && arg.next && arg.next.limits && !arg.next.onQuote) {
+    const l = arg.next.limits;
+    html += `<p class="usage-limit-next">${escapeHtml(iwTf("Forfait {name} : {session} crédits par session, {week} par semaine, {month} par mois.", { name: arg.next.name, session: usageNumber(l.session), week: usageNumber(l.week), month: usageNumber(l.month) }))}</p>`;
+  }
+  return html;
+}
+
+// Page Tarifs : les limites de session et de semaine de chaque forfait, quand elles s'appliquent reellement (GET /api/usage-limits, sans compte).
+async function renderPricingUsage() {
+  let data = null;
+  try { data = await fetchJson("/api/usage-limits"); } catch (e) { return; }
+  const enforced = !!(data && data.ok && data.enforced && data.plans);
+  renderUsageFaq(enforced);
+  document.querySelectorAll("#pricing-grid .plan-card").forEach((card) => {
+    card.querySelectorAll(".plan-usage").forEach((n) => n.remove());
+    const p = enforced ? data.plans[card.dataset.planId] : null;
+    if (!p) return;
+    const row = document.createElement("div");
+    row.className = "plan-usage";
+    row.innerHTML = `<strong>${usageNumber(p.session)}</strong> <span>crédits par session de</span> ${data.sessionHours} h · <strong>${usageNumber(p.week)}</strong> <span>par semaine</span>`;
+    const credits = card.querySelector(".plan-credits");
+    if (credits) credits.after(row);
+  });
+  const box = document.getElementById("pricing-usage");
+  if (box) {
+    box.hidden = !enforced;
+    if (enforced) {
+      box.innerHTML = `<h2>${escapeHtml(iwT("Les limites d'usage de votre forfait"))}</h2>
+        <p>${escapeHtml(iwTf("Chaque forfait a un prix mensuel et des limites d'usage : un quota de {h} heures par session, qui s'ouvre à votre première mission et se renouvelle seul, un quota par semaine, et le quota du mois. Aucun forfait n'est illimité.", { h: data.sessionHours }))}</p>
+        <p>${escapeHtml(iwT("Quand une limite est atteinte, vous pouvez lancer de nouvelles missions à l'heure de renouvellement affichée dans votre compte, ou tout de suite si vous passez au forfait supérieur, qui a ses propres limites plus larges."))}</p>`;
+    }
+  }
+}
+
+// FAQ : une question de plus, seulement quand les limites s'appliquent.
+function renderUsageFaq(enforced) {
+  const list = document.querySelector("#faq-view .faq-list");
+  if (!list) return;
+  const old = document.getElementById("faq-usage-limits");
+  if (old) old.remove();
+  if (!enforced) return;
+  const item = document.createElement("details");
+  item.className = "faq-item";
+  item.id = "faq-usage-limits";
+  item.innerHTML = `<summary>${escapeHtml(iwT("Que se passe-t-il quand j'atteins une limite d'usage ?"))}</summary>
+    <p>${escapeHtml(iwT("Votre forfait a un quota par session de 4 heures, un quota par semaine et un quota par mois. Quand l'un d'eux est atteint, la mission est refusée avec le nom de la limite et l'heure exacte de son renouvellement. Une automatisation est simplement reportée à son prochain passage, et passer au forfait supérieur élargit tout de suite vos limites. Vous voyez à tout moment ce qu'il vous reste, dans Facturation et dans la barre du haut."))}</p>`;
+  list.appendChild(item);
+}
+
 // ---------- AUTOMATISATIONS (missions recurrentes, vrai pipeline) ----------
 
 // Statuts du dernier passage ecrits par le moteur (core/automation/AUTOMATION-ENGINE.ps1) quand la mission n'a pas ete lancee.
@@ -1116,6 +1422,7 @@ const AUTOMATION_STATUS_LABELS = {
   installation_paused: "non lancée : Worker en pause",
   worker_not_included: "non lancée : Worker hors de votre forfait",
   quota_exceeded: "non lancée : quota de crédits atteint",
+  usage_limit: "non lancée : quota de session ou de semaine atteint, reprise au prochain passage",
 };
 
 const FREQUENCY_LABELS = {
@@ -1162,9 +1469,9 @@ function handleAutomationError(result, retryAction) {
     requireAccount(() => { retryAction(); loadAutomations(); });
     return true;
   }
-  if (result.error === "SUBSCRIPTION_REQUIRED") {
+  if (isQuotaRefusal(result)) {
     const errorEl = document.getElementById("automation-error");
-    errorEl.innerHTML = `${escapeHtml(result.detail || "Votre quota est épuisé. Souscrivez un abonnement pour continuer.")} ${subscribeCtaHtml(result)}`;
+    errorEl.innerHTML = `${escapeHtml(result.detail || "Votre quota est épuisé. Souscrivez un abonnement pour continuer.")} ${usageRefusalExtraHtml(result)} ${subscribeCtaHtml(result)}`;
     errorEl.hidden = false;
     wireSubscribeCta(errorEl, result);
     return true;
@@ -1328,8 +1635,8 @@ document.getElementById("automation-form").addEventListener("submit", async (e) 
     requireAccount(() => document.getElementById("automation-form").requestSubmit());
     return;
   }
-  if (result.error === "SUBSCRIPTION_REQUIRED") {
-    errorEl.innerHTML = `${escapeHtml(result.detail || "Votre quota est épuisé.")} ${subscribeCtaHtml(result)}`;
+  if (isQuotaRefusal(result)) {
+    errorEl.innerHTML = `${escapeHtml(result.detail || "Votre quota est épuisé.")} ${usageRefusalExtraHtml(result)} ${subscribeCtaHtml(result)}`;
     errorEl.hidden = false;
     wireSubscribeCta(errorEl, result);
     return;
@@ -1940,6 +2247,7 @@ function renderPricing() {
   });
 
   renderPricingScale();
+  renderPricingUsage();
   renderActivityHelper();
 }
 
@@ -2959,7 +3267,7 @@ async function runTrialTask(objective) {
     });
 
     if (result.error === "TRIAL_DAILY_LIMIT_REACHED" || result.error === "TRIAL_IP_LIMIT_REACHED") {
-      errorEl.textContent = "Beaucoup de monde teste BK-AI-WORKERS en ce moment — réessayez un peu plus tard, ou inscrivez-vous pour un accès sans limite.";
+      errorEl.textContent = "Beaucoup de monde teste BK-AI-WORKERS en ce moment — réessayez un peu plus tard, ou inscrivez-vous pour accéder à votre forfait.";
       errorEl.hidden = false;
       return;
     }
@@ -2983,7 +3291,7 @@ async function runTrialTask(objective) {
     resultEl.className = "task-result";
     resultEl.innerHTML = `<div class="status-line">Aperçu d'essai gratuit${result.degraded ? " (mode secours)" : ""}</div>
       ${renderAnswer(result.answer)}
-      ${result.truncated ? '<p class="trial-note">Réponse tronquée — inscrivez-vous pour recevoir le livrable complet, sans limite.</p>' : ""}
+      ${result.truncated ? '<p class="trial-note">Réponse tronquée — inscrivez-vous pour recevoir le livrable complet.</p>' : ""}
       <button type="button" class="btn btn-gold" id="trial-cta-lead-btn" style="margin-top:10px">S'inscrire pour continuer &rarr;</button>`;
     resultEl.hidden = false;
     document.getElementById("trial-cta-lead-btn").addEventListener("click", () => requireAccount(() => {}));
@@ -3329,10 +3637,11 @@ async function runTask(objective) {
       requireAccount(() => runTask(objective));
       return;
     }
-    if (result.error === "SUBSCRIPTION_REQUIRED") {
+    if (isQuotaRefusal(result)) {
       responseEl.className = "chat-msg chat-msg-worker needs-chloe";
-      responseEl.innerHTML = `<div class="status-line">Abonnement requis</div>
+      responseEl.innerHTML = `<div class="status-line">${quotaRefusalTitle(result)}</div>
         <p>${escapeHtml(result.detail || "Votre quota est épuisé.")}</p>
+        ${usageRefusalExtraHtml(result)}
         ${subscribeCtaHtml(result)}`;
       wireSubscribeCta(responseEl, result);
       return;
@@ -3467,10 +3776,11 @@ async function runChloeFabTask(objective) {
       requireAccount(() => runChloeFabTask(objective));
       return;
     }
-    if (result.error === "SUBSCRIPTION_REQUIRED") {
+    if (isQuotaRefusal(result)) {
       responseEl.className = "chat-msg chat-msg-worker needs-chloe";
-      responseEl.innerHTML = `<div class="status-line">Abonnement requis</div>
+      responseEl.innerHTML = `<div class="status-line">${quotaRefusalTitle(result)}</div>
         <p>${escapeHtml(result.detail || "Votre quota est épuisé.")}</p>
+        ${usageRefusalExtraHtml(result)}
         ${subscribeCtaHtml(result)}`;
       wireSubscribeCta(responseEl, result, closeChloeFab);
       return;
@@ -4469,11 +4779,12 @@ async function iwRunTrial() {
     return;
   }
   const result = outcome.result || {};
-  if (result.error === "SUBSCRIPTION_REQUIRED") {
+  if (isQuotaRefusal(result)) {
     // Comme toutes les cartes « quota atteint » : le forfait suivant (avec le rythme de paiement du client) en plus du lien vers tous les forfaits.
-    const up = result.upgrade && result.upgrade.next && !result.upgrade.next.onQuote ? result.upgrade : null;
+    const upgrade = quotaUpgradeOf(result);
+    const up = upgrade && upgrade.next && !upgrade.next.onQuote ? upgrade : null;
     const upgradeBtn = up ? `<button type="button" class="btn btn-gold" id="iw-upgrade-now">${escapeHtml(iwTf("Passer à {name}", { name: up.next.name }))}</button> ` : "";
-    box.innerHTML = `<div class="iw-alert iw-alert-warn"><div class="iw-alert-title">Abonnement requis</div><p>${escapeHtml(result.detail || "Votre quota est épuisé.")}</p>${upgradeBtn}<button type="button" class="btn ${up ? "btn-ghost" : "btn-gold"}" id="iw-to-billing">Voir les abonnements</button></div>`;
+    box.innerHTML = `<div class="iw-alert iw-alert-warn"><div class="iw-alert-title">${quotaRefusalTitle(result)}</div><p>${escapeHtml(result.detail || "Votre quota est épuisé.")}</p>${usageRefusalExtraHtml(result)}${upgradeBtn}<button type="button" class="btn ${up ? "btn-ghost" : "btn-gold"}" id="iw-to-billing">Voir les abonnements</button></div>`;
     box.querySelector("#iw-to-billing").addEventListener("click", async () => { await iwClose(); showView("billing"); });
     const upgradeNow = box.querySelector("#iw-upgrade-now");
     if (upgradeNow) upgradeNow.addEventListener("click", async () => { await iwClose(); showView("billing"); startUpgrade(up); });
@@ -4598,6 +4909,8 @@ async function submitMissionAndWait(workerId, objective) {
     if (job.status === "ERROR") {
       // Worker non embauche (verifie une seconde fois par le job) : l'interface propose alors d'embaucher, pas un message technique.
       if (job.errorCode === "WORKER_NOT_INCLUDED") return { result: { error: "WORKER_NOT_INCLUDED", detail: job.error, workerId } };
+      // Une autre mission a consomme le reste de la session ou de la semaine entre l'envoi et la reservation : meme carte qu'un refus immediat.
+      if ((job.errorCode === "USAGE_LIMIT_REACHED" || job.errorCode === "SUBSCRIPTION_REQUIRED") && job.errorPayload) return { result: job.errorPayload };
       return { result: { error: "SUBMIT_EXCEPTION", detail: job.error } };
     }
   }
@@ -5422,6 +5735,7 @@ Promise.all([checkGateStatus(), checkAccountStatus()]).then(() => {
   bootstrap();
   handleStripeCheckoutReturn();
   syncAdminNavVisibility();
+  refreshUsage();       // jauges de session / semaine : seulement si elles s'appliquent (BK_USAGE_WINDOWS=1) et pour un compte client
 });
 
 document.getElementById("account-tab-signup").addEventListener("click", () => showAccountTab("signup"));
