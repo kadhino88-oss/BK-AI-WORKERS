@@ -10,8 +10,8 @@
 #   - Un moteur qui repond « credit epuise », « acces refuse » ou « injoignable » est mis de cote quelques minutes (disjoncteur, runtime/engine/health.json) :
 #     les missions suivantes ne l'attendent pas. Une erreur ponctuelle (delai, 429, 5xx) fait seulement passer CETTE mission au moteur suivant.
 #   - Plafond de depense Claude (jour / mois, CHF) : verifie AVANT chaque appel a Claude ; atteint, Claude est saute (la chaine gratuite prend le relais, avec
-#     mention). Le reste disponible devient le plafond de l'appel (BK_ENGINE_BUDGET_CHF -> ANTHROPIC-ADAPTER.ps1). Le cout reel de chaque mission Claude de la
-#     PLATEFORME est ajoute au registre (runtime/engine/spend.json) ; la cle d'un client (BYOK) n'y compte jamais.
+#     mention). Le reste disponible devient le plafond de l'appel (BK_ENGINE_BUDGET_CHF -> ANTHROPIC-ADAPTER.ps1). Le cout reel de chaque essai Claude de la
+#     PLATEFORME, reussi ou non, est ajoute au registre (runtime/engine/spend.json) ; la cle d'un client (BYOK) n'y compte jamais.
 #   - Une demande qui exige une capacite que le moteur n'a pas (recherche web, fichiers Office, code) recoit une remarque honnete a la fin de la reponse.
 #   - Aucun moteur n'a repondu : erreur « NO_ENGINE_AVAILABLE » (le moteur de secours de la plateforme produit alors la reponse de secours, a 0 credit).
 # Sans BK_ENGINE_PLAN, ce script n'est jamais appele : le chemin Claude tourne exactement comme avant.
@@ -103,6 +103,16 @@ function Invoke-ChainEntry {
     }
 }
 
+function Add-AttemptSpend {
+    # Cout releve par l'adaptateur de Claude (usage.estimated_cost_chf / _usd, present aussi dans un resultat ERROR depuis le 2026-10-26) -> registre de depense.
+    param($Result)
+    try {
+        if ($null -eq $Result.usage) { return }
+        $Chf = [double]$Result.usage.estimated_cost_chf; $Usd = [double]$Result.usage.estimated_cost_usd
+        if ($Chf -gt 0 -or $Usd -gt 0) { Add-BKEngineSpend -Chf $Chf -Usd $Usd }
+    } catch { }
+}
+
 function Get-GapNote {
     # Remarque honnete quand la demande semble exiger une capacite que CE moteur n'a pas (miroir de provider_router.gap_note).
     param($Entry)
@@ -144,6 +154,9 @@ foreach ($Entry in $Chain) {
     }
     $Call = Invoke-ChainEntry -Entry $Entry
     $R = $Call.Result
+    # Depense de la PLATEFORME sur Claude (pas la cle d'un client, pas un moteur gratuit) : registre du jour et du mois (plafond du proprietaire), pour CHAQUE
+    # essai, reussi OU NON : un appel facture suivi d'un delai, d'un 429 ou d'un credit epuise en cours de mission a coute, meme si un autre moteur repond ensuite.
+    if ($Id -eq "anthropic" -and $null -ne $R) { Add-AttemptSpend -Result $R }
     if ($Call.Exit -eq 0 -and $null -ne $R -and [string]$R.status -eq "SUCCESS" -and -not [string]::IsNullOrWhiteSpace([string]$R.answer)) {
         $Answered = [pscustomobject]@{ Entry = $Entry; Result = $R }
         $Attempts += [ordered]@{ provider = $Id; outcome = "answered"; reason = "" }
@@ -205,14 +218,6 @@ $EngineOut = [ordered]@{
 if ($R.engine) { foreach ($P in $R.engine.PSObject.Properties) { if (-not $EngineOut.Contains($P.Name)) { $EngineOut[$P.Name] = $P.Value } } }
 if ($R.PSObject.Properties["engine"]) { $R.engine = [pscustomobject]$EngineOut } else { $R | Add-Member -NotePropertyName engine -NotePropertyValue ([pscustomobject]$EngineOut) }
 if ($E.byok -or [string]$E.id -eq "byok") { $R.provider = "byok" }
-
-# Depense de la PLATEFORME sur Claude (pas la cle d'un client, pas un moteur gratuit) : registre du jour et du mois (plafond du proprietaire).
-if ([string]$E.id -eq "anthropic") {
-    try {
-        $Chf = [double]$R.usage.estimated_cost_chf; $Usd = [double]$R.usage.estimated_cost_usd
-        if ($Chf -gt 0 -or $Usd -gt 0) { Add-BKEngineSpend -Chf $Chf -Usd $Usd }
-    } catch { }
-}
 
 Write-Result $R
 exit 0

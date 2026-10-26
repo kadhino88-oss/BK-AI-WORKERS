@@ -489,6 +489,9 @@ if ($ExitCode -eq 0) {
     exit 0
 }
 else {
-    Write-Result ([ordered]@{ status="ERROR"; provider="anthropic"; model=$EffectiveModel; mode="LLM"; api_call=$true; answer=""; error=$ErrorDetail; error_body=[string]$ErrorBody; http_status=[int]$ErrorStatus })
+    # usage aussi en cas d'erreur (2026-10-26) : les appels deja factures AVANT l'echec (un premier tour d'outil, puis un delai, un 429 ou un credit epuise en
+    # cours de mission) ont bel et bien coute ; l'executeur de moteurs les ajoute au registre de depense (plafond du proprietaire). Le chemin sans plan l'ignore.
+    Write-Result ([ordered]@{ status="ERROR"; provider="anthropic"; model=$EffectiveModel; mode="LLM"; api_call=$true; answer=""; error=$ErrorDetail; error_body=[string]$ErrorBody; http_status=[int]$ErrorStatus
+                              usage=$(if ($MissionCost) { Get-BKCostUsageFields -Cost $MissionCost } else { $null }) })
     exit 1
 }

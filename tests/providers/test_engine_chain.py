@@ -271,6 +271,30 @@ class SpendingCeilingInTheExecutor(ChainBase):
         self.assertEqual(r.result["engine"]["attempts"][0], {"provider": "anthropic", "outcome": "skipped", "reason": "spending-ceiling"})
         self.assertEqual(self.anthropic_calls(), [])
 
+    def test_paid_claude_calls_before_a_failure_still_enter_the_ledger(self):
+        """Claude facture un premier tour (appel d'outil) puis echoue (delai, puis credit epuise en cours de mission) : la mission passe au moteur local et ne
+        coute rien au client, mais la plateforme a paye Anthropic : le registre du plafond le compte."""
+        self.new_root(activated=("gmail",))
+        self.ollama()
+        self.configure(defaultChain=["anthropic", "ollama"], ceiling={"dailyChf": 5})
+        read = {"tool_use": {"connectorId": "gmail", "operation": "READ_MESSAGES", "reason": "lire"}, "usage": [30000, 3000]}
+        r = self.run_chain(self.plan(), [read, {"timeout": True}], level="equilibre")
+        self.assertEqual(r.exit, 0, r.proc.stderr + r.stdout)
+        self.assertEqual(len(self.anthropic_calls()), 2)
+        self.assertEqual([(a["provider"], a["outcome"], a["reason"]) for a in r.result["engine"]["attempts"]],
+                         [("anthropic", "failed", "timeout"), ("ollama", "answered", "")])
+        self.assertTrue(r.result["engine"]["creditsFree"])
+        day = next(iter(self.spend()["days"].values()))
+        self.assertGreater(day["chf"], 0.05, "le premier appel facture (30 000 + 3 000 jetons Sonnet) est compte")
+        self.assertEqual(day["missions"], 1)
+        first = day["chf"]
+        r2 = self.run_chain(self.plan(), [read, {"credit_error": True}], level="equilibre", task="TASK-" + "C" * 32)
+        self.assertEqual(r2.exit, 0, r2.proc.stderr + r2.stdout)
+        self.assertEqual(r2.result["engine"]["attempts"][0]["reason"], "billing")
+        day = next(iter(self.spend()["days"].values()))
+        self.assertGreater(day["chf"], first + 0.05, "credit epuise en cours de mission : l'appel deja facture est compte aussi")
+        self.assertEqual(day["missions"], 2)
+
     def test_remaining_budget_caps_the_claude_loop_itself(self):
         self.new_root(activated=("gmail",))
         self.configure(ceiling={"dailyChf": 1.0})
