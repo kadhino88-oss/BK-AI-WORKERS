@@ -5,6 +5,7 @@ refus des adresses interdites, jeton jamais affiche.
     python tests/providers/test_check_engine.py       (Windows ou Linux ; aucun PowerShell)
 """
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -20,7 +21,9 @@ SCRIPT = os.path.join(REPO, "deploy", "check-engine.py")
 
 class CheckEngine(unittest.TestCase):
     def run_script(self, *args, env=None):
-        full = dict(os.environ, BK_ROOT=tempfile.mkdtemp(prefix="bkchk-"))
+        root = tempfile.mkdtemp(prefix="bkchk-")
+        self.addCleanup(shutil.rmtree, root, True)                  # une racine jetable par appel : rien ne reste dans le dossier temporaire
+        full = dict(os.environ, BK_ROOT=root)
         for k in ("BK_SECRET_OLLAMA", "BK_SECRET_SWISS", "BK_OLLAMA_URL", "BK_SWISS_URL", "BK_SECRETS_DIR"):
             full.pop(k, None)
         full.update(env or {})
