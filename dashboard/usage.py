@@ -671,10 +671,10 @@ class UsageService:
                 self._apply_settle(L, rid, r, actual, now)
                 if not readonly:
                     self._emit("usage_reservation_expired", clientId=client_id, usageKind=r.get("kind"), ref=r.get("ref"), credits=actual)
-                    if r.get("kind") in ("mission", "automation"):
-                        # La mission a peut-etre livre avant de perdre son reglement : ses credits sont dans ses traces TASK-*.json. Liberee a 0
-                        # ici, elle est recomptee par la reconciliation, avancee a la prochaine ecriture sans reservation en cours.
-                        L["lastReconcileUtc"] = None
+                    # La mission a peut-etre livre avant de perdre son reglement (ses credits sont dans ses traces TASK-*.json), l'etape de projet a
+                    # peut-etre ete reglee par le moteur dans son cost-ledger.jsonl : la reconciliation les recompte, avancee a la prochaine ecriture
+                    # sans reservation en cours.
+                    L["lastReconcileUtc"] = None
                 changed = True
         self._recompute_reserved(L)
         return changed
