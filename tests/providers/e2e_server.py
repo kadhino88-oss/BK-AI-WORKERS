@@ -333,7 +333,7 @@ def main():
         st, eng_a = alice.get("/api/engine")
         check("cle desactivee : retour au moteur de la plateforme sans la supprimer", eng_a["provider"] == "ollama" and eng_a["byok"]["configured"] and eng_a["byok"]["enabled"] is False, eng_a)
         alice.post("/api/engine/byok", {"enabled": True})
-        st, exp = alice.json("GET", "/api/account/export")
+        st, exp = alice.json("POST", "/api/account/export", {})
         check("export des donnees : l'etat de la cle sans la cle, et pas dans la liste des outils", st == 200 and exp["aiEngineKey"]["configured"] is True and ALICE_KEY not in json.dumps(exp)
               and "ai_engine" not in exp.get("connectedTools", []), exp.get("aiEngineKey"))
         st, out = alice.post("/api/engine/byok/remove")
