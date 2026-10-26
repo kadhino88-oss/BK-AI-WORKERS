@@ -239,6 +239,55 @@ class Byok(Fixture):
         self.assertNotIn(A, self.vault.stored)
         self.assertFalse(os.path.isfile(pr.byok_meta_path(TMP, A)))
 
+    def key_file(self, client):
+        return os.path.join(server.CLIENT_CREDENTIALS_DIR, client, "ai_engine.json")
+
+    def failing_vault(self):
+        """Ce que renvoie le vrai pont quand PowerShell depasse ses 20 s (demarrage a froid) : rien n'a ete supprime."""
+        calls = []
+
+        def vault(client_id, provider, value, reserved=False):
+            calls.append((client_id, provider, bool(value), reserved))
+            return {"ok": False, "error": "STORE_CREDENTIAL_TIMEOUT"}
+        server.store_client_connector_credential = vault
+        return calls
+
+    def test_a_vault_timeout_on_removal_still_removes_the_key_file_before_saying_so(self):
+        add_account(A)
+        server.store_byok(A, {"kind": "anthropic", "key": KEY_A})
+        calls = self.failing_vault()
+        payload, status = server.remove_byok(A)
+        self.assertEqual(len(calls), 1, "le coffre est bien appele d'abord")
+        self.assertEqual((status, payload), (200, {"ok": True, "byok": {"configured": False}}))
+        self.assertFalse(os.path.isfile(self.key_file(A)), "supprimer ne demande aucun dechiffrement : le serveur retire le fichier lui-meme")
+        self.assertFalse(os.path.isfile(pr.byok_meta_path(TMP, A)))
+        self.assertFalse(server.export_account_data(A)["aiEngineKey"]["configured"])
+
+    def test_a_removal_that_did_not_happen_is_never_reported_as_done(self):
+        add_account(A)
+        server.store_byok(A, {"kind": "anthropic", "key": KEY_A})
+        self.failing_vault()
+        real_remove = os.remove
+
+        def stuck(path, *a, **kw):
+            if os.path.basename(str(path)) == "ai_engine.json":
+                raise PermissionError("fichier verrouille")
+            return real_remove(path, *a, **kw)
+        server.os.remove = stuck
+        self.addCleanup(setattr, server.os, "remove", real_remove)
+        payload, status = server.remove_byok(A)
+        self.assertEqual((status, payload["error"]), (500, "STORE_FAILED"))
+        self.assertIn("toujours enregistrée", payload["message"])
+        self.assertNotIn("byok", payload, "aucun « configured: false » pour une cle encore sur le disque")
+        self.assertTrue(os.path.isfile(self.key_file(A)))
+        self.assertTrue(os.path.isfile(pr.byok_meta_path(TMP, A)), "la description reste : le client voit toujours sa cle")
+        self.assertTrue(server.export_account_data(A)["aiEngineKey"]["configured"], "l'export dit la verite")
+        self.assertEqual(server.engine_status(A)["provider"], "byok")
+        server.os.remove = real_remove
+        server.store_client_connector_credential = self.vault
+        self.assertEqual(server.remove_byok(A)[0], {"ok": True, "byok": {"configured": False}}, "un nouvel essai aboutit")
+        self.assertFalse(os.path.isfile(self.key_file(A)))
+
     def test_rate_limited(self):
         for _ in range(server.CRED_SAVE_MAX_PER_HOUR):
             server.store_byok(A, {"kind": "anthropic", "key": "bad"})

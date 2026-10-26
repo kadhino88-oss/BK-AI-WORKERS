@@ -3247,7 +3247,12 @@ async function loadEngineCard() {
   };
   remove.onclick = async () => {
     if (!confirm("Supprimer votre clé ? Vos missions reviendront au moteur de la plateforme.")) return;
-    try { await fetchJson("/api/engine/byok/remove", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }); showToast("Clé supprimée."); loadEngineCard(); } catch (e) { /* message de la page */ }
+    // « Clé supprimée » seulement si le serveur confirme : un coffre qui n'a pas repondu laisse la cle en place (HTTP 500, message a afficher).
+    try {
+      const r = await fetchJson("/api/engine/byok/remove", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+      if (r.ok) { showToast("Clé supprimée."); loadEngineCard(); return; }
+      msg.className = "task-error"; msg.textContent = r.message || r.error || "Suppression impossible."; msg.hidden = false;
+    } catch (e) { msg.className = "task-error"; msg.textContent = e.message; msg.hidden = false; }
   };
 }
 

@@ -1073,10 +1073,24 @@ def store_byok(client_id, body):
 
 
 def remove_byok(client_id):
-    """Supprime la cle personnelle du client (fichier chiffre + description). Idempotent."""
+    """Supprime la cle personnelle du client (fichier chiffre + description). Idempotent. La description n'est retiree qu'une fois le fichier chiffre
+    REELLEMENT absent du disque : le client ne voit jamais « Clé supprimée » (ni l'export « aucune clé ») pour une cle qui y est encore."""
     if not _is_customer_id(client_id):
         return {"error": "NOT_ALLOWED"}, 403
-    store_client_connector_credential(client_id, ENGINE_BYOK_PROVIDER, "", reserved=True)
+    removed = store_client_connector_credential(client_id, ENGINE_BYOK_PROVIDER, "", reserved=True)
+    key_file = os.path.join(CLIENT_CREDENTIALS_DIR, client_id, ENGINE_BYOK_PROVIDER + ".json")
+    if not (isinstance(removed, dict) and removed.get("ok")):
+        # Supprimer ne demande aucun dechiffrement : si le coffre n'a pas repondu (PowerShell a froid au-dela de 20 s, machine chargee), le serveur retire
+        # lui-meme le fichier, comme le fait deja la suppression du compte. Seule la NATURE de l'echec est journalisee.
+        print("[engine] suppression de la cle personnelle par le coffre impossible (" + ("delai du coffre depasse" if isinstance(removed, dict) and removed.get("error") == "STORE_CREDENTIAL_TIMEOUT" else "erreur du coffre")
+              + "), suppression directe du fichier", flush=True)
+        try:
+            if os.path.isfile(key_file):
+                os.remove(key_file)
+        except OSError:
+            pass
+    if os.path.lexists(key_file):
+        return {"error": "STORE_FAILED", "message": "Suppression impossible pour le moment : votre clé est toujours enregistrée. Réessayez."}, 500
     provider_router.delete_byok_meta(ROOT, client_id)
     log_activity("byok_removed", clientId=client_id)
     return {"ok": True, "byok": {"configured": False}}, 200
