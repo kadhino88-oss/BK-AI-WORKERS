@@ -543,6 +543,13 @@ def submit_task(worker_hint_text, worker_id="", plan_only=False, client_id="", l
     bannieres Write-Host des scripts imbriques)."""
     import tempfile, uuid
 
+    # Budget de Chloe (nombre de Workers payables MAINTENANT, phrase de renouvellement) lu EN PREMIER, avant toute reservation des credits de cette
+    # mission (fenetres d'usage, chantier « limites ») : la reservation de la mission ne doit jamais reduire son propre plafond (sinon une mission
+    # qui a reserve 7 Workers n'en appellerait plus qu'un). La reservation borne ensuite ce nombre (MissionRun.cap_workers).
+    is_chloe = str(worker_id or "").lower() == "chloe"
+    chloe_lvl = normalize_level(level, client_id) if is_chloe else None
+    chloe_max_workers = chloe_worker_cap(client_id, chloe_lvl) if is_chloe else None
+    chloe_env = CHLOE_SCOPE.child_env(client_id, chloe_lvl, worker_id) if is_chloe else {}
     # Offre "Worker a l'unite" : DERNIER verrou, valable pour TOUS les points d'entree (routes, WhatsApp, essai, API publique) : un Worker
     # non embauche ne demarre jamais de mission (donc aucun credit consomme), meme si une route l'avait oublie.
     block = worker_block(client_id, worker_id or "-")
@@ -581,7 +588,7 @@ def submit_task(worker_hint_text, worker_id="", plan_only=False, client_id="", l
         # Chloe : quand les credits reviennent (phrase fabriquee par CHLOE_SCOPE, jamais recopiee d'un texte) et identifiant de suivi en direct de la mission
         # en arriere-plan (le job : chloe/Chloe-Executor.ps1 ecrit son avancement sous runtime/chloe-runs/<ClientId>/<job>/).
         child_env.pop("BK_CHLOE_RESET_NOTE", None)
-        child_env.update(CHLOE_SCOPE.child_env(client_id, lvl, worker_id))
+        child_env.update(chloe_env)
         # « Juste une reponse rapide » (BK_PROJECTS=1) : le client a refuse le projet propose par Chloe, elle traite la demande comme une mission. Choix du client
         # (champ mode de la requete), jamais lu dans un texte.
         if chloe_mode == "mission" and str(worker_id or "").lower() == "chloe":
@@ -599,8 +606,8 @@ def submit_task(worker_hint_text, worker_id="", plan_only=False, client_id="", l
             child_env["BK_ALLOWED_WORKERS"] = allowed_env
         else:
             child_env.pop("BK_ALLOWED_WORKERS", None)
-        # Chloe appelle PLUSIEURS Workers et chacun coute le niveau de la mission : on plafonne leur nombre au solde de credits du client.
-        max_workers = chloe_worker_cap(client_id, lvl) if str(worker_id or "").lower() == "chloe" else None
+        # Chloe appelle PLUSIEURS Workers et chacun coute le niveau de la mission : on plafonne leur nombre aux credits utilisables (lus plus haut).
+        max_workers = chloe_max_workers
         if max_workers is not None:
             max_workers = usage_run.cap_workers(max_workers)       # ... et a ce que les fenetres de session et de semaine ont accorde
             child_env["BK_MAX_WORKERS"] = str(max_workers)

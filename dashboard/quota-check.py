@@ -90,6 +90,12 @@ def main():
         verdict = {"blocked": False, "allowedWorkers": allowed, "level": level}
         if worker_id == "chloe":
             cap = server.chloe_worker_cap(client_id, level)
+            if cap is not None and server.USAGE.enforced:
+                # ... et a ce qui reste dans la session et la semaine : le premier Worker est deja debite, chacun des autres coute le niveau
+                view = server.USAGE.remaining(client_id)
+                if not view.exempt:
+                    cost = server.level_credits(level) if level else 1
+                    cap = max(1, min(cap, 1 + int(view.allowedNow) // max(1, cost)))
             if cap is not None:
                 verdict["maxWorkers"] = cap
         print(json.dumps(verdict))

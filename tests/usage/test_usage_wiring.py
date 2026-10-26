@@ -257,6 +257,19 @@ def run():
         rec = server.read_async_job(job["jobId"])
     check("mission en arriere-plan : job ERROR / USAGE_LIMIT_REACHED, avec le message et le corps", rec["status"] == "ERROR"
           and rec["errorCode"] == "USAGE_LIMIT_REACHED" and "quota de session" in rec["error"] and rec["errorPayload"]["resetsAtUtc"], rec)
+    import whatsapp_channel                                          # meme course par WhatsApp : le message dit la limite, pas « reessayez »
+    sent = []
+    old_send = whatsapp_channel.send_text
+    whatsapp_channel.send_text = lambda phone, text: sent.append(text)
+    try:
+        store = type("S", (), {"client_for": lambda self, phone: B})()
+        whatsapp_channel._handle_message("41790000000", "Prepare un plan", store, {
+            "subscription_blocks_mission": lambda c: None, "attach_pending_action": lambda r: r, "log_activity": lambda *a, **k: None,
+            "submit_task": lambda text, **kw: server.submit_task(text, level="approfondi", **kw)})
+    finally:
+        whatsapp_channel.send_text = old_send
+    check("WhatsApp : la reservation refusee renvoie le message de la limite (session, heure)", len(sent) == 1 and "quota de session" in sent[0]
+          and "renouvelle" in sent[0], sent)
 
     # ----------------------------------------------------------------------------------------------------------------------------------------
     print("\n== Chloe : le nombre de Workers suit ce que la session accorde ==")
@@ -369,6 +382,10 @@ def run():
     with contextlib.redirect_stdout(buf):
         cli.main(["usage-cli.py", "charge", B, "2", "automation", "t"])
     check("usage-cli charge : {ok:true} et debit", json.loads(buf.getvalue()) == {"ok": True} and ledger(B)["session"]["used"] == 2)
+    USAGE.charge(B, 78, "automation", "fill")                          # session d'Equipe : 2 + 78 = 80 / 83
+    v = run_cli(qc, B, "chloe", "scheduled")
+    check("Chloe en automatisation : maxWorkers plafonne a ce qui reste dans la session (1 debite + 2 restants = 3 Workers, pas 819)",
+          v["blocked"] is False and v.get("maxWorkers") == 3 and ledger(B)["session"]["used"] == 81, v)
     buf = io.StringIO()
     with contextlib.redirect_stdout(buf):
         cli.main(["usage-cli.py", "charge", B, "abc"])
