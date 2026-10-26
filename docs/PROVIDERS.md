@@ -201,9 +201,19 @@ Tous sans réseau externe ni coût (faux serveur OpenAI-compatible de la bibliot
 
 ### Essai réel contre votre Ollama (gratuit)
 
-Résultats consignés à la fin de ce fichier par `real_ollama_check.py`.
+Commande : `python tests/providers/real_ollama_check.py` (adaptateur réel, prompt Worker réel de Noah en version compacte, Ollama réel sur `127.0.0.1:11434`, racine jetable, niveau Rapide). Mesuré le 2026-10-26, PC du propriétaire, sans carte graphique, machine par ailleurs occupée.
 
-REAL_OLLAMA_RESULTS_PLACEHOLDER
+| Modèle | Réponse simple | Appel d'outil (« enregistre « Bonjour le monde » dans note.txt ») |
+|---|---|---|
+| `qwen2.5:1.5b` | **marche** : « Bonjour, je suis Noah, assistant exécutif et administratif. » en 73 s (chargement à froid compris) | **ne marche pas** : les outils natifs sont proposés, le modèle n'en appelle aucun et **affirme** « TextEdit.txt a été enregistré avec succès » alors qu'aucun fichier n'existe. Le garde-fou ajoute alors à la réponse : « Attention : dans cette mission, le moteur n'a PAS enregistré un fichier (aucun outil ne l'a fait)… » |
+| `llama3:latest` (8 B) | **marche** : « Bonjour, je suis Noah, Assistant Exécutif & Administratif, prêt à vous aider. » en **641 s** (chargement à froid de plus de 3 minutes, puis lecture d'environ 2 000 jetons à 6 jetons par seconde) | **marche** en mode « JSON dans le texte » (llama3 n'a pas d'appel natif) : un appel `write_text_file` valide, `note.txt` créé, en **660 s** (2 tours, 4 316 jetons lus) |
+
+Ce que cela veut dire, sans détour :
+
+- **La chaîne technique fonctionne de bout en bout avec votre vrai Ollama** (réponse, appel d'outil écrit en texte, fichier produit, garde-fou contre les actions affirmées sans effet).
+- **Mais Llama 3 8 B sur ce PC est trop lent pour une mission interactive** : plus de 10 minutes par mission, alors que le serveur coupe une mission à 600 s (la plateforme s'arrête à 540 s). Je n'ai donc dû relever la limite que pour cette mesure. Tel quel, une mission d'essai envoyée à ce modèle sur ce PC se terminerait par « Aucun moteur d'IA n'a pu répondre » (gratuit, honnête). Pour des démonstrations qui répondent, il faut : une carte graphique, ou un PC plus puissant, ou un modèle plus petit (`qwen2.5:3b`, que je n'ai pas téléchargé), ou plus simplement **un hébergeur suisse** (§7).
+- `qwen2.5:1.5b` est assez rapide (environ 50 jetons / seconde en lecture) pour une démonstration, mais **trop petit pour mériter la confiance** : il invente des actions. À réserver, si vous le gardez, à des démonstrations très courtes, sans connecteur.
+- Le garde-fou « action affirmée sans effet » (`Get-BKUnbackedClaimNote`) est une heuristique de sécurité, pas une garantie : un modèle peut dire une fausseté d'une autre manière. La règle de fond reste : **rien d'extérieur ne part sans votre confirmation** (porte d'approbation), quel que soit le moteur.
 
 ## 12. Limites honnêtes
 

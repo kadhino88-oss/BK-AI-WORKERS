@@ -118,6 +118,12 @@ function Get-GapNote {
 $Chain = @($Plan.chain)
 $PreferredId = [string]$Plan.preferred
 $Answered = $null
+# Moteurs deja ecartes au moment du plan (plafond de depense atteint, disjoncteur ouvert...) : ils figurent dans les essais, pour que la note de repli dise POURQUOI
+# le moteur prevu n'a pas repondu. Un moteur « non configure » n'est pas une raison de repli (il n'a jamais ete disponible).
+foreach ($S in @($Plan.skipped)) {
+    if ($null -eq $S -or [string]$S.why -eq "not-configured") { continue }
+    $Attempts += [ordered]@{ provider = [string]$S.id; outcome = "skipped"; reason = ([string]$S.why -replace ':.*$', '') }
+}
 foreach ($Entry in $Chain) {
     $Id = [string]$Entry.id
     if ($Id -ne "byok" -and -not (Test-BKEngineHealthy -Provider $Id)) {

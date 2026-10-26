@@ -234,6 +234,28 @@ class SpendingCeilingInTheExecutor(ChainBase):
         self.assertIn("le plafond de dépense Claude fixé par le propriétaire est atteint", r.result["answer"])
         self.assertEqual(self.anthropic_calls(), [])
 
+    def test_the_note_names_the_ceiling_even_when_the_free_engine_was_already_in_the_chain(self):
+        self.new_root()
+        self.ollama()
+        self.configure(defaultChain=["anthropic", "ollama"], ceiling={"dailyChf": 1.0})
+        self.write_spend(1.2)
+        plan = self.plan()
+        self.assertEqual([e["id"] for e in plan["chain"]], ["ollama"])
+        r = self.run_chain(plan, [{"text": "ne doit jamais etre appele"}])
+        self.assertEqual(r.exit, 0, r.proc.stderr + r.stdout)
+        self.assertIn("le plafond de dépense Claude fixé par le propriétaire est atteint", r.result["answer"])
+        self.assertIn({"provider": "anthropic", "outcome": "skipped", "reason": "spending-ceiling"}, r.result["engine"]["attempts"])
+
+    def test_a_benched_engine_at_plan_time_is_named_in_the_note(self):
+        self.new_root()
+        self.ollama()
+        self.configure(defaultChain=["anthropic", "ollama"])
+        pr.mark_unhealthy(self.root, "anthropic", "billing")
+        r = self.run_chain(self.plan(), [{"text": "ne doit jamais etre appele"}])
+        self.assertEqual(r.exit, 0, r.proc.stderr + r.stdout)
+        self.assertIn("il est indisponible depuis quelques minutes", r.result["answer"])
+        self.assertEqual(self.anthropic_calls(), [])
+
     def test_ceiling_reached_between_planning_and_calling_is_still_respected(self):
         """Deux missions en parallele : le plan de la seconde a ete fait avant que la premiere ne depasse le plafond."""
         self.new_root()
