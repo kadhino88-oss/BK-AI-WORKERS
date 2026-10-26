@@ -1,4 +1,4 @@
-# =====================================================================
+﻿# =====================================================================
 # Faux API Anthropic POUR LES TESTS DE LA CHAINE DE MOTEURS : remplace Invoke-RestMethod pour https://api.anthropic.com/* uniquement (aucun reseau, aucun cout) ;
 # tout autre appel (le faux serveur OpenAI-compatible local) est transmis a la vraie commande. A dot-sourcer dans le pilote de test.
 #

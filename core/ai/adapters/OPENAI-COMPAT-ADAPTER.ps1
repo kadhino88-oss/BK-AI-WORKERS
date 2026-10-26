@@ -1,4 +1,4 @@
-# ============================================================
+﻿# ============================================================
 # BK AI WORKERS
 # ADAPTATEUR OPENAI-COMPATIBLE (2026-10-25) : Ollama (/v1/chat/completions), hote suisse (Infomaniak AI Tools, Mistral, vLLM...) ou cle personnelle
 # d'un client (BYOK). MEME CONTRAT que ANTHROPIC-ADAPTER.ps1 : memes entrees (ClientId, ProjectId, WorkerId, TaskId, Objective, Model), meme JSON de

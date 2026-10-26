@@ -1,4 +1,4 @@
-# ============================================================
+﻿# ============================================================
 # BK AI WORKERS
 # EXECUTEUR DE CHAINE DE MOTEURS (2026-10-25) : suit le PLAN de moteurs decide par dashboard/provider_router.py (variable BK_ENGINE_PLAN, JSON) pour UNE mission.
 # Il se comporte comme un adaptateur (memes entrees que ANTHROPIC-ADAPTER.ps1, memes sorties JSON sur la derniere ligne) et appelle, dans l'ordre de la chaine,

@@ -1,4 +1,4 @@
-# Pilote PowerShell des tests de Engine-Common.ps1 : vecteurs d'adresses partages avec Python, appel d'outil texte, fichiers texte, depense / disjoncteur.
+﻿# Pilote PowerShell des tests de Engine-Common.ps1 : vecteurs d'adresses partages avec Python, appel d'outil texte, fichiers texte, depense / disjoncteur.
 # Sortie : un objet JSON { ipMismatches, endpointMismatches, tool, files, health } lu par tests/providers/test_engine_common_ps.py.
 param([Parameter(Mandatory = $true)][string]$Repo, [Parameter(Mandatory = $true)][string]$OutFile)
 $ErrorActionPreference = "Stop"

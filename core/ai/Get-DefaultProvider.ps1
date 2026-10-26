@@ -1,4 +1,4 @@
-# =====================================================================
+﻿# =====================================================================
 # BK-AI-WORKERS — Choix du fournisseur IA par defaut.
 # Renvoie "OPENAI" si (1) AI-PROVIDERS.json active le LLM et OpenAI et
 # (2) une cle existe (variable BK_SECRET_*, fichier secret ou DPAPI, voir BK-Secret.ps1) ; sinon "NONE"

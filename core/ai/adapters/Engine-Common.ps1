@@ -1,4 +1,4 @@
-# =====================================================================
+﻿# =====================================================================
 # BK-AI-WORKERS - Fonctions communes des moteurs IA (2026-10-25) : adaptateur OpenAI-compatible (Ollama, hote suisse, cle du client) et
 # executeur de chaine (Invoke-EngineChain.ps1).
 #
