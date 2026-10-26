@@ -818,7 +818,7 @@ def render_site(workspace, root=None, relative=True):
         nf_body = (f'<section class="section"><div class="container prose"><h1>{_esc(s["notfound_title"])}</h1><p>{_esc(s["notfound_text"])}</p>'
                    f'<p><a class="btn" href="{home}">{_esc(s["home_link"])}</a></p></div></section>')
     nf = (f'<!doctype html>\n<html lang="{lang}">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n'
-          f'<title>{_esc(s["notfound_title"])} | {_esc(site["name"])}</title>\n<meta name="description" content="{_esc(s["notfound_text"])}">\n'
+          f'<title>{_esc(s["notfound_title"])} | {_esc(site["name"])}</title>\n<meta name="description" content="{_esc(s["notfound_text"] + " " + s["home_link"] + " : " + site["name"] + ".")}">\n'
           '<meta name="robots" content="noindex">\n'
           '<link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">\n<link rel="stylesheet" href="/assets/style.css">\n</head>\n<body>\n'
           f'<a class="skip-link" href="#main">{_esc(s["skip"])}</a>\n' + render_tokens(partials.get("header", ""), site, lang, ctx).strip() + "\n"
