@@ -410,6 +410,20 @@ class OwnerSettings(Base):
                                       env={"BK_SECRET_SWISS": "x" * 20}, resolver=lambda h, p: ["93.184.216.34"])
         self.assertEqual(errors, [])
 
+    def test_the_local_engine_is_never_accepted_on_a_public_address(self):
+        """Tunnel public (ngrok) avec jeton : refuse pour le moteur local (la page Securite le dit relie par un reseau prive), permis pour l'hote suisse."""
+        env = {"BK_SECRET_OLLAMA": "x" * 20, "BK_SECRET_SWISS": "x" * 20}
+        public = lambda h, p: ["3.125.1.2"]
+        _, errors = pr.apply_settings(self.root, {"endpoints": {"ollama": {"url": "https://abc.ngrok-free.app", "model": "llama3:latest"}}}, levels=LEVELS, env=env, resolver=public)
+        self.assertEqual([e.get("code") for e in errors], ["NOT_PRIVATE"])
+        self.assertIn("réseau privé", errors[0]["message"])
+        _, errors = pr.apply_settings(self.root, {"endpoints": {"swiss": {"url": "https://abc.ngrok-free.app", "model": "apertus"}}}, levels=LEVELS, env=env, resolver=public)
+        self.assertEqual(errors, [])
+        # adresse posee dans le .env (BK_OLLAMA_URL) sur une IP publique : le moteur local ne compte pas comme configure
+        self.assertFalse(pr.endpoint_structurally_ok("https://3.125.1.2", "ollama", env))
+        self.assertTrue(pr.endpoint_structurally_ok("https://3.125.1.2", "swiss", env))
+        self.assertTrue(pr.endpoint_structurally_ok("http://100.101.102.103:11434", "ollama", env))
+
     def test_invalid_values_are_listed_by_field(self):
         _, errors = self.apply({"defaultChain": ["anthropic", "gpt5"], "levelChains": {"nimporte": ["ollama"]}, "ceiling": {"dailyChf": -3}, "inconnu": 1})
         fields = {e["field"] for e in errors}

@@ -101,6 +101,10 @@ function Test-BKEndpointPolicy {
         if (-not $HasToken) { return (& $Fail "TOKEN_REQUIRED" "Une cle est obligatoire." $Classes) }
         return [pscustomobject]@{ Ok = $true; Code = "OK"; Message = ""; Classes = $Classes }
     }
+    # Moteur local (Ollama du proprietaire) : jamais une adresse publique (tunnel, port ouvert) ; la page Securite le dit relie par un reseau prive.
+    if ($Kind -eq "local" -and @($Classes | Where-Object { @("loopback", "private", "cgnat") -notcontains $_ }).Count -gt 0) {
+        return (& $Fail "NOT_PRIVATE" "Le moteur local doit etre sur votre propre machine ou votre reseau prive (127.x, 10.x, 172.16-31.x, 192.168.x, 100.64-127.x pour Tailscale) : une adresse publique est refusee. Pour un modele heberge, utilisez l'hebergeur suisse." $Classes)
+    }
     if ($Scheme -eq "http") {
         if (@($Classes | Where-Object { @("loopback", "private", "cgnat") -notcontains $_ }).Count -gt 0) {
             return (& $Fail "PLAIN_HTTP_PUBLIC" "Une adresse http:// simple n'est acceptee que vers votre propre machine ou votre reseau prive (127.x, 10.x, 172.16-31.x, 192.168.x, 100.64-127.x pour Tailscale)." $Classes)
@@ -463,9 +467,9 @@ function ConvertTo-BKFetchedBlock {
 # web_fetch : PROVENANCE de l'adresse (moteurs ouverts)
 # ---------------------------------------------------------------------------------------------------------------------------------
 # Un modele qui peut lire N'IMPORTE QUELLE adresse peut envoyer des donnees du client a un tiers en les mettant dans l'adresse
-# (https://collecte.example/s?d=<marge du client>, ou dans le chemin, ou dans le nom d'hote). Le web_fetch serveur d'Anthropic ne lit que des adresses deja
+# (« collecte.example/s?d=<marge du client> », ou dans le chemin, ou dans le nom d'hote). Le web_fetch serveur d'Anthropic ne lit que des adresses deja
 # presentes dans la conversation ; meme regle ici : l'adresse doit avoir ete ECRITE TELLE QUELLE par une source que le modele ne controle pas (message du
-# client, resultat d'outil de cette mission), ou etre la racine nue (https://site.ch/) d'un site que le client a nomme lui-meme.
+# client, resultat d'outil de cette mission), ou etre la racine nue (« site.ch/ » en https) d'un site que le client a nomme lui-meme.
 
 function Get-BKUrlsInText {
     # Adresses http(s) ecrites dans un texte, ponctuation finale retiree.

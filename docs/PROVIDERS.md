@@ -96,7 +96,7 @@ Pour enregistrer un jeton sans qu'il s'affiche : `python3 deploy/set-engine-secr
 
 ## 5. Relier le serveur à VOTRE PC sans l'exposer sur Internet
 
-**À faire par vous.** Le VPS doit joindre Ollama sur votre PC, mais votre PC ne doit **jamais** devenir joignable depuis Internet. La solution recommandée est un **réseau privé maillé** (Tailscale, offre gratuite : vérifiez les conditions actuelles). Le VPS appelle alors `http://100.x.y.z:11434` (l'adresse Tailscale de votre PC, plage 100.64.0.0/10) : le trafic est chiffré de bout en bout et seuls vos deux appareils sont dans ce réseau.
+**À faire par vous.** Le VPS doit joindre Ollama sur votre PC, mais votre PC ne doit **jamais** devenir joignable depuis Internet. La solution recommandée est un **réseau privé maillé** (Tailscale, offre gratuite : vérifiez les conditions actuelles). Le VPS appelle alors `http://100.x.y.z:11434` (l'adresse Tailscale de votre PC, plage 100.64.0.0/10) : le trafic est chiffré de bout en bout et seuls vos deux appareils sont dans ce réseau. Il traverse quand même Internet (le VPS est en France, le PC chez vous), sous forme chiffrée ; quand une liaison directe est impossible (pare-feu, NAT), il passe par un **serveur relais de Tailscale** (DERP), qui ne voit que des paquets chiffrés. La page Sécurité le dit tel quel.
 
 ### 5.1 Pas à pas
 
@@ -118,7 +118,7 @@ Pour enregistrer un jeton sans qu'il s'affiche : `python3 deploy/set-engine-secr
 6. **Dans `.env` sur le VPS** : `BK_OLLAMA_URL=http://100.101.102.103:11434` et `BK_OLLAMA_MODEL=` (§4.2), puis `docker compose up -d`.
 7. **Vérifier depuis le serveur** : `docker compose exec app python3 /data/app/deploy/check-engine.py --chat` affiche l'adresse (jamais un jeton), les modèles installés, le modèle choisi, si l'appel d'outils natif est disponible, et le temps d'une vraie réponse courte. Code de sortie 0 = prêt.
 
-L'adaptateur **refuse** de lui-même tout `http://` qui n'est pas loopback (127.x), réseau privé (10.x, 172.16-31.x, 192.168.x, fd00::/8) ou CGNAT (100.64.0.0/10, Tailscale), toute adresse de lien local (169.254.x.x : métadonnées des clouds), toute adresse avec identifiants, et exige un jeton Bearer pour tout `https://`. Mêmes règles dans `POST /api/admin/engine` (adresse refusée avant d'être enregistrée).
+L'adaptateur **refuse** de lui-même tout `http://` qui n'est pas loopback (127.x), réseau privé (10.x, 172.16-31.x, 192.168.x, fd00::/8) ou CGNAT (100.64.0.0/10, Tailscale), toute adresse de lien local (169.254.x.x : métadonnées des clouds), toute adresse avec identifiants, et exige un jeton Bearer pour tout `https://`. Pour le **moteur local** (`ollama`), il refuse en plus **toute adresse publique**, même en `https://` avec un jeton (code `NOT_PRIVATE`) : un tunnel public (ngrok, port ouvert) n'est jamais accepté, ce qui garantit ce que dit la page Sécurité (moteur relié par un réseau privé). Un modèle hébergé sur Internet passe par l'hébergeur suisse (`swiss`). Mêmes règles dans `POST /api/admin/engine` (adresse refusée avant d'être enregistrée) et dans `check-engine.py`.
 
 ### 5.2 Pourquoi pas ngrok + `Bridge.cs` (l'essai du 2026-10-21/22)
 

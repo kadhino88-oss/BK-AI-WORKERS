@@ -83,9 +83,15 @@ class CheckEngine(unittest.TestCase):
             self.assertNotIn("joignable en", out)
 
     def test_https_without_a_token_is_refused(self):
-        code, out = self.run_script("--url", "https://8.8.8.8/v1")
+        code, out = self.run_script("--engine", "swiss", "--url", "https://8.8.8.8/v1")
         self.assertEqual(code, 1, out)
         self.assertIn("TOKEN_REQUIRED", out)
+
+    def test_the_local_engine_on_a_public_address_is_refused_even_with_a_token(self):
+        code, out = self.run_script("--url", "https://8.8.8.8/v1", env={"BK_SECRET_OLLAMA": "tok-0123456789abcdef"})
+        self.assertEqual(code, 1, out)
+        self.assertIn("NOT_PRIVATE", out)
+        self.assertNotIn("joignable en", out)
 
     def test_dead_engine_gives_an_actionable_message(self):
         srv = self.serve()

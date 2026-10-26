@@ -94,7 +94,7 @@ def main():
     print(f"Jeton : {'present' if token else 'absent'} (jamais affiche)")
     good = True
 
-    ok, code, message, info = net_policy.check_endpoint(url, kind="owner", has_token=bool(token))
+    ok, code, message, info = net_policy.check_endpoint(url, kind="local" if args.engine == "ollama" else "owner", has_token=bool(token))
     good &= say(ok, "adresse permise" + (f" ({', '.join(info.get('classes', []))})" if ok else f" : {message} [{code}]"))
     if not ok:
         return 1

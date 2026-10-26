@@ -109,6 +109,9 @@ def check_endpoint(url, kind="owner", has_token=False, resolver=None, allowed_ho
         - http simple : seulement vers une adresse de loopback, privee ou CGNAT (Tailscale 100.64.0.0/10) ; jamais vers Internet ;
         - https : tout hote public ou prive, mais un jeton (Bearer) est OBLIGATOIRE ;
         - jamais d'identifiants dans l'URL, jamais d'adresse de lien local (metadonnees des clouds), non specifiee, multicast ou reservee.
+    kind = 'local' : le MOTEUR LOCAL (Ollama sur le PC du proprietaire) : memes regles que 'owner', et en plus TOUTES les adresses resolues doivent etre
+        de loopback, privees ou CGNAT (Tailscale). Une adresse publique (tunnel ngrok, port ouvert sur Internet) est refusee : la page Securite dit que ce
+        moteur est relie au serveur par un reseau prive, et ce controle le garantit. Un modele heberge passe par l'hote suisse ('owner').
     kind = 'byok' : adresse saisie par un CLIENT pour SA cle : https obligatoire, adresse publique seulement, hote dans `allowed_hosts`
         (liste blanche du proprietaire : un client ne doit jamais pouvoir faire appeler au serveur une adresse de son choix).
     """
@@ -146,6 +149,10 @@ def check_endpoint(url, kind="owner", has_token=False, resolver=None, allowed_ho
         if not has_token:
             return False, "TOKEN_REQUIRED", "Une clé est obligatoire.", info
         return True, "OK", "", info
+    if kind == "local" and any(c not in PRIVATE_OK for c in classes):
+        return False, "NOT_PRIVATE", ("Le moteur local doit être sur votre propre machine ou votre réseau privé (127.x, 10.x, 172.16-31.x, 192.168.x, "
+                                      "100.64-127.x pour Tailscale) : une adresse publique (tunnel, port ouvert sur Internet) est refusée. "
+                                      "Pour un modèle hébergé, utilisez l'hébergeur suisse."), info
     if scheme == "http":
         if any(c not in PRIVATE_OK for c in classes):
             return False, "PLAIN_HTTP_PUBLIC", ("Une adresse http:// simple n'est acceptée que vers votre propre machine ou votre réseau privé "

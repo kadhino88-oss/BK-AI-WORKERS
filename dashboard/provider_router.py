@@ -342,8 +342,8 @@ def endpoint_structurally_ok(url, secret_name, env=None):
         cls = net_policy.ip_class(host)
         if cls == "blocked":
             return False
-        if parts["scheme"] == "http" and cls not in net_policy.PRIVATE_OK:
-            return False
+        if (parts["scheme"] == "http" or secret_name == "ollama") and cls not in net_policy.PRIVATE_OK:
+            return False                                         # le moteur local n'est jamais sur une adresse publique (kind « local »)
     if parts["scheme"] == "https" and not token_present(secret_name, env):
         return False
     return True
@@ -619,7 +619,8 @@ def apply_settings(root, patch, levels=None, env=None, resolver=None):
                 if not url:
                     errors.append({"field": "endpoints." + eid + ".url", "message": "Adresse obligatoire."})
                     continue
-                ok, code, message, _ = net_policy.check_endpoint(url, kind="owner", has_token=token_present(eid, env), resolver=resolver)
+                # Moteur local : reseau prive seulement (la page Securite le promet) ; hote suisse : https public avec jeton permis.
+                ok, code, message, _ = net_policy.check_endpoint(url, kind="local" if eid == "ollama" else "owner", has_token=token_present(eid, env), resolver=resolver)
                 if not ok:
                     if code == "TOKEN_REQUIRED":
                         message += " Enregistrez d'abord le jeton sur le serveur (variable BK_SECRET_" + eid.upper() + ")."

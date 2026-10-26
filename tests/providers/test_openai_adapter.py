@@ -621,7 +621,11 @@ class EndpointPolicyTests(AdapterBase):
         self.assertIn(code, r.result["error"])
 
     def test_plain_http_to_the_internet_is_refused(self):
-        self.refused("http://8.8.8.8:11434", "PLAIN_HTTP_PUBLIC")
+        self.refused("http://8.8.8.8:11434", "NOT_PRIVATE")                                   # moteur local : jamais une adresse publique
+        self.refused("http://8.8.8.8:11434", "PLAIN_HTTP_PUBLIC", env={"BK_SECRET_SWISS": "tok-1234567890"}, engine="swiss")
+
+    def test_the_local_engine_behind_a_public_tunnel_is_refused_even_with_a_token(self):
+        self.refused("https://8.8.8.8", "NOT_PRIVATE", env={"BK_SECRET_OLLAMA": "tok-1234567890"})
 
     def test_https_without_a_token_is_refused(self):
         self.refused("https://8.8.8.8", "TOKEN_REQUIRED", engine="swiss")

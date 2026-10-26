@@ -223,8 +223,10 @@
   ],
   "sp-local-engine": [
     {"file": "dashboard/provider_router.py", "match": ["FREE_PROVIDER_IDS = \\(\"ollama\",\\)", "l'essai n'utilise JAMAIS Claude"]},
-    {"file": "core/ai/adapters/OPENAI-COMPAT-ADAPTER.ps1", "match": ["/chat/completions", "Test-BKEndpointPolicy"]},
-    {"file": "dashboard/net_policy.py", "match": ["PRIVATE_OK = \\(\"loopback\", \"private\", \"cgnat\"\\)"]}
+    {"file": "core/ai/adapters/OPENAI-COMPAT-ADAPTER.ps1", "match": ["/chat/completions", "Test-BKEndpointPolicy", "elseif \\(\\$IsLocal\\) \\{ \"local\" \\}"]},
+    {"file": "dashboard/net_policy.py", "match": ["PRIVATE_OK = \\(\"loopback\", \"private\", \"cgnat\"\\)", "if kind == \"local\" and any\\(c not in PRIVATE_OK for c in classes\\)"]},
+    {"file": "dashboard/provider_router.py", "match": ["kind=\"local\" if eid == \"ollama\" else \"owner\""]},
+    {"file": "docs/PROVIDERS.md", "match": ["Tailscale", "relais de Tailscale"]}
   ],
   "sp-swiss-engine": [
     {"file": "dashboard/provider_router.py", "match": ["BK_SWISS_URL", "PROVIDER_IDS = \\(\"anthropic\", \"ollama\", \"swiss\"\\)"]},
