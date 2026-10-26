@@ -197,6 +197,7 @@ Tous sans réseau externe ni coût (faux serveur OpenAI-compatible de la bibliot
 | `tests/providers/test_router.py` | routeur : rien ne change sans choix, chaînes, essai verrouillé, clé personnelle, plafond, alertes, disjoncteur, matrice de capacités, réglages |
 | `tests/providers/test_openai_adapter.py` | adaptateur : contrat, boucle d'outils natifs et en texte, **porte d'approbation (une écriture devient PENDING-ACTION, rien n'est exécuté)**, mémoire, fichiers, erreurs 402/401/429/délai, adresses interdites, **contenu externe = donnée**, prompt compact |
 | `tests/providers/test_engine_chain.py` | exécuteur : repli ouvert, disjoncteur, plafond, essai gratuit, clé personnelle sans repli, étiquette du moteur, réponse de secours |
+| `tests/providers/test_engine_ui.js` | interface (Node, sans page) : étiquette « Moteur : … » / « Réponse du moteur de remplacement : … », ligne près de la zone de mission, détail des limites, libellés hostiles échappés, ligne cachée si le serveur est en erreur |
 | `tests/providers/test_chloe_routing.py` | le routage de Chloé n'appelle Claude que si le plan le permet |
 | `tests/providers/test_check_engine.py` | `deploy/check-engine.py` |
 | `tests/providers/e2e_server.py` | bout en bout : vrai serveur, vrais comptes, vraies missions (pipeline PowerShell complet) répondues par un faux moteur local |

@@ -22,6 +22,8 @@ python3 -m unittest tests.providers.test_automation_engine
 python3 tests/providers/e2e_server.py        # bout en bout : vrai serveur, copie jetable du dépôt, quelques minutes
 ```
 
+L'interface (étiquette, ligne « Moteur : … », détail des limites) a son test Node, sans page ni serveur : `node tests/providers/test_engine_ui.js`.
+
 Sous Windows, passer par WSL (`wsl -e bash -c "cd /mnt/c/.../BK-AI-WORKERS && python3 -m unittest ..."`) ; sous Git Bash, préfixer par `MSYS_NO_PATHCONV=1`.
 Lire le dépôt sur le disque Windows depuis WSL est lent : la première racine jetable d'un processus (copie de `core/`) prend plusieurs minutes, les suivantes
 sont des copies locales.
