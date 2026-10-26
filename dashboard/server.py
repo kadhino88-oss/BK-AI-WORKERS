@@ -1065,7 +1065,7 @@ def store_byok(client_id, body):
     if not saved.get("ok"):
         return {"error": "STORE_FAILED", "message": "Enregistrement impossible pour le moment. Réessayez."}, 500
     provider_router.save_byok_meta(ROOT, client_id, info["kind"], info["host"], info["endpoint"], info["model"], True)
-    log_activity("byok_saved", clientId=client_id, kind=info["kind"], host=info["host"])
+    log_activity("byok_saved", clientId=client_id, engineKind=info["kind"], host=info["host"])
     return {"ok": True, "byok": provider_router.byok_public_view(provider_router.load_byok_meta(ROOT, client_id))}, 200
 
 
