@@ -661,7 +661,7 @@ def rule_a11y_css(m, rp, pc, want):
     if want("a11y.focus"):
         bad = re.search(r"outline\s*:\s*(?:none|0)\b", all_css) is not None
         good = re.search(r":focus-visible[^{}]*\{[^{}]*(?:outline|box-shadow|border)", all_css) is not None or \
-            re.search(r":focus[^{}]*\{[^{}]*(?:outline\s*:\s*(?!none|0)|box-shadow)", all_css) is not None
+            re.search(r":focus[^{}]*\{[^{}]*(?:outline\s*:(?!\s*(?:none|0)\b)|box-shadow)", all_css) is not None
         if bad and not good:
             rp.fail("a11y.focus", "outline:none sans style de focus de remplacement (:focus-visible) : le clavier ne voit plus où il est.", file="assets/style.css")
         elif all_css.strip():
@@ -1160,7 +1160,7 @@ def rule_build(m, rp, pc, cfg):
         try:
             import site_factory
             if site_factory.src_fingerprint(m.workspace) != m.build.get("srcSha256"):
-                rp.fail("build.stale", "site/src/ ou site.json a changé depuis la dernière construction : relancez site_build avant de contrôler (les contrôles lisent dist/).", severity="warn")
+                rp.fail("build.stale", "site/src/ ou site.json a changé depuis le dernier site_build : relancez site_build, sinon l'aperçu, le zip et ce contrôle portent sur une ancienne version.")
         except Exception:  # noqa: BLE001 - un contrôle d'empreinte ne fait jamais échouer les autres
             pass
     return True
@@ -1189,13 +1189,6 @@ def run_checks(workspace, check, res, root=None, site_rel="site"):
     if not rule_build(m, rp, pc, cfg):
         rp.finish()
         return
-    # dist/ à jour ?
-    try:
-        import site_factory
-        if m.build and m.build.get("srcDigest") and site_factory.src_digest(m.site_dir) != m.build.get("srcDigest"):
-            rp.fail("build.stale", "site/src ou site.json ont changé depuis le dernier site_build : relancez site_build, sinon l'aperçu, le zip et ce contrôle portent sur une ancienne version.")
-    except Exception:  # noqa: BLE001
-        pass
     if len(m.pages) > int(pc.get("maxPages") or 60):
         rp.fail("perf.total", f"{len(m.pages)} pages : au plus {pc.get('maxPages')} pour ce profil.")
     if not m.base_url:
