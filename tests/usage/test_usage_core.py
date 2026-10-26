@@ -350,6 +350,45 @@ def test_project_credits_survive_reconcile():
     env.close()
 
 
+def test_reconcile_never_double_counts():
+    print("\n== reconciliation periodique : jamais pendant une mission en cours ; mission perdue recomptee d'apres ses traces ==")
+    env = Env(limits={"reconcileIntervalSec": 60})
+    svc, clk = env.svc, env.clock
+    first = svc.reserve(A, 6, "mission", "MSN-1")                 # Chloe, deux Workers : la mission court
+    clk.advance(300)                                               # la reconciliation periodique est due (la reservation, 12 min, court encore)
+    env.write_task(A, 3, clk.t - 60)                               # le premier Worker a deja ecrit sa trace
+    second = svc.reserve(A, 6, "mission", "MSN-2")               # une autre mission demarre PENDANT la premiere
+    check("reservation pendant une mission en cours : aucune reconciliation (la trace partielle n'est pas comptee en plus du reglement)",
+          svc.snapshot(A)["session"]["used"] == 0 and svc.snapshot(A)["lastReconcileUtc"] == usage.iso(T0), svc.snapshot(A)["session"])
+    svc.settle(A, first, 3)
+    svc.release(A, second)
+    svc.reserve(A, 1, "mission", "MSN-3")                          # plus rien ne court : la reconciliation passe
+    s = svc.snapshot(A)
+    check("... puis, plus rien ne courant, la reconciliation passe et trouve 3 credits (pas 6)",
+          s["session"]["used"] == 3 and s["month"]["used"] == 3 and s["lastReconcileUtc"] == usage.iso(clk.t), s["session"])
+    env.close()
+
+    env = Env()                                                    # reconciliation periodique lointaine : seule l'echeance la declenche
+    svc, clk = env.svc, env.clock
+    svc.reserve(A, 6, "mission", "MSN-lost", ttl_s=30)            # le processus meurt apres avoir livre
+    env.write_task(A, 6, T0 + 10)
+    clk.advance(31)
+    svc.reserve(A, 1, "mission", "MSN-next")
+    s = svc.snapshot(A)
+    check("mission a reservation echue : liberee a 0 puis recomptee d'apres sa trace TASK-*.json (6 credits)",
+          s["session"]["used"] == 6 and s["month"]["used"] == 6 and s["session"]["reserved"] == 1, s["session"])
+    svc.reserve(A, 2, "mission", "MSN-boot")
+    env.write_task(A, 2, clk.t)
+    svc2 = usage.UsageService(env.root, plan_view=lambda c: dict(env.plans[c]), now=clk, mode="on", limits={"reconcileIntervalSec": 10 ** 7})
+    svc2.reap(boot=True)
+    check("reap(boot) : les missions orphelines sont liberees", svc2.snapshot(A)["reservations"] == {} and svc2.snapshot(A)["session"]["used"] == 6)
+    svc2.reserve(A, 1, "mission", "after-boot")
+    s = svc2.snapshot(A)
+    check("... et leurs credits deja traces sont recomptes a la premiere ecriture (6 + 2 = 8, la mission livree avant l'arret n'est pas offerte)",
+          s["session"]["used"] == 8 and s["month"]["used"] == 8, s["session"])
+    env.close()
+
+
 def test_clock_skew():
     print("\n== derive d'horloge ==")
     env = Env()
@@ -429,7 +468,7 @@ def test_serialisation():
 
 def main():
     for fn in (test_allocations, test_window_lifecycle, test_blocks, test_release_and_partial, test_concurrency_threads, test_concurrency_processes,
-               test_plan_change, test_exempt_and_modes, test_expired_reservation, test_seed_and_reconcile, test_project_credits_survive_reconcile, test_clock_skew,
+               test_plan_change, test_exempt_and_modes, test_expired_reservation, test_seed_and_reconcile, test_project_credits_survive_reconcile, test_reconcile_never_double_counts, test_clock_skew,
                test_events_do_not_deadlock, test_boot_reap_purge_ids, test_serialisation):
         fn()
     return finish("tests/usage/test_usage_core.py")

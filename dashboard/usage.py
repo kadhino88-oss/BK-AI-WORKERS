@@ -671,6 +671,10 @@ class UsageService:
                 self._apply_settle(L, rid, r, actual, now)
                 if not readonly:
                     self._emit("usage_reservation_expired", clientId=client_id, usageKind=r.get("kind"), ref=r.get("ref"), credits=actual)
+                    if r.get("kind") in ("mission", "automation"):
+                        # La mission a peut-etre livre avant de perdre son reglement : ses credits sont dans ses traces TASK-*.json. Liberee a 0
+                        # ici, elle est recomptee par la reconciliation, avancee a la prochaine ecriture sans reservation en cours.
+                        L["lastReconcileUtc"] = None
                 changed = True
         self._recompute_reserved(L)
         return changed
@@ -708,9 +712,11 @@ class UsageService:
             self._recompute_reserved(L)
             changed = True
         elif not readonly:
+            # Reconciliation periodique : jamais pendant qu'une reservation court. Une mission en cours peut avoir deja ecrit une partie de ses
+            # traces (Chloe : un TASK-*.json par Worker termine) : les recompter maintenant PUIS ajouter son reglement les compterait deux fois.
             interval = self.limits()["reconcileIntervalSec"]
             last = parse_iso(L.get("lastReconcileUtc"))
-            if last is None or now - last >= interval:
+            if (last is None or now - last >= interval) and not L["reservations"]:
                 self._reconcile_in_place(client_id, L, pv, now, force=True)
                 changed = True
         if changed and not readonly:
@@ -1016,6 +1022,8 @@ class UsageService:
                                 except Exception:  # noqa: BLE001
                                     actual = 0
                             self._apply_settle(L, rid, r, actual, now)
+                            if r.get("kind") in ("mission", "automation"):
+                                L["lastReconcileUtc"] = None       # credits peut-etre deja traces avant l'arret : recomptes a la prochaine ecriture
                             freed += 1
                     self._recompute_reserved(L)
                     self._write(client_id, L, now)
