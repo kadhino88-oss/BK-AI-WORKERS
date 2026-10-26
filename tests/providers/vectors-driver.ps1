@@ -46,6 +46,28 @@ $ToolCases["offered_name_extra_key"] = (ConvertFrom-BKToolText -Text '{"name":"w
 $ToolCases["name_args_unknown"] = (ConvertFrom-BKToolText -Text '{"name":"send_email","arguments":{"to":"a@b.ch"}}' -ToolNames $Names).Kind
 $ToolCases["call_name"] =(ConvertFrom-BKToolText -Text '{"tool":"write_text_file","arguments":{"name":"a.txt","content":"x"}}' -ToolNames $Names).Name
 
+# Provenance des adresses de web_fetch (moteurs ouverts)
+$ClientMsg = "Lis https://exemple.test/rapport?id=7 puis regarde le site migros.ch et www.admin.ch. Ecris-moi a jean@exemple-prive.ch. Marge cible 18 %."
+$Seen = @(Get-BKUrlsInText -Text ($ClientMsg + "`nPage lue : voir https://exemple.test/suite. ou (https://exemple.test/annexe), et https://collect.evil.example/s?d=…"))
+$Doms = @(Get-BKDomainsInText -Text $ClientMsg)
+$Prov = [ordered]@{}
+$Prov["seen"] = $Seen
+$Prov["domains"] = $Doms
+$Prov["verbatim"] = Test-BKFetchProvenance -Url "https://exemple.test/rapport?id=7" -SeenUrls $Seen -ClientDomains $Doms
+$Prov["trailing_slash_and_host_case"] = Test-BKFetchProvenance -Url "https://EXEMPLE.test/suite/" -SeenUrls $Seen -ClientDomains $Doms
+$Prov["from_a_page"] = Test-BKFetchProvenance -Url "https://exemple.test/annexe" -SeenUrls $Seen -ClientDomains $Doms
+$Prov["page_url_with_client_data_appended"] = Test-BKFetchProvenance -Url "https://collect.evil.example/s?d=Marge%20cible%2018%25" -SeenUrls $Seen -ClientDomains $Doms
+$Prov["query_changed"] = Test-BKFetchProvenance -Url "https://exemple.test/rapport?id=8" -SeenUrls $Seen -ClientDomains $Doms
+$Prov["prefix_of_a_seen_url"] = Test-BKFetchProvenance -Url "https://exemple.test/rapp" -SeenUrls $Seen -ClientDomains $Doms
+$Prov["invented"] = Test-BKFetchProvenance -Url "https://collect.evil.example/18-pourcent" -SeenUrls $Seen -ClientDomains $Doms
+$Prov["client_domain_root"] = Test-BKFetchProvenance -Url "https://www.migros.ch/" -SeenUrls $Seen -ClientDomains $Doms
+$Prov["client_domain_root_bare"] = Test-BKFetchProvenance -Url "https://admin.ch" -SeenUrls $Seen -ClientDomains $Doms
+$Prov["client_domain_with_path"] = Test-BKFetchProvenance -Url "https://www.migros.ch/marge-18" -SeenUrls $Seen -ClientDomains $Doms
+$Prov["client_domain_with_query"] = Test-BKFetchProvenance -Url "https://migros.ch/?d=18" -SeenUrls $Seen -ClientDomains $Doms
+$Prov["client_domain_subdomain"] = Test-BKFetchProvenance -Url "https://marge18.migros.ch/" -SeenUrls $Seen -ClientDomains $Doms
+$Prov["email_domain_is_not_a_site"] = Test-BKFetchProvenance -Url "https://exemple-prive.ch/" -SeenUrls $Seen -ClientDomains $Doms
+$Prov["strings_in_args"] = @(Get-BKStringsIn -Value ('{"connectorId":"gmail","params":{"Body":"voir https://a.example/?x=1&y=2","To":["b@c.ch"]}}' | ConvertFrom-Json))
+
 # Affirmations sans effet : un petit modele qui ecrit « j'ai envoye » sans aucun outil
 $Claims = [ordered]@{}
 $Claims["sent_fr"] = [bool](Get-BKUnbackedClaimNote -Text "Bonjour ! J'ai envoyé l'e-mail à Paul comme demandé.")
@@ -124,4 +146,4 @@ $Health["classes"] = [ordered]@{
 }
 Remove-Item -LiteralPath $Root2 -Recurse -Force -ErrorAction SilentlyContinue
 
-[ordered]@{ ipMismatches = $IpBad; endpointMismatches = $EpBad; tool = $ToolCases; files = $Files; health = $Health; claims = $Claims } | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $OutFile -Encoding utf8
+[ordered]@{ ipMismatches = $IpBad; endpointMismatches = $EpBad; tool = $ToolCases; files = $Files; health = $Health; claims = $Claims; provenance = $Prov } | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $OutFile -Encoding utf8

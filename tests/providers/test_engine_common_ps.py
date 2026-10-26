@@ -56,6 +56,18 @@ class EngineCommon(unittest.TestCase):
         self.assertEqual(t["offered_name_extra_key"], "malformed", "le nom d'un outil offert avec une cle en trop est un vrai essai d'appel")
         self.assertEqual(t["name_args_unknown"], "malformed", "forme exacte d'un appel ({name, arguments}) avec un outil invente : rappel")
 
+    def test_web_fetch_reads_only_addresses_it_did_not_build_itself(self):
+        p = self.r["provenance"]
+        self.assertEqual(p["seen"], ["https://exemple.test/rapport?id=7", "https://exemple.test/suite", "https://exemple.test/annexe", "https://collect.evil.example/s?d=…"],
+                         "ponctuation finale et parentheses retirees")
+        self.assertEqual(sorted(set(p["domains"])), ["admin.ch", "exemple.test", "migros.ch"], "une adresse e-mail ne donne pas de site")
+        for key in ("verbatim", "trailing_slash_and_host_case", "from_a_page", "client_domain_root", "client_domain_root_bare"):
+            self.assertTrue(p[key], key)
+        for key in ("page_url_with_client_data_appended", "query_changed", "prefix_of_a_seen_url", "invented", "client_domain_with_path",
+                    "client_domain_with_query", "client_domain_subdomain", "email_domain_is_not_a_site"):
+            self.assertFalse(p[key], key)
+        self.assertIn("voir https://a.example/?x=1&y=2", p["strings_in_args"], "les adresses des arguments sont lues sans echappement JSON")
+
     def test_text_files_only_and_capped(self):
         f = self.r["files"]
         self.assertTrue(f["ok_txt"].startswith("Fichier enregistre"))

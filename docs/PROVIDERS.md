@@ -22,7 +22,7 @@ Exposé par `GET /api/engine` pour le compte connecté, avec le moteur qu'il uti
 | Capacité | Claude | Moteur local / hébergeur suisse | Clé OpenAI-compatible |
 |---|---|---|---|
 | Recherche web | oui (outil serveur d'Anthropic) | **non**, sauf si vous configurez un point de recherche compatible SearXNG (`BK_SEARCH_URL`, §4.2) : extraits de résultats seulement | idem (le même point de recherche, si vous en avez un) |
-| Lecture d'une page web | oui | oui, **client-side, https seulement**, texte seulement (`dashboard/safe_fetch.py`) | oui, idem |
+| Lecture d'une page web | oui | oui, **client-side, https seulement**, texte seulement (`dashboard/safe_fetch.py`), et **seulement une adresse écrite telle quelle par le client ou trouvée dans un résultat de recherche, de page ou d'outil connecté** de la mission (ou la page d'accueil d'un site que le client a nommé) : une adresse fabriquée par le modèle, qui pourrait emporter des données du client vers un tiers, est refusée | oui, idem |
 | Exécution de code | oui | **non** | non |
 | Fichiers Excel / Word / PowerPoint / PDF | oui | **non** | non |
 | Fichiers texte (txt, md, csv, json, html) | oui | oui (mêmes plafonds : 10 fichiers, 25 Mo, 60 Mo) | oui |
