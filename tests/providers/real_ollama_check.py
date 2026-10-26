@@ -16,6 +16,10 @@ import time
 import urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")      # Windows (cp1252) : la reponse d'un petit modele peut contenir n'importe quel caractere
+except (AttributeError, ValueError):
+    pass
 sys.path.insert(0, HERE)
 import harness  # noqa: E402
 from harness import Run, make_root  # noqa: E402

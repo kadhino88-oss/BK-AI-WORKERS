@@ -77,9 +77,9 @@ class EngineCommon(unittest.TestCase):
 
     def test_actions_a_small_model_claims_without_any_tool_are_flagged(self):
         c = self.r["claims"]
-        for key in ("sent_fr", "sent_fr_passive", "sent_en", "file_fr", "file_fr2", "file_fr_text_subject", "file_fr_named", "web_fr"):
+        for key in ("sent_fr", "sent_fr_passive", "sent_en", "file_fr", "file_fr2", "file_fr_text_subject", "file_fr_bare", "file_en_success", "file_fr_named", "web_fr"):
             self.assertTrue(c[key], key)
-        for key in ("plain_text_is_fine", "file_negated_is_fine", "prepared_is_fine", "sent_but_really_executed", "file_but_really_saved", "web_but_really_read", "empty"):
+        for key in ("plain_text_is_fine", "future_save_is_fine", "file_negated_is_fine", "prepared_is_fine", "sent_but_really_executed", "file_but_really_saved", "web_but_really_read", "empty"):
             self.assertTrue(c[key], key)
         self.assertIn("n'a PAS envoyé, publié, payé ou supprimé quoi que ce soit, ni enregistré un fichier", c["note_text"])
         self.assertIn("aucun outil ne l'a fait", c["note_text"])

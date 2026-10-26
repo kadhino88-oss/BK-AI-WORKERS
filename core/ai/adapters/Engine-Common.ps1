@@ -334,10 +334,13 @@ function Get-BKUnbackedClaimNote {
     $SendEn = '(?i)\bI(?:[''\u2019]ve|\s+have|\s+just)\s+(?:already\s+)?(?:sent|published|posted|paid|deleted|scheduled|booked|forwarded)\b|\b(?:has|have)\s+(?:been\s+)?(?:sent|published|posted|paid|deleted|scheduled)\b'
     $FileFr = '(?i)\b(?:j[''\u2019]ai|je viens d[''\u2019])\s*(?:bien\s+)?(?:enregistr|sauvegard|cré|génér|export)[ée]?[^.\n]{0,40}\b(?:fichier|document|fiche|tableau|rapport|note)\b|\b(?:fichier|document|tableau|rapport)\b[^.\n]{0,40}\b(?:a|est)\s+(?:bien\s+)?(?:été\s+)?(?:enregistr|sauvegard|cré|génér|export)[ée]s?\b|\.(?:txt|md|csv|json|html|docx|xlsx|pdf)\b[^.\n]{0,40}\b(?:enregistr|sauvegard|cré)[ée]s?\b|\b(?:a|ont|est|sont)\s+(?:bien\s+)?(?:été\s+)?(?:enregistr|sauvegard|cré|génér|export)[ée]?s?\b[^.\n]{0,60}\b(?:fichier|document|nomm[ée]s?|sous le nom)\b'
     $FileEn = '(?i)\bI(?:[''\u2019]ve|\s+have)\s+(?:saved|created|generated|exported)\b[^.\n]{0,40}\b(?:file|document|spreadsheet|report)\b|\b(?:file|document|spreadsheet)\b[^.\n]{0,40}\b(?:has been|was)\s+(?:saved|created|generated)\b'
+    # \u00ab Ok, le texte a \u00e9t\u00e9 enregistr\u00e9 avec succ\u00e8s. \u00bb (mesure r\u00e9elle du 2026-10-26, qwen2.5:1.5b) : ni le mot \u00ab fichier \u00bb ni un nom de fichier, mais l'enregistrement est affirm\u00e9.
+    $FileFr2 = '(?i)\b(?:enregistr|sauvegard)[\u00e9e]s?\s+avec\s+succ[e\u00e8]s\b|\b(?:le\s+texte|le\s+contenu|la\s+note|votre\s+texte|votre\s+note|votre\s+contenu|ce\s+texte)\b[^.\n]{0,40}\b(?:a|est)\s+(?:bien\s+)?(?:\u00e9t\u00e9\s+)?(?:enregistr|sauvegard)[\u00e9e]s?\b'
+    $FileEn2 = '(?i)\b(?:saved|created|generated)\s+successfully\b|\bsuccessfully\s+(?:saved|created|generated)\b'
     $WebFr = '(?i)\b(?:j[''\u2019]ai|je viens de)\s*(?:bien\s+)?(?:cherch|recherch|consult|visit|ouvert|navigu)[ée]?[^.\n]{0,50}\b(?:web|internet|google|site|page)\b'
     $WebEn = '(?i)\bI(?:[''\u2019]ve|\s+have)\s+(?:searched|browsed|googled|visited|looked up)\b'
     if ($ActionsExecuted -le 0 -and ($T -match $SendFr -or $T -match $SendFrPassive -or $T -match $SendEn)) { $Claimed += "envoyé, publié, payé ou supprimé quoi que ce soit" }
-    if ($FilesSaved -le 0 -and ($T -match $FileFr -or $T -match $FileEn)) { $Claimed += "enregistré un fichier" }
+    if ($FilesSaved -le 0 -and ($T -match $FileFr -or $T -match $FileEn -or $T -match $FileFr2 -or $T -match $FileEn2)) { $Claimed += "enregistré un fichier" }
     if ($PagesRead -le 0 -and ($T -match $WebFr -or $T -match $WebEn)) { $Claimed += "consulté le web" }
     if ($Claimed.Count -eq 0) { return "" }
     return "Attention : dans cette mission, le moteur n'a PAS " + ($Claimed -join ", ni ") + " (aucun outil ne l'a fait). Si la réponse ci-dessus dit le contraire, c'est inexact — sauf s'il s'agit d'un texte que vous avez demandé vous-même (un e-mail à rédiger, par exemple). Une action n'est réelle que lorsque vous la confirmez depuis votre tableau de bord."
