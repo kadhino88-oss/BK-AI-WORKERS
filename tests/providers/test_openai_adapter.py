@@ -185,6 +185,34 @@ class ToolLoopTests(AdapterBase):
         self.assertIn("illisible", reminder)
         self.assertEqual(r.result["answer"], "Voici la reponse en texte.")
 
+    def test_a_json_final_answer_with_a_name_key_is_returned_at_once_in_both_modes(self):
+        """Fiche contact demandee en JSON : avant le correctif, chaque tour recevait « appel d'outil illisible » jusqu'a l'echeance de la mission."""
+        sheet = json.dumps({"name": "Jean Dupont", "email": "jean.dupont@exemple.ch", "telephone": "+41 79 000 00 00"}, ensure_ascii=False)
+        for mode, native in (("json", False), ("native", True)):
+            srv = self.serve([{"content": sheet}, {"content": "ne doit pas etre appele"}], supports_tools=native)
+            r = self.run_adapter(srv, mode=mode)
+            self.assertEqual(r.exit, 0, r.proc.stderr)
+            self.assertEqual(len(srv.chat_requests()), 1, mode + " : une seule requete, aucun rappel de format")
+            self.assertEqual(r.result["answer"], sheet, mode)
+            self.assertEqual(r.result["engine"]["toolCalls"], 0, mode)
+
+    def test_native_mode_never_sends_a_json_format_reminder(self):
+        broken = {"content": '{"tool":"write_text_file","arguments":{"name":"a.txt","content":'}
+        srv = self.serve([broken, {"content": "ne doit pas etre appele"}])
+        r = self.run_adapter(srv, mode="native")
+        self.assertEqual(r.exit, 0, r.proc.stderr)
+        self.assertEqual(len(srv.chat_requests()), 1, "en mode natif, le texte est la reponse : jamais de rappel du protocole JSON")
+
+    def test_format_reminders_stop_after_two_and_the_final_answer_is_asked_for(self):
+        broken = {"content": '{"tool":"write_text_file","arguments":{"name":"a.txt","content":'}
+        srv = self.serve([broken, broken, {"content": "Voici la reponse en texte."}, {"content": "ne doit pas etre appele"}], supports_tools=False)
+        r = self.run_adapter(srv, mode="json")
+        self.assertEqual(r.exit, 0, r.proc.stderr)
+        reqs = srv.chat_requests()
+        self.assertEqual(len(reqs), 3, "deux rappels au plus, puis la reponse finale est demandee")
+        self.assertIn("Tu n'as plus d'outils", reqs[2]["messages"][-1]["content"])
+        self.assertEqual(r.result["answer"], "Voici la reponse en texte.")
+
     def test_text_around_json_is_a_final_answer_not_a_tool_call(self):
         said = 'Je pourrais appeler {"tool":"write_text_file","arguments":{"name":"a.txt","content":"x"}} mais je reponds directement.'
         srv = self.serve([{"content": said}], supports_tools=False)

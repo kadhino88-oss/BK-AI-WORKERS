@@ -276,15 +276,21 @@ function Get-BKClaudeBudget {
 function ConvertFrom-BKToolText {
     <#
     Decide si le message d'un modele est UN appel d'outil ecrit en texte. Strict : le message ENTIER (apres retrait d'une cloture ```json) doit etre
-    un seul objet JSON { "tool": <nom>, "arguments": { ... } } (alias acceptes : name / parameters), le nom doit faire partie des outils OFFERTS a cette
-    mission, aucune autre cle. Tout le reste est une reponse finale. Le resultat est de la DONNEE : jamais d'execution ici.
-    Kind : "call" (Name, Arguments), "malformed" (ressemble a un appel mais invalide : le modele recevra un rappel de format) ou "final".
+    un seul objet JSON { "tool": <nom>, "arguments": { ... } } (alias acceptes : name / parameters / args), le nom doit faire partie des outils OFFERTS a cette
+    mission, aucune autre cle. Le resultat est de la DONNEE : jamais d'execution ici.
+    Kind : "call" (Name, Arguments), "malformed" (VRAI essai d'appel mais invalide : le modele recevra un rappel de format) ou "final".
+    Une reponse finale peut tres bien etre du JSON (fiche contact, fiche produit demandees en JSON) : un objet n'est un essai d'appel que s'il porte le NOM d'un
+    outil offert (cle « tool » ou « name »), ou s'il a exactement la forme d'un appel ({ "tool": x } ou { "tool"|"name": x, "arguments": {...} }, rien d'autre).
+    Tout autre JSON ({ "name": "Jean Dupont", "email": ... }) est une reponse finale, jamais un rappel de format en boucle.
     #>
     param([string]$Text, [string[]]$ToolNames)
     $T = ([string]$Text).Trim()
     if ($T.Length -eq 0) { return [pscustomobject]@{ Kind = "final"; Name = ""; Arguments = $null; Why = "" } }
     $Looks = ($T.StartsWith("{") -or $T.StartsWith('```'))
     if (-not $Looks) { return [pscustomobject]@{ Kind = "final"; Name = ""; Arguments = $null; Why = "" } }
+    # JSON illisible ou entoure de texte : un rappel de format seulement s'il nomme un outil OFFERT (« "tool": "write_text_file" »), sinon c'est du contenu.
+    $Offered = @($ToolNames | Where-Object { $_ } | ForEach-Object { [regex]::Escape([string]$_) })
+    $NamesOffered = if ($Offered.Count -gt 0) { '"(?:tool|name)"\s*:\s*"(?:' + ($Offered -join '|') + ')"' } else { '(?!)' }
     $Body = $T
     if ($Body.StartsWith('```')) {
         $Body = [regex]::Replace($Body, '^```[A-Za-z]*\s*', '')
@@ -292,21 +298,31 @@ function ConvertFrom-BKToolText {
         $Body = $Body.Trim()
     }
     if (-not $Body.StartsWith("{") -or -not $Body.EndsWith("}")) {
-        return [pscustomobject]@{ Kind = $(if ($T -match '"(tool|name)"\s*:') { "malformed" } else { "final" }); Name = ""; Arguments = $null; Why = "texte autour du JSON" }
+        return [pscustomobject]@{ Kind = $(if ($T -cmatch $NamesOffered) { "malformed" } else { "final" }); Name = ""; Arguments = $null; Why = "texte autour du JSON" }
     }
     $Obj = $null
     try { $Obj = $Body | ConvertFrom-Json -ErrorAction Stop } catch {
-        return [pscustomobject]@{ Kind = $(if ($T -match '"(tool|name)"\s*:') { "malformed" } else { "final" }); Name = ""; Arguments = $null; Why = "JSON invalide" }
+        return [pscustomobject]@{ Kind = $(if ($T -cmatch $NamesOffered) { "malformed" } else { "final" }); Name = ""; Arguments = $null; Why = "JSON invalide" }
     }
     if ($Obj -isnot [pscustomobject]) { return [pscustomobject]@{ Kind = "final"; Name = ""; Arguments = $null; Why = "" } }
     $Keys = @($Obj.PSObject.Properties.Name)
-    $NameKey = @("tool", "name") | Where-Object { $Keys -contains $_ } | Select-Object -First 1
     $ArgKey = @("arguments", "parameters", "args") | Where-Object { $Keys -contains $_ } | Select-Object -First 1
-    if (-not $NameKey) { return [pscustomobject]@{ Kind = "final"; Name = ""; Arguments = $null; Why = "" } }   # un JSON sans « tool » est un contenu, pas un appel
+    $NameKey = $null
+    foreach ($K in @("tool", "name")) {
+        if ($Keys -contains $K -and ($ToolNames -ccontains [string]$Obj.$K)) { $NameKey = $K; break }
+    }
+    if (-not $NameKey) {
+        # Aucun outil offert n'est nomme. Forme exacte d'un appel (cle « tool » seule ou avec ses arguments, ou « name » + arguments et rien d'autre) :
+        # un outil invente ou mal ecrit (« MEMORY »), le modele recoit un rappel. Toute autre forme est un contenu (reponse finale).
+        $ShapeKeys = @($Keys | Where-Object { $_ -ne $ArgKey })
+        $CallShape = ($ShapeKeys.Count -eq 1 -and ($ShapeKeys[0] -eq "tool" -or ($ShapeKeys[0] -eq "name" -and $ArgKey)))
+        if ($CallShape -and $Obj.($ShapeKeys[0]) -is [string]) { return [pscustomobject]@{ Kind = "malformed"; Name = [string]$Obj.($ShapeKeys[0]); Arguments = $null; Why = "outil inconnu" } }
+        return [pscustomobject]@{ Kind = "final"; Name = ""; Arguments = $null; Why = "" }
+    }
     $Extra = @($Keys | Where-Object { $_ -ne $NameKey -and $_ -ne $ArgKey })
     $Name = [string]$Obj.$NameKey
-    if ($Extra.Count -gt 0 -or ($ToolNames -cnotcontains $Name)) {
-        return [pscustomobject]@{ Kind = "malformed"; Name = $Name; Arguments = $null; Why = $(if ($Extra.Count -gt 0) { "cles en trop" } else { "outil inconnu" }) }
+    if ($Extra.Count -gt 0) {
+        return [pscustomobject]@{ Kind = "malformed"; Name = $Name; Arguments = $null; Why = "cles en trop" }
     }
     $Args = if ($ArgKey) { $Obj.$ArgKey } else { [pscustomobject]@{} }
     if ($null -eq $Args) { $Args = [pscustomobject]@{} }

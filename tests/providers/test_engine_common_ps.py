@@ -49,6 +49,13 @@ class EngineCommon(unittest.TestCase):
         self.assertEqual(t["case_sensitive"], "malformed")
         self.assertEqual(t["call_name"], "write_text_file")
 
+    def test_a_json_final_answer_is_never_taken_for_a_broken_tool_call(self):
+        t = self.r["tool"]
+        for key in ("json_answer_with_name", "json_answer_fenced", "json_answer_name_only", "json_answer_then_text", "json_answer_broken", "product_with_tool_key"):
+            self.assertEqual(t[key], "final", key)
+        self.assertEqual(t["offered_name_extra_key"], "malformed", "le nom d'un outil offert avec une cle en trop est un vrai essai d'appel")
+        self.assertEqual(t["name_args_unknown"], "malformed", "forme exacte d'un appel ({name, arguments}) avec un outil invente : rappel")
+
     def test_text_files_only_and_capped(self):
         f = self.r["files"]
         self.assertTrue(f["ok_txt"].startswith("Fichier enregistre"))

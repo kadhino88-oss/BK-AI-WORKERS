@@ -35,7 +35,16 @@ $ToolCases["broken_json"] = (ConvertFrom-BKToolText -Text '{"tool":"memory","arg
 $ToolCases["args_not_object"] = (ConvertFrom-BKToolText -Text '{"tool":"memory","arguments":"search"}' -ToolNames $Names).Kind
 $ToolCases["json_without_tool"] = (ConvertFrom-BKToolText -Text '{"nom":"Alice","age":3}' -ToolNames $Names).Kind
 $ToolCases["case_sensitive"] = (ConvertFrom-BKToolText -Text '{"tool":"MEMORY","arguments":{}}' -ToolNames $Names).Kind
-$ToolCases["call_name"] = (ConvertFrom-BKToolText -Text '{"tool":"write_text_file","arguments":{"name":"a.txt","content":"x"}}' -ToolNames $Names).Name
+# Une reponse finale en JSON (fiche contact, fiche produit) n'est pas un appel d'outil rate, meme avec une cle « name » ou « tool »
+$ToolCases["json_answer_with_name"] = (ConvertFrom-BKToolText -Text '{"name":"Jean Dupont","email":"jean.dupont@exemple.ch","telephone":"+41 79 000 00 00"}' -ToolNames $Names).Kind
+$ToolCases["json_answer_fenced"] = (ConvertFrom-BKToolText -Text ('```json' + "`n" + '{"name":"Jean Dupont","email":"jean.dupont@exemple.ch"}' + "`n" + '```') -ToolNames $Names).Kind
+$ToolCases["json_answer_name_only"] = (ConvertFrom-BKToolText -Text '{"name":"Jean Dupont"}' -ToolNames $Names).Kind
+$ToolCases["json_answer_then_text"] = (ConvertFrom-BKToolText -Text '{"name":"Jean Dupont","email":"x@y.ch"} Voici la fiche.' -ToolNames $Names).Kind
+$ToolCases["json_answer_broken"] = (ConvertFrom-BKToolText -Text '{"name":"Jean Dupont","email":' -ToolNames $Names).Kind
+$ToolCases["product_with_tool_key"] = (ConvertFrom-BKToolText -Text '{"tool":"Marteau","prix":30}' -ToolNames $Names).Kind
+$ToolCases["offered_name_extra_key"] = (ConvertFrom-BKToolText -Text '{"name":"web_fetch","url":"https://exemple.test"}' -ToolNames $Names).Kind
+$ToolCases["name_args_unknown"] = (ConvertFrom-BKToolText -Text '{"name":"send_email","arguments":{"to":"a@b.ch"}}' -ToolNames $Names).Kind
+$ToolCases["call_name"] =(ConvertFrom-BKToolText -Text '{"tool":"write_text_file","arguments":{"name":"a.txt","content":"x"}}' -ToolNames $Names).Name
 
 # Affirmations sans effet : un petit modele qui ecrit « j'ai envoye » sans aucun outil
 $Claims = [ordered]@{}

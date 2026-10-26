@@ -362,6 +362,7 @@ try {
     $NudgeSent = $false
     $LastText = ""
     $DuplicateStrikes = 0
+    $FormatStrikes = 0
     while ($true) {
         if ((Get-Date) -ge $MissionDeadline) { break }
         $Remaining = [int][Math]::Max(20, [Math]::Min($CallTimeout, ($MissionDeadline - (Get-Date)).TotalSeconds))
@@ -412,9 +413,11 @@ try {
                 }
             }
             else {
+                # En mode natif, le texte est la reponse finale ; seul un appel PARFAITEMENT valide d'un outil offert y est pris (certains modeles servis par
+                # Ollama ecrivent l'appel dans le texte au lieu de tool_calls), jamais un rappel de format (qui parlerait d'un protocole JSON que ce mode n'a pas).
                 $Parsed = ConvertFrom-BKToolText -Text $Text -ToolNames $ToolNames
                 if ($Parsed.Kind -eq "call") { $ModeUsed = "json"; $Calls += [pscustomobject]@{ Id = "text_" + $Iterations; Name = $Parsed.Name; Args = $Parsed.Arguments; Bad = $false } }
-                elseif ($Parsed.Kind -eq "malformed") { $ModeUsed = "json"; $Calls += [pscustomobject]@{ Id = "text_" + $Iterations; Name = "(format)"; Args = $null; Bad = $true } }
+                elseif ($Parsed.Kind -eq "malformed" -and $Mode -eq "json") { $ModeUsed = "json"; $Calls += [pscustomobject]@{ Id = "text_" + $Iterations; Name = "(format)"; Args = $null; Bad = $true } }
             }
         }
 
@@ -444,6 +447,7 @@ try {
         foreach ($C in $Calls) {
             $ToolCalls++
             if ($C.Bad) {
+                if ($C.Name -eq "(format)") { $FormatStrikes++ }
                 $Out = 'REFUSE : appel d''outil illisible. Reponds par UN SEUL objet JSON {"tool": "<nom>", "arguments": {...}} avec un outil de la liste, ou donne ta reponse finale en texte.'
             }
             else {
@@ -472,6 +476,8 @@ try {
         }
         $PromptTrimmed += Limit-Messages -List $Messages -HistoryStart $HistoryStart
         if ($DuplicateStrikes -ge 2) { $ForceFinal = $true }
+        # Deux rappels de format sans succes : on n'insiste plus (un petit modele lent tiendrait sinon la mission jusqu'a son echeance), la reponse finale est demandee.
+        if ($FormatStrikes -ge 2) { $ForceFinal = $true }
     }
 
     if ([string]::IsNullOrWhiteSpace($ResponseText) -and -not [string]::IsNullOrWhiteSpace($LastText)) { $ResponseText = $LastText }
