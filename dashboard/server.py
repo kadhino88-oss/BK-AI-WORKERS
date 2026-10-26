@@ -1063,6 +1063,9 @@ def store_byok(client_id, body):
     saved = store_client_connector_credential(client_id, ENGINE_BYOK_PROVIDER, secret, reserved=True)
     secret = None
     if not saved.get("ok"):
+        # Seule la NATURE de l'echec est journalisee (jamais la valeur ni le texte de l'erreur) : un delai du coffre depasse (PowerShell a froid, machine chargee)
+        # se distingue ainsi d'une vraie panne, sans rien divulguer.
+        print("[engine] cle personnelle non enregistree : " + ("delai du coffre depasse" if saved.get("error") == "STORE_CREDENTIAL_TIMEOUT" else "erreur du coffre"), flush=True)
         return {"error": "STORE_FAILED", "message": "Enregistrement impossible pour le moment. Réessayez."}, 500
     provider_router.save_byok_meta(ROOT, client_id, info["kind"], info["host"], info["endpoint"], info["model"], True)
     log_activity("byok_saved", clientId=client_id, engineKind=info["kind"], host=info["host"])

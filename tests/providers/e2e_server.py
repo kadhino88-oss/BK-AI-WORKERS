@@ -301,6 +301,25 @@ def main():
 
         # ------------------------------------------------------------------------------------------------ cle personnelle
         print("\n== cle personnelle (BYOK) ==")
+        # Le coffre chiffre est un script PowerShell que le serveur lance avec un delai de 20 s. Sur une machine lente ou chargee, le TOUT PREMIER demarrage a froid peut
+        # le depasser (mesure ici : 146 s a froid, 26 s, puis 11 s) : le serveur repond alors 500 STORE_FAILED « Reessayez » (voir [engine] dans son journal). On
+        # rechauffe donc le coffre avec un delai large, hors serveur (suppression d'une cle inexistante, sans effet), puis on reessaie comme le ferait le client.
+        warm_in, warm_out = os.path.join(root, "warm-in.json"), os.path.join(root, "warm-out.json")
+        with open(warm_in, "w", encoding="utf-8") as f:
+            json.dump({"clientId": "CLI-CUST-WARMUP00", "provider": "ai_engine", "value": ""}, f)
+        warm_t0 = time.time()
+        subprocess.run([PWSH, "-NoProfile", "-File", os.path.join(app, "dashboard", "Store-Client-Credential-Bridge.ps1"), "-InFile", warm_in, "-OutFile", warm_out],
+                       env=env, capture_output=True, timeout=900)
+        print(f"  (coffre rechauffe en {time.time() - warm_t0:.0f} s)")
+
+        def store_key(client, body):
+            for attempt in (1, 2, 3):
+                st, out = client.post("/api/engine/byok", body)
+                if not (st == 500 and out.get("error") == "STORE_FAILED"):
+                    break
+                print(f"  (note : le coffre a depasse son delai, nouvel essai {attempt})")
+            return st, out
+
         st, out = anon.post("/api/engine/byok", {"kind": "anthropic", "key": ALICE_KEY})
         check("sans compte : 401", st == 401, (st, out))
         st, out = alice.post("/api/engine/byok", {"kind": "anthropic", "key": "pas-une-cle"})
@@ -310,7 +329,7 @@ def main():
         check("adresse interdite : refusee (le serveur ne contactera jamais une adresse choisie par un client)", st == 400 and out.get("field") == "endpoint", (st, out))
         st, out = alice.post("/api/engine/byok", {"kind": "openai_compat", "key": "k" * 24, "endpoint": "https://evil.example/v1", "model": "m"})
         check("hote hors de la liste blanche : refuse", st == 400 and out.get("field") == "endpoint", (st, out))
-        st, out = alice.post("/api/engine/byok", {"kind": "anthropic", "key": ALICE_KEY})
+        st, out = store_key(alice, {"kind": "anthropic", "key": ALICE_KEY})
         check("cle Anthropic valide : enregistree", st == 200 and out.get("ok") and out["byok"]["configured"] and out["byok"]["kind"] == "anthropic", (st, out))
         check("la reponse ne contient pas la cle", ALICE_KEY not in json.dumps(out), "")
         st, out = alice.get("/api/engine/byok")
@@ -325,7 +344,7 @@ def main():
         check("isolation : bob garde son moteur (essai -> local)", out["provider"] == "ollama" and out["byok"] == {"configured": False}, out)
         st, out = bob.get("/api/engine/byok")
         check("isolation : bob ne voit aucune cle", out == {"configured": False}, out)
-        st, out = bob.post("/api/engine/byok", {"kind": "anthropic", "key": BOB_KEY})
+        st, out = store_key(bob, {"kind": "anthropic", "key": BOB_KEY})
         check("bob enregistre SA cle", st == 200 and out["byok"]["configured"], (st, out))
         check("deux fichiers distincts, chacun avec sa propre cle chiffree", os.path.isfile(os.path.join(cred_dir(b_id), "ai_engine.json"))
               and BOB_KEY not in read_text(os.path.join(cred_dir(b_id), "ai_engine.json")) and read_text(os.path.join(cred_dir(a_id), "ai_engine.json")) != read_text(os.path.join(cred_dir(b_id), "ai_engine.json")))
@@ -339,7 +358,7 @@ def main():
         st, out = alice.post("/api/engine/byok/remove")
         check("suppression de la cle : fichier chiffre et description effaces", st == 200 and not os.path.exists(os.path.join(cred_dir(a_id), "ai_engine.json")) and not os.path.exists(byok_meta(a_id)), (st, out))
         check("la cle de bob n'a pas ete touchee", os.path.isfile(os.path.join(cred_dir(b_id), "ai_engine.json")) and os.path.isfile(byok_meta(b_id)))
-        alice.post("/api/engine/byok", {"kind": "anthropic", "key": ALICE_KEY})
+        store_key(alice, {"kind": "anthropic", "key": ALICE_KEY})
         st, out = alice.post("/api/account/delete", {"password": PASSWORD})
         check("suppression du compte", st == 200 and out.get("ok"), (st, out))
         check("la suppression du compte efface la cle chiffree ET sa description", not os.path.isdir(cred_dir(a_id)) and not os.path.exists(byok_meta(a_id)))
@@ -354,6 +373,9 @@ def main():
         except Exception:
             server.kill()
         check("les cles personnelles n'apparaissent jamais dans la sortie du serveur", ALICE_KEY not in out_text and BOB_KEY not in out_text)
+        for line in out_text.splitlines():
+            if "[engine] cle personnelle non enregistree" in line:
+                print("  (journal du serveur) " + line[:160])
         check("ni dans un prompt envoye au moteur local", all(ALICE_KEY not in json.dumps(r) and BOB_KEY not in json.dumps(r) for r in fake.requests))
         server = None
     finally:
