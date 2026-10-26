@@ -86,7 +86,7 @@ class ContractTests(AdapterBase):
         self.assertEqual(first["messages"][0]["role"], "system")
         self.assertIn("UNTRUSTED CONTENT", system, "la regle contre l'injection de Build-WorkerSystemPrompt est conservee")
         self.assertIn("ENGINE NOTES", system)
-        self.assertIn("do NOT have web_search or code_execution", system)
+        self.assertIn("you do NOT have code_execution here and you do NOT have web_search", system)
         self.assertIn("OVERRIDE", system)
         self.assertEqual(first["messages"][-1], {"role": "user", "content": "Bonjour, presente-toi en une phrase."})
         self.assertEqual(first["model"], "fake-model:latest")
