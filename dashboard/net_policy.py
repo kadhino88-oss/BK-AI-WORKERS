@@ -69,7 +69,13 @@ def ip_class(addr):
 
 def resolve_all(host, port=443, resolver=None):
     """Toutes les adresses auxquelles `host` se resout (liste de textes, sans doublon, ordre conserve). Leve OSError si la resolution echoue.
-    `resolver(host, port)` -> liste d'adresses, injectable pour les tests ; par defaut le resolveur du systeme."""
+    `resolver(host, port)` -> liste d'adresses, injectable pour les tests ; par defaut le resolveur du systeme.
+    Une adresse IP ecrite en toutes lettres se resout toujours en elle-meme (jamais par le resolveur injecte), comme dans Engine-Common.ps1."""
+    try:
+        literal = ipaddress.ip_address(str(host).strip("[]").split("%", 1)[0])
+        return [str(literal)]
+    except ValueError:
+        pass
     if resolver is not None:
         found = list(resolver(host, port))
     else:

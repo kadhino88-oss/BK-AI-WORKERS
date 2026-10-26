@@ -182,7 +182,7 @@ if ($FailedOver) {
     $Why = if ($WhyList.Count -gt 0) { $ReasonText[[string]$WhyList[0]] } else { "le moteur prévu n'était pas disponible" }
     if (-not $Why) { $Why = "le moteur prévu n'était pas disponible" }
     $Intended = if ($PreferredId -eq "anthropic") { "Claude" } elseif ($PreferredId -eq "ollama") { "le moteur local" } elseif ($PreferredId -eq "swiss") { "le moteur hébergé en Suisse" } else { "le moteur prévu" }
-    $Free = if ($Plan.creditsFreeOnFailover) { " Cette mission ne consomme aucun credit." } else { "" }
+    $Free = if ($Plan.creditsFreeOnFailover) { " Cette mission ne consomme aucun crédit." } else { "" }
     $Note = "Note : cette réponse vient du moteur « " + $Label + " » et non de " + $Intended + " (" + $Why + "). Elle peut être plus simple.$Free"
     $AnswerText = $Note + "`n`n" + $AnswerText
 }

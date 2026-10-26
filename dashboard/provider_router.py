@@ -256,10 +256,14 @@ def _env(env, name, default=""):
     return str(src.get(name, default) or "").strip()
 
 
+PROVIDER_ALIASES = {"claude": "anthropic", "local": "ollama", "suisse": "swiss"}      # BK_AI_PROVIDER=local, claude,local...
+
+
 def parse_chain(text):
-    """'ollama,anthropic' -> ['ollama', 'anthropic'] (identifiants inconnus ou en double ignores)."""
+    """'ollama,anthropic' -> ['ollama', 'anthropic'] (identifiants inconnus ou en double ignores ; alias : local, claude, suisse)."""
     out = []
-    for part in re.split(r"[,\s;]+", str(text or "").lower()):
+    for part in re.split(r"[,\s;>]+", str(text or "").lower()):
+        part = PROVIDER_ALIASES.get(part, part)
         if part in PROVIDER_IDS and part not in out:
             out.append(part)
     return out
@@ -416,8 +420,9 @@ def ceiling_status(root, settings, now=None, env=None):
 
 
 def maybe_alert(root, settings, now=None, notify=None, env=None):
-    """E-mail au proprietaire UNE fois par periode quand la depense atteint 80 % d'un plafond (jour ou mois). `notify(subject, text)` est fourni par
-    le serveur (courrier existant). Renvoie la liste des alertes envoyees (pour les tests et le journal)."""
+    """E-mail au proprietaire quand la depense Claude atteint 80 % d'un plafond (jour ou mois), puis une seconde fois quand il est ATTEINT : au plus deux
+    e-mails par plafond et par periode. `notify(subject, text)` est fourni par le serveur (courrier existant). Renvoie la liste des alertes envoyees
+    (pour les tests et le journal)."""
     now = time.time() if now is None else now
     cfg = ceiling_config(settings, env)
     if not cfg["alert"] or not (cfg["dailyChf"] or cfg["monthlyChf"]):
@@ -429,21 +434,20 @@ def maybe_alert(root, settings, now=None, notify=None, env=None):
         for scope, key, spent, cap in (("day", spend["dayKey"], spend["dayChf"], cfg["dailyChf"]), ("month", spend["monthKey"], spend["monthChf"], cfg["monthlyChf"])):
             if not cap or spent < ALERT_RATIO * cap:
                 continue
-            mark = scope + ":" + key
+            reached = spent >= cap
+            mark = scope + ":" + key + (":100" if reached else ":80")
             if marks.get(mark):
                 continue
-            reached = spent >= cap
             subject = ("Plafond de dépense Claude ATTEINT (" if reached else "Plafond de dépense Claude à 80 % (") + ("jour " if scope == "day" else "mois ") + key + ")"
             text = (f"Dépense Claude {'du jour' if scope == 'day' else 'du mois'} : {spent:.2f} CHF sur un plafond de {cap:.2f} CHF.\n"
                     + ("Le plafond est atteint : les missions passent maintenant sur la chaîne gratuite (moteur local), avec une mention honnête dans la réponse.\n"
                        if reached else "À 100 %, les missions passent automatiquement sur la chaîne gratuite (moteur local).\n")
-                    + "Réglage : POST /api/admin/engine (ceiling). Aucun e-mail de plus pour cette période.")
+                    + "Réglage : POST /api/admin/engine (ceiling), ou la carte « Moteur d'IA » de la vue Admin.")
             marks[mark] = {"at": now, "spentChf": spent, "capChf": cap}
-            sent.append({"scope": scope, "key": key, "subject": subject, "text": text})
+            sent.append({"scope": scope, "key": key, "subject": subject, "text": text, "reached": reached})
         if sent:
-            for k in list(marks):                      # on ne garde que les 60 dernieres marques
-                if len(marks) > 60:
-                    marks.pop(sorted(marks, key=lambda x: marks[x].get("at", 0))[0], None)
+            while len(marks) > 60:                     # on ne garde que les 60 dernieres marques
+                marks.pop(sorted(marks, key=lambda x: marks[x].get("at", 0))[0], None)
             _write_atomic(alerts_path(root), marks)
     if notify:
         for a in sent:
