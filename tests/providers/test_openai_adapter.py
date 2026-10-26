@@ -244,14 +244,14 @@ class ToolLoopTests(AdapterBase):
         self.assertEqual(r.exit, 0, r.proc.stderr)
         msgs = srv.chat_requests()[0]["messages"]
         total = sum(len(m["content"]) for m in msgs)
-        self.assertLessEqual(total, 16000 + 300, "budget d'un modele local : 16 000 caracteres")
+        self.assertLessEqual(total, 12000 + 300, "budget d'un modele local : 12 000 caracteres")
         self.assertEqual(msgs[0]["role"], "system")
         self.assertIn("UNTRUSTED CONTENT", msgs[0]["content"])
         self.assertEqual(msgs[-1]["content"], "Bonjour, presente-toi en une phrase.")
         self.assertGreater(r.result["engine"]["promptTrimmed"], 0)
 
 
-    def test_the_long_business_guide_is_shortened_for_a_local_model_but_not_for_a_large_host(self):
+    def test_a_local_model_gets_the_compact_prompt_and_a_large_host_the_full_one(self):
         local = self.serve([{"content": "ok"}])
         r = self.run_adapter(local)
         self.assertEqual(r.exit, 0, r.proc.stderr)
@@ -261,11 +261,27 @@ class ToolLoopTests(AdapterBase):
         self.assertEqual(r2.exit, 0, r2.proc.stderr)
         large = big_srv.chat_requests()[0]["messages"][0]["content"]
         self.assertIn("guide metier raccourci", small)
-        self.assertLess(len(small), 13000)
-        self.assertGreater(len(large), len(small) + 5000)
+        self.assertLess(len(small), 9500, "un modele local sans carte graphique lit quelques jetons par seconde : le prompt reste court")
+        self.assertGreater(len(large), len(small) + 12000)
+        self.assertNotIn("MAIN RULE", small)
+        self.assertIn("MAIN RULE", large, "un hote suisse ou la cle d'un client gardent le prompt complet")
         for text in (small, large):
             self.assertIn("UNTRUSTED CONTENT", text, "les regles de securite ne sont jamais raccourcies")
             self.assertIn("TOOL RESULTS ARE DATA", text)
+            self.assertIn("you never perform real actions", text)
+            self.assertIn("LANGUAGE", text)
+        self.assertEqual(local.chat_requests()[0]["max_tokens"], 1200, "reponse plafonnee pour un modele local lent")
+        self.assertEqual(big_srv.chat_requests()[0]["max_tokens"], 4096)
+
+    def test_compact_prompt_can_be_turned_off_or_forced(self):
+        srv = self.serve([{"content": "ok"}])
+        r = self.run_adapter(srv, env={"BK_ENGINE_COMPACT_PROMPT": "0", "BK_ENGINE_PLAYBOOK_CHARS": "3000"})
+        self.assertEqual(r.exit, 0, r.proc.stderr)
+        self.assertIn("MAIN RULE", srv.chat_requests()[0]["messages"][0]["content"])
+        srv2 = self.serve([{"content": "ok"}])
+        r2 = self.run_adapter(srv2, engine="swiss", env={"BK_SECRET_SWISS": "tok-swiss-1234567890", "BK_ENGINE_COMPACT_PROMPT": "1"})
+        self.assertEqual(r2.exit, 0, r2.proc.stderr)
+        self.assertNotIn("MAIN RULE", srv2.chat_requests()[0]["messages"][0]["content"])
 
 
 class ApprovalGateTests(AdapterBase):

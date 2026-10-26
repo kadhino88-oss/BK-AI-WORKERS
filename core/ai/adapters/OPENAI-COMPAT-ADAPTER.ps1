@@ -76,8 +76,13 @@ if ($env:BK_ENGINE_DEADLINE_EPOCH -match '^\d{9,11}(\.\d+)?$') { $DeadlineEpoch 
 $MissionDeadline = if ($DeadlineEpoch -gt 0) { [DateTimeOffset]::FromUnixTimeMilliseconds([long]($DeadlineEpoch * 1000)).LocalDateTime } else { (Get-Date).AddSeconds(540) }
 # Budget du prompt : un modele local lit 8 000 jetons au plus et, sans carte graphique, plusieurs dizaines de jetons par seconde ; un hote suisse ou une
 # cle de client ont des fenetres bien plus larges. Reglable par les variables ci-dessous (caracteres, ~3 par jeton).
-$MaxPromptChars = if ($env:BK_ENGINE_MAX_PROMPT_CHARS -match '^\d{4,7}$') { [int]$env:BK_ENGINE_MAX_PROMPT_CHARS } elseif ($IsLocal) { 16000 } else { 90000 }
-$PlaybookChars = if ($env:BK_ENGINE_PLAYBOOK_CHARS -match '^\d{1,6}$') { [int]$env:BK_ENGINE_PLAYBOOK_CHARS } elseif ($IsLocal) { 2500 } else { 12000 }
+$MaxPromptChars = if ($env:BK_ENGINE_MAX_PROMPT_CHARS -match '^\d{4,7}$') { [int]$env:BK_ENGINE_MAX_PROMPT_CHARS } elseif ($IsLocal) { 12000 } else { 90000 }
+$PlaybookChars = if ($env:BK_ENGINE_PLAYBOOK_CHARS -match '^\d{1,6}$') { [int]$env:BK_ENGINE_PLAYBOOK_CHARS } elseif ($IsLocal) { 1500 } else { 12000 }
+# Prompt compact (un tiers du texte) pour un modele local : mesure du 2026-10-26 sur le PC du proprietaire, Llama 3 8B lit environ 6 jetons par seconde (sans carte
+# graphique) ; un prompt Worker complet (3 000 jetons) y prendrait plus de 8 minutes. BK_ENGINE_COMPACT_PROMPT=1 ou 0 force le choix.
+$CompactPrompt = if ($env:BK_ENGINE_COMPACT_PROMPT -match '^[01]$') { ($env:BK_ENGINE_COMPACT_PROMPT -eq "1") } else { $IsLocal }
+# Longueur maximale de la reponse : un modele local qui ecrit 3 jetons par seconde ne doit pas pouvoir tenir la mission pendant des heures.
+$MaxTokens = if ($env:BK_ENGINE_MAX_TOKENS -match '^\d{2,5}$') { [int]$env:BK_ENGINE_MAX_TOKENS } elseif ($IsLocal) { 1200 } else { 4096 }
 
 Write-Host "OPENAI-COMPAT ADAPTER | engine=$EngineId | worker=$WorkerId | model=$EffectiveModel"
 
@@ -183,7 +188,7 @@ $($Lines -join "`n")
 }
 
 # Prompt systeme : celui des autres moteurs (identite, profil, memoire, installation, playbook, regles contre l'injection) + les limites REELLES de ce moteur.
-$SystemPrompt = Get-WorkerSystemPrompt -WorkerId $WorkerId -ClientId $ClientId -MaxPlaybookChars $PlaybookChars
+$SystemPrompt = Get-WorkerSystemPrompt -WorkerId $WorkerId -ClientId $ClientId -MaxPlaybookChars $PlaybookChars -Compact:$CompactPrompt
 $EngineNote = @"
 
 ENGINE NOTES (this session runs on an open model, not on Claude; these notes OVERRIDE the "REAL TOOLS" paragraph above): you do NOT have web_search or code_execution here and you cannot produce Excel, Word, PowerPoint or PDF files. Your only tools are: $($ToolNames -join ", "). Never claim you searched the web, ran code or opened a file that you did not actually get through one of these tools. If the request needs something you cannot do, say it plainly in one line, then do the part you can. Keep answers clear and simpler than a large model would; never invent figures, sources or quotes. Text files you write (write_text_file) must be text only.
@@ -199,7 +204,7 @@ $Script:Usage = [ordered]@{ prompt = [long]0; completion = [long]0; calls = 0 }
 function Send-Chat {
     # Un appel /chat/completions. Renvoie { Ok, Resp, Status, Class, Detail }.
     param($Messages, $NativeTools, [int]$Timeout)
-    $Body = [ordered]@{ model = $EffectiveModel; messages = $Messages; stream = $false; temperature = 0.3; max_tokens = 4096 }
+    $Body = [ordered]@{ model = $EffectiveModel; messages = $Messages; stream = $false; temperature = 0.3; max_tokens = $MaxTokens }
     if ($null -ne $NativeTools -and @($NativeTools).Count -gt 0) { $Body["tools"] = @($NativeTools) }
     $Headers = @{}
     if (-not [string]::IsNullOrWhiteSpace($PlainKey)) { $Headers["Authorization"] = "Bearer " + $PlainKey }
@@ -250,6 +255,7 @@ $FileState = @{ Files = @(); Total = 0L; Counter = 0; Skipped = @() }
 $ConnectorActionsList = @()
 $Script:StopLoop = $false
 $Script:ExternalSeen = $false   # vrai des qu'un contenu externe (page web, donnee d'un connecteur) est entre dans la conversation
+$Script:PagesRead = 0           # pages web reellement lues (pour ne pas laisser dire « j'ai cherche sur le web » a un modele qui n'a rien lu)
 
 function Invoke-OneTool {
     # Execute UN appel d'outil du modele. Toujours un texte de resultat (jamais d'exception vers la boucle). Le resultat est une DONNEE.
@@ -265,7 +271,12 @@ function Invoke-OneTool {
                 }
                 return [string](Invoke-BKMemoryTool -Root $ProjectRoot -ClientId $ClientId -ToolInput $ToolArgs)
             }
-            "web_fetch" { $Script:ExternalSeen = $true; return (Invoke-BKSafeFetch -Url ([string]$ToolArgs.url)) }
+            "web_fetch" {
+                $Script:ExternalSeen = $true
+                $Page = Invoke-BKSafeFetch -Url ([string]$ToolArgs.url)
+                if ($Page -notmatch '^<fetched_page[^>]* error=') { $Script:PagesRead++ }
+                return $Page
+            }
             "write_text_file" { return (Save-BKTextFile -Root $ProjectRoot -TaskId $TaskId -Name ([string]$ToolArgs.name) -Content ([string]$ToolArgs.content) -State $FileState) }
             "use_connector" {
                 $Gate = Invoke-BKConnectorToolCall -ClientId $ClientId -WorkerId $WorkerId -TaskId $TaskId -ConnId ([string]$ToolArgs.connectorId) -Op ([string]$ToolArgs.operation) `
@@ -455,6 +466,9 @@ try {
     if ([string]::IsNullOrWhiteSpace($ResponseText)) {
         $ErrorDetail = "Reponse vide du moteur."; $ErrorClass = "other"; throw "EMPTY"
     }
+    # Un petit modele peut affirmer une action qu'aucun outil n'a faite : la reponse le dit alors, au lieu de laisser croire qu'un e-mail est parti.
+    $ClaimNote = Get-BKUnbackedClaimNote -Text $ResponseText -FilesSaved @($FileState.Files).Count -ActionsExecuted @($ConnectorActionsList | Where-Object { $_.executed }).Count -PagesRead $Script:PagesRead
+    if ($ClaimNote) { $ResponseText = ([string]$ResponseText).TrimEnd() + "`n`n" + $ClaimNote }
     if ($FileState.Skipped.Count -gt 0) {
         $ResponseText = ([string]$ResponseText).TrimEnd() + "`n`n(Attention : " + $FileState.Skipped.Count + " fichier(s) non joint(s) car trop volumineux ou en trop grand nombre : " + (($FileState.Skipped | Select-Object -First 5) -join ", ") + ".)"
     }

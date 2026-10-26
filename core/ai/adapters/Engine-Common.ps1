@@ -315,6 +315,35 @@ function ConvertFrom-BKToolText {
 }
 
 # ---------------------------------------------------------------------------------------------------------------------------------
+# Affirmations sans effet (garde-fou d'honnetete des petits modeles)
+# ---------------------------------------------------------------------------------------------------------------------------------
+function Get-BKUnbackedClaimNote {
+    <#
+    Un petit modele peut ECRIRE « j'ai envoye l'e-mail » ou « le fichier a ete enregistre » alors qu'aucun outil n'a rien fait (mesure reelle du 2026-10-26 avec
+    qwen2.5:1.5b : « TextEdit.txt a ete enregistre avec succes » sans aucun fichier). Cette fonction relit la reponse finale et, si elle AFFIRME une action que ce code
+    sait ne pas avoir eue lieu, renvoie une note a ajouter (sinon une chaine vide) : envoi / publication / paiement / suppression sans action reelle executee,
+    enregistrement d'un fichier sans fichier, recherche sur le web sans page lue. Heuristique volontairement prudente : elle peut signaler a tort un texte demande
+    par le client (un e-mail a rediger qui dit « je vous ai envoye ») ; la note le precise. Une action seulement PREPAREE (en attente de validation) n'est pas un envoi.
+    #>
+    param([string]$Text, [int]$FilesSaved = 0, [int]$ActionsExecuted = 0, [int]$PagesRead = 0)
+    $T = [string]$Text
+    if ([string]::IsNullOrWhiteSpace($T)) { return "" }
+    $Claimed = @()
+    $SendFr = '(?i)\b(?:j[''\u2019]ai|je viens d[''\u2019]|nous avons|c[''\u2019]est fait[^.\n]{0,40}?)\s*(?:bien\s+|déjà\s+|maintenant\s+)?(?:envoy|publi|post|pay|supprim|programm|réserv|transmis)[ée]?'
+    $SendFrPassive = '(?i)\b(?:e-?mails?|mails?|messages?|posts?|publications?|virements?|paiements?|factures?|invitations?|rappels?)\b[^.\n]{0,40}\b(?:a|ont|est|sont)\s+(?:bien\s+|déjà\s+)?(?:été\s+)?(?:envoy|publi|post|pay|supprim|programm|transmis)[ée]s?\b'
+    $SendEn = '(?i)\bI(?:[''\u2019]ve|\s+have|\s+just)\s+(?:already\s+)?(?:sent|published|posted|paid|deleted|scheduled|booked|forwarded)\b|\b(?:has|have)\s+(?:been\s+)?(?:sent|published|posted|paid|deleted|scheduled)\b'
+    $FileFr = '(?i)\b(?:j[''\u2019]ai|je viens d[''\u2019])\s*(?:bien\s+)?(?:enregistr|sauvegard|cré|génér|export)[ée]?[^.\n]{0,40}\b(?:fichier|document|fiche|tableau|rapport|note)\b|\b(?:fichier|document|tableau|rapport)\b[^.\n]{0,40}\b(?:a|est)\s+(?:bien\s+)?(?:été\s+)?(?:enregistr|sauvegard|cré|génér|export)[ée]s?\b|\.(?:txt|md|csv|json|html|docx|xlsx|pdf)\b[^.\n]{0,40}\b(?:enregistr|sauvegard|cré)[ée]s?\b'
+    $FileEn = '(?i)\bI(?:[''\u2019]ve|\s+have)\s+(?:saved|created|generated|exported)\b[^.\n]{0,40}\b(?:file|document|spreadsheet|report)\b|\b(?:file|document|spreadsheet)\b[^.\n]{0,40}\b(?:has been|was)\s+(?:saved|created|generated)\b'
+    $WebFr = '(?i)\b(?:j[''\u2019]ai|je viens de)\s*(?:bien\s+)?(?:cherch|recherch|consult|visit|ouvert|navigu)[ée]?[^.\n]{0,50}\b(?:web|internet|google|site|page)\b'
+    $WebEn = '(?i)\bI(?:[''\u2019]ve|\s+have)\s+(?:searched|browsed|googled|visited|looked up)\b'
+    if ($ActionsExecuted -le 0 -and ($T -match $SendFr -or $T -match $SendFrPassive -or $T -match $SendEn)) { $Claimed += "envoyé, publié, payé ou supprimé quoi que ce soit" }
+    if ($FilesSaved -le 0 -and ($T -match $FileFr -or $T -match $FileEn)) { $Claimed += "enregistré un fichier" }
+    if ($PagesRead -le 0 -and ($T -match $WebFr -or $T -match $WebEn)) { $Claimed += "consulté le web" }
+    if ($Claimed.Count -eq 0) { return "" }
+    return "Attention : dans cette mission, le moteur n'a PAS " + ($Claimed -join ", ni ") + " (aucun outil ne l'a fait). Si la réponse ci-dessus dit le contraire, c'est inexact — sauf s'il s'agit d'un texte que vous avez demandé vous-même (un e-mail à rédiger, par exemple). Une action n'est réelle que lorsque vous la confirmez depuis votre tableau de bord."
+}
+
+# ---------------------------------------------------------------------------------------------------------------------------------
 # Fichiers texte
 # ---------------------------------------------------------------------------------------------------------------------------------
 $Script:BKTextFileExtensions = @("txt", "md", "csv", "json", "html")

@@ -37,6 +37,22 @@ $ToolCases["json_without_tool"] = (ConvertFrom-BKToolText -Text '{"nom":"Alice",
 $ToolCases["case_sensitive"] = (ConvertFrom-BKToolText -Text '{"tool":"MEMORY","arguments":{}}' -ToolNames $Names).Kind
 $ToolCases["call_name"] = (ConvertFrom-BKToolText -Text '{"tool":"write_text_file","arguments":{"name":"a.txt","content":"x"}}' -ToolNames $Names).Name
 
+# Affirmations sans effet : un petit modele qui ecrit « j'ai envoye » sans aucun outil
+$Claims = [ordered]@{}
+$Claims["sent_fr"] = [bool](Get-BKUnbackedClaimNote -Text "Bonjour ! J'ai envoyé l'e-mail à Paul comme demandé.")
+$Claims["sent_fr_passive"] = [bool](Get-BKUnbackedClaimNote -Text "L'e-mail a bien été envoyé au client.")
+$Claims["sent_en"] = [bool](Get-BKUnbackedClaimNote -Text "I've sent the invoice to your accountant.")
+$Claims["file_fr"] = [bool](Get-BKUnbackedClaimNote -Text "TextEdit.txt a été enregistré avec succès.")
+$Claims["file_fr2"] = [bool](Get-BKUnbackedClaimNote -Text "J'ai créé le fichier budget pour vous.")
+$Claims["web_fr"] = [bool](Get-BKUnbackedClaimNote -Text "J'ai cherché sur le web les prix de vos concurrents.")
+$Claims["plain_text_is_fine"] = -not [bool](Get-BKUnbackedClaimNote -Text "Voici un brouillon d'e-mail à envoyer à Paul : Bonjour Paul, ...")
+$Claims["prepared_is_fine"] = -not [bool](Get-BKUnbackedClaimNote -Text "J'ai préparé une action réelle (gmail — DRAFT_MESSAGE). Elle n'est PAS encore envoyée.")
+$Claims["sent_but_really_executed"] = -not [bool](Get-BKUnbackedClaimNote -Text "J'ai envoyé l'e-mail." -ActionsExecuted 1)
+$Claims["file_but_really_saved"] = -not [bool](Get-BKUnbackedClaimNote -Text "J'ai enregistré le fichier plan.md." -FilesSaved 1)
+$Claims["web_but_really_read"] = -not [bool](Get-BKUnbackedClaimNote -Text "J'ai consulté le site de la mairie." -PagesRead 1)
+$Claims["empty"] = -not [bool](Get-BKUnbackedClaimNote -Text "")
+$Claims["note_text"] = (Get-BKUnbackedClaimNote -Text "J'ai envoyé l'e-mail. J'ai enregistré le fichier plan.txt.")
+
 # Fichiers texte : extensions, plafonds, noms dangereux
 $Tmp = Join-Path ([System.IO.Path]::GetTempPath()) ("bkfiles-" + [guid]::NewGuid().ToString("N"))
 New-Item -ItemType Directory -Force -Path $Tmp | Out-Null
@@ -93,4 +109,4 @@ $Health["classes"] = [ordered]@{
 }
 Remove-Item -LiteralPath $Root2 -Recurse -Force -ErrorAction SilentlyContinue
 
-[ordered]@{ ipMismatches = $IpBad; endpointMismatches = $EpBad; tool = $ToolCases; files = $Files; health = $Health } | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $OutFile -Encoding utf8
+[ordered]@{ ipMismatches = $IpBad; endpointMismatches = $EpBad; tool = $ToolCases; files = $Files; health = $Health; claims = $Claims } | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $OutFile -Encoding utf8
