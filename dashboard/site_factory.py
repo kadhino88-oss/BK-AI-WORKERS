@@ -129,7 +129,8 @@ def _write(full, text_or_bytes):
 
 
 def _esc(value):
-    return html.escape(str(value), quote=True)
+    """Échappement HTML (texte et attributs entre guillemets doubles) ; l'apostrophe reste lisible."""
+    return html.escape(str(value), quote=False).replace('"', "&quot;")
 
 
 def _get(d, dotted):

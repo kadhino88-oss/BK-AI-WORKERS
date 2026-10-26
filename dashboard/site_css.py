@@ -162,7 +162,7 @@ def ensure_contrast(fg, bg, minimum=4.5, toward=None):
     """Éclaircit ou assombrit `fg` jusqu'à atteindre `minimum` sur `bg` (au plus 40 pas) ; renvoie la couleur ajustée."""
     if contrast(fg, bg) >= minimum:
         return fg
-    target = toward or ((0, 0, 0) if luminance(bg) > 0.4 else (255, 255, 255))
+    target = toward or ((0, 0, 0) if contrast((0, 0, 0), bg) >= contrast((255, 255, 255), bg) else (255, 255, 255))
     cur = fg
     for i in range(1, 41):
         cur = mix(fg, target, i / 40.0)

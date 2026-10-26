@@ -96,7 +96,8 @@ def make_good_site(ws=None, build=True):
     ws = ws or tempfile.mkdtemp(prefix="bk-site-")
     sf.scaffold(ws, dict(SCAFFOLD))
     sj = os.path.join(ws, "site", "site.json")
-    site = json.load(open(sj, encoding="utf-8"))
+    with open(sj, encoding="utf-8") as f:
+        site = json.load(f)
     site["needsFromClient"] = []
     with open(sj, "w", encoding="utf-8") as f:
         json.dump(site, f, ensure_ascii=False, indent=2)
@@ -121,14 +122,18 @@ def edit_src(ws, lang, slug, fn):
 
 def edit_dist(ws, rel, fn):
     path = os.path.join(ws, "site", "dist", *rel.split("/"))
-    text = open(path, encoding="utf-8").read() if os.path.isfile(path) else ""
+    text = ""
+    if os.path.isfile(path):
+        with open(path, encoding="utf-8") as f:
+            text = f.read()
     with open(path, "w", encoding="utf-8", newline="\n") as f:
         f.write(fn(text))
 
 
 def edit_site_json(ws, fn):
     sj = os.path.join(ws, "site", "site.json")
-    site = json.load(open(sj, encoding="utf-8"))
+    with open(sj, encoding="utf-8") as f:
+        site = json.load(f)
     fn(site)
     with open(sj, "w", encoding="utf-8") as f:
         json.dump(site, f, ensure_ascii=False, indent=2)
