@@ -21,7 +21,11 @@ def main():
     for name in SUITES:
         if quick and name == "test_orchestration.py":
             continue
-        cmd = [shutil.which("node") or "node", os.path.join(HERE, name)] if name.endswith(".js") else [sys.executable, os.path.join(HERE, name)]
+        if name.endswith(".js") and not shutil.which("node"):
+            # WSL sans Node.js : la suite d'interface se lance a part sous Windows (node tests/chloe-delegation/test_ui_render.js)
+            print(f"{name:32} SAUTEE (node absent ici : lancer node tests/chloe-delegation/{name} sous Windows)", flush=True)
+            continue
+        cmd = [shutil.which("node"), os.path.join(HERE, name)] if name.endswith(".js") else [sys.executable, os.path.join(HERE, name)]
         started = time.time()
         p = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace")
         tail = " | ".join(line.strip() for line in (p.stdout + p.stderr).splitlines()[-12:] if line.startswith(("Ran ", "OK", "FAILED", "TOUT PASSE", "ECHEC")) or "ECHEC" in line)

@@ -198,6 +198,29 @@ class CreditBudget(Fixture):
         self.assertNotIn("BK_CHLOE_RUN_ID", lea_env)
         self.assertNotIn("BK_CHLOE_RESET_NOTE", lea_env)
 
+    def test_the_budget_is_read_before_the_mission_reserves_its_own_credits(self):
+        # Le chantier « limites » reserve les credits de la mission juste APRES le verrou d'embauche (worker_block) : cette reservation ne doit pas
+        # reduire le plafond de Chloe pour la meme mission (7 Workers reserves, 1 seul appele). On la simule a cet endroit precis.
+        write_billing(A, "equipe")
+        fake = FakeUsage(allowed=42, binding="session")
+        server.USAGE = fake
+        calls = []
+        original_run, original_block = server.subprocess.run, server.worker_block
+
+        def fake_run(cmd, **kw):
+            calls.append(kw.get("env") or {})
+            return types.SimpleNamespace(returncode=0, stdout=b"", stderr=b"")
+
+        def block_then_reserve(client_id, worker_id):
+            fake._view.allowedNow = 0           # la mission vient de reserver tout ce qui restait
+            return original_block(client_id, worker_id)
+        server.subprocess.run, server.worker_block = fake_run, block_then_reserve
+        try:
+            server.submit_task("Lance mon offre", worker_id="chloe", client_id=A, level="equilibre")
+        finally:
+            server.subprocess.run, server.worker_block = original_run, original_block
+        self.assertEqual(calls[0]["BK_MAX_WORKERS"], "7", "42 credits // 6 (equilibre), lus avant la reservation de la mission")
+
     def test_the_quick_answer_choice_comes_from_the_request_field_only_and_only_for_chloe(self):
         write_billing(A, "equipe")
         self.assertEqual((server._chloe_mode_of({"mode": "mission"}), server._chloe_mode_of({"mode": " Mission "}), server._chloe_mode_of({"mode": "project"}),
