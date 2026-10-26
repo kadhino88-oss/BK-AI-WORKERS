@@ -4714,6 +4714,8 @@ import projects_wiring
 
 # Moteur de projets (dashboard/projects*.py, docs/AUTONOMY-ENGINE.md) : DORMANT tant que BK_PROJECTS n'est pas 1 (routes en 503, superviseur arrete).
 PROJECTS, PROJECTS_API = projects_wiring.build(projects_wiring.ModuleView(globals()))
+# Apercu prive des sites de projet (dashboard/site_preview.py, cree par site_routes.register) : contexte de securite separe (CSP sandbox).
+SITE_PREVIEW = getattr(sys.modules.get("site_routes"), "PREVIEW", None)
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -4895,6 +4897,8 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         parsed = urlparse(self.path)
         path = unquote(parsed.path)
+        if SITE_PREVIEW is not None and SITE_PREVIEW.handle_get(self, path):  # /preview/<jeton>/... : avant la porte, aucun cookie lu (dormant si BK_PROJECTS=0)
+            return
 
         if route_requires_gate(path) and not self._gate_authenticated():
             self._send_gate_required()
