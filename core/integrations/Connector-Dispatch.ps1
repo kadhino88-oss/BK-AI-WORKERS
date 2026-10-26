@@ -453,6 +453,7 @@ $Script:OperationTable = @{
         }
     }
 }
+. (Join-Path $Script:DispatchRoot "core/integrations/Connector-Site-Publish.ps1")   # atelier de sites : brouillons de pages WordPress
 
 function Get-ConnectorBaseId {
     <#
