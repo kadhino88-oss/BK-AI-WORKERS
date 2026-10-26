@@ -764,7 +764,12 @@ def rule_privacy(m, rp, pc, want, cfg):
             for url, el, attr, kind in H.resource_refs(p.doc):
                 if kind in ("a", "form") or not H.is_external(url or ""):
                     continue
+                if kind == "link" and set((el.get("rel") or "").lower().split()) & {"canonical", "alternate", "prev", "next", "me", "author", "license"}:
+                    continue            # liens de navigation (adresse canonique, autres langues) : rien n'est chargé
                 host = H.host_of(url)
+                own = H.host_of(m.base_url) if m.base_url else None
+                if host and own and host == own:
+                    continue
                 if kind == "meta" and host and placeholder in host:
                     continue
                 if host and (_host_matches(host, allowed) or host in neutral):
@@ -1015,6 +1020,8 @@ def rule_seo(m, rp, pc, want, cfg):
                         continue
                     if base and vv.startswith(base.lower()):
                         continue
+                    if _placeholder_domain(cfg) in vv:
+                        continue
                     if vv in ("localbusiness", "organization", "website", "webpage", "postaladdress", "person", "professionalservice", "store", "restaurant", "medicalbusiness") \
                             or re.match(r"^[a-z]+$", vv) and len(vv) < 30 and vv[:1].isupper() is False and v[:1].isupper():
                         continue
@@ -1066,7 +1073,7 @@ def rule_content(m, rp, pc, want, cfg):
         else:
             rp.ok()
     if want("content.filler"):
-        pat = re.compile(r"lorem ipsum|dolor sit amet|consectetur adipiscing|texte (?:à|a) remplacer|your text here|insérez votre texte|\bTODO\b|\bTBD\b|\bXXX+\b|coming soon", re.I)
+        pat = re.compile(r"\[À RÉDIGER\b[^\]]{0,200}\]?|\[TO WRITE\b[^\]]{0,200}\]?|lorem ipsum|dolor sit amet|consectetur adipiscing|texte (?:à|a) remplacer|your text here|insérez votre texte|\bTODO\b|\bTBD\b|\bXXX+\b|coming soon", re.I)
         for p in m.pages:
             mm = pat.search(p.doc.visible_text())
             if mm:
@@ -1149,6 +1156,13 @@ def rule_build(m, rp, pc, cfg):
     if not m.dist_exists or not m.pages:
         rp.fail("build.missing", "Aucun site construit : lancez site_build (il assemble site/dist/ depuis site/src/).")
         return False
+    if isinstance(m.build, dict) and m.build.get("srcSha256"):
+        try:
+            import site_factory
+            if site_factory.src_fingerprint(m.workspace) != m.build.get("srcSha256"):
+                rp.fail("build.stale", "site/src/ ou site.json a changé depuis la dernière construction : relancez site_build avant de contrôler (les contrôles lisent dist/).", severity="warn")
+        except Exception:  # noqa: BLE001 - un contrôle d'empreinte ne fait jamais échouer les autres
+            pass
     return True
 
 

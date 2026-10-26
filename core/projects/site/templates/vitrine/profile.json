@@ -1,0 +1,109 @@
+{
+  "schema": "BK-SITE-PROFILE-V1",
+  "profile": "vitrine",
+  "description": "Site vitrine multi-pages : accueil, prestations, à propos, contact, mentions légales, confidentialité.",
+  "pages": [
+    {
+      "key": "home",
+      "slug": {
+        "fr": "index",
+        "en": "index"
+      },
+      "title": {
+        "fr": "Accueil",
+        "en": "Home"
+      },
+      "nav": true,
+      "sections": [
+        "hero",
+        "services",
+        "process",
+        "facts",
+        "faq",
+        "cta"
+      ]
+    },
+    {
+      "key": "services",
+      "slug": {
+        "fr": "services",
+        "en": "services"
+      },
+      "title": {
+        "fr": "Prestations",
+        "en": "Services"
+      },
+      "nav": true,
+      "sections": [
+        "page-title",
+        "services",
+        "pricing",
+        "cta"
+      ]
+    },
+    {
+      "key": "about",
+      "slug": {
+        "fr": "a-propos",
+        "en": "about"
+      },
+      "title": {
+        "fr": "À propos",
+        "en": "About"
+      },
+      "nav": true,
+      "sections": [
+        "about",
+        "facts",
+        "cta"
+      ]
+    },
+    {
+      "key": "contact",
+      "slug": {
+        "fr": "contact",
+        "en": "contact"
+      },
+      "title": {
+        "fr": "Contact",
+        "en": "Contact"
+      },
+      "nav": true,
+      "sections": [
+        "contact"
+      ]
+    },
+    {
+      "key": "legal",
+      "slug": {
+        "fr": "mentions-legales",
+        "en": "legal-notice"
+      },
+      "title": {
+        "fr": "Mentions légales",
+        "en": "Legal notice"
+      },
+      "nav": false,
+      "footer": true,
+      "sections": [
+        "legal"
+      ]
+    },
+    {
+      "key": "privacy",
+      "slug": {
+        "fr": "confidentialite",
+        "en": "privacy"
+      },
+      "title": {
+        "fr": "Confidentialité",
+        "en": "Privacy"
+      },
+      "nav": false,
+      "footer": true,
+      "sections": [
+        "privacy"
+      ]
+    }
+  ]
+}
