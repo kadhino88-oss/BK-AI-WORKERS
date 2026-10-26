@@ -38,6 +38,7 @@ exit 0
 
 def install_shim(root):
     shutil.copy2(os.path.join(HERE, "shim_anthropic.ps1"), os.path.join(root, "_test", "shim_anthropic.ps1"))
+    shutil.copy2(os.path.join(HERE, "shim_redirect.ps1"), os.path.join(root, "_test", "shim_redirect.ps1"))
     with open(os.path.join(root, "_test", "store_byok.ps1"), "w", encoding="utf-8") as f:
         f.write(STORE_BYOK)
 
@@ -324,6 +325,46 @@ class ClientKey(ChainBase):
         self.assertEqual(len(srv.chat_requests()), 0, "pas de repli vers le moteur de la plateforme : ce serait une depense cachee")
         self.assertEqual(len(self.anthropic_calls()), 1)
         self.assertEqual(self.health(), {}, "la cle d'un client ne met pas un moteur de la plateforme de cote")
+
+    def test_openai_compatible_client_key_reaches_its_provider_with_the_key_in_the_header_only(self):
+        """Hote public de la liste blanche (adresse fictive 93.184.216.34), https obligatoire, cle du client en en-tete ; la requete est redirigee vers un faux serveur local."""
+        self.new_root()
+        key = "mk-CLIENT-MISTRAL-KEY-0123456789abcdef"
+        srv = fake_openai.FakeOpenAI(script=[{"content": "Reponse du fournisseur du client."}], token=key)
+        self.servers.append(srv)
+        self.configure(byokAllowedHosts=["93.184.216.34"])
+        self.store_key(kind="openai_compat", key=key, endpoint="https://93.184.216.34/v1", model="mistral-large-latest")
+        meta = {"kind": "openai_compat", "host": "93.184.216.34", "endpoint": "https://93.184.216.34/v1", "model": "mistral-large-latest", "enabled": True}
+        plan = pr.resolve_plan(self.root, CLIENT, "equilibre", "Bonjour", byok=meta, levels=LEVELS, env={})
+        self.assertIn("93.184.216.34", plan["chain"][0]["allowedHosts"])
+        full = dict(self.enc_env, T_PRE='. (Join-Path $env:BK_ROOT "_test/shim_redirect.ps1")', FAKE_REDIRECT_FROM="https://93.184.216.34", FAKE_REDIRECT_BASE=srv.url,
+                    BK_ENGINE_SKIP_PROBE="1")
+        r = self.run_chain(plan, env=full)
+        self.assertEqual(r.exit, 0, r.proc.stderr + r.stdout)
+        e = r.result["engine"]
+        self.assertEqual((e["provider"], e["byok"], e["failedOver"], e["local"]), ("byok", True, False, False))
+        self.assertEqual(e["label"], "Votre clé (Mistral)")
+        self.assertEqual(r.result["model"], "mistral-large-latest")
+        self.assertEqual(r.result["answer"], "Reponse du fournisseur du client.")
+        self.assertTrue(all(q["_auth"] for q in srv.chat_requests()), "la cle du client part en en-tete Authorization")
+        for q in srv.chat_requests():
+            self.assertNotIn(key, json.dumps({k: v for k, v in q.items() if not k.startswith("_")}), "la cle n'est dans aucun prompt")
+        self.assertNotIn(key, r.stdout + r.proc.stdout + r.proc.stderr)
+        self.assertEqual(self.spend(), {})
+
+    def test_a_stored_client_endpoint_outside_the_allow_list_is_never_called(self):
+        self.new_root()
+        srv = fake_openai.FakeOpenAI(script=[{"content": "ne doit pas etre appele"}])
+        self.servers.append(srv)
+        self.store_key(kind="openai_compat", key="mk-CLIENT-KEY-0123456789abcdef", endpoint="https://93.184.216.34/v1", model="m")   # hote absent de la liste blanche
+        meta = {"kind": "openai_compat", "host": "93.184.216.34", "endpoint": "https://93.184.216.34/v1", "model": "m", "enabled": True}
+        plan = pr.resolve_plan(self.root, CLIENT, "equilibre", "Bonjour", byok=meta, levels=LEVELS, env={})
+        full = dict(self.enc_env, T_PRE='. (Join-Path $env:BK_ROOT "_test/shim_redirect.ps1")', FAKE_REDIRECT_FROM="https://93.184.216.34", FAKE_REDIRECT_BASE=srv.url,
+                    BK_ENGINE_SKIP_PROBE="1")
+        r = self.run_chain(plan, env=full)
+        self.assertEqual(r.exit, 1)
+        self.assertEqual(srv.chat_requests(), [])
+        self.assertTrue(r.result["error"].startswith("NO_ENGINE_AVAILABLE"))
 
     def test_without_a_stored_key_the_mission_is_refused_not_run_on_the_platform_key(self):
         self.new_root()

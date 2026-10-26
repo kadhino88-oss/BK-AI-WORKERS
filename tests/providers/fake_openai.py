@@ -25,11 +25,13 @@ import time
 
 
 class FakeOpenAI:
-    def __init__(self, script=None, token=None, supports_tools=True, models=None, host="127.0.0.1", port=0):
+    def __init__(self, script=None, token=None, supports_tools=True, models=None, host="127.0.0.1", port=0, search_results=None):
         self.script = list(script or [{"content": "ok"}])
         self.token = token
         self.supports_tools = supports_tools
         self.models = models or ["fake-model:latest"]
+        self.search_results = search_results if search_results is not None else [
+            {"title": "Mairie de Lyon", "url": "https://www.lyon.fr/", "content": "Horaires d'ouverture de la mairie."}]
         self.requests = []
         self.gets = []
         self._i = 0
@@ -60,6 +62,8 @@ class FakeOpenAI:
                 outer.gets.append({"path": self.path, "_auth": self._authorized()})
                 if not self._authorized():
                     self._send(401, {"error": {"message": "Incorrect API key provided"}})
+                elif self.path.startswith("/search?"):
+                    self._send(200, {"results": outer.search_results})
                 elif self.path.rstrip("/") in ("/v1/models", "/api/tags", "/openai/v1/models"):
                     self._send(200, {"object": "list", "data": [{"id": m, "object": "model"} for m in outer.models],
                                      "models": [{"name": m} for m in outer.models]})

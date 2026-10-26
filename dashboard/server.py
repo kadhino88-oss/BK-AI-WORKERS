@@ -1007,7 +1007,7 @@ def engine_status(client_id, level=None):
     byok = provider_router.load_byok_meta(ROOT, client_id) if _is_customer_id(client_id) else None
     view = provider_router.engine_view(plan, byok)
     view["level"] = lvl
-    view["matrix"] = provider_router.capability_matrix()
+    view["matrix"] = provider_router.capability_matrix(search_endpoint=bool(provider_router.search_url(provider_router.load_settings(ROOT), os.environ)))
     return view
 
 

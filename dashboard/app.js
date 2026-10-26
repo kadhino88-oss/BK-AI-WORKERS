@@ -3260,14 +3260,16 @@ async function loadAdminEngine() {
   if (!data || data.error || !data.engine) { stateEl.textContent = "Réglages indisponibles."; return; }
   const e = data.engine;
   const ceil = e.ceiling || {};
-  const lines = [`Moteur choisi : ${(e.defaultChain || []).join(" → ")} (${escapeHtml(e.defaultChainSource || "")})`];
+  const ENGINE_NAMES = { anthropic: "Claude", ollama: "moteur local", swiss: "hôte suisse" };
+  const SOURCES = { defaut: "valeur par défaut", environnement: "variable BK_AI_PROVIDER du serveur", reglage: "réglage enregistré ici" };
+  const lines = [`Moteur choisi : ${(e.defaultChain || []).map((id) => ENGINE_NAMES[id] || id).join(" → ")} (${escapeHtml(SOURCES[e.defaultChainSource] || e.defaultChainSource || "")})`];
   const oll = e.endpoints && e.endpoints.ollama;
   lines.push(oll ? `Moteur local : ${escapeHtml(oll.url)} — modèle ${escapeHtml(oll.model)}` : "Moteur local : non configuré");
   lines.push(ceil.configured
     ? `Dépense Claude : ${ceil.dayChf} CHF aujourd'hui${ceil.dailyChf ? " sur " + ceil.dailyChf : ""}, ${ceil.monthChf} CHF ce mois${ceil.monthlyChf ? " sur " + ceil.monthlyChf : ""}${ceil.reached ? " — PLAFOND ATTEINT : les missions passent sur le moteur gratuit" : ""}`
     : `Dépense Claude : ${ceil.dayChf || 0} CHF aujourd'hui, ${ceil.monthChf || 0} CHF ce mois — aucun plafond fixé`);
   const sick = Object.keys(e.health || {});
-  if (sick.length) lines.push("Moteurs mis de côté : " + sick.map((k) => `${escapeHtml(k)} (${escapeHtml(e.health[k].reason)}, ${Math.ceil(e.health[k].retryInSec / 60)} min)`).join(", "));
+  if (sick.length) lines.push("Moteurs mis de côté : " + sick.map((k) => `${escapeHtml(ENGINE_NAMES[k] || k)} (${escapeHtml(e.health[k].reason)}, encore ${Math.ceil(e.health[k].retryInSec / 60)} min)`).join(", "));
   stateEl.innerHTML = lines.map((l) => `<div>${l}</div>`).join("");
   document.getElementById("admin-engine-chain").value = (e.defaultChain || ["anthropic"]).join(",");
   if (oll) { document.getElementById("admin-engine-url").value = oll.url; document.getElementById("admin-engine-model").value = oll.model; }

@@ -337,6 +337,47 @@ class Capabilities(Base):
         self.assertEqual(plan["needs"], ["officeFiles"])
 
 
+class SearchEndpoint(Base):
+    def test_a_local_engine_has_no_web_search_until_the_owner_configures_an_endpoint(self):
+        self.settings(endpoints={"ollama": {"url": "http://127.0.0.1:11434", "model": "llama3:latest"}})
+        before = self.plan("rapide", trial=True)
+        self.assertFalse(before["chain"][0]["caps"]["webSearch"])
+        self.assertIsNone(before["chain"][0]["searchUrl"])
+        self.settings(search={"url": "http://127.0.0.1:8888"})
+        after = self.plan("rapide", trial=True)
+        self.assertTrue(after["chain"][0]["caps"]["webSearch"])
+        self.assertEqual(after["chain"][0]["searchUrl"], "http://127.0.0.1:8888")
+        view = pr.engine_view(after)
+        self.assertTrue(view["capabilities"]["webSearch"])
+        self.assertIn("point de recherche", view["capabilities"]["webSearchNote"])
+        self.assertNotIn("recherche web", view["capabilities"]["limitsFr"])
+        self.assertTrue(pr.capabilities_for("ollama", search_endpoint=True)["webSearch"])
+
+    def test_claude_keeps_its_own_search_and_no_note(self):
+        caps = pr.capabilities_for("anthropic", search_endpoint=True)
+        self.assertTrue(caps["webSearch"])
+        self.assertIsNone(caps["webSearchNote"])
+
+    def test_unsafe_search_addresses_are_refused(self):
+        for url in ("http://8.8.8.8:8080", "http://169.254.169.254/", "ftp://127.0.0.1", "https://127.0.0.1:8888", "http://u:p@127.0.0.1"):
+            _, errors = pr.apply_settings(self.root, {"search": {"url": url}}, levels=LEVELS, env={}, resolver=lambda h, p: [h])
+            self.assertTrue(errors, url)
+            self.assertEqual(errors[0]["field"], "search.url")
+        self.assertFalse(os.path.isfile(pr.settings_path(self.root)))
+
+    def test_search_can_be_cleared_and_never_stores_a_token(self):
+        self.settings(search={"url": "http://100.101.102.103:8080"})
+        self.assertEqual(pr.search_url(pr.load_settings(self.root)), "http://100.101.102.103:8080")
+        self.assertNotIn("token", open(pr.settings_path(self.root), encoding="utf-8").read().lower())
+        self.settings(search=None)
+        self.assertEqual(pr.search_url(pr.load_settings(self.root)), "")
+
+    def test_environment_variable_is_enough(self):
+        self.assertEqual(pr.search_url({}, {"BK_SEARCH_URL": "http://192.168.1.50:8080"}), "http://192.168.1.50:8080")
+        self.assertEqual(pr.search_url({}, {"BK_SEARCH_URL": "https://search.exemple.ch"}), "", "https sans jeton : pas configure")
+        self.assertEqual(pr.search_url({}, {"BK_SEARCH_URL": "https://search.exemple.ch", "BK_SECRET_SEARCH": "x" * 20}), "https://search.exemple.ch")
+
+
 class OwnerSettings(Base):
     def apply(self, patch):
         return pr.apply_settings(self.root, patch, levels=LEVELS, env={}, resolver=lambda h, p: ["127.0.0.1"])

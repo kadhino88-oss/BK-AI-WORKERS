@@ -75,6 +75,7 @@ _CAPS = {
     },
 }
 _WEBFETCH_NOTE = "Lecture de pages web publiques en https seulement, texte uniquement (pas de PDF, pas de pages qui exigent JavaScript)."
+_SEARCH_NOTE = "Recherche web par le point de recherche que le propriétaire a configuré : extraits de résultats seulement, plus limitée que celle de Claude."
 _LIMIT_NAMES = {
     "webSearch": "recherche web", "codeExecution": "exécution de code", "officeFiles": "fichiers Office (Excel, Word, PowerPoint, PDF)",
     "longProjects": "projets de plusieurs heures",
@@ -103,6 +104,7 @@ def capabilities_for(engine_id, byok_kind=None, search_endpoint=False):
         caps["webSearch"] = True
     caps["engine"] = engine_id
     caps["webFetchNote"] = None if key.endswith("anthropic") or key == "anthropic" else _WEBFETCH_NOTE
+    caps["webSearchNote"] = (_SEARCH_NOTE if search_endpoint and not key.endswith("anthropic") and key != "anthropic" else None)
     limits = [_LIMIT_NAMES[k] for k in ("webSearch", "codeExecution", "officeFiles", "longProjects") if not caps[k]]
     if caps["toolUse"] == "weak":
         limits.append("branchement d'outils peu fiable")
@@ -313,6 +315,14 @@ def endpoint_config(engine_id, settings, env=None):
     mode = str(cfg.get("toolMode") or "auto")
     return {"url": url, "model": model, "timeoutSec": max(20, min(timeout, 900)), "toolMode": mode if mode in ("auto", "native", "json") else "auto",
             "secret": engine_id}
+
+
+def search_url(settings, env=None):
+    """Adresse du point de recherche web COMPATIBLE SearXNG (GET <adresse>/search?q=...&format=json) que le proprietaire a configure (reglage `search.url`, sinon
+    BK_SEARCH_URL), ou '' si aucune / adresse non permise. Sans cela, un moteur local n'a AUCUNE recherche web (il ne la simule pas)."""
+    cfg = settings.get("search") if isinstance(settings.get("search"), dict) else {}
+    url = str(cfg.get("url") or _env(env, "BK_SEARCH_URL")).strip()
+    return url if url and endpoint_structurally_ok(url, "search", env) else ""
 
 
 def endpoint_structurally_ok(url, secret_name, env=None):
@@ -654,13 +664,27 @@ def apply_settings(root, patch, levels=None, env=None, resolver=None):
             if "alert" in c:
                 tgt["alert"] = bool(c["alert"])
             new["ceiling"] = tgt
+    if "search" in patch:
+        sv = patch["search"]
+        if sv is None:
+            new.pop("search", None)
+        elif not isinstance(sv, dict) or not isinstance(sv.get("url"), str):
+            errors.append({"field": "search", "message": "Un objet {url} est attendu (point de recherche compatible SearXNG)."})
+        else:
+            ok, code, message, _ = net_policy.check_endpoint(sv["url"].strip(), kind="owner", has_token=token_present("search", env), resolver=resolver)
+            if not ok:
+                if code == "TOKEN_REQUIRED":
+                    message += " Enregistrez d'abord le jeton sur le serveur (variable BK_SECRET_SEARCH)."
+                errors.append({"field": "search.url", "message": message, "code": code})
+            else:
+                new["search"] = {"url": sv["url"].strip()}
     if "byokAllowedHosts" in patch:
         h = patch["byokAllowedHosts"]
         if not isinstance(h, list) or len(h) > 30 or any(not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9.\-]{1,200}", str(x)) for x in h):
             errors.append({"field": "byokAllowedHosts", "message": "Liste de noms d'hôtes (30 au plus)."})
         else:
             new["byokAllowedHosts"] = sorted({str(x).lower() for x in h})
-    unknown = [k for k in patch if k not in ("defaultChain", "freeChain", "levelChains", "endpoints", "ceiling", "byokAllowedHosts")]
+    unknown = [k for k in patch if k not in ("defaultChain", "freeChain", "levelChains", "endpoints", "ceiling", "byokAllowedHosts", "search")]
     for k in unknown:
         errors.append({"field": str(k)[:40], "message": "Réglage inconnu."})
     if errors:
@@ -683,6 +707,7 @@ def settings_view(root, env=None, now=None):
                     if cfg else None)
     return {"defaultChain": default_chain(s, env), "defaultChainSource": "reglage" if s.get("defaultChain") else ("environnement" if _env(env, "BK_AI_PROVIDER") else "defaut"),
             "freeChain": free_chain(s), "levelChains": s.get("levelChains") or {}, "endpoints": eps,
+            "search": ({"url": search_url(s, env), "tokenPresent": token_present("search", env)} if search_url(s, env) else None),
             "ceiling": ceiling_status(root, s, now, env), "byokAllowedHosts": byok_allowed_hosts(s),
             "health": health_snapshot(root, now), "providers": list(PROVIDER_IDS), "updatedAtUtc": s.get("updatedAtUtc")}
 
@@ -700,9 +725,10 @@ def _entry(engine_id, settings, level_cfg, env, search_endpoint=False):
     cfg = endpoint_config(engine_id, settings, env)
     if not cfg or not endpoint_structurally_ok(cfg["url"], cfg["secret"], env):
         return None, "not-configured"
-    caps = capabilities_for(engine_id, search_endpoint=search_endpoint)
+    search = search_url(settings, env)
+    caps = capabilities_for(engine_id, search_endpoint=bool(search) or search_endpoint)
     return {"id": engine_id, "adapter": "openai_compat", "model": cfg["model"], "url": cfg["url"], "secret": cfg["secret"], "timeoutSec": cfg["timeoutSec"],
-            "toolMode": cfg["toolMode"], "local": engine_id == "ollama", "free": engine_id in FREE_PROVIDER_IDS,
+            "toolMode": cfg["toolMode"], "local": engine_id == "ollama", "free": engine_id in FREE_PROVIDER_IDS, "searchUrl": search or None,
             "label": engine_label(engine_id, cfg["model"]), "caps": _caps_for_plan(caps), "summary": engine_summary(engine_id, cfg["model"])}, None
 
 
@@ -731,8 +757,10 @@ def resolve_plan(root, client_id, level, objective="", *, trial=False, byok=None
         label = engine_label("byok", byok.get("model"), kind)
         entry = {"id": "byok", "adapter": kind, "model": byok.get("model") or ((level_cfg or {}).get("model") if kind == "anthropic" else None),
                  "local": False, "free": False, "byok": True, "kind": kind, "label": label,
-                 "caps": _caps_for_plan(capabilities_for("byok", kind)), "summary": engine_summary("byok", byok.get("model"), kind), "timeoutSec": 180,
-                 "url": byok.get("endpoint"), "allowedHosts": byok_allowed_hosts(settings)}
+                 "caps": _caps_for_plan(capabilities_for("byok", kind, search_endpoint=bool(search_url(settings, env)) and kind == "openai_compat")),
+                 "summary": engine_summary("byok", byok.get("model"), kind), "timeoutSec": 180,
+                 "url": byok.get("endpoint"), "allowedHosts": byok_allowed_hosts(settings),
+                 "searchUrl": (search_url(settings, env) or None) if kind == "openai_compat" else None}
         plan.update(explicit=True, reason="byok", preferred="byok", chain=[entry], byok=True, creditsFreeOnFailover=False)
         return plan
 
@@ -833,7 +861,7 @@ def engine_view(plan, byok_meta=None):
            "skipped": plan.get("skipped") or [], "degraded": not chain}
     if first:
         out.update(provider=first["id"], model=first.get("model"), local=bool(first.get("local")), label=first["label"], summary=first["summary"],
-                   capabilities=capabilities_for(first["id"], first.get("kind")))
+                   capabilities=capabilities_for(first["id"], first.get("kind"), search_endpoint=bool(first.get("searchUrl"))))
         # le libelle de capacites des moteurs a adresse : webFetch limite, etc.
     else:
         out.update(provider="none", model=None, local=False, label="Réponse de secours", summary=engine_summary("none"), capabilities=None)

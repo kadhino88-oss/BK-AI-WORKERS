@@ -21,7 +21,7 @@ Exposé par `GET /api/engine` pour le compte connecté, avec le moteur qu'il uti
 
 | Capacité | Claude | Moteur local / hébergeur suisse | Clé OpenAI-compatible |
 |---|---|---|---|
-| Recherche web | oui (outil serveur d'Anthropic) | **non** (sauf point de recherche configuré par vous : non construit) | non |
+| Recherche web | oui (outil serveur d'Anthropic) | **non**, sauf si vous configurez un point de recherche compatible SearXNG (`BK_SEARCH_URL`, §4.2) : extraits de résultats seulement | idem (le même point de recherche, si vous en avez un) |
 | Lecture d'une page web | oui | oui, **client-side, https seulement**, texte seulement (`dashboard/safe_fetch.py`) | oui, idem |
 | Exécution de code | oui | **non** | non |
 | Fichiers Excel / Word / PowerPoint / PDF | oui | **non** | non |
@@ -65,7 +65,8 @@ Choix du moteur (Claude seul, local puis Claude, Claude puis local, local seul, 
   "defaultChain": ["anthropic", "ollama"],
   "endpoints": {"ollama": {"url": "http://100.x.y.z:11434", "model": "llama3.1:8b"}},
   "ceiling": {"dailyChf": 5, "monthlyChf": 80, "alert": true},
-  "levelChains": {"rapide": ["ollama", "anthropic"]}
+  "levelChains": {"rapide": ["ollama", "anthropic"]},
+  "search": {"url": "http://100.x.y.z:8080"}
 }
 ```
 
@@ -79,6 +80,8 @@ BK_OLLAMA_URL=             # http://100.x.y.z:11434  (adresse Tailscale de votre
 BK_OLLAMA_MODEL=           # llama3.1:8b
 BK_OLLAMA_TIMEOUT_SEC=     # 300 par défaut
 BK_SECRET_OLLAMA=          # seulement si Ollama est derrière un https qui exige un jeton Bearer
+BK_SEARCH_URL=             # facultatif : point de recherche web compatible SearXNG (GET <adresse>/search?q=...&format=json), même règles d'adresse que les moteurs
+BK_SECRET_SEARCH=          # jeton Bearer, obligatoire si l'adresse est en https
 BK_SWISS_URL=              # hébergeur suisse (Infomaniak AI Tools, Mistral, vLLM...) : adresse https
 BK_SWISS_MODEL=
 BK_SECRET_SWISS=           # jeton Bearer, obligatoire en https (voir deploy/set-engine-secret.py)
@@ -217,7 +220,7 @@ Ce que cela veut dire, sans détour :
 
 ## 12. Limites honnêtes
 
-- Un modèle local n'a **pas** de recherche web, d'exécution de code ni de fichiers Office, et ne tient pas un projet de plusieurs heures ; ses réponses sont plus simples et peuvent se tromper. L'interface et les réponses le disent.
+- Un modèle local n'a **pas** de recherche web (sauf point de recherche SearXNG que vous aurez installé et configuré : jamais simulée), d'exécution de code ni de fichiers Office, et ne tient pas un projet de plusieurs heures ; ses réponses sont plus simples et peuvent se tromper. L'interface et les réponses le disent.
 - Le PC doit être allumé et relié au réseau privé : sinon l'essai répond « aucun moteur disponible » (gratuit, honnête).
 - L'agent téléphonique n'est pas concerné par ce choix de moteur (il appelle Claude directement).
 - `GET /api/engine` affiche le moteur **prévu** ; un repli de dernière minute n'apparaît que dans la réponse de la mission.

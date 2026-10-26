@@ -93,6 +93,7 @@ function Invoke-ChainEntry {
         if ($Entry.timeoutSec) { $Splat["TimeoutSec"] = [int]$Entry.timeoutSec }
         if ($Entry.secret) { $Splat["SecretName"] = [string]$Entry.secret }
         if ($Entry.allowedHosts) { $Splat["AllowedHosts"] = (@($Entry.allowedHosts) -join ",") }
+        if ($Entry.searchUrl) { $Splat["SearchUrl"] = [string]$Entry.searchUrl }
         $Out = & (Join-Path $AdapterDir "OPENAI-COMPAT-ADAPTER.ps1") @Common -Model $(if ($Entry.model) { [string]$Entry.model } else { "NONE" }) @Splat 2>&1
         return [pscustomobject]@{ Exit = $LASTEXITCODE; Result = (Get-LastJson -Output $Out) }
     }
