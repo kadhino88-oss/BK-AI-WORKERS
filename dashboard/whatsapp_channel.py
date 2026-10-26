@@ -212,6 +212,11 @@ def _handle_message(phone, text, store, deps):
     if isinstance(result, dict) and (result.get("error") == "WORKER_NOT_INCLUDED" or result.get("Status") == "WORKER_NOT_INCLUDED"):
         send_text(phone, str(result.get("detail") or result.get("FinalSynthesis") or "Ce Worker ne fait pas partie de votre forfait.")[:1500])
         return
+    # Quota de session, de semaine ou du mois atteint entre le controle et la reservation (une autre mission a pris le reste) : le message dit lequel
+    # et quand il se renouvelle, plutot que « reessayez ».
+    if isinstance(result, dict) and result.get("error") in ("USAGE_LIMIT_REACHED", "SUBSCRIPTION_REQUIRED") and result.get("detail"):
+        send_text(phone, str(result["detail"])[:1500])
+        return
     if not isinstance(result, dict) or result.get("error") or result.get("Status") != "SUCCESS":
         send_text(phone, "Je n'ai pas pu traiter cette demande pour le moment. Réessayez dans un instant.")
         return
