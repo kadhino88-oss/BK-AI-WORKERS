@@ -230,4 +230,9 @@ $result=[ordered]@{
     WorkerResolved=$WorkerExists
 }
 
+# Moteur qui a reellement repondu { provider, model, local, failedOver, label... } (executeur de moteurs, 2026-10-25) : present SEULEMENT quand un plan de moteurs
+# est actif (sans plan, le resultat est identique a celui d'avant). Un repli est toujours visible ici : jamais une reponse locale etiquetee Claude.
+$EngineInfo = Get-ProviderField $ProviderResult 'engine'
+if ($null -ne $EngineInfo) { $result["Engine"] = $EngineInfo }
+
 $result | ConvertTo-Json -Depth 20

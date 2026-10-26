@@ -556,6 +556,32 @@
           <button type="button" class="btn btn-ghost" id="verify-resend-btn" style="margin-left:8px">Renvoyer l'email</button>
         </div>
 
+        <div id="engine-section" hidden>
+          <h2 class="billing-section-title">Mon moteur d'IA</h2>
+          <div class="account-data-card" id="engine-card">
+            <p id="engine-card-summary"></p>
+            <p class="engine-card-note" id="engine-card-limits"></p>
+            <details class="engine-byok" id="engine-byok">
+              <summary>Utiliser ma propre clé d'IA (facultatif)</summary>
+              <p>Si votre entreprise a déjà un compte chez Anthropic (Claude) ou chez un fournisseur compatible OpenAI (Mistral, Infomaniak AI Tools...), vos missions peuvent passer par votre clé : c'est vous qui payez ce fournisseur, nous ne facturons aucun coût d'IA en plus. Votre clé est chiffrée, ne vous est jamais réaffichée et n'est utilisée que pour vos missions. Elle n'est pas testée à l'enregistrement : une clé fausse se verra à la première mission.</p>
+              <form id="engine-byok-form" class="engine-byok-form">
+                <select id="engine-byok-kind" aria-label="Type de fournisseur">
+                  <option value="anthropic">Anthropic (Claude)</option>
+                  <option value="openai_compat">Compatible OpenAI (Mistral, Infomaniak, OpenAI...)</option>
+                </select>
+                <input type="text" id="engine-byok-endpoint" placeholder="Adresse du fournisseur (https://api.mistral.ai/v1)" autocomplete="off" hidden>
+                <input type="text" id="engine-byok-model" placeholder="Nom du modèle (ex : mistral-large-latest)" autocomplete="off" hidden>
+                <input type="password" id="engine-byok-key" placeholder="Votre clé d'API" autocomplete="off">
+                <div class="engine-byok-actions">
+                  <button type="submit" class="btn btn-gold" id="engine-byok-save">Enregistrer ma clé</button>
+                  <button type="button" class="btn btn-ghost" id="engine-byok-remove" hidden>Supprimer ma clé</button>
+                </div>
+                <div id="engine-byok-msg" class="task-error" hidden></div>
+              </form>
+            </details>
+          </div>
+        </div>
+
         <div id="account-data-section" hidden>
           <h2 class="billing-section-title">Mes données</h2>
           <div class="account-data-card">
@@ -589,6 +615,30 @@
       <h2 class="billing-section-title">Activité en direct <span class="block-subtitle">(dernières 24 h, actualisée toutes les 30 s)</span></h2>
       <div class="trust-grid" id="admin-24h-grid"></div>
       <div id="admin-activity-list" class="admin-activity"></div>
+
+      <h2 class="billing-section-title">Moteur d'IA</h2>
+      <div class="account-data-card" id="admin-engine-card">
+        <div id="admin-engine-state" class="engine-admin-state"></div>
+        <form id="admin-engine-form" class="engine-admin-form">
+          <label>Moteur choisi pour les missions
+            <select id="admin-engine-chain">
+              <option value="anthropic">Claude seul (par défaut)</option>
+              <option value="ollama,anthropic">Moteur local, puis Claude si indisponible</option>
+              <option value="anthropic,ollama">Claude, puis moteur local si indisponible</option>
+              <option value="ollama">Moteur local seul</option>
+              <option value="swiss,anthropic">Hôte suisse, puis Claude</option>
+              <option value="anthropic,swiss">Claude, puis hôte suisse</option>
+            </select>
+          </label>
+          <label>Adresse du moteur local (réseau privé)<input type="text" id="admin-engine-url" placeholder="http://100.x.y.z:11434" autocomplete="off"></label>
+          <label>Modèle local<input type="text" id="admin-engine-model" placeholder="llama3:latest" autocomplete="off"></label>
+          <label>Plafond de dépense Claude par jour (CHF)<input type="number" step="0.5" min="0" id="admin-engine-daily" placeholder="vide = pas de plafond"></label>
+          <label>Plafond de dépense Claude par mois (CHF)<input type="number" step="1" min="0" id="admin-engine-monthly" placeholder="vide = pas de plafond"></label>
+          <button type="submit" class="btn btn-gold">Enregistrer</button>
+          <div id="admin-engine-msg" class="task-error" hidden></div>
+        </form>
+        <p class="engine-card-note">Les jetons (hôte suisse, moteur local en https) ne se saisissent jamais ici : voir docs/PROVIDERS.md.</p>
+      </div>
 
       <h2 class="billing-section-title">Témoignages clients</h2>
       <div class="account-data-card" id="admin-testimonials-card">
@@ -789,6 +839,11 @@
             <div class="profile-block">
               <div class="block-title">Confier une mission</div>
               <div class="level-picker" id="level-picker" role="radiogroup" aria-label="Niveau de travail" hidden></div>
+              <div class="engine-line" id="engine-line" hidden>
+                <span class="engine-line-text" id="engine-line-text"></span>
+                <button type="button" class="engine-more-btn" id="engine-more-btn" aria-expanded="false" hidden>Ce que ce moteur sait faire</button>
+                <div class="engine-details" id="engine-details" hidden></div>
+              </div>
               <form id="task-form" class="task-form">
                 <input id="task-input" type="text" placeholder="Ex: prépare une stratégie de prospection pour un nouveau client" autocomplete="off">
                 <button type="submit">Envoyer</button>

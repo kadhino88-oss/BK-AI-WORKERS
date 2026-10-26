@@ -235,6 +235,41 @@ function Add-BKEngineSpend {
     } | Out-Null
 }
 
+function Get-BKClaudeBudget {
+    # Plafond de depense Claude (jour UTC et mois UTC, CHF) : miroir de provider_router.ceiling_status. Les reglages viennent de
+    # core/ai/data/engine-settings.json (POST /api/admin/engine) ou, a defaut, des variables BK_CLAUDE_DAILY_CHF / BK_CLAUDE_MONTHLY_CHF.
+    # Renvoie { Configured, Reached, RemainingChf (le plus petit reste, $null si aucun plafond), DayChf, MonthChf }.
+    $Settings = Read-BKEngineJson -Path (Join-Path $Script:BKEngineRoot "core/ai/data/engine-settings.json")
+    $Daily = $null; $Monthly = $null
+    $Ceil = if ($null -ne $Settings) { $Settings.PSObject.Properties["ceiling"] } else { $null }
+    foreach ($Pair in @(@("dailyChf", "BK_CLAUDE_DAILY_CHF"), @("monthlyChf", "BK_CLAUDE_MONTHLY_CHF"))) {
+        $V = $null
+        if ($Ceil -and $Ceil.Value -and $null -ne $Ceil.Value.PSObject.Properties[$Pair[0]]) { $V = $Ceil.Value.PSObject.Properties[$Pair[0]].Value }
+        if ($null -eq $V -or "$V" -eq "") { $V = [Environment]::GetEnvironmentVariable($Pair[1]) }
+        $N = 0.0
+        if ($null -ne $V -and [double]::TryParse("$V", [System.Globalization.NumberStyles]::Float, [System.Globalization.CultureInfo]::InvariantCulture, [ref]$N) -and $N -gt 0) {
+            if ($Pair[0] -eq "dailyChf") { $Daily = $N } else { $Monthly = $N }
+        }
+    }
+    $Spend = Read-BKEngineJson -Path (Join-Path (Get-BKEngineStateDir) "spend.json")
+    $Day = [DateTime]::UtcNow.ToString("yyyy-MM-dd"); $Month = $Day.Substring(0, 7)
+    $DayChf = 0.0; $MonthChf = 0.0
+    if ($null -ne $Spend) {
+        if ($Spend.days -and $Spend.days.PSObject.Properties[$Day]) { $DayChf = [double]$Spend.days.PSObject.Properties[$Day].Value.chf }
+        if ($Spend.months -and $Spend.months.PSObject.Properties[$Month]) { $MonthChf = [double]$Spend.months.PSObject.Properties[$Month].Value.chf }
+    }
+    $Out = [pscustomobject]@{ Configured = ($null -ne $Daily -or $null -ne $Monthly); Reached = $false; RemainingChf = $null; DayChf = $DayChf; MonthChf = $MonthChf }
+    $Rem = @()
+    if ($null -ne $Daily) { $Rem += ($Daily - $DayChf) }
+    if ($null -ne $Monthly) { $Rem += ($Monthly - $MonthChf) }
+    if ($Rem.Count -gt 0) {
+        $Min = ($Rem | Measure-Object -Minimum).Minimum
+        $Out.RemainingChf = [Math]::Round([Math]::Max(0.0, $Min), 4)
+        $Out.Reached = ($Min -le 0)
+    }
+    return $Out
+}
+
 # ---------------------------------------------------------------------------------------------------------------------------------
 # Appel d'outil « JSON dans le texte » (modeles sans appel d'outils natif)
 # ---------------------------------------------------------------------------------------------------------------------------------

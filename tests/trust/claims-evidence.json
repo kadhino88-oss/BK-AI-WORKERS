@@ -221,6 +221,19 @@
     {"file": "core/ai/adapters/ANTHROPIC-ADAPTER.ps1", "match": ["https://api\\.anthropic\\.com/v1/messages"]},
     {"file": "dashboard/phone_agent.py", "match": ["https://api\\.anthropic\\.com/v1/messages"]}
   ],
+  "sp-local-engine": [
+    {"file": "dashboard/provider_router.py", "match": ["FREE_PROVIDER_IDS = \\(\"ollama\",\\)", "l'essai n'utilise JAMAIS Claude"]},
+    {"file": "core/ai/adapters/OPENAI-COMPAT-ADAPTER.ps1", "match": ["/chat/completions", "Test-BKEndpointPolicy"]},
+    {"file": "dashboard/net_policy.py", "match": ["PRIVATE_OK = \\(\"loopback\", \"private\", \"cgnat\"\\)"]}
+  ],
+  "sp-swiss-engine": [
+    {"file": "dashboard/provider_router.py", "match": ["BK_SWISS_URL", "PROVIDER_IDS = \\(\"anthropic\", \"ollama\", \"swiss\"\\)"]},
+    {"file": "core/ai/adapters/OPENAI-COMPAT-ADAPTER.ps1", "match": ["swiss"]}
+  ],
+  "sp-byok": [
+    {"file": "dashboard/provider_router.py", "match": ["BYOK_KINDS = \\(\"anthropic\", \"openai_compat\"\\)", "sans repli vers nos moteurs"]},
+    {"file": "dashboard/server.py", "match": ["ENGINE_BYOK_PROVIDER = \"ai_engine\""]}
+  ],
   "sp-google": [
     {"file": "dashboard/Mailer-Bridge.ps1", "match": ["https://gmail\\.googleapis\\.com/gmail/v1/users/me/messages/send"]},
     {"file": "dashboard/server.py", "match": ["https://accounts\\.google\\.com/o/oauth2/v2/auth"]}

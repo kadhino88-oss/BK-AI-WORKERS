@@ -26,6 +26,7 @@ import seo_pages
 import pwa_static
 import trust_pages
 import installations as inst
+import provider_router
 
 # ---------------------------------------------------------------------
 # Ecritures concurrentes (2026-09-28) : le serveur traite les requetes en
@@ -489,6 +490,7 @@ def get_worker_activity(worker_id_upper, client_id, limit=8):
                 "authorized": data.get("Authorized"),
                 "createdAtUtc": data.get("CreatedAtUtc"),
                 "answer": (data.get("Result") or {}).get("Answer"),
+                "engine": _engine_public((data.get("Result") or {}).get("Engine")),
                 "executionNote": data.get("ExecutionNote"),
                 "files": [{"filename": f.get("filename"), "sizeBytes": f.get("sizeBytes"), "mime": f.get("mime")}
                           for f in ((data.get("Result") or {}).get("Files") or []) if isinstance(f, dict) and f.get("filename")],
@@ -572,6 +574,17 @@ def submit_task(worker_hint_text, worker_id="", plan_only=False, client_id="", l
             child_env["BK_MISSION_LEVEL"] = lvl
         else:
             child_env.pop("BK_MISSION_LEVEL", None)
+        # Moteur d'IA de CETTE mission (2026-10-25) : le routeur decide (niveau, essai, cle du client, reglages du proprietaire, sante des moteurs,
+        # plafond de depense Claude). Tant que le proprietaire n'a rien choisi, le plan est « implicite » : aucune variable n'est posee et la mission
+        # suit exactement le chemin Claude d'avant.
+        for _name in provider_router.PLAN_ENV_NAMES:
+            child_env.pop(_name, None)
+        engine_plan = None
+        try:
+            engine_plan = engine_plan_for(client_id, lvl, worker_hint_text)
+            child_env.update(provider_router.plan_env(engine_plan))
+        except Exception as exc:  # noqa: BLE001 - un souci de reglages ne doit jamais empecher une mission : chemin habituel
+            print("[engine] plan de moteurs impossible, chemin habituel : " + type(exc).__name__, flush=True)
         # Liste des Workers embauches pour Submit-Task.ps1 / Chloe (le routeur ne peut choisir qu'eux) ; absente = tous les Workers.
         allowed_env = allowed_workers_env(client_id)
         if allowed_env is not None:
@@ -590,6 +603,8 @@ def submit_task(worker_hint_text, worker_id="", plan_only=False, client_id="", l
         )
         stderr = (proc.stderr or b"").decode("utf-8", errors="replace")
         stdout = (proc.stdout or b"").decode("utf-8", errors="replace")
+        if engine_plan and engine_plan.get("explicit"):
+            engine_after_mission()
 
         if os.path.isfile(out_file):
             with open(out_file, encoding="utf-8-sig") as f:
@@ -928,6 +943,142 @@ def automation_level(client_id=""):
     return min(levels, key=lambda k: level_credits(k))
 
 
+# ---------------------------------------------------------------------
+# MOTEUR D'IA PAR MISSION (2026-10-25). Decision du proprietaire : le moteur est un CHOIX, jamais un remplacement global.
+#   1. essai gratuit et demonstrations : modele LOCAL (Ollama), cout nul, aucune donnee client reelle ;
+#   2. clients payants : Claude (ou un hote suisse), cout deja compris dans le prix du forfait (docs/PRICING.md) ;
+#   3. cle personnelle (BYOK) : le client paie son fournisseur, jamais nous ; sa cle vit dans le coffre chiffre, jamais renvoyee ;
+#   4. plafond de depense Claude (jour / mois) : le credit ne s'epuise plus en silence.
+# Tout vit dans dashboard/provider_router.py (aucun appel reseau) ; l'executeur PowerShell (core/ai/Invoke-EngineChain.ps1) suit le plan.
+# Tant que BK_AI_PROVIDER est absent et qu'aucun reglage n'est enregistre, rien ne change : le chemin Claude tourne comme avant.
+# ---------------------------------------------------------------------
+ENGINE_BYOK_PROVIDER = "ai_engine"      # nom du fichier chiffre du client (core/connectors/client-credentials/data/<ClientId>/ai_engine.json), jamais un connecteur
+
+
+def _notify_engine_alert(subject, text):
+    """E-mail au proprietaire (plafond de depense Claude a 80 % / atteint) par le meme chemin que les demandes d'embauche. Sans adresse configuree,
+    l'alerte reste visible dans GET /api/admin/engine (etat du plafond)."""
+    to = pilot_program.owner_notify_address(ROOT)
+    if not to:
+        print("[engine] alerte de depense Claude ; aucune adresse proprietaire configuree (BK_PILOT_NOTIFY_EMAIL)", flush=True)
+        return
+    import html as _html
+    body = "<p>" + "<br>".join(_html.escape(line) for line in str(text).splitlines()) + "</p>"
+    html_body = mailer.brand_email(_html.escape(subject), body)
+
+    def _send():
+        try:
+            ok, err = mailer.send_email(to, subject, html_body, text, gmail_bridge=run_mailer_bridge)
+            print("[engine] e-mail au proprietaire : " + ("envoye" if ok else f"ECHEC ({err})"), flush=True)
+        except Exception as exc:  # noqa: BLE001
+            print(f"[engine] e-mail au proprietaire : ECHEC ({type(exc).__name__})", flush=True)
+
+    threading.Thread(target=_send, daemon=True).start()
+
+
+def engine_after_mission():
+    """Apres une mission menee avec un plan de moteurs : la depense Claude a pu franchir 80 % d'un plafond -> alerte (une seule par periode)."""
+    try:
+        provider_router.maybe_alert(ROOT, provider_router.load_settings(ROOT), notify=_notify_engine_alert)
+    except Exception as exc:  # noqa: BLE001 - une alerte perdue ne doit jamais faire echouer une mission
+        print("[engine] alerte impossible : " + type(exc).__name__, flush=True)
+
+
+def _is_trial_account(client_id):
+    """L'essai public (visiteur sans compte) et tout compte au forfait Essai : la chaine GRATUITE seulement, des qu'elle existe."""
+    if client_id == TRIAL_CLIENT_ID:
+        return True
+    return _is_customer_id(client_id) and _client_plan(client_id).get("name") == PLAN_CATALOG["essai"]["name"]
+
+
+def engine_plan_for(client_id, level, objective=""):
+    """Plan de moteurs d'une mission de ce client au niveau donne (voir provider_router.resolve_plan)."""
+    byok = provider_router.load_byok_meta(ROOT, client_id) if _is_customer_id(client_id) else None
+    _, levels = mission_levels()
+    return provider_router.resolve_plan(ROOT, client_id, level or "", objective, trial=_is_trial_account(client_id), byok=byok, levels=levels,
+                                        env=os.environ, notify=_notify_engine_alert)
+
+
+def engine_status(client_id, level=None):
+    """GET /api/engine : le moteur que CE compte utilisera pour sa prochaine mission (au niveau demandé), ses capacites reelles, sa chaine de repli,
+    sa cle personnelle (jamais la cle) et la matrice de tous les moteurs. Aucune adresse, aucun jeton."""
+    lvl = normalize_level(level, client_id)
+    plan = engine_plan_for(client_id, lvl)
+    byok = provider_router.load_byok_meta(ROOT, client_id) if _is_customer_id(client_id) else None
+    view = provider_router.engine_view(plan, byok)
+    view["level"] = lvl
+    view["matrix"] = provider_router.capability_matrix()
+    return view
+
+
+def engine_capabilities(client_id, level=None):
+    """Capacites du moteur que ce compte utilisera (dictionnaire de provider_router.capabilities_for), ou None si aucun moteur n'est disponible.
+    POINT D'ENTREE DU MODE PROJET (docs/AUTONOMY-ENGINE.md, branche ws/chantier-design) : appeler cette fonction (ou provider_router.engine_supports) AVANT de
+    promettre un chantier long, des fichiers Office, du code ou une recherche web ; sur un moteur local, ne pas lancer ce qu'il ne sait pas faire."""
+    view = engine_status(client_id, level)
+    return view.get("capabilities")
+
+
+def _engine_public(engine):
+    """Ce que le client voit du moteur qui a repondu (jamais d'adresse ni de detail technique) ; None quand aucun plan de moteurs n'etait actif."""
+    if not isinstance(engine, dict) or not engine.get("provider"):
+        return None
+    return {"provider": engine.get("provider"), "model": engine.get("model"), "local": bool(engine.get("local")), "failedOver": bool(engine.get("failedOver")),
+            "label": engine.get("label"), "byok": bool(engine.get("byok"))}
+
+
+@_state_locked
+def admin_apply_engine_settings(body):
+    """POST /api/admin/engine (proprietaire) : valide et enregistre les reglages (chaine par defaut, adresse du moteur local, modeles, chaines par niveau,
+    plafond de depense Claude). Renvoie (charge utile, statut HTTP). Aucun jeton n'est accepte ici : ils vivent dans l'environnement du serveur."""
+    _, levels = mission_levels()
+    _, errors = provider_router.apply_settings(ROOT, body, levels=levels, env=os.environ)
+    if errors:
+        return {"error": "INVALID_SETTINGS", "errors": errors}, 400
+    log_activity("engine_settings", fields=sorted(str(k) for k in body.keys())[:12])
+    return {"ok": True, "engine": provider_router.settings_view(ROOT, env=os.environ)}, 200
+
+
+def store_byok(client_id, body):
+    """POST /api/engine/byok : le client enregistre SA cle (Anthropic ou compatible OpenAI). Validation par la forme seulement (aucun appel reel, aucun cout) ;
+    la cle est chiffree par le coffre existant, jamais renvoyee, jamais journalisee. Renvoie (charge utile, statut HTTP)."""
+    if not _is_customer_id(client_id):
+        return {"error": "NOT_ALLOWED", "message": "La clé personnelle est réservée aux comptes clients."}, 403
+    rows = _recent(CRED_SAVE_RATE, client_id, 3600)
+    if len(rows) >= CRED_SAVE_MAX_PER_HOUR:
+        return {"error": "RATE_LIMITED", "message": "Trop de tentatives. Réessayez dans une heure."}, 429
+    rows.append(time.time())
+    meta = provider_router.load_byok_meta(ROOT, client_id)
+    if "key" not in body and "enabled" in body:
+        if not meta:
+            return {"error": "NOT_CONFIGURED"}, 404
+        provider_router.save_byok_meta(ROOT, client_id, meta["kind"], meta.get("host"), meta.get("endpoint"), meta.get("model"), bool(body.get("enabled")))
+        return {"ok": True, "byok": provider_router.byok_public_view(provider_router.load_byok_meta(ROOT, client_id))}, 200
+    settings = provider_router.load_settings(ROOT)
+    key = body.get("key")
+    ok, err, info = provider_router.validate_byok(settings, body.get("kind"), key if isinstance(key, str) else "", str(body.get("endpoint") or ""), str(body.get("model") or ""))
+    if not ok:
+        return {"error": "INVALID_FIELD", "field": err["field"], "message": err["message"]}, 400
+    secret = json.dumps({"kind": body["kind"], "key": key.strip(), "endpoint": info["endpoint"], "model": info["model"]}, ensure_ascii=False)
+    saved = store_client_connector_credential(client_id, ENGINE_BYOK_PROVIDER, secret, reserved=True)
+    secret = None
+    if not saved.get("ok"):
+        return {"error": "STORE_FAILED", "message": "Enregistrement impossible pour le moment. Réessayez."}, 500
+    provider_router.save_byok_meta(ROOT, client_id, info["kind"], info["host"], info["endpoint"], info["model"], True)
+    log_activity("byok_saved", clientId=client_id, kind=info["kind"], host=info["host"])
+    return {"ok": True, "byok": provider_router.byok_public_view(provider_router.load_byok_meta(ROOT, client_id))}, 200
+
+
+def remove_byok(client_id):
+    """Supprime la cle personnelle du client (fichier chiffre + description). Idempotent."""
+    if not _is_customer_id(client_id):
+        return {"error": "NOT_ALLOWED"}, 403
+    store_client_connector_credential(client_id, ENGINE_BYOK_PROVIDER, "", reserved=True)
+    provider_router.delete_byok_meta(ROOT, client_id)
+    log_activity("byok_removed", clientId=client_id)
+    return {"ok": True, "byok": {"configured": False}}, 200
+
+
 
 def _pending_action_path(task_id):
     # task_id vient du corps de la requete (client) : sans ce controle
@@ -1217,14 +1368,15 @@ def get_client_configured_providers(client_id):
         return set()
 
 
-def store_client_connector_credential(client_id, provider, value):
+def store_client_connector_credential(client_id, provider, value, reserved=False):
     """Appelle Store-Client-Credential-Bridge.ps1 pour chiffrer et
     enregistrer (ou supprimer si value est vide) l'identifiant DE CE
     CLIENT pour ce connecteur. Passe par un fichier JSON, jamais par une
     commande PowerShell interpolee (meme raison que le pont de confirmation)."""
     import tempfile, uuid
 
-    if provider not in CLIENT_CONNECTOR_PROVIDERS:
+    # `reserved` : nom interne du coffre (cle personnelle du moteur d'IA, ENGINE_BYOK_PROVIDER), jamais un connecteur ni une valeur venue d'une requete.
+    if provider not in CLIENT_CONNECTOR_PROVIDERS and not (reserved and provider == "ai_engine"):
         return {"ok": False, "error": "UNKNOWN_PROVIDER"}
 
     in_file = os.path.join(tempfile.gettempdir(), f"bkaiw-cred-in-{uuid.uuid4().hex}.json")
@@ -1587,6 +1739,7 @@ def _summarize_mission_result(result):
                     "answer": (r.get("Result") or {}).get("Answer"),
                     "files": (r.get("Result") or {}).get("Files"),
                     "costCapped": bool((r.get("Result") or {}).get("CostCapped")),
+                    "engine": _engine_public((r.get("Result") or {}).get("Engine")),
                 }
                 for r in result.get("Results", []) if isinstance(r, dict)
             ],
@@ -1599,6 +1752,8 @@ def _summarize_mission_result(result):
         "files": (result.get("Result") or {}).get("Files"),
         # True = mission arretee a son plafond de cout par niveau : la reponse est partielle (la note de fin le dit).
         "costCapped": bool((result.get("Result") or {}).get("CostCapped")),
+        # Moteur qui a reellement repondu (Claude, moteur local, hote suisse, cle du client) ; null tant qu'aucun choix de moteur n'est actif.
+        "engine": _engine_public((result.get("Result") or {}).get("Engine")),
     }
 
 
@@ -2251,7 +2406,7 @@ def export_account_data(client_id):
     providers = []
     cdir = os.path.join(CLIENT_CREDENTIALS_DIR, client_id)
     if os.path.isdir(cdir):
-        providers = sorted(f[:-5] for f in os.listdir(cdir) if f.endswith(".json"))
+        providers = sorted(f[:-5] for f in os.listdir(cdir) if f.endswith(".json") and f[:-5] != ENGINE_BYOK_PROVIDER)
     all_auto = []
     try:
         with open(os.path.join(ROOT, "core", "automation", "data", "automations.json"), encoding="utf-8-sig") as f:
@@ -2269,6 +2424,7 @@ def export_account_data(client_id):
         "hireRequests": [r for r in _read_hire_requests() if r.get("clientId") == client_id],
         "automations": all_auto,
         "connectedTools": providers,
+        "aiEngineKey": provider_router.byok_public_view(provider_router.load_byok_meta(ROOT, client_id)),
         "whatsappLinked": bool(wa),
         "note": "Les jetons et identifiants de vos outils connectés sont chiffrés et ne sont pas exportés.",
     }
@@ -2351,7 +2507,8 @@ def delete_account(client_id, password):
     WA_STORE.unlink_client(client_id)
     cdir = os.path.join(CLIENT_CREDENTIALS_DIR, client_id)
     if os.path.isdir(cdir):
-        shutil.rmtree(cdir, ignore_errors=True)
+        shutil.rmtree(cdir, ignore_errors=True)              # (dont la cle personnelle du moteur d'IA, ai_engine.json)
+    provider_router.delete_byok_meta(ROOT, client_id)
     try:
         path = os.path.join(ROOT, "core", "automation", "data", "automations.json")
         with open(path, encoding="utf-8-sig") as f:
@@ -2562,6 +2719,7 @@ def get_client_missions(client_id, limit=25):
                 "authorized": data.get("Authorized"),
                 "createdAtUtc": data.get("CreatedAtUtc"),
                 "answer": (data.get("Result") or {}).get("Answer"),
+                "engine": _engine_public((data.get("Result") or {}).get("Engine")),
                 "executionNote": data.get("ExecutionNote"),
                 "files": [{"filename": f.get("filename"), "sizeBytes": f.get("sizeBytes"), "mime": f.get("mime")}
                           for f in ((data.get("Result") or {}).get("Files") or []) if isinstance(f, dict) and f.get("filename")],
@@ -4395,12 +4553,14 @@ def run_trial_mission(worker_id, objective, client_ip):
     # par Worker reellement execute — toutes a nettoyer, pas une seule).
     if worker_id == "chloe":
         answer = str(result.get("FinalSynthesis") or "")
-        provider, degraded = None, False
+        provider, degraded, trial_engine = None, False, None
         for item in (result.get("Results") or []):
             _cleanup_trial_task(item.get("TaskId"))
             item_result = item.get("Result") or {}
             if provider is None and item_result.get("Provider"):
                 provider = item_result.get("Provider")
+            if trial_engine is None:
+                trial_engine = _engine_public(item_result.get("Engine"))
             degraded = degraded or bool(item_result.get("Degraded"))
         if not answer.strip() and result.get("Status") == "NO_WORKER_MATCHED":
             # Routage par mots-cles de Chloe : aucun Worker identifie pour
@@ -4422,6 +4582,7 @@ def run_trial_mission(worker_id, objective, client_ip):
         answer = str(inner.get("Answer") or "")
         provider = inner.get("Provider")
         degraded = bool(inner.get("Degraded"))
+        trial_engine = _engine_public(inner.get("Engine"))
         _cleanup_trial_task(result.get("TaskId"))
 
     if not answer.strip():
@@ -4444,6 +4605,7 @@ def run_trial_mission(worker_id, objective, client_ip):
         "truncated": truncated,
         "provider": provider,
         "degraded": degraded,
+        "engine": trial_engine,
     }, 200
 
 
@@ -4974,6 +5136,26 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_account_required()
                 return
             self._send_json({"notes": list_client_memory(client_id)})
+        elif path == "/api/engine":
+            # Moteur d'IA que CE compte utilisera pour sa prochaine mission (au niveau demande), ses capacites reelles en francais simple, sa chaine de repli et la
+            # matrice de tous les moteurs. Affiche pres de la zone de mission et sur la page du Worker. Jamais d'adresse ni de jeton.
+            client_id = self._resolve_client_id()
+            if not client_id:
+                self._send_account_required()
+                return
+            self._send_json(engine_status(client_id, (parse_qs(parsed.query).get("level") or [None])[0]))
+        elif path == "/api/engine/byok":
+            client_id = self._resolve_client_id()
+            if not client_id:
+                self._send_account_required()
+                return
+            self._send_json(provider_router.byok_public_view(provider_router.load_byok_meta(ROOT, client_id) if _is_customer_id(client_id) else None))
+        elif path == "/api/admin/engine":
+            # Reserve au proprietaire (porte historique) : reglages effectifs, etat du plafond de depense Claude, sante des moteurs. Jamais de jeton.
+            if not self._gate_authenticated():
+                self._send_gate_required()
+                return
+            self._send_json({"engine": provider_router.settings_view(ROOT, env=os.environ), "matrix": provider_router.capability_matrix()})
         elif path == "/api/mission-levels":
             if (parse_qs(parsed.query).get("scale") or [""])[0] == "public":
                 self._send_json(public_mission_levels(""))     # l'echelle complete, la meme pour tous (page Tarifs) : aucune donnee de compte
@@ -5913,6 +6095,33 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json({"error": "WORKER_NOT_INCLUDED", "detail": refused}, 403)
                 return
             self._send_json(_summarize_mission_result(result))
+        elif path == "/api/admin/engine":
+            # Reglages du moteur d'IA, PROPRIETAIRE SEULEMENT (porte historique) : jamais un compte client, meme tres actif.
+            if not self._gate_authenticated():
+                self._send_gate_required()
+                return
+            body = self._read_json_limited(20000, strict=True)
+            if body is None:
+                return
+            payload, status = admin_apply_engine_settings(body)
+            self._send_json(payload, status)
+        elif path == "/api/engine/byok":
+            client_id = self._resolve_client_id()
+            if not client_id:
+                self._send_account_required()
+                return
+            body = self._read_json_limited(8000, strict=True)
+            if body is None:
+                return
+            payload, status = store_byok(client_id, body)
+            self._send_json(payload, status)
+        elif path == "/api/engine/byok/remove":
+            client_id = self._resolve_client_id()
+            if not client_id:
+                self._send_account_required()
+                return
+            payload, status = remove_byok(client_id)
+            self._send_json(payload, status)
         elif path == "/api/connectors/auto-approve/toggle":
             # Pre-autorisation globale : quand activee, les actions
             # d'ecriture proposees par un Worker s'executent pour de vrai
@@ -6129,6 +6338,13 @@ class Handler(BaseHTTPRequestHandler):
             automation_id = path.split("/")[3]
             result = run_automation_bridge("delete", automation_id=automation_id, client_id=client_id)
             self._send_json(result)
+        elif path == "/api/engine/byok":
+            client_id = self._resolve_client_id()
+            if not client_id:
+                self._send_account_required()
+                return
+            payload, status = remove_byok(client_id)
+            self._send_json(payload, status)
         else:
             self._send_json({"error": "NOT_FOUND"}, 404)
 

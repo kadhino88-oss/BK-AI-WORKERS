@@ -25,7 +25,7 @@ import time
 
 
 class FakeOpenAI:
-    def __init__(self, script=None, token=None, supports_tools=True, models=None, host="127.0.0.1"):
+    def __init__(self, script=None, token=None, supports_tools=True, models=None, host="127.0.0.1", port=0):
         self.script = list(script or [{"content": "ok"}])
         self.token = token
         self.supports_tools = supports_tools
@@ -75,17 +75,19 @@ class FakeOpenAI:
                     body = {}
                 body["_auth"] = self._authorized()
                 body["_path"] = self.path
+                rejected = bool(body.get("tools")) and not outer.supports_tools and body["_auth"]
                 with outer._lock:
                     outer.requests.append(body)
                     idx = outer._i
-                    outer._i += 1
+                    if not rejected:                  # une requete refusee (« n'accepte pas les outils ») ne consomme pas le scenario
+                        outer._i += 1
                 if not body["_auth"]:
                     self._send(401, {"error": {"message": "Incorrect API key provided", "type": "invalid_request_error"}})
                     return
                 if not self.path.endswith("/chat/completions"):
                     self._send(404, {"error": "nf"})
                     return
-                if body.get("tools") and not outer.supports_tools:
+                if rejected:
                     self._send(400, {"error": {"message": "registry.ollama.ai/library/%s does not support tools" % body.get("model", "x"),
                                                "type": "invalid_request_error"}})
                     return
@@ -119,7 +121,7 @@ class FakeOpenAI:
                                  "choices": [{"index": 0, "message": message, "finish_reason": finish}],
                                  "usage": {"prompt_tokens": usage[0], "completion_tokens": usage[1], "total_tokens": usage[0] + usage[1]}})
 
-        self.httpd = http.server.ThreadingHTTPServer((host, 0), H)
+        self.httpd = http.server.ThreadingHTTPServer((host, port), H)
         self.httpd.daemon_threads = True
         self.port = self.httpd.server_address[1]
         self.url = "http://%s:%d" % (host, self.port)

@@ -84,9 +84,17 @@ $CallTimeout = if ($LevelCfg -and $LevelCfg.callTimeoutSec) { [int]$LevelCfg.cal
 # output_config.effort : GA sur les modeles 5.x, PAS sur Haiku 4.5 (le modele historique des Workers).
 $UseEffort = ($LevelCfg -and $LevelCfg.effort -and $EffectiveModel -notlike "claude-haiku-4*")
 $MissionDeadline = (Get-Date).AddSeconds(540)   # le serveur coupe a 600 s : on rend un resultat partiel avant
+# Executeur de moteurs (Invoke-EngineChain.ps1) : l'echeance de TOUTE la mission, partagee entre les moteurs d'une chaine de repli. Sans variable : inchange.
+if ($env:BK_ENGINE_DEADLINE_EPOCH -match '^\d{9,11}(\.\d+)?$') { $MissionDeadline = [DateTimeOffset]::FromUnixTimeMilliseconds([long]([double]$env:BK_ENGINE_DEADLINE_EPOCH * 1000)).LocalDateTime }
 # Plafond de cout de la mission (maxCostChf du niveau) et suivi du cout reel appel par appel : Mission-Cost.ps1, tarifs dans
 # core/ai/AI-PRICING.json. Sans niveau (ancien comportement) ou pour Rapide : pas de plafond, le cout est quand meme releve.
 $CostCeilingChf = if ($LevelCfg) { $LevelCfg.maxCostChf } else { $null }
+# Plafond de depense Claude du proprietaire (jour / mois, core/ai/data/engine-settings.json) : l'executeur de moteurs pose le RESTE disponible ; il joue le role de
+# plafond de la mission si celui-ci est plus petit (ou absent). Meme mecanique que maxCostChf : la boucle s'arrete avant l'appel qui le depasserait. Sans variable : inchange.
+if ($env:BK_ENGINE_BUDGET_CHF -match '^\d+(\.\d+)?$') {
+    $BudgetChf = [double]$env:BK_ENGINE_BUDGET_CHF
+    if ($BudgetChf -gt 0 -and (-not $CostCeilingChf -or $BudgetChf -lt [double]$CostCeilingChf)) { $CostCeilingChf = $BudgetChf }
+}
 $MissionCost = New-BKMissionCost -Pricing (Get-BKPricing -Root $ProjectRoot) -Model $EffectiveModel -CeilingChf $CostCeilingChf
 
 Write-Host "ANTHROPIC ADAPTER | worker=$WorkerId | model=$EffectiveModel"
@@ -135,6 +143,7 @@ function Get-CodeExecFileIds {
 
 $PlainKey = $null
 $ResponseText = $null; $ErrorDetail = $null; $ExitCode = 1
+$ErrorBody = ""; $ErrorStatus = 0
 $Response = $null
 
 if (-not (Test-BKSecret -Name "anthropic")) {
@@ -447,6 +456,10 @@ try {
 catch {
     $ErrorDetail = $_.Exception.Message
     $ExitCode = 1
+    # Corps de l'erreur HTTP et code (ajoutes le 2026-10-25) : « credit balance too low » n'est que dans le corps ; l'executeur de moteurs en a besoin
+    # pour distinguer un credit epuise (moteur mis de cote) d'une simple erreur de requete. Le corps d'erreur de l'API ne contient jamais la cle.
+    try { $ErrorBody = ([string]$_.ErrorDetails.Message); if ($ErrorBody.Length -gt 400) { $ErrorBody = $ErrorBody.Substring(0, 400) } } catch { }
+    try { $ErrorStatus = [int]$_.Exception.Response.StatusCode } catch { }
 }
 finally {
     $PlainKey = $null
@@ -476,6 +489,6 @@ if ($ExitCode -eq 0) {
     exit 0
 }
 else {
-    Write-Result ([ordered]@{ status="ERROR"; provider="anthropic"; model=$EffectiveModel; mode="LLM"; api_call=$true; answer=""; error=$ErrorDetail })
+    Write-Result ([ordered]@{ status="ERROR"; provider="anthropic"; model=$EffectiveModel; mode="LLM"; api_call=$true; answer=""; error=$ErrorDetail; error_body=[string]$ErrorBody; http_status=[int]$ErrorStatus })
     exit 1
 }

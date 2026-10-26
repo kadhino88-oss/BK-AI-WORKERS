@@ -6,7 +6,10 @@
 function Get-WorkerSystemPrompt {
     param(
         [Parameter(Mandatory=$true)][string]$WorkerId,
-        [string]$ClientId = ""
+        [string]$ClientId = "",
+        # 0 = guide metier (playbook.md) en entier, comme toujours. > 0 : seulement le debut (modeles a petite fenetre de contexte : Ollama, 2026-10-25) ;
+        # le reste du prompt (identite, regles contre l'injection, installation, memoire) n'est jamais raccourci ici.
+        [int]$MaxPlaybookChars = 0
     )
 
     $ProjectRoot = if ($env:BK_ROOT) { $env:BK_ROOT } else { "C:/Users/FEUCOM/BK-AI-WORKERS" }
@@ -31,6 +34,12 @@ function Get-WorkerSystemPrompt {
     if (Test-Path -LiteralPath $PlaybookPath -PathType Leaf) {
         try {
             $PlaybookText = (Get-Content -LiteralPath $PlaybookPath -Raw -Encoding UTF8).Trim()
+            if ($MaxPlaybookChars -gt 0 -and $PlaybookText.Length -gt $MaxPlaybookChars) {
+                $Cut = $PlaybookText.Substring(0, $MaxPlaybookChars)
+                $LastBreak = $Cut.LastIndexOf("`n")
+                if ($LastBreak -gt ($MaxPlaybookChars * 0.5)) { $Cut = $Cut.Substring(0, $LastBreak) }
+                $PlaybookText = $Cut.TrimEnd() + "`n[... guide metier raccourci pour ce moteur : suis ce qui precede et reste simple]"
+            }
             if ($PlaybookText) { $PlaybookBlock = "`n" + $PlaybookText + "`n" }
         } catch { }
     }

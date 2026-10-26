@@ -84,6 +84,10 @@ function Get-BKMissionCredits {
     if (-not $Succeeded -or $null -eq $WorkerResult) { return 0 }
     $DegradedProp = $WorkerResult.PSObject.Properties["Degraded"]
     if ($null -ne $DegradedProp -and [bool]$DegradedProp.Value) { return 0 }
+    # Repli vers un autre moteur (Claude indisponible, plafond de depense atteint...) : le client n'a pas recu le moteur de son forfait, la mission ne coute aucun
+    # credit (Result.Engine.creditsFree, pose par core/ai/Invoke-EngineChain.ps1). Une mission voulue sur le moteur local (essai, niveau) coute le credit du niveau.
+    $EngineProp = $WorkerResult.PSObject.Properties["Engine"]
+    if ($null -ne $EngineProp -and $null -ne $EngineProp.Value -and $null -ne $EngineProp.Value.PSObject.Properties["creditsFree"] -and [bool]$EngineProp.Value.creditsFree) { return 0 }
     return $LevelCost
 }
 

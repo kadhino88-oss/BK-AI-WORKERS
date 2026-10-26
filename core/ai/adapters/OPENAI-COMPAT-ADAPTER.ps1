@@ -74,7 +74,10 @@ if ($IsLocal -and $CallTimeout -lt 120) { $CallTimeout = 120 }   # un modele sur
 $DeadlineEpoch = 0.0
 if ($env:BK_ENGINE_DEADLINE_EPOCH -match '^\d{9,11}(\.\d+)?$') { $DeadlineEpoch = [double]$env:BK_ENGINE_DEADLINE_EPOCH }
 $MissionDeadline = if ($DeadlineEpoch -gt 0) { [DateTimeOffset]::FromUnixTimeMilliseconds([long]($DeadlineEpoch * 1000)).LocalDateTime } else { (Get-Date).AddSeconds(540) }
-$MaxPromptChars = if ($env:BK_ENGINE_MAX_PROMPT_CHARS -match '^\d{4,7}$') { [int]$env:BK_ENGINE_MAX_PROMPT_CHARS } elseif ($IsLocal) { 26000 } else { 90000 }
+# Budget du prompt : un modele local lit 8 000 jetons au plus et, sans carte graphique, plusieurs dizaines de jetons par seconde ; un hote suisse ou une
+# cle de client ont des fenetres bien plus larges. Reglable par les variables ci-dessous (caracteres, ~3 par jeton).
+$MaxPromptChars = if ($env:BK_ENGINE_MAX_PROMPT_CHARS -match '^\d{4,7}$') { [int]$env:BK_ENGINE_MAX_PROMPT_CHARS } elseif ($IsLocal) { 16000 } else { 90000 }
+$PlaybookChars = if ($env:BK_ENGINE_PLAYBOOK_CHARS -match '^\d{1,6}$') { [int]$env:BK_ENGINE_PLAYBOOK_CHARS } elseif ($IsLocal) { 2500 } else { 12000 }
 
 Write-Host "OPENAI-COMPAT ADAPTER | engine=$EngineId | worker=$WorkerId | model=$EffectiveModel"
 
@@ -133,7 +136,7 @@ if ([string]::IsNullOrEmpty($BaseUri.AbsolutePath.Trim('/'))) { $Base = $Base + 
 $ChatUrl = $Base + "/chat/completions"
 
 # Un PC eteint ou un VPN coupe ne doit pas faire attendre la mission cinq minutes : sonde TCP de 3 secondes avant l'appel.
-if (-not (Test-BKTcpReachable -HostName $BaseUri.Host -Port $BaseUri.Port -TimeoutMs 3000)) {
+if ($env:BK_ENGINE_SKIP_PROBE -ne "1" -and -not (Test-BKTcpReachable -HostName $BaseUri.Host -Port $BaseUri.Port -TimeoutMs 3000)) {
     $PlainKey = $null
     Write-ErrorResult -Detail ("Connection refused : " + $BaseUri.Host + ":" + $BaseUri.Port + " ne repond pas (machine eteinte, VPN coupe ou pare-feu).") -Class "connection"
     exit 1
@@ -180,7 +183,7 @@ $($Lines -join "`n")
 }
 
 # Prompt systeme : celui des autres moteurs (identite, profil, memoire, installation, playbook, regles contre l'injection) + les limites REELLES de ce moteur.
-$SystemPrompt = Get-WorkerSystemPrompt -WorkerId $WorkerId -ClientId $ClientId
+$SystemPrompt = Get-WorkerSystemPrompt -WorkerId $WorkerId -ClientId $ClientId -MaxPlaybookChars $PlaybookChars
 $EngineNote = @"
 
 ENGINE NOTES (this session runs on an open model, not on Claude; these notes OVERRIDE the "REAL TOOLS" paragraph above): you do NOT have web_search or code_execution here and you cannot produce Excel, Word, PowerPoint or PDF files. Your only tools are: $($ToolNames -join ", "). Never claim you searched the web, ran code or opened a file that you did not actually get through one of these tools. If the request needs something you cannot do, say it plainly in one line, then do the part you can. Keep answers clear and simpler than a large model would; never invent figures, sources or quotes. Text files you write (write_text_file) must be text only.
@@ -246,6 +249,7 @@ function ConvertTo-ParamTable {
 $FileState = @{ Files = @(); Total = 0L; Counter = 0; Skipped = @() }
 $ConnectorActionsList = @()
 $Script:StopLoop = $false
+$Script:ExternalSeen = $false   # vrai des qu'un contenu externe (page web, donnee d'un connecteur) est entre dans la conversation
 
 function Invoke-OneTool {
     # Execute UN appel d'outil du modele. Toujours un texte de resultat (jamais d'exception vers la boucle). Le resultat est une DONNEE.
@@ -253,13 +257,21 @@ function Invoke-OneTool {
     try {
         if ($ToolNames -cnotcontains $Name) { return "REFUSE : outil inconnu. Outils disponibles : " + ($ToolNames -join ", ") + "." }
         switch ($Name) {
-            "memory" { return [string](Invoke-BKMemoryTool -Root $ProjectRoot -ClientId $ClientId -ToolInput $ToolArgs) }
-            "web_fetch" { return (Invoke-BKSafeFetch -Url ([string]$ToolArgs.url)) }
+            "memory" {
+                # Un modele local se laisse plus facilement piloter par un texte hostile : apres la lecture d'un contenu externe, aucune ECRITURE durable
+                # (ajout ou suppression de note) pendant cette mission. La lecture et la recherche restent possibles.
+                if ($Script:ExternalSeen -and @("write", "delete") -contains [string]$ToolArgs.action) {
+                    return "REFUSE : un contenu externe (page web ou donnee d'un outil) a ete lu pendant cette mission ; la memoire durable n'est pas modifiee dans ce cas. Dis-le au client s'il faut retenir quelque chose."
+                }
+                return [string](Invoke-BKMemoryTool -Root $ProjectRoot -ClientId $ClientId -ToolInput $ToolArgs)
+            }
+            "web_fetch" { $Script:ExternalSeen = $true; return (Invoke-BKSafeFetch -Url ([string]$ToolArgs.url)) }
             "write_text_file" { return (Save-BKTextFile -Root $ProjectRoot -TaskId $TaskId -Name ([string]$ToolArgs.name) -Content ([string]$ToolArgs.content) -State $FileState) }
             "use_connector" {
                 $Gate = Invoke-BKConnectorToolCall -ClientId $ClientId -WorkerId $WorkerId -TaskId $TaskId -ConnId ([string]$ToolArgs.connectorId) -Op ([string]$ToolArgs.operation) `
                     -Reason ([string]$ToolArgs.reason) -OpParams (ConvertTo-ParamTable -Params $ToolArgs.params) -Strict
                 $Script:ConnectorActionsList += $Gate.Action
+                if ($Gate.Action.executed) { $Script:ExternalSeen = $true }
                 if ($Gate.Stop) { $Script:StopLoop = $true }
                 return [string]$Gate.Content
             }

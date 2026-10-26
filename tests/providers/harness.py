@@ -18,6 +18,7 @@ CLIENT = "CLI-CUST-0000AAAA"
 
 DRIVER = r'''
 $ErrorActionPreference = "Stop"
+if ($env:T_PRE) { . ([scriptblock]::Create($env:T_PRE)) }
 $Splat = @{ ClientId = $env:T_CLIENT; ProjectId = "PROJ-T"; WorkerId = "noah"; TaskId = $env:T_TASK; Objective = $env:T_OBJECTIVE; Model = $env:T_MODEL }
 if ($env:T_SPLAT) { foreach ($P in ($env:T_SPLAT | ConvertFrom-Json).PSObject.Properties) { $Splat[$P.Name] = $P.Value } }
 $Out = & (Join-Path $env:BK_ROOT $env:T_SCRIPT) @Splat
@@ -26,20 +27,35 @@ $Exit = $LASTEXITCODE
 '''
 
 
+_TEMPLATE = {}
+
+
+def _template():
+    """Copie de reference construite UNE fois par processus (sous WSL, lire le depot sur le disque Windows est lent) : chaque racine jetable
+    est ensuite une copie locale de celle-ci."""
+    if "dir" not in _TEMPLATE:
+        d = tempfile.mkdtemp(prefix="bkprov-tpl-")
+        shutil.copytree(os.path.join(REPO, "core"), os.path.join(d, "core"),
+                        ignore=shutil.ignore_patterns("client-credentials", "accounts", "__pycache__", "*.pyc"))
+        os.makedirs(os.path.join(d, "dashboard"), exist_ok=True)
+        for name in ("net_policy.py", "safe_fetch.py"):
+            shutil.copy2(os.path.join(REPO, "dashboard", name), os.path.join(d, "dashboard", name))
+        src = os.path.join(REPO, "workers", "noah", "identity")
+        dst = os.path.join(d, "workers", "noah", "identity")
+        os.makedirs(dst, exist_ok=True)
+        for fname in ("identity.json", "playbook.md"):
+            if os.path.isfile(os.path.join(src, fname)):
+                shutil.copy2(os.path.join(src, fname), os.path.join(dst, fname))
+        _TEMPLATE["dir"] = d
+        import atexit
+        atexit.register(shutil.rmtree, d, True)
+    return _TEMPLATE["dir"]
+
+
 def make_root(activated=(), auto_approve=False, extra=None):
     """Racine jetable : core/ (sans identifiants ni comptes), les deux modules Python du web_fetch, l'identite d'un Worker, le dossier de test."""
     root = tempfile.mkdtemp(prefix="bkprov-")
-    shutil.copytree(os.path.join(REPO, "core"), os.path.join(root, "core"),
-                    ignore=shutil.ignore_patterns("client-credentials", "accounts", "__pycache__", "*.pyc"))
-    os.makedirs(os.path.join(root, "dashboard"), exist_ok=True)
-    for name in ("net_policy.py", "safe_fetch.py"):
-        shutil.copy2(os.path.join(REPO, "dashboard", name), os.path.join(root, "dashboard", name))
-    src = os.path.join(REPO, "workers", "noah", "identity")
-    dst = os.path.join(root, "workers", "noah", "identity")
-    os.makedirs(dst, exist_ok=True)
-    for fname in ("identity.json", "playbook.md"):
-        if os.path.isfile(os.path.join(src, fname)):
-            shutil.copy2(os.path.join(src, fname), os.path.join(dst, fname))
+    shutil.copytree(_template(), root, dirs_exist_ok=True)
     for sub in ("_test", "memory/runtime", "runtime/tasks", "core/connectors/data", "core/ai/data", "runtime/engine"):
         os.makedirs(os.path.join(root, sub), exist_ok=True)
     if activated:

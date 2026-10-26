@@ -727,7 +727,8 @@ def resolve_plan(root, client_id, level, objective="", *, trial=False, byok=None
         label = engine_label("byok", byok.get("model"), kind)
         entry = {"id": "byok", "adapter": kind, "model": byok.get("model") or ((level_cfg or {}).get("model") if kind == "anthropic" else None),
                  "local": False, "free": False, "byok": True, "kind": kind, "label": label,
-                 "caps": _caps_for_plan(capabilities_for("byok", kind)), "summary": engine_summary("byok", byok.get("model"), kind), "timeoutSec": 180}
+                 "caps": _caps_for_plan(capabilities_for("byok", kind)), "summary": engine_summary("byok", byok.get("model"), kind), "timeoutSec": 180,
+                 "url": byok.get("endpoint"), "allowedHosts": byok_allowed_hosts(settings)}
         plan.update(explicit=True, reason="byok", preferred="byok", chain=[entry], byok=True, creditsFreeOnFailover=False)
         return plan
 
