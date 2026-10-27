@@ -360,8 +360,13 @@ def og_png(site, width=1200, height=630):
 
 
 # ------------------------------------------------------------------ gabarits du kit
+_CODE_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
 def templates_dir(root=None):
-    return os.path.join(root or ROOT, *TEMPLATES_REL)
+    """Gabarits du kit sous `root`, sinon ceux livrés avec le code (un dossier de données sans copie du dépôt ne casse pas l'atelier)."""
+    d = os.path.join(root or ROOT, *TEMPLATES_REL)
+    return d if os.path.isdir(d) else os.path.join(_CODE_ROOT, *TEMPLATES_REL)
 
 
 def load_profile(profile, root=None):
@@ -384,7 +389,8 @@ def load_sections(lang, root=None):
 
 def guide_text(root=None):
     try:
-        return _read(os.path.join(root or ROOT, *GUIDE_REL), 200 * 1024)
+        path = os.path.join(root or ROOT, *GUIDE_REL)
+        return _read(path if os.path.isfile(path) else os.path.join(_CODE_ROOT, *GUIDE_REL), 200 * 1024)
     except (OSError, SiteError):
         return ""
 

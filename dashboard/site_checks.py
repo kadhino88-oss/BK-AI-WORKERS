@@ -28,9 +28,16 @@ _CONFIG_CACHE = {}
 
 
 # ------------------------------------------------------------------ configuration
+_CODE_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
 def load_config(root=None):
+    """Seuils de core/projects/site/site-checks.json. Si le fichier manque sous `root` (dossier de données sans copie du dépôt), celui livré
+    avec le code fait foi : un contrôle de sécurité ne tourne jamais avec des seuils vides."""
     root = root or ROOT
     path = os.path.join(root, *CONFIG_REL)
+    if not os.path.isfile(path):
+        path = os.path.join(_CODE_ROOT, *CONFIG_REL)
     try:
         mt = os.path.getmtime(path)
     except OSError:
@@ -42,9 +49,26 @@ def load_config(root=None):
         with open(path, encoding="utf-8-sig") as f:
             cfg = json.load(f)
     except (OSError, ValueError):
-        cfg = {"default": {}, "profiles": {}, "families": [], "alwaysRun": []}
+        cfg = None
+    if not isinstance(cfg, dict) or not isinstance(cfg.get("default"), dict) or "title" not in cfg["default"]:
+        cfg = _BUILTIN_CONFIG
     _CONFIG_CACHE[root] = (mt, cfg)
     return cfg
+
+
+# Seuils de secours (les mêmes que le fichier livré) si le fichier de réglage est illisible : les règles tournent quand même.
+_BUILTIN_CONFIG = {
+    "families": ["html", "meta", "links", "img", "a11y", "perf", "privacy", "i18n", "seo", "content"],
+    "alwaysRun": ["privacy.trackers", "claims.unverified", "abuse.credential_form"],
+    "default": {"maxPages": 60, "title": {"min": 30, "max": 60, "hardMin": 15, "hardMax": 75}, "description": {"min": 70, "max": 160, "hardMin": 40, "hardMax": 200},
+                "perf": {"htmlKb": 100, "cssKb": 100, "jsKb": 50, "pageKb": 1024, "totalMb": 10, "imgKb": 250}, "contrast": {"normal": 4.5},
+                "requireParity": True, "requireCanonical": True, "requireOrphanCheck": True, "requireSkipLink": "warn", "requireReducedMotion": "warn", "requireLazy": "warn"},
+    "profiles": {"landing": {"requireParity": False, "requireOrphanCheck": False, "maxPages": 12}},
+    "trackerHosts": ["google-analytics.com", "googletagmanager.com", "doubleclick.net", "connect.facebook.net", "hotjar.com", "clarity.ms", "snap.licdn.com", "analytics.tiktok.com"],
+    "trackerPatterns": [r"\bgtag\s*\(", r"\bfbq\s*\("],
+    "claimPatterns": [{"id": "rating", "kind": "ratings", "re": r"\b\d(?:[.,]\d)?\s*/\s*5\b|aggregateRating", "label": "note ou étoiles"}],
+    "credentialFieldNames": ["password", "mot[-_ ]?de[-_ ]?passe", "card", "carte", "cvv", "iban"],
+}
 
 
 def profile_config(cfg, profile):
