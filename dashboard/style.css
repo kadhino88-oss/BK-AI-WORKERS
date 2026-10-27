@@ -1540,6 +1540,85 @@ a:focus-visible,
 
 .billing-hire { margin-top: 12px; font-size: 13.5px; color: var(--ink-muted); }
 
+/* ---------- LIMITES D'USAGE : session (4 h), semaine ; pastille de la barre du haut ----------
+   Meme logique que les limites de Claude. Trois niveaux, jamais la couleur seule (texte + icone) : ok, warn (des 80 %), full (100 %). Le contraste du
+   texte d'alerte (#8a4b00 sur #fff7e6, #92351f sur #fdece8) depasse 4,5:1. */
+.usage-windows {
+  margin: 0 0 18px;
+  padding: 16px 18px;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+}
+.usage-windows[hidden], .usage-chip[hidden], .usage-banner[hidden] { display: none; }
+.usage-windows-title { font-size: 15px; margin: 0 0 4px; }
+.usage-windows-sub { margin: 0 0 14px; font-size: 13px; color: var(--ink-muted); }
+.usage-meters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 22px; }
+.usage-meter { min-width: 0; }
+.usage-meter-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+.usage-meter-name { font-weight: 700; font-size: 14px; }
+.usage-meter-figures { font-size: 13px; color: var(--ink-muted); }
+.usage-meter-figures strong { color: var(--ink); }
+.usage-meter-track { width: 100%; height: 10px; border-radius: 999px; background: rgba(0, 0, 0, 0.07); overflow: hidden; }
+.usage-meter-fill { height: 100%; border-radius: 999px; background: var(--gold); transition: width 0.3s ease; }
+.usage-meter[data-level="warn"] .usage-meter-fill { background: #b26b00; }
+.usage-meter[data-level="full"] .usage-meter-fill { background: var(--danger); }
+.usage-meter-foot { display: flex; justify-content: space-between; gap: 4px 12px; flex-wrap: wrap; margin-top: 6px; font-size: 12.5px; color: var(--ink-muted); }
+.usage-meter-left strong { color: var(--ink); }
+.usage-meter-alert { margin: 8px 0 0; padding: 8px 10px; border-radius: var(--radius-sm); font-size: 12.5px; line-height: 1.4; }
+.usage-meter[data-level="warn"] .usage-meter-alert { color: #8a4b00; background: #fff7e6; border: 1px solid rgba(217, 154, 28, 0.45); }
+.usage-meter[data-level="full"] .usage-meter-alert { color: #92351f; background: #fdece8; border: 1px solid rgba(192, 57, 43, 0.3); }
+.usage-upgrade { margin-top: 14px; }
+.usage-limit-reset, .usage-limit-next { margin: 6px 0 0; font-size: 13px; color: var(--ink-muted); }
+.usage-limit-reset time { color: var(--ink); font-weight: 600; }
+.billing-plan-limits { font-size: 13px; color: var(--ink-muted); margin-bottom: 4px; }
+.plan-usage { font-size: 12.5px; color: var(--ink-muted); margin: -2px 0 10px; }
+.plan-usage strong { color: var(--ink); }
+
+.usage-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px 4px 5px;
+  border: 1px solid var(--card-border);
+  border-radius: 999px;
+  background: var(--bg-elevated);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  --usage-color: var(--gold);
+}
+.usage-chip:hover { border-color: var(--gold-light); }
+.usage-chip:focus-visible, .usage-windows button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.usage-chip[data-level="warn"] { --usage-color: #b26b00; border-color: rgba(178, 107, 0, 0.6); }
+.usage-chip[data-level="full"] { --usage-color: var(--danger); border-color: rgba(213, 69, 63, 0.6); }
+.usage-chip-ring {
+  --p: 0;
+  position: relative;
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: conic-gradient(var(--usage-color) calc(var(--p) * 1%), rgba(0, 0, 0, 0.09) 0);
+}
+.usage-chip-ring::after { content: ""; position: absolute; inset: 5px; border-radius: 50%; background: var(--bg-elevated); }
+
+@media (max-width: 720px) {
+  .usage-meters { grid-template-columns: 1fr; }
+  .usage-windows { padding: 14px; }
+}
+/* Etroit : la pastille ne garde que l'anneau (38 px, comme les autres boutons du haut) ; le texte reste pour le lecteur d'ecran et l'infobulle. */
+@media (max-width: 520px) {
+  .usage-chip { flex: 0 0 auto; width: 38px; height: 38px; padding: 0; justify-content: center; gap: 0; }
+  .usage-chip-text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .usage-meter-fill { transition: none; }
+}
+
 .billing-section-title {
   font-size: 18px;
   margin: 30px 0 14px;

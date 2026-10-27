@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "creditCostChf": 0.0375,
+  "weeklyDivisor": 4.35,
+  "sessionShareOfWeek": 0.40,
+  "sessionHours": 4,
+  "weekDays": 7,
+  "minSessionCredits": 12,
+  "minStartCredits": 6,
+  "reservationTtlSec": {"mission": 720, "project_step": 900, "automation": 300},
+  "exemptClients": ["CLI-DASHBOARD", "CLI-TRIAL-PUBLIC"],
+  "exemptPlans": ["essai"],
+  "overridesByClient": {},
+  "warnPercent": 80,
+  "reconcileIntervalSec": 21600,
+  "seedLookbackDays": 35,
+  "displayTimezone": "Europe/Zurich"
+}
