@@ -2787,6 +2787,8 @@ const CHLOE_STATUS_LABELS = {
   NO_WORKER_MATCHED: "Clarification",
   PARTIAL_SUCCESS: "Partiellement traité",
   BLOCKED: "Bloqué",
+  SUGGEST_PROJECT: "Projet proposé",
+  WORKER_NOT_INCLUDED: "Non inclus dans votre forfait",
 };
 function chloeStatusLabel(status) {
   return CHLOE_STATUS_LABELS[status] || status;
@@ -3452,6 +3454,129 @@ function renderTaskFilesBlock(taskId, files) {
   return el;
 }
 
+// ===== CHLOE-TEAM BEGIN : une mission de Chloe repartie entre plusieurs Workers (2026-10-19) =====
+// Le serveur renvoie : Sections (une par Worker : statut, ce qui lui etait demande, reponse, fichiers), Overview (le resume de Chloe SANS les reponses),
+// pendingActions (chaque action preparee, avec le Worker qui l'a preparee) et HireOffer (les Workers a embaucher pour le reste). Tout texte est echappe.
+const CHLOE_SECTION_LABELS = { DONE: "Terminé", FAILED: "Échec", BLOCKED: "Non lancé", DEFERRED: "Reporté", TIMED_OUT: "Interrompu (délai)" };
+const CHLOE_SECTION_TONE = { DONE: "ok", FAILED: "bad", TIMED_OUT: "bad", BLOCKED: "wait", DEFERRED: "wait" };
+
+function chloeWorkerPortrait(workerId) {
+  const w = (typeof allWorkers !== "undefined" ? allWorkers : []).find((x) => x.id === workerId);
+  return w && w.portraitUrl ? String(w.portraitUrl) : "";
+}
+
+// Boutons « Embaucher X » pour les Workers que le forfait ne comprend pas (Trio : ceux qui manquent a Chloe).
+function chloeHireActions(result, closeFab) {
+  const offer = result && result.HireOffer;
+  const ids = offer && Array.isArray(offer.workers) ? offer.workers.map((w) => String(w).toLowerCase()).filter((w) => w && w !== "chloe") : [];
+  if (!ids.length) return null;
+  const box = document.createElement("div");
+  box.className = "iw-notice-actions chloe-hire-actions";
+  ids.slice(0, 4).forEach((id) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "btn btn-gold";
+    b.innerHTML = `<span>Embaucher</span> <strong>${escapeHtml(workerNameById(id))}</strong>`;
+    b.addEventListener("click", () => { if (closeFab) closeFab(); iwGoHire(id); });
+    box.appendChild(b);
+  });
+  return box;
+}
+
+// Carte d'un Worker : qui, ce qu'on lui a demande, son resultat, ses fichiers et SES actions a valider.
+function renderChloeWorkerCard(section, pendingActions) {
+  const tone = CHLOE_SECTION_TONE[section.status] || "wait";
+  const card = document.createElement("section");
+  card.className = `chloe-worker-card chloe-worker-${tone}`;
+  const portrait = chloeWorkerPortrait(section.worker);
+  const label = CHLOE_SECTION_LABELS[section.status] || section.statusLabel || section.status || "";
+  const seconds = Number(section.durationSec) > 0 ? ` · ${Number(section.durationSec)} s` : "";
+  card.innerHTML = `<header class="chloe-worker-head">
+      ${portrait ? `<img class="chloe-worker-portrait" src="${escapeHtml(portrait)}" alt="" width="36" height="36">` : ""}
+      <div class="chloe-worker-title"><strong>${escapeHtml(section.workerName || section.worker)}</strong><span class="chloe-worker-step">${escapeHtml(section.step || "")}${escapeHtml(seconds)}</span></div>
+      <span class="chloe-worker-chip">${escapeHtml(label)}</span>
+    </header>
+    <p class="chloe-worker-asked"><span>Demandé :</span> ${escapeHtml(section.objective || "")}</p>`;
+  if (section.note) {
+    const note = document.createElement("p");
+    note.className = "chloe-worker-note";
+    note.textContent = section.note;
+    card.appendChild(note);
+  }
+  if (section.answer) {
+    const long = String(section.answer).length > 900;
+    const details = document.createElement("details");
+    details.className = "chloe-worker-details";
+    if (!long) details.open = true;
+    details.innerHTML = `<summary>${escapeHtml(long ? "Voir la réponse de " + (section.workerName || section.worker) : "Réponse")}</summary><div class="chloe-worker-answer">${renderAnswer(section.answer)}</div>`;
+    card.appendChild(details);
+  }
+  const files = renderTaskFilesBlock(section.taskId, section.files);
+  if (files) card.appendChild(files);
+  (pendingActions || []).forEach((p) => card.appendChild(renderPendingActionCard(p)));
+  return card;
+}
+
+// Affiche le resultat d'une mission de Chloe dans `responseEl` (le message) et `turn` (cartes par Worker, fichiers, actions a valider). Un seul Worker
+// et sans incident : l'affichage d'avant. Plusieurs Workers, ou une partie qui n'a pas abouti : l'apercu de Chloe puis une carte par Worker.
+function renderChloeResult(result, turn, responseEl, closeFab) {
+  const sections = Array.isArray(result.Sections) ? result.Sections : [];
+  const pendings = Array.isArray(result.pendingActions) ? result.pendingActions : (result.pendingAction ? [result.pendingAction] : []);
+  const blocked = result.Status !== "SUCCESS";
+  const workers = (result.SelectedWorkers || []).join(", ");
+  const statusLine = blocked ? (chloeStatusLabel(result.Status) || "Aucun Worker identifié") : `Traité par : ${workers}`;
+  responseEl.className = "chat-msg chat-msg-worker" + (blocked ? " needs-chloe" : "");
+  const team = sections.length > 1 || sections.some((s) => s.status !== "DONE");
+  if (!team) {
+    responseEl.innerHTML = `<div class="status-line">${escapeHtml(statusLine)}</div>${renderAnswer(result.FinalSynthesis || "Aucune synthèse disponible.")}`;
+    const hire = chloeHireActions(result, closeFab);
+    if (hire) responseEl.appendChild(hire);
+    if (Array.isArray(result.Results)) {
+      result.Results.forEach((r) => {
+        if (r && r.Result && Array.isArray(r.Result.Files)) {
+          const block = renderTaskFilesBlock(r.Result.TaskId, r.Result.Files);
+          if (block) turn.appendChild(block);
+        }
+      });
+    }
+    pendings.forEach((p) => turn.appendChild(renderPendingActionCard(p)));
+    return;
+  }
+  const done = sections.filter((s) => s.status === "DONE").length;
+  const head = result.Status === "SUCCESS" ? `Traité par ${sections.length} Workers` : `${done} sur ${sections.length} Workers ont terminé`;
+  responseEl.innerHTML = `<div class="status-line">${escapeHtml(head)}</div>${renderAnswer(result.Overview || result.FinalSynthesis || "Aucune synthèse disponible.")}`;
+  const hire = chloeHireActions(result, closeFab);
+  if (hire) responseEl.appendChild(hire);
+  const matched = new Set();
+  const grid = document.createElement("div");
+  grid.className = "chloe-team";
+  sections.forEach((s) => {
+    const mine = pendings.filter((p) => p.taskId && p.taskId === s.taskId);
+    mine.forEach((p) => matched.add(p));
+    grid.appendChild(renderChloeWorkerCard(s, mine));
+  });
+  turn.appendChild(grid);
+  pendings.filter((p) => !matched.has(p)).forEach((p) => turn.appendChild(renderPendingActionCard(p)));
+}
+
+// Attente d'une mission en arriere-plan : place dans la file quand le serveur est occupe, et, pour Chloe, ou en est chaque Worker.
+function updateMissionProgress(responseEl, job) {
+  const text = responseEl && responseEl.querySelector(".task-loading-text");
+  if (!text || !job) return;
+  if (job.status === "QUEUED") {
+    text.textContent = Number(job.queuePosition) > 1
+      ? `Le service est très sollicité : votre mission est la n°${Number(job.queuePosition)} dans la file…`
+      : "Le service est très sollicité : votre mission démarre dès qu'une place se libère…";
+    return;
+  }
+  const tasks = job.progress && Array.isArray(job.progress.tasks) ? job.progress.tasks : [];
+  if (tasks.length > 1) {
+    const mark = { DONE: "✓", RUNNING: "…", FAILED: "✗", TIMED_OUT: "✗", BLOCKED: "–", DEFERRED: "–", PENDING: "·" };
+    text.textContent = "Chloé coordonne : " + tasks.map((t) => `${t.name || t.worker} ${mark[t.status] || ""}`.trim()).join(" · ");
+  }
+}
+// ===== CHLOE-TEAM END =====
+
 // Niveau de travail (Rapide / Equilibre / Approfondi) : memorise sur l'appareil, envoye avec chaque mission.
 let missionLevels = { default: "", levels: [] };
 function currentMissionLevel() {
@@ -3605,7 +3730,7 @@ async function runTask(objective) {
     // (envoi + interrogation : submitMissionAndWait, partage avec l'essai a
     // blanc de l'assistant d'installation.)
     const missionWorkerId = currentWorkerId;
-    const outcome = await submitMissionAndWait(missionWorkerId, objective);
+    const outcome = await submitMissionAndWait(missionWorkerId, objective, (job) => updateMissionProgress(responseEl, job));
 
     if (outcome.accountRequired) {
       turn.remove();
@@ -3652,11 +3777,8 @@ async function runTask(objective) {
       errorEl.textContent = "Erreur : " + (result.detail || result.error);
       errorEl.hidden = false;
     } else if (currentWorkerId === "chloe") {
-      const blocked = result.Status !== "SUCCESS";
-      responseEl.className = "chat-msg chat-msg-worker" + (blocked ? " needs-chloe" : "");
-      const workers = (result.SelectedWorkers || []).join(", ");
-      const statusLine = blocked ? (chloeStatusLabel(result.Status) || "Aucun Worker identifié") : `Traité par : ${workers}`;
-      responseEl.innerHTML = `<div class="status-line">${statusLine}</div>${renderAnswer(result.FinalSynthesis || "Aucune synthèse disponible.")}`;
+      // Une carte par Worker (resultat, fichiers, actions a valider) quand la mission en a plusieurs ; l'affichage d'avant pour un seul Worker.
+      renderChloeResult(result, turn, responseEl, null);
     } else {
       const needsChloe = result.Status === "NEEDS_CHLOE_VERIFICATION";
       const blocked = result.Authorized !== true;
@@ -3669,18 +3791,13 @@ async function runTask(objective) {
     }
     // Fichiers produits (telechargement) — branche Chloe (un TaskId par
     // Worker dans Results[]) ou branche directe (result.Result.TaskId).
-    if (currentWorkerId === "chloe" && Array.isArray(result.Results)) {
-      result.Results.forEach((r) => {
-        if (r && r.Result && Array.isArray(r.Result.Files)) {
-          const block = renderTaskFilesBlock(r.Result.TaskId, r.Result.Files);
-          if (block) turn.appendChild(block);
-        }
-      });
+    if (currentWorkerId === "chloe") {
+      // fichiers, cartes par Worker et actions a valider : deja ajoutes par renderChloeResult (une carte de confirmation par action, sous son Worker)
     } else if (result.Result && Array.isArray(result.Result.Files) && result.Result.Files.length) {
       const block = renderTaskFilesBlock(result.Result.TaskId, result.Result.Files);
       if (block) turn.appendChild(block);
     }
-    if (result.pendingAction) {
+    if (currentWorkerId !== "chloe" && result.pendingAction) {
       turn.appendChild(renderPendingActionCard(result.pendingAction));
     }
     turn.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -3765,11 +3882,20 @@ async function runChloeFabTask(objective) {
   const responseEl = turn.querySelector(".chat-msg-worker");
 
   try {
-    const result = await fetchJson("/api/chloe/task", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ objective }),
-    });
+    // Mission en arriere-plan comme sur la fiche (file d'attente quand le serveur est occupe, avancement Worker par Worker) : une mission a plusieurs Workers
+    // peut durer plusieurs minutes, trop pour une requete HTTP qui reste ouverte.
+    const outcome = await submitMissionAndWait("chloe", objective, (job) => updateMissionProgress(responseEl, job));
+    if (outcome.accountRequired) {
+      turn.remove();
+      requireAccount(() => runChloeFabTask(objective));
+      return;
+    }
+    if (outcome.timedOut) {
+      responseEl.className = "chat-msg chat-msg-worker needs-chloe";
+      responseEl.innerHTML = `<div class="status-line">Toujours en cours</div><p>La mission prend plus de temps que prévu. Elle continue en arrière-plan — réessayez dans un instant.</p>`;
+      return;
+    }
+    const result = outcome.result;
 
     if (result.error === "ACCOUNT_REQUIRED") {
       turn.remove();
@@ -3795,14 +3921,7 @@ async function runChloeFabTask(objective) {
       responseEl.className = "chat-msg chat-msg-worker blocked";
       responseEl.innerHTML = `<div class="status-line">Erreur</div><p>${escapeHtml(result.detail || result.error)}</p>`;
     } else {
-      const blocked = result.Status !== "SUCCESS";
-      responseEl.className = "chat-msg chat-msg-worker" + (blocked ? " needs-chloe" : "");
-      const workers = (result.SelectedWorkers || []).join(", ");
-      const statusLine = blocked ? (chloeStatusLabel(result.Status) || "Aucun Worker identifié") : `Traité par : ${workers}`;
-      responseEl.innerHTML = `<div class="status-line">${statusLine}</div>${renderAnswer(result.FinalSynthesis || "Aucune synthèse disponible.")}`;
-    }
-    if (result.pendingAction) {
-      turn.appendChild(renderPendingActionCard(result.pendingAction));
+      renderChloeResult(result, turn, responseEl, closeChloeFab);
     }
     turn.scrollIntoView({ behavior: "smooth", block: "end" });
   } catch (err) {
@@ -4873,7 +4992,7 @@ async function iwSetStatus(workerId, status) {
 
 // Lance une mission en arriere-plan et attend son resultat. Renvoie { result } (resultat final ou erreur), { accountRequired: true } ou { timedOut: true }.
 // Utilise par la fiche (runTask) et par l'essai a blanc de l'assistant : une seule facon de faire, un seul garde-fou serveur.
-async function submitMissionAndWait(workerId, objective) {
+async function submitMissionAndWait(workerId, objective, onUpdate) {
   const endpoint = workerId === "chloe" ? "/api/chloe/task" : `/api/workers/${workerId}/task`;
   const started = await fetchJson(endpoint + "/async", {
     method: "POST",
@@ -4905,6 +5024,7 @@ async function submitMissionAndWait(workerId, objective) {
     }
     if (job.error === "ACCOUNT_REQUIRED") return { accountRequired: true };
     if (job.error) return { result: job };
+    if (typeof onUpdate === "function") { try { onUpdate(job); } catch (e) { /* l'affichage de l'attente ne doit jamais casser la mission */ } }
     if (job.status === "DONE") return { result: job.result || {} };
     if (job.status === "ERROR") {
       // Worker non embauche (verifie une seconde fois par le job) : l'interface propose alors d'embaucher, pas un message technique.
