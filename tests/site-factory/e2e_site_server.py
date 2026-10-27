@@ -99,7 +99,13 @@ def main():
         with open(os.path.join(app, "_e2e", "wrapper.py"), "w", encoding="utf-8") as f:
             f.write(WRAPPER)
         E.put_scenario(app, T.scenario())
-        proc, port = E.start_server(app, True)
+        try:
+            proc, port = E.start_server(app, True)
+        except SystemExit:
+            with open(os.path.join(app, "_e2e", "server-on.log"), encoding="utf-8", errors="replace") as f:
+                print("---- journal du serveur ----")
+                print("".join(f.readlines()[-40:]))
+            raise
         procs.append(proc)
         check = E.check
         alice, a_id = E.signup(port, "alice@mail-test.example", "198.51.100.31")

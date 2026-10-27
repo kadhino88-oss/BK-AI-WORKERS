@@ -4715,7 +4715,11 @@ import projects_wiring
 # Moteur de projets (dashboard/projects*.py, docs/AUTONOMY-ENGINE.md) : DORMANT tant que BK_PROJECTS n'est pas 1 (routes en 503, superviseur arrete).
 PROJECTS, PROJECTS_API = projects_wiring.build(projects_wiring.ModuleView(globals()))
 # Apercu prive des sites de projet (dashboard/site_preview.py, cree par site_routes.register) : contexte de securite separe (CSP sandbox).
-SITE_PREVIEW = getattr(sys.modules.get("site_routes"), "PREVIEW", None)
+try:
+    import site_routes as _site_routes    # deja charge par projects_wiring.build
+    SITE_PREVIEW = _site_routes.PREVIEW
+except Exception:  # noqa: BLE001 - un module optionnel ne casse jamais le serveur
+    SITE_PREVIEW = None
 
 
 class Handler(BaseHTTPRequestHandler):
