@@ -25,7 +25,7 @@
 // dans le cache, et seulement une reponse 200 de meme origine sans "no-store" ni
 // "private". Les reponses de l'API (comptes, missions, facturation) ne passent
 // jamais par ici : rien d'authentifie n'est conserve hors-ligne.
-const CACHE_NAME = "bk-shell-v2";
+const CACHE_NAME = "bk-shell-v3";
 const CACHE_PREFIX = "bk-shell-";
 const OFFLINE_URL = "/offline.html";
 

@@ -287,6 +287,7 @@ async function afterAccountUnlocked() {
   accountAuthenticated = true;
   syncAccountButtonLabel();
   refreshUsage();
+  window.BKProjects?.onAccount();
   document.getElementById("account-modal").hidden = true;
   const action = pendingAccountAction;
   pendingAccountAction = null;
@@ -372,6 +373,7 @@ async function submitGatePassword() {
     isOperator = true;
     syncAdminNavVisibility();
     applyUsage(null);       // le proprietaire n'a ni jauge ni pastille d'usage
+    window.BKProjects?.onAccount();
     document.getElementById("gate-modal").hidden = true;
     const action = pendingGateAction;
     pendingGateAction = null;
@@ -396,6 +398,7 @@ const NAV_LINK_VIEW_MAP = {
   "nav-faq": "faq",
   "nav-billing": "billing",
   "nav-admin": "admin",
+  "nav-projets": "projets",
 };
 
 function syncActiveNavLink(name) {
@@ -428,6 +431,7 @@ function showView(name) {
   legalView.hidden = name !== "legal";
   profileView.hidden = name !== "profile";
   adminView.hidden = name !== "admin";
+  window.BKProjects?.onShowView(name);     // vue « Projets » (project_ui.js) : affichee, ou masquee et son interrogation arretee
   syncActiveNavLink(name);
   window.scrollTo(0, 0);
   // Rejoue la transition d'entree a chaque changement de vue : sans ce
@@ -3139,6 +3143,7 @@ async function openWorkerProfile(workerId) {
 
   document.getElementById("activity-block").hidden = false;
   loadInstallPanel(workerId);          // « Installer ce Worker » ou « Embaucher ce Worker » selon le forfait
+  window.BKProjects?.onWorkerProfile(workerId);   // « Lancer un projet » (project_ui.js, seulement si les projets sont actifs)
   await loadActivity(workerId);
 }
 
@@ -3148,6 +3153,7 @@ async function openChloeProfile() {
   const w = await fetchJson("/api/chloe");
   fillProfileCommon(w);
   loadInstallPanel("chloe");           // Chloe ne s'installe ni ne s'embauche : le panneau se masque
+  window.BKProjects?.onWorkerProfile("chloe");
 
   document.getElementById("profile-role").textContent = "Orchestratrice — comprend, répartit, vérifie";
   document.getElementById("activity-block").hidden = false;
@@ -3531,6 +3537,7 @@ function renderChloeResult(result, turn, responseEl, closeFab) {
     responseEl.innerHTML = `<div class="status-line">${escapeHtml(statusLine)}</div>${renderAnswer(result.FinalSynthesis || "Aucune synthèse disponible.")}`;
     const hire = chloeHireActions(result, closeFab);
     if (hire) responseEl.appendChild(hire);
+    if (result.Status === "SUGGEST_PROJECT" && window.BKProjects) responseEl.appendChild(window.BKProjects.suggestCard(result));   // projet propose (project_ui.js)
     if (Array.isArray(result.Results)) {
       result.Results.forEach((r) => {
         if (r && r.Result && Array.isArray(r.Result.Files)) {
@@ -3688,9 +3695,10 @@ async function openFilePreview(base, fname) {
   }
 }
 
-async function runTask(objective) {
+// extra (facultatif) : champs ajoutes a la requete, ex. { mode: "mission" } = reponse rapide de Chloe sans proposition de projet (project_ui.js).
+async function runTask(objective, extra) {
   if (!accountAuthenticated) {
-    requireAccount(() => runTask(objective));
+    requireAccount(() => runTask(objective, extra));
     return;
   }
 
@@ -3730,7 +3738,7 @@ async function runTask(objective) {
     // (envoi + interrogation : submitMissionAndWait, partage avec l'essai a
     // blanc de l'assistant d'installation.)
     const missionWorkerId = currentWorkerId;
-    const outcome = await submitMissionAndWait(missionWorkerId, objective, (job) => updateMissionProgress(responseEl, job));
+    const outcome = await submitMissionAndWait(missionWorkerId, objective, (job) => updateMissionProgress(responseEl, job), extra);
 
     if (outcome.accountRequired) {
       turn.remove();
@@ -4992,12 +5000,12 @@ async function iwSetStatus(workerId, status) {
 
 // Lance une mission en arriere-plan et attend son resultat. Renvoie { result } (resultat final ou erreur), { accountRequired: true } ou { timedOut: true }.
 // Utilise par la fiche (runTask) et par l'essai a blanc de l'assistant : une seule facon de faire, un seul garde-fou serveur.
-async function submitMissionAndWait(workerId, objective, onUpdate) {
+async function submitMissionAndWait(workerId, objective, onUpdate, extra) {
   const endpoint = workerId === "chloe" ? "/api/chloe/task" : `/api/workers/${workerId}/task`;
   const started = await fetchJson(endpoint + "/async", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ objective, level: currentMissionLevel() }),
+    body: JSON.stringify(Object.assign({ objective, level: currentMissionLevel() }, extra || {})),
   });
   if (started.error === "ACCOUNT_REQUIRED") return { accountRequired: true };
   if (started.error || !started.jobId) {
@@ -5856,6 +5864,7 @@ Promise.all([checkGateStatus(), checkAccountStatus()]).then(() => {
   handleStripeCheckoutReturn();
   syncAdminNavVisibility();
   refreshUsage();       // jauges de session / semaine : seulement si elles s'appliquent (BK_USAGE_WINDOWS=1) et pour un compte client
+  window.BKProjects?.onAccount();   // navigation « Projets » si le moteur est actif ; lien #projet/<id> des e-mails
 });
 
 document.getElementById("account-tab-signup").addEventListener("click", () => showAccountTab("signup"));
