@@ -9,7 +9,26 @@ on:
   workflow_dispatch: {}
 
 jobs:
+  # Les tests passent AVANT le deploiement automatique (push sur main). Un lancement a la main
+  # (workflow_dispatch) deploie quand meme : c'est la sortie de secours si les tests sont en panne.
+  tests:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Suites Python
+        run: bash tests/run-python-suites.sh
+
   deploy:
+    needs: tests
+    if: ${{ always() && (github.event_name == 'workflow_dispatch' || needs.tests.result == 'success') }}
     runs-on: ubuntu-latest
     concurrency:
       group: production-deploy
@@ -20,13 +39,23 @@ jobs:
           SSH_KEY: ${{ secrets.BK_DEPLOY_SSH_KEY }}
           HOST: ${{ secrets.BK_DEPLOY_HOST }}
           SSH_USER: ${{ secrets.BK_DEPLOY_USER }}
+          # Empreinte du serveur (sortie de : ssh-keyscan -H <hote>), a ajouter comme secret.
+          # Sans ce secret, on garde l'ancien comportement (ssh-keyscan) avec un avertissement.
+          KNOWN_HOSTS: ${{ secrets.BK_DEPLOY_KNOWN_HOSTS }}
         run: |
           set -euo pipefail
           mkdir -p ~/.ssh
           printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
-          ssh -i ~/.ssh/deploy_key "$SSH_USER@$HOST" '
+          if [ -n "${KNOWN_HOSTS:-}" ]; then
+            printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+            SSH_OPTS="-o StrictHostKeyChecking=yes"
+          else
+            echo "::warning::BK_DEPLOY_KNOWN_HOSTS absent : l'identite du serveur n'est pas verifiee (ssh-keyscan). Ajoutez ce secret."
+            ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
+            SSH_OPTS=""
+          fi
+          ssh $SSH_OPTS -i ~/.ssh/deploy_key "$SSH_USER@$HOST" '
             set -euo pipefail
             cd ~/BK-AI-WORKERS
             git fetch origin main

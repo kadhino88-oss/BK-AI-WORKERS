@@ -429,6 +429,29 @@ def ceiling_status(root, settings, now=None, env=None):
     return out
 
 
+FALLBACK_ALERT_SECONDS = 3600               # une seule alerte « moteur en panne » par raison et par heure
+_FALLBACK_REASON_RE = re.compile(r"PROVIDER UNAVAILABLE[ \t]*\r?\n[ \t]*REASON[ \t]*:[ \t]*([A-Za-z0-9_\-]{1,80})[ \t]*\r?$", re.MULTILINE)
+_fallback_alert_marks = {}
+
+
+def parse_fallback_reason(stdout):
+    """Raison (un code, jamais un secret) pour laquelle une mission est retombee sur la reponse de secours locale, lue dans la sortie de Submit-Task
+    (« PROVIDER UNAVAILABLE / REASON : ANTHROPIC_EXIT_CODE_1 »). Chaine vide si la mission n'est pas tombee en secours."""
+    m = _FALLBACK_REASON_RE.search(str(stdout or ""))
+    return m.group(1) if m else ""
+
+
+def fallback_alert_due(reason, now=None, marks=None):
+    """Vrai au plus une fois par heure et par raison (pour ne pas inonder la boite du proprietaire quand chaque mission echoue)."""
+    now = time.time() if now is None else now
+    marks = _fallback_alert_marks if marks is None else marks
+    last = marks.get(reason)
+    if last is not None and now - last < FALLBACK_ALERT_SECONDS:
+        return False
+    marks[reason] = now
+    return True
+
+
 def maybe_alert(root, settings, now=None, notify=None, env=None):
     """E-mail au proprietaire quand la depense Claude atteint 80 % d'un plafond (jour ou mois), puis une seconde fois quand il est ATTEINT : au plus deux
     e-mails par plafond et par periode. `notify(subject, text)` est fourni par le serveur (courrier existant). Renvoie la liste des alertes envoyees
