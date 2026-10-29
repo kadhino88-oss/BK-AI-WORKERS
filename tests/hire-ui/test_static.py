@@ -152,7 +152,9 @@ else:
     print("  SKIP  node absent : syntaxe non verifiee")
 for name in ("app.js", "index.html", "style.css", "i18n-en-app.js"):
     raw = open(os.path.join(D, name), "rb").read()
-    check(f"dashboard/{name} : fins de ligne CRLF conservees (aucune ligne LF seule)", raw.count(b"\n") == raw.count(b"\r\n"))
+    # Les fichiers sont en LF dans le depot et en CRLF dans une copie Windows (autocrlf) :
+    # ce qui compte est qu'il n'y ait jamais de melange des deux dans un meme fichier.
+    check(f"dashboard/{name} : fins de ligne coherentes (tout LF ou tout CRLF, jamais melanges)", raw.count(b"\r\n") in (0, raw.count(b"\n")))
     check(f"dashboard/{name} : pas de BOM", not raw.startswith(b"\xef\xbb\xbf"))
 
 # ------------------------------------------------------------------ 2. identifiants HTML
@@ -289,7 +291,8 @@ def z(selector):
 
 
 check("l'assistant est au-dessus de la bulle de Chloe et sous la fenetre « Connecter un outil »", z(".iw-overlay") and z(".cg-overlay") and 2000 < z(".iw-overlay") < z(".cg-overlay"), f"{z('.iw-overlay')} / {z('.cg-overlay')}")
-mobile = CSS[CSS.rindex("@media (max-width: 720px) {\r\n  .iw-overlay"):] if "@media (max-width: 720px) {\r\n  .iw-overlay" in CSS else ""
+_CSS_LF = CSS.replace("\r\n", "\n")   # meme analyse que la copie soit en LF (Linux/depot) ou en CRLF (Windows)
+mobile = _CSS_LF[_CSS_LF.rindex("@media (max-width: 720px) {\n  .iw-overlay"):] if "@media (max-width: 720px) {\n  .iw-overlay" in _CSS_LF else ""
 check("sous 720 px l'assistant occupe tout l'ecran", ".iw-box { width: 100%;" in mobile and "border-radius: 0" in mobile)
 check("sous 720 px seul le libelle de l'etape courante est affiche (cinq etapes tiennent sur 375 px)", ".iw-step-item:not(.is-current) .iw-step-label { display: none; }" in mobile)
 check("polices de champs a 16 px sur mobile (pas de zoom automatique)", "font-size: 16px" in mobile)

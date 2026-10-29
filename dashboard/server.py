@@ -5125,12 +5125,12 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if path == "/api/gate/login":
-            length = int(self.headers.get("Content-Length", 0))
-            raw = self.rfile.read(length) if length else b"{}"
-            try:
-                body = json.loads(raw.decode("utf-8"))
-            except Exception:
-                body = {}
+            # Route publique : taille du corps plafonnee (413 au-dela), un
+            # Content-Length absurde ou non numerique ne doit ni lever
+            # d'exception ni faire lire un corps de taille arbitraire.
+            body = self._read_json_limited(4096)
+            if body is None:
+                return
             password = body.get("password") or ""
             if not gate_is_enabled():
                 self._send_json({"ok": True, "note": "Porte desactivee (aucun mot de passe defini)."})

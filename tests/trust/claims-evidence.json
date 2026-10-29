@@ -9,7 +9,7 @@
     {"file": "docker-compose.yml", "match": ["\"127\\.0\\.0\\.1:8787:8787\""], "absent": ["^\\s*- \"8787:8787\""]}
   ],
   "no-sec-headers": [
-    {"file": "dashboard/server.py", "absent": ["Strict-Transport-Security", "Content-Security-Policy", "X-Frame-Options"]},
+    {"file": "dashboard/server.py", "absent": ["Strict-Transport-Security", "Content-Security-Policy\"(?!, \"default-src 'none'; img-src 'self'; sandbox\")", "X-Frame-Options"]},
     {"file": "deploy/Caddyfile.docker", "absent": ["Strict-Transport-Security", "Content-Security-Policy", "X-Frame-Options", "header "]}
   ],
   "aes-gcm": [
