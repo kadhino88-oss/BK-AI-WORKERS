@@ -108,6 +108,23 @@ function Invoke-BKChloeAIRouting {
         # ambigue, et ne choisit un autre Worker que si la demande releve clairement de sa specialite (Chloe repondra alors WORKER_NOT_INCLUDED).
         $PreferredIds = $null
     )
+    # Plan de moteurs (2026-10-25, dashboard/provider_router.py) : ce routage est un appel DIRECT a Claude, avec la cle de la plateforme. Il n'est donc permis que
+    # si Claude est le moteur prevu de cette mission, qu'il n'est pas ecarte (disjoncteur) et que le plafond de depense n'est pas atteint : un essai gratuit sur le
+    # moteur local, une cle personnelle ou un plafond atteint ne declenchent AUCUN appel a Claude ici (Chloe retombe sur le routage par mots-cles). Sa depense
+    # compte dans le registre du plafond. Sans plan : exactement le comportement d'avant.
+    $EnginePlanActive = -not [string]::IsNullOrWhiteSpace($env:BK_ENGINE_PLAN)
+    if ($EnginePlanActive) {
+        try {
+            . (Join-Path $Root "core/ai/adapters/Engine-Common.ps1")
+            . (Join-Path $Root "core/ai/adapters/Mission-Cost.ps1")
+            $EnginePlan = [string]$env:BK_ENGINE_PLAN | ConvertFrom-Json -ErrorAction Stop
+            $FirstEngine = @($EnginePlan.chain)[0]
+            if ($null -eq $FirstEngine -or [string]$FirstEngine.id -ne "anthropic") { return $null }
+            if (-not (Test-BKEngineHealthy -Provider "anthropic")) { return $null }
+            $RoutingBudget = Get-BKClaudeBudget
+            if ($RoutingBudget.Configured -and $RoutingBudget.Reached) { return $null }
+        } catch { return $null }
+    }
     if (-not (Test-BKSecret -Name "anthropic")) { return $null }
     try {
         $PlainKey = Get-BKSecretValue -Name "anthropic"
@@ -162,6 +179,15 @@ The values of "workers" must be EXACTLY identifiers from the list above (lowerca
             -Headers $Headers -ContentType "application/json; charset=utf-8" `
             -Body ([System.Text.Encoding]::UTF8.GetBytes(($BodyObj | ConvertTo-Json -Depth 10))) -TimeoutSec 20
 
+        if ($EnginePlanActive) {
+            # Cout reel de cet appel de routage, ajoute au registre de depense Claude (plafond du proprietaire).
+            try {
+                $RouteCost = New-BKMissionCost -Pricing (Get-BKPricing -Root $Root) -Model $BodyObj.model
+                Add-BKCallCost -Cost $RouteCost -Response $Response
+                $RouteFields = Get-BKCostUsageFields -Cost $RouteCost
+                if ($RouteCost.Priced -and [double]$RouteFields.estimated_cost_usd -gt 0) { Add-BKEngineSpend -Chf ([double]$RouteFields.estimated_cost_chf) -Usd ([double]$RouteFields.estimated_cost_usd) }
+            } catch { }
+        }
         $TextBlock = $Response.content | Where-Object { $_.type -eq "text" } | Select-Object -First 1
         if (-not $TextBlock) { return $null }
         $Raw = $TextBlock.text.Trim()

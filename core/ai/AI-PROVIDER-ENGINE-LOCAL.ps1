@@ -53,6 +53,10 @@ $runtimePath = Join-Path $projectRoot "memory/runtime"
 $credentialLoader = Join-Path $aiRoot "SECURE-CREDENTIAL-LOADER.ps1"
 $openaiAdapter = Join-Path $aiRoot "adapters/OPENAI-ADAPTER.ps1"
 $anthropicAdapter = Join-Path $aiRoot "adapters/ANTHROPIC-ADAPTER.ps1"
+# Choix du moteur par mission (2026-10-25) : quand le serveur a pose un plan de moteurs (BK_ENGINE_PLAN, voir dashboard/provider_router.py), la mission passe par
+# l'executeur de chaine (Claude, moteur local, hote suisse ou cle du client, repli etiquete). Sans plan : l'adaptateur de Claude, exactement comme avant.
+$engineChain = Join-Path $aiRoot "Invoke-EngineChain.ps1"
+$useEngineChain = ((-not [string]::IsNullOrWhiteSpace($env:BK_ENGINE_PLAN)) -and (Test-Path -LiteralPath $engineChain -PathType Leaf))
 
 Write-Host ""
 Write-Host "============================================"
@@ -236,6 +240,9 @@ else {
     $providerUsage = $null
     $providerFiles = @()
     $providerCostCapped = $false   # mission arretee a son plafond de cout (ANTHROPIC-ADAPTER.ps1, Mission-Cost.ps1)
+    $providerEngine = $null        # moteur qui a reellement repondu (executeur de chaine) : { provider, model, local, failedOver, label... }
+    $providerRealModel = $null
+    $providerUserMessage = ""
     $providerResult = $null
     $providerError = ""
 
@@ -313,7 +320,7 @@ else {
             Write-Host "ANTHROPIC : READY FOR LIVE PATH"
 
             try {
-                $providerResult = & $anthropicAdapter `
+                $providerResult = & $(if ($useEngineChain) { $engineChain } else { $anthropicAdapter }) `
                     -ClientId $ClientId `
                     -ProjectId $ProjectId `
                     -WorkerId $WorkerId `
@@ -331,6 +338,10 @@ else {
                         $providerFiles = if ($ParsedAnthropic.files) { $ParsedAnthropic.files } else { @() }
                         $CostCappedProp = $ParsedAnthropic.PSObject.Properties["cost_capped"]
                         $providerCostCapped = [bool]($CostCappedProp -and $CostCappedProp.Value)
+                        if ($useEngineChain) {
+                            $providerEngine = $ParsedAnthropic.engine
+                            $providerRealModel = [string]$ParsedAnthropic.model
+                        }
                     }
                     else {
                         $providerError = "ANTHROPIC_EMPTY_RESPONSE"
@@ -338,6 +349,15 @@ else {
                 }
                 else {
                     $providerError = "ANTHROPIC_EXIT_CODE_$LASTEXITCODE"
+                    if ($useEngineChain) {
+                        # Aucun moteur de la chaine n'a repondu : on garde la raison (jamais de secret) et les essais pour l'afficher honnetement.
+                        $ParsedChainError = ($providerResult | Out-String) | ConvertFrom-Json -ErrorAction SilentlyContinue
+                        if ($null -ne $ParsedChainError) {
+                            if ($ParsedChainError.error) { $providerError = ([string]$ParsedChainError.error) }
+                            $providerEngine = $ParsedChainError.engine
+                            $providerUserMessage = [string]$ParsedChainError.user_message
+                        }
+                    }
                 }
             }
             catch {
@@ -348,11 +368,19 @@ else {
 
     if ($providerAvailable) {
 
+        # Avec un plan de moteurs, le fournisseur et le modele sont CEUX QUI ONT REPONDU (jamais « ANTHROPIC » pour une reponse d'un modele local).
+        $reportedProvider = $effectiveProvider
+        $reportedModel = $effectiveModel
+        if ($null -ne $providerEngine -and $providerEngine.provider) {
+            $reportedProvider = ([string]$providerEngine.provider).ToUpperInvariant()
+            if (-not [string]::IsNullOrWhiteSpace($providerRealModel)) { $reportedModel = $providerRealModel }
+        }
+
         $result = [ordered]@{
             status = "SUCCESS"
             mode = "LLM"
-            provider = $effectiveProvider
-            model = $effectiveModel
+            provider = $reportedProvider
+            model = $reportedModel
             worker = $WorkerId
             task_id = $TaskId
             client_id = $ClientId
@@ -380,16 +408,28 @@ else {
         Write-Host "REASON : $providerError"
         Write-Host "FALLBACK : LOCAL"
 
+        # Avec un plan de moteurs, aucun moteur n'a repondu : la reponse de secours n'est PAS celle d'un fournisseur (jamais etiquetee ANTHROPIC), elle dit
+        # honnetement pourquoi et que la mission est gratuite (Degraded -> 0 credit, Get-BKMissionCredits).
+        $fallbackProvider = $effectiveProvider
+        $fallbackModel = $effectiveModel
+        $fallbackAnswer = "Le fournisseur IA externe n'est pas disponible. Le traitement local reste disponible."
+        if ($useEngineChain -and $effectiveProvider -eq "ANTHROPIC") {
+            $fallbackProvider = "NONE"
+            $fallbackModel = "NONE"
+            if (-not [string]::IsNullOrWhiteSpace($providerUserMessage)) { $fallbackAnswer = $providerUserMessage }
+            else { $fallbackAnswer = "Aucun moteur d'IA n'a pu répondre pour le moment. Votre mission n'a pas été traitée et ne consomme aucun crédit. Réessayez dans quelques minutes." }
+        }
+
         $result = [ordered]@{
             status = "FALLBACK"
             mode = "LOCAL"
-            provider = $effectiveProvider
-            model = $effectiveModel
+            provider = $fallbackProvider
+            model = $fallbackModel
             worker = $WorkerId
             task_id = $TaskId
             client_id = $ClientId
             project_id = $ProjectId
-            answer = "Le fournisseur IA externe n'est pas disponible. Le traitement local reste disponible."
+            answer = $fallbackAnswer
             recommendations = @()
             next_action = "Continuer avec le moteur local du Worker ou réessayer lorsque le fournisseur sera disponible."
             security_status = "VALID"
@@ -403,6 +443,9 @@ else {
         }
     }
 }
+
+# Moteur qui a reellement repondu (ou n'a pas pu) : present SEULEMENT quand un plan de moteurs est actif ; sans plan, le fichier est identique a celui d'avant.
+if ($useEngineChain -and $effectiveProvider -eq "ANTHROPIC") { $result["engine"] = $providerEngine }
 
 New-Item -ItemType Directory -Force -Path $runtimePath | Out-Null
 

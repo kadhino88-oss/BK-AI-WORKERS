@@ -118,15 +118,15 @@
     {"file": "dashboard/server.py", "match": ["PAYMENT_NOT_CONFIRMED", "Aucune donnee de\\s+carte ne transite jamais par ce serveur"]}
   ],
   "human-validation": [
-    {"file": "core/ai/adapters/ANTHROPIC-ADAPTER.ps1", "match": ["JAMAIS executee ici", "PENDING_CONFIRMATION", "-like \"READ_\\*\" -or \\$Operation -like \"SEARCH_\\*\""]},
+    {"file": "core/ai/adapters/Connector-Tool.ps1", "match": ["JAMAIS executee ici", "PENDING_CONFIRMATION", "-like \"READ_\\*\" -or \\$Operation -like \"SEARCH_\\*\""]},
     {"file": "dashboard/server.py", "match": ["/api/connector-action/confirm"]}
   ],
   "autoapprove-optin": [
-    {"file": "core/ai/adapters/ANTHROPIC-ADAPTER.ps1", "match": ["Faux par defaut", "autoapprove\\.json"]},
+    {"file": "core/ai/adapters/Connector-Tool.ps1", "match": ["Faux par defaut", "autoapprove\\.json"]},
     {"file": "dashboard/server.py", "match": ["_save_client_autoapprove"]}
   ],
   "finance-manual": [
-    {"file": "core/ai/adapters/ANTHROPIC-ADAPTER.ps1", "match": ["-in @\\(\"stripe\", \"paypal\", \"quickbooks\", \"xero\"\\)", "\\$ClientId -eq \"CLI-DASHBOARD\" -and \\$IsFinancialConnector -and -not \\(Test-ReadOnlyOperation"]},
+    {"file": "core/ai/adapters/Connector-Tool.ps1", "match": ["-in @\\(\"stripe\", \"paypal\", \"quickbooks\", \"xero\"\\)", "\\$ClientId -eq \"CLI-DASHBOARD\" -and \\$IsFinancialConnector -and -not \\(Test-ReadOnlyOperation"]},
     {"file": "dashboard/server.py", "assign_excludes": {"name": "CLIENT_CONNECTOR_PROVIDERS", "values": ["stripe", "paypal", "quickbooks", "xero"]}}
   ],
   "auth-chain": [
@@ -220,6 +220,21 @@
   "sp-anthropic": [
     {"file": "core/ai/adapters/ANTHROPIC-ADAPTER.ps1", "match": ["https://api\\.anthropic\\.com/v1/messages"]},
     {"file": "dashboard/phone_agent.py", "match": ["https://api\\.anthropic\\.com/v1/messages"]}
+  ],
+  "sp-local-engine": [
+    {"file": "dashboard/provider_router.py", "match": ["FREE_PROVIDER_IDS = \\(\"ollama\",\\)", "l'essai n'utilise JAMAIS Claude"]},
+    {"file": "core/ai/adapters/OPENAI-COMPAT-ADAPTER.ps1", "match": ["/chat/completions", "Test-BKEndpointPolicy", "elseif \\(\\$IsLocal\\) \\{ \"local\" \\}"]},
+    {"file": "dashboard/net_policy.py", "match": ["PRIVATE_OK = \\(\"loopback\", \"private\", \"cgnat\"\\)", "if kind == \"local\" and any\\(c not in PRIVATE_OK for c in classes\\)"]},
+    {"file": "dashboard/provider_router.py", "match": ["kind=\"local\" if eid == \"ollama\" else \"owner\""]},
+    {"file": "docs/PROVIDERS.md", "match": ["Tailscale", "relais de Tailscale"]}
+  ],
+  "sp-swiss-engine": [
+    {"file": "dashboard/provider_router.py", "match": ["BK_SWISS_URL", "PROVIDER_IDS = \\(\"anthropic\", \"ollama\", \"swiss\"\\)"]},
+    {"file": "core/ai/adapters/OPENAI-COMPAT-ADAPTER.ps1", "match": ["swiss"]}
+  ],
+  "sp-byok": [
+    {"file": "dashboard/provider_router.py", "match": ["BYOK_KINDS = \\(\"anthropic\", \"openai_compat\"\\)", "sans repli vers nos moteurs"]},
+    {"file": "dashboard/server.py", "match": ["ENGINE_BYOK_PROVIDER = \"ai_engine\""]}
   ],
   "sp-google": [
     {"file": "dashboard/Mailer-Bridge.ps1", "match": ["https://gmail\\.googleapis\\.com/gmail/v1/users/me/messages/send"]},

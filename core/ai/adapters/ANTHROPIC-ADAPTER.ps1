@@ -84,9 +84,17 @@ $CallTimeout = if ($LevelCfg -and $LevelCfg.callTimeoutSec) { [int]$LevelCfg.cal
 # output_config.effort : GA sur les modeles 5.x, PAS sur Haiku 4.5 (le modele historique des Workers).
 $UseEffort = ($LevelCfg -and $LevelCfg.effort -and $EffectiveModel -notlike "claude-haiku-4*")
 $MissionDeadline = (Get-Date).AddSeconds(540)   # le serveur coupe a 600 s : on rend un resultat partiel avant
+# Executeur de moteurs (Invoke-EngineChain.ps1) : l'echeance de TOUTE la mission, partagee entre les moteurs d'une chaine de repli. Sans variable : inchange.
+if ($env:BK_ENGINE_DEADLINE_EPOCH -match '^\d{9,11}(\.\d+)?$') { $MissionDeadline = [DateTimeOffset]::FromUnixTimeMilliseconds([long]([double]$env:BK_ENGINE_DEADLINE_EPOCH * 1000)).LocalDateTime }
 # Plafond de cout de la mission (maxCostChf du niveau) et suivi du cout reel appel par appel : Mission-Cost.ps1, tarifs dans
 # core/ai/AI-PRICING.json. Sans niveau (ancien comportement) ou pour Rapide : pas de plafond, le cout est quand meme releve.
 $CostCeilingChf = if ($LevelCfg) { $LevelCfg.maxCostChf } else { $null }
+# Plafond de depense Claude du proprietaire (jour / mois, core/ai/data/engine-settings.json) : l'executeur de moteurs pose le RESTE disponible ; il joue le role de
+# plafond de la mission si celui-ci est plus petit (ou absent). Meme mecanique que maxCostChf : la boucle s'arrete avant l'appel qui le depasserait. Sans variable : inchange.
+if ($env:BK_ENGINE_BUDGET_CHF -match '^\d+(\.\d+)?$') {
+    $BudgetChf = [double]$env:BK_ENGINE_BUDGET_CHF
+    if ($BudgetChf -gt 0 -and (-not $CostCeilingChf -or $BudgetChf -lt [double]$CostCeilingChf)) { $CostCeilingChf = $BudgetChf }
+}
 $MissionCost = New-BKMissionCost -Pricing (Get-BKPricing -Root $ProjectRoot) -Model $EffectiveModel -CeilingChf $CostCeilingChf
 
 Write-Host "ANTHROPIC ADAPTER | worker=$WorkerId | model=$EffectiveModel"
@@ -101,174 +109,9 @@ function Write-Result($Object) { $Object | ConvertTo-Json -Depth 10 -Compress }
 # tout : Claude repond en texte, comme avant.
 # =====================================================================
 
-# Description courte, par operation, des parametres attendus — guide
-# textuel plutot qu'un schema JSON par operation (varierait trop d'un
-# connecteur a l'autre) : suffisant pour un modele, et evite de
-# dupliquer la table de Connector-Dispatch.ps1 ici.
-$Script:OperationParamHints = @{
-    "gmail:DRAFT_MESSAGE" = "To, Subject, Body"
-    "gmail:SEARCH_MESSAGES" = "Query"
-    "outlook_mail:DRAFT_MESSAGE" = "To, Subject, Body"
-    "outlook_mail:SEARCH_MESSAGES" = "Query"
-    "calendar:CREATE_EVENT" = "Summary, StartIso, EndIso"
-    "calendar:SEARCH_EVENTS" = "Query"
-    "outlook_calendar:CREATE_EVENT" = "Summary, StartIso, EndIso"
-    "outlook_calendar:SEARCH_EVENTS" = "Query"
-    "salesforce:SEARCH_CONTACTS" = "Query"
-    "salesforce:READ_CONTACT" = "Id"
-    "salesforce:READ_OPPORTUNITY" = "Id"
-    "salesforce:CREATE_TASK" = "Subject, Notes"
-    "hubspot:SEARCH_CONTACTS" = "Query"
-    "hubspot:READ_CONTACT" = "Id"
-    "hubspot:READ_DEAL" = "Id"
-    "hubspot:CREATE_TASK" = "Subject, Notes"
-    "pipedrive:SEARCH_CONTACTS" = "Query"
-    "pipedrive:READ_CONTACT" = "Id"
-    "pipedrive:READ_DEAL" = "Id"
-    "linkedin:CREATE_DRAFT_POST" = "Text"
-    "instagram:CREATE_DRAFT_POST" = "Text, IgUserId"
-    "facebook:CREATE_DRAFT_POST" = "Text, PageId"
-    "facebook:READ_POSTS" = "PageId"
-    "tiktok:CREATE_DRAFT_POST" = "Text"
-    "x_twitter:CREATE_DRAFT_POST" = "Text"
-    "wordpress:CREATE_DRAFT" = "Title, Content"
-    "wordpress:UPDATE_DRAFT" = "Id, Title, Content"
-    "webflow:UPDATE_DRAFT" = "Id, Title"
-    "shopify:READ_PRODUCT" = "Id"
-    "shopify:READ_INVENTORY" = "Id"
-    "woocommerce:READ_PRODUCT" = "Id"
-    "teams:DRAFT_MESSAGE" = "TeamId, ChannelId, Text"
-    "whatsapp_business:DRAFT_MESSAGE" = "PhoneNumberId, Text"
-    "google_drive:SEARCH_FILES" = "Query"
-    "google_drive:READ_FILE" = "Id"
-    "dropbox:SEARCH_FILES" = "Query"
-    "dropbox:READ_FILE" = "Path"
-    "onedrive:SEARCH_FILES" = "Query"
-    "onedrive:READ_FILE" = "Id"
-    "google_search_console:READ_REPORT" = "SiteUrl, StartDate, EndDate"
-    "google_search_console:SEARCH_QUERIES" = "SiteUrl, StartDate, EndDate"
-    "google_ads:READ_CAMPAIGN" = "CustomerId"
-    "google_ads:READ_REPORT" = "CustomerId"
-    "meta_ads:READ_CAMPAIGN" = "AdAccountId"
-    "meta_ads:READ_REPORT" = "CampaignId"
-    "asana:SEARCH_TASKS" = "WorkspaceGid, Query"
-    "asana:READ_TASK" = "Id"
-    "asana:CREATE_TASK" = "Name, Notes, WorkspaceGid"
-    "trello:SEARCH_CARDS" = "Query"
-    "trello:READ_CARD" = "Id"
-    "trello:CREATE_CARD" = "Name, Description, ListId"
-    "monday:SEARCH_ITEMS" = "BoardId"
-    "monday:READ_ITEM" = "Id"
-    "monday:CREATE_ITEM" = "BoardId, Name"
-    "zendesk:SEARCH_TICKETS" = "Query"
-    "zendesk:READ_TICKET" = "Id"
-    "zendesk:DRAFT_REPLY" = "Id, Body"
-    "intercom:SEARCH_TICKETS" = "Query"
-    "intercom:READ_TICKET" = "Id"
-    "intercom:DRAFT_REPLY" = "Id, Body, AdminId"
-    "figma:READ_ASSET" = "FileKey"
-    "figma:SEARCH_ASSETS" = "FileKey"
-    "monitoring:READ_STATUS" = "(aucun parametre)"
-    "monitoring:SEARCH_INCIDENTS" = "(aucun parametre)"
-    "calendar_hr:READ_EMPLOYEE_RECORD" = "Id"
-    "calendar_hr:SEARCH_CANDIDATES" = "(aucun parametre)"
-    "slack:POST_MESSAGE" = "Text, WorkerName"
-    "twilio:PLACE_CALL" = "To (numero E.164, ex: +41791234567), Message (texte que le Worker doit dire au telephone, en langage naturel)"
-    "slack:DRAFT_MESSAGE" = "Text"
-    "stripe:READ_CUSTOMER" = "Id"
-    "stripe:CREATE_REFUND" = "ChargeId, Amount (optionnel, en centimes — total si omis)"
-    "stripe:CREATE_PAYOUT" = "Amount (en centimes), Currency"
-    "paypal:CREATE_REFUND" = "CaptureId, Amount, Currency"
-    "paypal:CREATE_PAYOUT" = "Amount, Currency, Receiver (email du destinataire)"
-    "quickbooks:READ_COMPANY_INFO" = "Id"
-    "quickbooks:CREATE_PAYMENT" = "Amount, CustomerId"
-    "xero:CREATE_PAYMENT" = "InvoiceId, AccountCode, Amount"
-}
-
-function Get-ClientActivatedConnectors {
-    param([string]$ClientId)
-    $Path = Join-Path $ProjectRoot ("core/connectors/data/" + $ClientId + ".json")
-    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return @() }
-    try {
-        $Ids = Get-Content -LiteralPath $Path -Raw -Encoding UTF8 | ConvertFrom-Json
-        return @($Ids | ForEach-Object { $_ -replace '\.controlled$', '' })
-    } catch { return @() }
-}
-
-function Test-ClientAutoApprove {
-    <#
-    Pre-autorisation globale, choix explicite et reversible du client
-    (bascule dans son tableau de bord) : quand vraie, une action
-    d'ecriture proposee par ce Worker s'execute pour de vrai tout de
-    suite, sans carte de confirmation manuelle. Faux par defaut — un
-    fichier absent ou illisible ne doit jamais etre interprete comme une
-    autorisation.
-    #>
-    param([string]$ClientId)
-    $Path = Join-Path $ProjectRoot ("core/connectors/data/" + $ClientId + ".autoapprove.json")
-    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return $false }
-    try {
-        $Cfg = Get-Content -LiteralPath $Path -Raw -Encoding UTF8 | ConvertFrom-Json
-        return [bool]$Cfg.autoApprove
-    } catch { return $false }
-}
-
-function Build-ConnectorToolDefinition {
-    param([string]$ClientId)
-
-    # @() autour de l'appel est obligatoire : une fonction qui "retourne"
-    # un tableau a un seul element est deballee en simple chaine par le
-    # pipeline PowerShell (meme piege que Save-Automations plus tot dans
-    # ce projet) — sans ce garde-fou, $Activated.Count plante des qu'un
-    # client n'a active qu'UN SEUL connecteur.
-    $Activated = @(Get-ClientActivatedConnectors -ClientId $ClientId)
-    if ($Activated.Count -eq 0) { return $null }
-
-    $Lines = @()
-    foreach ($ConnId in $Activated) {
-        if ($ConnId -eq "slack") {
-            $Lines += "- slack : SEARCH_MESSAGES, DRAFT_MESSAGE (prepare), POST_MESSAGE (envoie reellement, params: Text)"
-            continue
-        }
-        if ($ConnId -eq "twilio") {
-            $Lines += "- twilio : PLACE_CALL (place un vrai appel telephonique, params: To, Message)"
-            continue
-        }
-        $Entry = $Script:OperationTable[$ConnId]
-        if (-not $Entry) { continue }
-        $OpsDesc = @($Entry.Operations.Keys | ForEach-Object {
-            $Hint = $Script:OperationParamHints["${ConnId}:$_"]
-            if ($Hint) { "$_ (params: $Hint)" } else { $_ }
-        }) -join ", "
-        $Lines += "- ${ConnId} : $OpsDesc"
-    }
-    if ($Lines.Count -eq 0) { return $null }
-
-    return @{
-        name = "use_connector"
-        description = "Consulte ou prepare une action reelle via un outil externe QUE LE CLIENT A LUI-MEME CONNECTE a son compte. N'utilise que les connecteurs et operations listes ici, avec exactement les parametres indiques (en 'params'). Connecteurs disponibles pour ce client :`n" + ($Lines -join "`n") + "`n`nLes operations READ_*/SEARCH_* consultent une vraie donnee et te reviennent immediatement. Les autres (DRAFT_*/CREATE_*/POST_*/UPDATE_*/PREPARE_*/DRAFT_REPLY) preparent une action reelle mais NE PARTENT JAMAIS automatiquement — le client doit confirmer lui-meme depuis son tableau de bord avant tout envoi effectif."
-        input_schema = @{
-            type = "object"
-            properties = @{
-                connectorId = @{ type = "string"; description = "Identifiant exact du connecteur, ex: trello, gmail, hubspot" }
-                operation   = @{ type = "string"; description = "Operation exacte, ex: SEARCH_CARDS, CREATE_TASK" }
-                params      = @{ type = "object"; description = "Parametres attendus par cette operation (voir la liste ci-dessus)" }
-                reason      = @{ type = "string"; description = "Une phrase expliquant pourquoi cette action aide a repondre a la mission" }
-            }
-            required = @("connectorId", "operation", "reason")
-        }
-    }
-}
-
-function Test-ReadOnlyOperation {
-    param([string]$Operation)
-    return ($Operation -like "READ_*" -or $Operation -like "SEARCH_*")
-}
-
-# Auto-approve ("Laisser mes Workers agir seuls") ne vaut QUE pour les vrais brouillons : rien ne part chez un tiers.
-# Attention aux noms trompeurs : CREATE_DRAFT_POST PUBLIE sur LinkedIn/Facebook/X/TikTok/Instagram, et DRAFT_MESSAGE
-# ENVOIE vraiment sur Teams/WhatsApp (revue 2026-10-11). BK_AUTOAPPROVE_DRAFTS_ONLY=0 restaure l'ancien comportement.
-$AutoApproveSafeOps = @("gmail|DRAFT_MESSAGE", "outlook_mail|DRAFT_MESSAGE", "wordpress|CREATE_DRAFT", "wordpress|UPDATE_DRAFT", "zendesk|DRAFT_REPLY", "intercom|DRAFT_REPLY")
+# Description des connecteurs, outil use_connector, pre-autorisation et garde-fou d'approbation : core/ai/adapters/Connector-Tool.ps1
+# (partage avec OPENAI-COMPAT-ADAPTER.ps1 ; Invoke-BKConnectorToolCall y applique la regle unique « un Worker prepare, il n'envoie jamais seul »).
+. (Join-Path $ProjectRoot "core/ai/adapters/Connector-Tool.ps1")
 
 function Get-ResponseText {
     # Texte (blocs "text") d'UNE reponse de l'API.
@@ -300,6 +143,7 @@ function Get-CodeExecFileIds {
 
 $PlainKey = $null
 $ResponseText = $null; $ErrorDetail = $null; $ExitCode = 1
+$ErrorBody = ""; $ErrorStatus = 0
 $Response = $null
 
 if (-not (Test-BKSecret -Name "anthropic")) {
@@ -450,61 +294,12 @@ try {
                 $ToolUse.input.params.PSObject.Properties | ForEach-Object { $OpParams[$_.Name] = $_.Value }
             }
 
-            $AutoApproved = Test-ClientAutoApprove -ClientId $ClientId
-            # Garde-fou specifique a Kader (CLI-DASHBOARD) : sur SON PROPRE
-            # compte, une sortie d'argent (connecteur financier, operation
-            # non READ_*/SEARCH_*) exige TOUJOURS sa confirmation manuelle,
-            # meme s'il a active "auto-approve" pour le reste — regle
-            # explicite, sans exception, distincte du choix d'un client sur
-            # son propre portefeuille (celui-la reste regi par son propre
-            # bascule auto-approve, comme n'importe quel autre connecteur).
-            $IsFinancialConnector = (Get-ConnectorBaseId -ConnectorId "$ConnId.controlled") -in @("stripe", "paypal", "quickbooks", "xero")
-            if ($ClientId -eq "CLI-DASHBOARD" -and $IsFinancialConnector -and -not (Test-ReadOnlyOperation -Operation $Op)) {
-                $AutoApproved = $false
-            }
-            if ($AutoApproved -and $env:BK_AUTOAPPROVE_DRAFTS_ONLY -ne "0" -and -not (Test-ReadOnlyOperation -Operation $Op) -and (("$ConnId|$Op") -notin $AutoApproveSafeOps)) {
-                $AutoApproved = $false
-            }
-            # Interrupteur d'arret (2026-10-12) : le client a mis l'installation de CE Worker en pause -> il n'agit plus seul, meme pour un vrai
-            # brouillon (il attend la confirmation du client). La mission lancee a la main fonctionne toujours : lectures et propositions restent possibles.
-            if ($AutoApproved -and (Test-BKInstallationPaused -Root $ProjectRoot -ClientId $ClientId -WorkerId $WorkerId)) {
-                $AutoApproved = $false
-            }
-
-            if ((Test-ReadOnlyOperation -Operation $Op) -or $AutoApproved) {
-                # Lecture : toujours executee reellement tout de suite
-                # (aucun effet externe possible). Ecriture : executee
-                # reellement tout de suite UNIQUEMENT si ce client a
-                # explicitement pre-autorise ses Workers a agir sans
-                # attendre (bascule "autoApprove", desactivee par defaut).
-                $ActionResult = Invoke-ConnectorAction -ConnectorId "$ConnId.controlled" -Operation $Op -ClientId $ClientId -Params $OpParams
-                $ConnectorActionsList += @{ connectorId = $ConnId; operation = $Op; status = $ActionResult.Status; executed = $true; autoApproved = $AutoApproved }
-                $ToolResults += @{ type = "tool_result"; tool_use_id = $ToolUse.id; content = ($ActionResult | ConvertTo-Json -Depth 10 -Compress) }
-            }
-            else {
-                # Ecriture : JAMAIS executee ici. On ecrit l'action proposee
-                # sur disque pour confirmation explicite du client. Une
-                # seule action en attente possible par mission (le fichier
-                # est nomme par TaskId, pas par tool_use.id) : la premiere
-                # ecriture non auto-approuvee arrete la boucle apres ce
-                # tour, pour ne jamais en ecraser une deuxieme.
-                $PendingPath = Join-Path $ProjectRoot ("memory/runtime/PENDING-ACTION-" + $TaskId + ".json")
-                $Pending = [ordered]@{
-                    taskId       = $TaskId
-                    clientId     = $ClientId
-                    workerId     = $WorkerId
-                    connectorId  = $ConnId
-                    operation    = $Op
-                    params       = $OpParams
-                    reason       = $Reason
-                    createdAtUtc = (Get-Date).ToUniversalTime().ToString("o")
-                }
-                ($Pending | ConvertTo-Json -Depth 10) | Set-Content -LiteralPath $PendingPath -Encoding UTF8
-
-                $ConnectorActionsList += @{ connectorId = $ConnId; operation = $Op; status = "PENDING_CONFIRMATION"; executed = $false }
-                $ToolResults += @{ type = "tool_result"; tool_use_id = $ToolUse.id; content = "PENDING_CONFIRMATION : action non executee, en attente de confirmation du client depuis son tableau de bord." }
-                $StopLoop = $true
-            }
+            # Lecture executee tout de suite ; ecriture JAMAIS executee ici (PENDING-ACTION-<TaskId>.json, confirmation explicite du client) sauf
+            # pre-autorisation limitee aux vrais brouillons : toute la regle vit dans Invoke-BKConnectorToolCall (Connector-Tool.ps1), commune a tous les moteurs.
+            $Gate = Invoke-BKConnectorToolCall -ClientId $ClientId -WorkerId $WorkerId -TaskId $TaskId -ConnId $ConnId -Op $Op -Reason $Reason -OpParams $OpParams
+            $ConnectorActionsList += $Gate.Action
+            $ToolResults += @{ type = "tool_result"; tool_use_id = $ToolUse.id; content = $Gate.Content }
+            if ($Gate.Stop) { $StopLoop = $true }
         }
 
         if ($ToolResults.Count -gt 0) { [void]$Messages.Add(@{ role = "user"; content = $ToolResults }) }
@@ -661,6 +456,10 @@ try {
 catch {
     $ErrorDetail = $_.Exception.Message
     $ExitCode = 1
+    # Corps de l'erreur HTTP et code (ajoutes le 2026-10-25) : « credit balance too low » n'est que dans le corps ; l'executeur de moteurs en a besoin
+    # pour distinguer un credit epuise (moteur mis de cote) d'une simple erreur de requete. Le corps d'erreur de l'API ne contient jamais la cle.
+    try { $ErrorBody = ([string]$_.ErrorDetails.Message); if ($ErrorBody.Length -gt 400) { $ErrorBody = $ErrorBody.Substring(0, 400) } } catch { }
+    try { $ErrorStatus = [int]$_.Exception.Response.StatusCode } catch { }
 }
 finally {
     $PlainKey = $null
@@ -690,6 +489,9 @@ if ($ExitCode -eq 0) {
     exit 0
 }
 else {
-    Write-Result ([ordered]@{ status="ERROR"; provider="anthropic"; model=$EffectiveModel; mode="LLM"; api_call=$true; answer=""; error=$ErrorDetail })
+    # usage aussi en cas d'erreur (2026-10-26) : les appels deja factures AVANT l'echec (un premier tour d'outil, puis un delai, un 429 ou un credit epuise en
+    # cours de mission) ont bel et bien coute ; l'executeur de moteurs les ajoute au registre de depense (plafond du proprietaire). Le chemin sans plan l'ignore.
+    Write-Result ([ordered]@{ status="ERROR"; provider="anthropic"; model=$EffectiveModel; mode="LLM"; api_call=$true; answer=""; error=$ErrorDetail; error_body=[string]$ErrorBody; http_status=[int]$ErrorStatus
+                              usage=$(if ($MissionCost) { Get-BKCostUsageFields -Cost $MissionCost } else { $null }) })
     exit 1
 }

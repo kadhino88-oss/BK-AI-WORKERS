@@ -117,6 +117,8 @@ Règle du propriétaire : quand un client épuise **tous** ses crédits du mois 
 
 ## 6. Ce qui n'est PAS construit (décisions ouvertes)
 
+- **Moteur d'IA par mission** (2026-10-25, `docs/PROVIDERS.md`) : l'essai gratuit tourne sur un modèle local (coût 0) quand le propriétaire l'a configuré, un repli vers un autre moteur ne coûte **aucun crédit**, et le propriétaire peut fixer un plafond de dépense Claude (jour / mois). **Décision ouverte** : les crédits d'une mission en **clé personnelle** du client (BYOK). Livré : ils restent ceux du forfait ; alternatives et recommandation dans `docs/PROVIDERS.md` §8.
+
 - **Fenêtres hebdomadaire et de session** (comme les limites de 5 heures et de la semaine de Claude) : non construites. Aujourd'hui un client peut consommer tout son quota mensuel en une journée. Décision du propriétaire : les ajouter ou non, et avec quelles valeurs.
 - Paquets de crédits : **décidé : il n'y en a pas** (l'étude recommandait CHF 12 les 100 crédits ; le propriétaire a choisi le passage au forfait supérieur).
 - Facturation du **téléphone et de WhatsApp** en crédits (1,5 crédit par minute dans l'étude) : le numéro et WhatsApp pour les clients de nos clients ne sont pas en production ; rien n'est annoncé ni facturé. L'essai n'inclut aucune minute de téléphone (`phoneMinutes: 0`).
