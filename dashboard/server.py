@@ -119,6 +119,15 @@ PUBLIC_BASE_URL = os.environ.get("BK_PUBLIC_URL", "http://127.0.0.1:8787").rstri
 # Cookies de session en Lax (et Secure en https) : Strict empechait le retour
 # de Google ("Se connecter avec Google") de reconnaitre la session -> SESSION_MISMATCH.
 COOKIE_SECURE = "; Secure" if PUBLIC_BASE_URL.startswith("https") else ""
+# En-tetes de securite ajoutes a TOUTE reponse qui ne les pose pas deja (Handler.end_headers). Pas de Content-Security-Policy ici : le tableau de bord utilise
+# des scripts et styles inline, une CSP stricte le casserait sans test visuel (voir docs/SECURITY-OVERVIEW.md). HSTS seulement en https.
+SECURITY_HEADERS = [
+    ("X-Content-Type-Options", "nosniff"),
+    ("X-Frame-Options", "SAMEORIGIN"),
+    ("Referrer-Policy", "strict-origin-when-cross-origin"),
+]
+if PUBLIC_BASE_URL.startswith("https"):
+    SECURITY_HEADERS.append(("Strict-Transport-Security", "max-age=31536000"))
 REQUIRE_GATE = os.environ.get("BK_REQUIRE_GATE") == "1"
 GATE_SESSION_TTL_SECONDS = 60 * 60 * 12  # 12h
 GATE_SESSIONS = {}  # sha256(token) -> expiry (epoch seconds)
@@ -291,8 +300,9 @@ def _find_account_by_email(email):
 
 def _hash_password(password):
     salt = os.urandom(16)
-    h = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, 200000, dklen=32)
-    return f"{salt.hex()}:{h.hex()}:200000"
+    # 600000 : valeur recommandee par l'OWASP pour PBKDF2-HMAC-SHA256. Les anciens hash (200000) restent valides : le nombre d'iterations est stocke avec le hash.
+    h = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, 600000, dklen=32)
+    return f"{salt.hex()}:{h.hex()}:600000"
 
 
 def _verify_password(password, hash_line):
@@ -4649,6 +4659,17 @@ def run_trial_mission(worker_id, objective, client_ip):
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         pass  # silence par defaut, evite le bruit console
+
+    def end_headers(self):
+        # Securite : en-tetes communs a toutes les reponses, sans doublon avec ceux qu'une route a deja poses (ex. nosniff des telechargements).
+        try:
+            already = b"".join(getattr(self, "_headers_buffer", [])).lower()
+            for name, value in SECURITY_HEADERS:
+                if (name.lower() + ":").encode("ascii") not in already:
+                    self.send_header(name, value)
+        except Exception:  # noqa: BLE001 - un en-tete manquant ne doit jamais casser une reponse
+            pass
+        super().end_headers()
 
     def _send_json(self, payload, status=200):
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
