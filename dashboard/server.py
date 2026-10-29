@@ -605,6 +605,7 @@ def submit_task(worker_hint_text, worker_id="", plan_only=False, client_id="", l
         stdout = (proc.stdout or b"").decode("utf-8", errors="replace")
         if engine_plan and engine_plan.get("explicit"):
             engine_after_mission()
+        engine_report_fallback(stdout)
 
         if os.path.isfile(out_file):
             with open(out_file, encoding="utf-8-sig") as f:
@@ -974,6 +975,25 @@ def _notify_engine_alert(subject, text):
             print(f"[engine] e-mail au proprietaire : ECHEC ({type(exc).__name__})", flush=True)
 
     threading.Thread(target=_send, daemon=True).start()
+
+
+def engine_report_fallback(stdout):
+    """Quand une mission retombe sur la reponse de secours (« Le fournisseur IA externe n'est pas disponible »), la RAISON n'etait nulle part : elle est
+    maintenant ecrite dans le journal du serveur et envoyee au proprietaire (une fois par heure et par raison). Un code seulement, jamais un secret."""
+    try:
+        reason = provider_router.parse_fallback_reason(stdout)
+        if not reason:
+            return
+        print("[engine] mission en reponse de secours, raison : " + reason, flush=True)
+        if provider_router.fallback_alert_due(reason):
+            _notify_engine_alert(
+                "Le moteur d'IA ne répond plus (mission en réponse de secours)",
+                "Une mission n'a pas pu être traitée par le moteur d'IA et a reçu la réponse de secours.\n"
+                f"Raison technique : {reason}\n"
+                "Pistes : crédit ou clé Anthropic (ANTHROPIC_EXIT_CODE_1 = l'appel a échoué), moteur désactivé dans core/ai/AI-PROVIDERS.json, clé absente sur le serveur.\n"
+                "Cet e-mail n'est envoyé qu'une fois par heure et par raison.")
+    except Exception as exc:  # noqa: BLE001 - un journal perdu ne doit jamais faire echouer une mission
+        print("[engine] rapport de secours impossible : " + type(exc).__name__, flush=True)
 
 
 def engine_after_mission():
