@@ -8,9 +8,12 @@
   "local-bind": [
     {"file": "docker-compose.yml", "match": ["\"127\\.0\\.0\\.1:8787:8787\""], "absent": ["^\\s*- \"8787:8787\""]}
   ],
-  "no-sec-headers": [
-    {"file": "dashboard/server.py", "absent": ["Strict-Transport-Security", "Content-Security-Policy\"(?!, \"default-src 'none'; img-src 'self'; sandbox\")", "X-Frame-Options"]},
-    {"file": "deploy/Caddyfile.docker", "absent": ["Strict-Transport-Security", "Content-Security-Policy", "X-Frame-Options", "header "]}
+  "sec-headers": [
+    {"file": "dashboard/server.py", "match": ["SECURITY_HEADERS", "\"X-Content-Type-Options\", \"nosniff\"", "\"X-Frame-Options\", \"SAMEORIGIN\"", "\"Referrer-Policy\"", "\"Strict-Transport-Security\", \"max-age=31536000\""]}
+  ],
+  "no-csp": [
+    {"file": "dashboard/server.py", "absent": ["Content-Security-Policy\"(?!, \"default-src 'none'; img-src 'self'; sandbox\")"]},
+    {"file": "deploy/Caddyfile.docker", "absent": ["Content-Security-Policy", "header "]}
   ],
   "aes-gcm": [
     {"file": "core/connectors/Crypto-Helper.ps1", "match": ["\\[System\\.Security\\.Cryptography\\.AesGcm\\]::new\\(\\$Key\\)", "\\[byte\\[\\]\\]::new\\(12\\)", "Length -ne 32", "RandomNumberGenerator\\]::Fill\\(\\$Nonce\\)"]},
@@ -37,7 +40,7 @@
     {"file": "dashboard/server.py", "function": "store_client_connector_credential", "match": ["bkaiw-cred-in-", "os\\.remove\\(f\\)"]}
   ],
   "passwords": [
-    {"file": "dashboard/server.py", "function": "_hash_password", "match": ["pbkdf2_hmac\\(\"sha256\"", "os\\.urandom\\(16\\)", "200000"]},
+    {"file": "dashboard/server.py", "function": "_hash_password", "match": ["pbkdf2_hmac\\(\"sha256\"", "os\\.urandom\\(16\\)", "600000"]},
     {"file": "dashboard/server.py", "function": "_verify_password", "match": ["hmac\\.compare_digest"]},
     {"file": "dashboard/server.py", "function": "create_account", "match": ["len\\(password or \"\"\\) < 8"]},
     {"file": "dashboard/server.py", "absent": ["log_activity\\([^\\n]*\\bpassword\\s*="]}
