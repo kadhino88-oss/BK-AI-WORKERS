@@ -1,0 +1,28 @@
+name: Tests
+
+# Informatif pour l'instant : ce workflow ne bloque PAS le deploiement
+# (deploy.yml reste inchange). Une fois qu'on l'a vu vert plusieurs fois
+# sur GitHub, on pourra faire dependre deploy.yml de ce job.
+on:
+  pull_request: {}
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  python-suites:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"   # version de l'image de production (Ubuntu 24.04)
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Suites Python
+        run: bash tests/run-python-suites.sh
