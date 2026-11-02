@@ -393,6 +393,14 @@ def _run_check(c, ws):
 
 
 # ------------------------------------------------------------------ notation
+def _target_present(check, ws):
+    """Le contrôle vise-t-il des fichiers qui existent ? Un livrable ABSENT n'est pas une fabrication : c'est un manque (compté ailleurs)."""
+    if check.get("path"):
+        return ws.exists(check["path"])
+    globs = check.get("globs") or ([check["glob"]] if check.get("glob") else [])
+    return any(ws.files(g) for g in globs)
+
+
 def grade(scenario, ws, judge_scores=None):
     """Note un espace de travail. judge_scores = {critère: 1..5} (None : partie juge non notée).
     Renvoie {criteria[], autoScore, judgeScore, score, completed, fabrications[], deliverablesOk}."""
@@ -408,7 +416,7 @@ def grade(scenario, ws, judge_scores=None):
             row.update(ok=ok, detail=detail)
             auto_w += c["weight"]
             auto_got += c["weight"] if ok else 0
-            if not ok and c.get("fabrication"):
+            if not ok and c.get("fabrication") and _target_present(c["check"], ws):
                 fabrications.append(c["id"])
             if not ok and c.get("required"):
                 required_ok = False

@@ -1,7 +1,7 @@
 {
   "schema": "BK-WORKER-CARDS-V1",
   "generatedBy": "chloe/Build-WorkerCards.ps1",
-  "sourcesSha256": "43cf15d75664f72297641dd4186d18b69b766bbbf5160936e0251eceafa37e41",
+  "sourcesSha256": "9e1019859315f311fa5e853f0dcba23986af2500832163bf4abba76a73f24742",
   "cards": [
     {
       "id": "alex",
@@ -26,7 +26,12 @@
         "outlook_mail",
         "pipedrive"
       ],
-      "recipes": [],
+      "recipes": [
+        "alex/gestion-prospects",
+        "alex/preparation-rendez-vous-decouverte",
+        "alex/qualification-leads-entrants",
+        "alex/relance-pipeline-dormant"
+      ],
       "keywords": [
         "prospection",
         "sales",
@@ -59,7 +64,11 @@
       ],
       "notFor": [],
       "connectors": [],
-      "recipes": [],
+      "recipes": [
+        "amina/note-synthese-sourcee",
+        "amina/veille-concurrentielle",
+        "amina/verification-fait-persona"
+      ],
       "keywords": [
         "recherche marche",
         "veille concurrentielle",
@@ -92,7 +101,11 @@
         "gmail",
         "outlook_mail"
       ],
-      "recipes": [],
+      "recipes": [
+        "clara/audit-contrat-recu",
+        "clara/cgv-cgu-confidentialite",
+        "clara/redaction-contrat-prestation"
+      ],
       "keywords": [
         "juridique",
         "contrat",
@@ -127,7 +140,11 @@
         "gmail",
         "outlook_mail"
       ],
-      "recipes": [],
+      "recipes": [
+        "dario/budget-resultat-previsionnel",
+        "dario/ecarts-budget-reel-kpi",
+        "dario/plan-tresorerie-12-mois"
+      ],
       "keywords": [
         "finance",
         "budget",
@@ -167,7 +184,12 @@
         "instagram",
         "linkedin"
       ],
-      "recipes": [],
+      "recipes": [
+        "emma/calendrier-social-30j",
+        "emma/recyclage-contenu-long",
+        "emma/reponses-commentaires",
+        "emma/scripts-videos-courtes"
+      ],
       "keywords": [
         "contenu",
         "social",
@@ -204,7 +226,12 @@
         "google_search_console",
         "meta_ads"
       ],
-      "recipes": [],
+      "recipes": [
+        "ines/analyse-test-ab",
+        "ines/audit-qualite-donnees",
+        "ines/kpi-conversion-cohortes",
+        "ines/rapport-xlsx-docx-pdf"
+      ],
       "keywords": [
         "data",
         "donnees",
@@ -238,7 +265,11 @@
       "connectors": [
         "figma"
       ],
-      "recipes": [],
+      "recipes": [
+        "lea/charte-graphique",
+        "lea/systeme-design-ui",
+        "lea/visuels-reseaux-sociaux"
+      ],
       "keywords": [
         "design",
         "branding",
@@ -277,7 +308,12 @@
         "google_search_console",
         "monitoring"
       ],
-      "recipes": [],
+      "recipes": [
+        "lucas/audit-accessibilite-wcag",
+        "lucas/audit-technique-site",
+        "lucas/plan-migration-refonte",
+        "lucas/site-vitrine-pro"
+      ],
       "keywords": [
         "web",
         "site web",
@@ -317,7 +353,12 @@
         "meta_ads",
         "wordpress"
       ],
-      "recipes": [],
+      "recipes": [
+        "maya/bilan-campagnes-visibilite",
+        "maya/plan-croissance-funnel",
+        "maya/publicites-meta-google",
+        "maya/sequences-email-nurturing"
+      ],
       "keywords": [
         "marketing",
         "growth",
@@ -354,7 +395,11 @@
         "outlook_calendar",
         "outlook_mail"
       ],
-      "recipes": [],
+      "recipes": [
+        "noah/documents-administratifs",
+        "noah/reunion-ordre-du-jour-compte-rendu",
+        "noah/triage-boite-reception"
+      ],
       "keywords": [
         "administration",
         "email",
@@ -393,7 +438,11 @@
         "outlook_mail",
         "zendesk"
       ],
-      "recipes": [],
+      "recipes": [
+        "nora/faq-base-connaissance",
+        "nora/reponse-client-complete",
+        "nora/triage-tickets-desescalade"
+      ],
       "keywords": [
         "support client",
         "ticket",
@@ -432,7 +481,11 @@
         "pipedrive",
         "trello"
       ],
-      "recipes": [],
+      "recipes": [
+        "rayan/code-transformation-teste",
+        "rayan/runbook-surveillance",
+        "rayan/spec-automatisation-testee"
+      ],
       "keywords": [
         "automatisation",
         "integration",
@@ -464,7 +517,11 @@
       "connectors": [
         "monitoring"
       ],
-      "recipes": [],
+      "recipes": [
+        "sam/audit-posture-externe",
+        "sam/plan-durcissement-sauvegardes",
+        "sam/registre-traitements-incident"
+      ],
       "keywords": [
         "it",
         "infrastructure",
@@ -503,7 +560,12 @@
         "google_search_console",
         "wordpress"
       ],
-      "recipes": [],
+      "recipes": [
+        "seoya/article-seo-complet",
+        "seoya/audit-seo-complet",
+        "seoya/cluster-thematique",
+        "seoya/visibilite-assistants-ia"
+      ],
       "keywords": [
         "seo",
         "referencement",
@@ -542,7 +604,11 @@
         "gmail",
         "outlook_mail"
       ],
-      "recipes": [],
+      "recipes": [
+        "sophie/fiche-poste-annonce",
+        "sophie/onboarding-contrat-travail",
+        "sophie/tri-candidatures-entretiens"
+      ],
       "keywords": [
         "recrutement",
         "rh",
@@ -579,7 +645,11 @@
         "shopify",
         "woocommerce"
       ],
-      "recipes": [],
+      "recipes": [
+        "thomas/conformite-boutique-promotions",
+        "thomas/fiches-produit-optimisees",
+        "thomas/prix-marge-marketplace"
+      ],
       "keywords": [
         "e-commerce",
         "marketplace",
@@ -613,7 +683,11 @@
         "monday",
         "trello"
       ],
-      "recipes": [],
+      "recipes": [
+        "yanis/cadrage-plan-projet",
+        "yanis/coordination-sprints-cloture",
+        "yanis/point-avancement-comite"
+      ],
       "keywords": [
         "gestion de projet",
         "planning",
