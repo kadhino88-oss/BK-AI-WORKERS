@@ -1,0 +1,29 @@
+{
+  "scenario_name": "Infomaniak-kDrive-Classification-Chloe",
+  "target_worker": "chloe",
+  "objective": "Automatiser l'archivage légal suisse des pièces comptables ou contrats sur kDrive.",
+  "steps": [
+    {
+      "step": 1,
+      "module": "kDrive or Email Webhook",
+      "action": "Récupère un nouveau document PDF entrant (ex: facture fournisseur)."
+    },
+    {
+      "step": 2,
+      "module": "HTTP POST to BK-AI-WORKERS API",
+      "payload": {
+        "worker": "chloe",
+        "request": "Analyse ce document et classe-le parmi: RH, Comptabilite, Facture, Juridique."
+      }
+    },
+    {
+      "step": 3,
+      "module": "kDrive: Create a Folder & Upload a File",
+      "action": "Crée dynamiquement l'arborescence sur l'infrastructure souveraine d'Infomaniak: /Archives_2026/{{2.classification}}/ et y dépose le fichier proprement renommé."
+    }
+  ],
+  "security": {
+    "sovereignty": "Infrastructure souveraine Infomaniak suisse, conforme nLPD.",
+    "header_validation": "X-BK-Signature"
+  }
+}

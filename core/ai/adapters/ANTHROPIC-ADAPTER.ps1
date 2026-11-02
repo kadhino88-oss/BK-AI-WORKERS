@@ -84,9 +84,17 @@ $CallTimeout = if ($LevelCfg -and $LevelCfg.callTimeoutSec) { [int]$LevelCfg.cal
 # output_config.effort : GA sur les modeles 5.x, PAS sur Haiku 4.5 (le modele historique des Workers).
 $UseEffort = ($LevelCfg -and $LevelCfg.effort -and $EffectiveModel -notlike "claude-haiku-4*")
 $MissionDeadline = (Get-Date).AddSeconds($(if ($env:BK_MISSION_DEADLINE_SEC -match '^[0-9]{2,3}$' -and [int]$env:BK_MISSION_DEADLINE_SEC -le 540) { [int]$env:BK_MISSION_DEADLINE_SEC } else { 540 }))   # le serveur coupe a 600 s : on rend un resultat partiel avant (Chloe donne un delai plus court a chaque Worker d'une mission multi-Workers : BK_MISSION_DEADLINE_SEC)
+# Executeur de moteurs (Invoke-EngineChain.ps1) : l'echeance de TOUTE la mission, partagee entre les moteurs d'une chaine de repli. Sans variable : inchange.
+if ($env:BK_ENGINE_DEADLINE_EPOCH -match '^\d{9,11}(\.\d+)?$') { $MissionDeadline = [DateTimeOffset]::FromUnixTimeMilliseconds([long]([double]$env:BK_ENGINE_DEADLINE_EPOCH * 1000)).LocalDateTime }
 # Plafond de cout de la mission (maxCostChf du niveau) et suivi du cout reel appel par appel : Mission-Cost.ps1, tarifs dans
 # core/ai/AI-PRICING.json. Sans niveau (ancien comportement) ou pour Rapide : pas de plafond, le cout est quand meme releve.
 $CostCeilingChf = if ($LevelCfg) { $LevelCfg.maxCostChf } else { $null }
+# Plafond de depense Claude du proprietaire (jour / mois, core/ai/data/engine-settings.json) : l'executeur de moteurs pose le RESTE disponible ; il joue le role de
+# plafond de la mission si celui-ci est plus petit (ou absent). Meme mecanique que maxCostChf : la boucle s'arrete avant l'appel qui le depasserait. Sans variable : inchange.
+if ($env:BK_ENGINE_BUDGET_CHF -match '^\d+(\.\d+)?$') {
+    $BudgetChf = [double]$env:BK_ENGINE_BUDGET_CHF
+    if ($BudgetChf -gt 0 -and (-not $CostCeilingChf -or $BudgetChf -lt [double]$CostCeilingChf)) { $CostCeilingChf = $BudgetChf }
+}
 $MissionCost = New-BKMissionCost -Pricing (Get-BKPricing -Root $ProjectRoot) -Model $EffectiveModel -CeilingChf $CostCeilingChf
 
 Write-Host "ANTHROPIC ADAPTER | worker=$WorkerId | model=$EffectiveModel"
@@ -98,6 +106,7 @@ function Write-Result($Object) { $Object | ConvertTo-Json -Depth 10 -Compress }
 
 $PlainKey = $null
 $ResponseText = $null; $ErrorDetail = $null; $ExitCode = 1
+$ErrorBody = ""; $ErrorStatus = 0
 $Response = $null
 
 if (-not (Test-BKSecret -Name "anthropic")) {
@@ -248,61 +257,12 @@ try {
                 $ToolUse.input.params.PSObject.Properties | ForEach-Object { $OpParams[$_.Name] = $_.Value }
             }
 
-            $AutoApproved = Test-ClientAutoApprove -ClientId $ClientId
-            # Garde-fou specifique a Kader (CLI-DASHBOARD) : sur SON PROPRE
-            # compte, une sortie d'argent (connecteur financier, operation
-            # non READ_*/SEARCH_*) exige TOUJOURS sa confirmation manuelle,
-            # meme s'il a active "auto-approve" pour le reste — regle
-            # explicite, sans exception, distincte du choix d'un client sur
-            # son propre portefeuille (celui-la reste regi par son propre
-            # bascule auto-approve, comme n'importe quel autre connecteur).
-            $IsFinancialConnector = (Get-ConnectorBaseId -ConnectorId "$ConnId.controlled") -in @("stripe", "paypal", "quickbooks", "xero")
-            if ($ClientId -eq "CLI-DASHBOARD" -and $IsFinancialConnector -and -not (Test-ReadOnlyOperation -Operation $Op)) {
-                $AutoApproved = $false
-            }
-            if ($AutoApproved -and $env:BK_AUTOAPPROVE_DRAFTS_ONLY -ne "0" -and -not (Test-ReadOnlyOperation -Operation $Op) -and (("$ConnId|$Op") -notin $AutoApproveSafeOps)) {
-                $AutoApproved = $false
-            }
-            # Interrupteur d'arret (2026-10-12) : le client a mis l'installation de CE Worker en pause -> il n'agit plus seul, meme pour un vrai
-            # brouillon (il attend la confirmation du client). La mission lancee a la main fonctionne toujours : lectures et propositions restent possibles.
-            if ($AutoApproved -and (Test-BKInstallationPaused -Root $ProjectRoot -ClientId $ClientId -WorkerId $WorkerId)) {
-                $AutoApproved = $false
-            }
-
-            if ((Test-ReadOnlyOperation -Operation $Op) -or $AutoApproved) {
-                # Lecture : toujours executee reellement tout de suite
-                # (aucun effet externe possible). Ecriture : executee
-                # reellement tout de suite UNIQUEMENT si ce client a
-                # explicitement pre-autorise ses Workers a agir sans
-                # attendre (bascule "autoApprove", desactivee par defaut).
-                $ActionResult = Invoke-ConnectorAction -ConnectorId "$ConnId.controlled" -Operation $Op -ClientId $ClientId -Params $OpParams
-                $ConnectorActionsList += @{ connectorId = $ConnId; operation = $Op; status = $ActionResult.Status; executed = $true; autoApproved = $AutoApproved }
-                $ToolResults += @{ type = "tool_result"; tool_use_id = $ToolUse.id; content = ($ActionResult | ConvertTo-Json -Depth 10 -Compress) }
-            }
-            else {
-                # Ecriture : JAMAIS executee ici. On ecrit l'action proposee
-                # sur disque pour confirmation explicite du client. Une
-                # seule action en attente possible par mission (le fichier
-                # est nomme par TaskId, pas par tool_use.id) : la premiere
-                # ecriture non auto-approuvee arrete la boucle apres ce
-                # tour, pour ne jamais en ecraser une deuxieme.
-                $PendingPath = Join-Path $ProjectRoot ("memory/runtime/PENDING-ACTION-" + $TaskId + ".json")
-                $Pending = [ordered]@{
-                    taskId       = $TaskId
-                    clientId     = $ClientId
-                    workerId     = $WorkerId
-                    connectorId  = $ConnId
-                    operation    = $Op
-                    params       = $OpParams
-                    reason       = $Reason
-                    createdAtUtc = (Get-Date).ToUniversalTime().ToString("o")
-                }
-                ($Pending | ConvertTo-Json -Depth 10) | Set-Content -LiteralPath $PendingPath -Encoding UTF8
-
-                $ConnectorActionsList += @{ connectorId = $ConnId; operation = $Op; status = "PENDING_CONFIRMATION"; executed = $false }
-                $ToolResults += @{ type = "tool_result"; tool_use_id = $ToolUse.id; content = "PENDING_CONFIRMATION : action non executee, en attente de confirmation du client depuis son tableau de bord." }
-                $StopLoop = $true
-            }
+            # Lecture executee tout de suite ; ecriture JAMAIS executee ici (PENDING-ACTION-<TaskId>.json, confirmation explicite du client) sauf
+            # pre-autorisation limitee aux vrais brouillons : toute la regle vit dans Invoke-BKConnectorToolCall (Connector-Tool.ps1), commune a tous les moteurs.
+            $Gate = Invoke-BKConnectorToolCall -ClientId $ClientId -WorkerId $WorkerId -TaskId $TaskId -ConnId $ConnId -Op $Op -Reason $Reason -OpParams $OpParams
+            $ConnectorActionsList += $Gate.Action
+            $ToolResults += @{ type = "tool_result"; tool_use_id = $ToolUse.id; content = $Gate.Content }
+            if ($Gate.Stop) { $StopLoop = $true }
         }
 
         if ($ToolResults.Count -gt 0) { [void]$Messages.Add(@{ role = "user"; content = $ToolResults }) }
@@ -386,6 +346,10 @@ try {
 catch {
     $ErrorDetail = $_.Exception.Message
     $ExitCode = 1
+    # Corps de l'erreur HTTP et code (ajoutes le 2026-10-25) : « credit balance too low » n'est que dans le corps ; l'executeur de moteurs en a besoin
+    # pour distinguer un credit epuise (moteur mis de cote) d'une simple erreur de requete. Le corps d'erreur de l'API ne contient jamais la cle.
+    try { $ErrorBody = ([string]$_.ErrorDetails.Message); if ($ErrorBody.Length -gt 400) { $ErrorBody = $ErrorBody.Substring(0, 400) } } catch { }
+    try { $ErrorStatus = [int]$_.Exception.Response.StatusCode } catch { }
 }
 finally {
     $PlainKey = $null
@@ -415,6 +379,9 @@ if ($ExitCode -eq 0) {
     exit 0
 }
 else {
-    Write-Result ([ordered]@{ status="ERROR"; provider="anthropic"; model=$EffectiveModel; mode="LLM"; api_call=$true; answer=""; error=$ErrorDetail })
+    # usage aussi en cas d'erreur (2026-10-26) : les appels deja factures AVANT l'echec (un premier tour d'outil, puis un delai, un 429 ou un credit epuise en
+    # cours de mission) ont bel et bien coute ; l'executeur de moteurs les ajoute au registre de depense (plafond du proprietaire). Le chemin sans plan l'ignore.
+    Write-Result ([ordered]@{ status="ERROR"; provider="anthropic"; model=$EffectiveModel; mode="LLM"; api_call=$true; answer=""; error=$ErrorDetail; error_body=[string]$ErrorBody; http_status=[int]$ErrorStatus
+                              usage=$(if ($MissionCost) { Get-BKCostUsageFields -Cost $MissionCost } else { $null }) })
     exit 1
 }

@@ -152,7 +152,9 @@ else:
     print("  SKIP  node absent : syntaxe non verifiee")
 for name in ("app.js", "index.html", "style.css", "i18n-en-app.js"):
     raw = open(os.path.join(D, name), "rb").read()
-    check(f"dashboard/{name} : fins de ligne CRLF conservees (aucune ligne LF seule)", raw.count(b"\n") == raw.count(b"\r\n"))
+    # Les fichiers sont en LF dans le depot et en CRLF dans une copie Windows (autocrlf) :
+    # ce qui compte est qu'il n'y ait jamais de melange des deux dans un meme fichier.
+    check(f"dashboard/{name} : fins de ligne coherentes (tout LF ou tout CRLF, jamais melanges)", raw.count(b"\r\n") in (0, raw.count(b"\n")))
     check(f"dashboard/{name} : pas de BOM", not raw.startswith(b"\xef\xbb\xbf"))
 
 # ------------------------------------------------------------------ 2. identifiants HTML
@@ -289,7 +291,8 @@ def z(selector):
 
 
 check("l'assistant est au-dessus de la bulle de Chloe et sous la fenetre « Connecter un outil »", z(".iw-overlay") and z(".cg-overlay") and 2000 < z(".iw-overlay") < z(".cg-overlay"), f"{z('.iw-overlay')} / {z('.cg-overlay')}")
-mobile = CSS[CSS.rindex("@media (max-width: 720px) {\r\n  .iw-overlay"):] if "@media (max-width: 720px) {\r\n  .iw-overlay" in CSS else ""
+_CSS_LF = CSS.replace("\r\n", "\n")   # meme analyse que la copie soit en LF (Linux/depot) ou en CRLF (Windows)
+mobile = _CSS_LF[_CSS_LF.rindex("@media (max-width: 720px) {\n  .iw-overlay"):] if "@media (max-width: 720px) {\n  .iw-overlay" in _CSS_LF else ""
 check("sous 720 px l'assistant occupe tout l'ecran", ".iw-box { width: 100%;" in mobile and "border-radius: 0" in mobile)
 check("sous 720 px seul le libelle de l'etape courante est affiche (cinq etapes tiennent sur 375 px)", ".iw-step-item:not(.is-current) .iw-step-label { display: none; }" in mobile)
 check("polices de champs a 16 px sur mobile (pas de zoom automatique)", "font-size: 16px" in mobile)
@@ -331,6 +334,7 @@ check("la liste des automatisations echappe l'objectif et le libelle du dernier 
 check("la suppression de compte ne dit plus de resilier un abonnement deja resilie et previent de la perte du temps paye",
       "le temps déjà payé n'est pas remboursé" in APP and "Une fois la résiliation enregistrée, vous pouvez supprimer votre compte tout de suite" in APP)
 check("un forfait sur facture en dernier mois paye est annonce « valable jusqu'au », pas « renouvele »", "data.awaitingInvoice" in APP)
+check("la suppression de compte explique le refus quand un ancien abonnement attend encore son annulation chez Stripe", "STRIPE_CLEANUP_PENDING" in APP)
 check("les statuts « installation_paused » et « worker_not_included » ont un libelle francais", "AUTOMATION_STATUS_LABELS" in APP and "non lancée : Worker en pause" in APP)
 
 print("\n" + ("TOUT PASSE" if not failures else f"{len(failures)} ECHEC(S)"))

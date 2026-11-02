@@ -52,7 +52,7 @@ La clé `BK_SECRET_CRED_ENCRYPTION_KEY` vit dans `.env` (hôte, `chmod 600`), fo
 | Transport | HTTPS automatique par Caddy ; appels sortants en HTTPS | `docker-compose.yml`, `deploy/Caddyfile.docker` |
 | Chiffrement des identifiants d'outils | AES-256-GCM, nonce aléatoire de 12 octets, tag de 16 octets, clé de 32 octets exigée | `core/connectors/Crypto-Helper.ps1`, `Client-Credential-Store.ps1` |
 | Valeur jamais relue | seul le **nom** des outils connectés est listé ; le secret n'est jamais renvoyé au navigateur ni journalisé | `server.py: get_client_configured_providers`, `connect_guides.py` |
-| Mots de passe | PBKDF2-HMAC-SHA256, 200 000 itérations, sel de 16 octets, `hmac.compare_digest`, 8 caractères minimum | `server.py: _hash_password`, `_verify_password`, `create_account` |
+| Mots de passe | PBKDF2-HMAC-SHA256, 600 000 itérations, sel de 16 octets, `hmac.compare_digest`, 8 caractères minimum | `server.py: _hash_password`, `_verify_password`, `create_account` |
 | Sessions | `secrets.token_urlsafe(32)`, cookie `HttpOnly; SameSite=Lax` (+ `Secure` en HTTPS), empreinte SHA-256 seule sur disque (`0600`), fermeture de toutes les sessions au reset du mot de passe et à la suppression | `server.py` |
 | Anti force brute | 8 échecs par compte+IP et 40 par IP sur 15 min ; inscription 10/h/IP ; mot de passe oublié 6/h/IP et 3/h/e-mail ; démo 4/h/IP ; identifiants d'outils 40/h/client ; API publique 20/min/client ; essai public 3/jour/IP et 80/jour au total ; WhatsApp 30 messages/h | `server.py`, `whatsapp_channel.py` |
 | Réinitialisation | jeton à usage unique valable 1 h, réponse identique que le compte existe ou non | `server.py: request_password_reset` |
@@ -65,7 +65,7 @@ La clé `BK_SECRET_CRED_ENCRYPTION_KEY` vit dans `.env` (hôte, `chmod 600`), fo
 | Chaîne d'autorisation | capacité, autorité, politique, tâche, identifiants, connecteur, fournisseur, preuve, rétention ; échec = `AI_AUTHORIZATION_BLOCKED` | `core/runtime/worker-runtime/Invoke-Worker-AI.ps1` |
 | Agent téléphonique | aucun Worker, connecteur ni donnée de client joignable : seulement la fiche publique | `dashboard/phone_agent.py`, `docs/PHONE-AGENT.md` |
 | Écritures concurrentes | verrou + écriture atomique (incident du 2026-09-28) | `server.py`, `core/runtime/State-Lock.ps1` |
-| Droits des personnes | export JSON (`/api/account/export`), suppression en libre-service (`/api/account/delete`, mot de passe requis, refus si abonnement Stripe actif) | `server.py` |
+| Droits des personnes | export JSON (`/api/account/export`), suppression en libre-service (`/api/account/delete`, mot de passe requis, refus tant qu'un abonnement Stripe est encore renouvelé ; une résiliation déjà enregistrée ne bloque plus la suppression) | `server.py` |
 | Disponibilité | mesure toutes les 60 s, agrégats quotidiens 90 j, page `/status.html`, `/api/status` | `status_monitor.py`, `trust_pages.py` |
 
 ## 4. Services tiers réellement appelés (liste de sous-traitants)
@@ -102,7 +102,7 @@ Non utilisés à l'exécution (outils du propriétaire pour produire des vidéos
 
 ## 6. Ce qui n'est pas fait (à dire tel quel)
 
-Aucun rapport SOC 2, aucune certification ISO/IEC 27001, aucun test d'intrusion externe, aucun programme de récompense. Pas de 2FA ni de SSO. Pas de HSTS ni de CSP (ni aucun en-tête de sécurité HTTP) et pas de jeton anti-CSRF dédié. Pas de HSM, pas de rotation de la clé maîtresse. Missions, profils et comptes non chiffrés au niveau applicatif. Sauvegardes sur le même serveur, non chiffrées, sans test de restauration documenté. Un seul serveur, une seule personne, aucune relecture de code par un tiers. Pas de scan de dépendances, pas de CI de tests bloquante, conteneur exécuté en `root`.
+Aucun rapport SOC 2, aucune certification ISO/IEC 27001, aucun test d'intrusion externe, aucun programme de récompense. Pas de 2FA ni de SSO. Pas de politique CSP et pas de jeton anti-CSRF dédié (en-têtes HSTS en HTTPS, X-Frame-Options, X-Content-Type-Options et Referrer-Policy en place). Pas de HSM, pas de rotation de la clé maîtresse. Missions, profils et comptes non chiffrés au niveau applicatif. Sauvegardes sur le même serveur, non chiffrées, sans test de restauration documenté. Un seul serveur, une seule personne, aucune relecture de code par un tiers. Pas de scan de dépendances (les tests, eux, passent avant chaque déploiement automatique), conteneur exécuté en `root`.
 
 ### Points faibles relevés pendant cette revue (7 octobre 2026)
 
@@ -111,7 +111,7 @@ Aucun rapport SOC 2, aucune certification ISO/IEC 27001, aucun test d'intrusion 
 | 1 | L'URL de webhook sortant d'un client (`POST /api/integrations/webhook`) n'est contrôlée que par `startswith("http")` : le serveur peut être amené à appeler une adresse interne (SSRF). La protection de `connect_guides.py` ne la couvre pas. | **Haute** | réutiliser `connect_guides.normalize_host` + refuser IP/ports/suffixes internes ; revalider au moment de l'envoi |
 | 2 | Plusieurs routes lisent `Content-Length` sans plafond (`signup`, `login`, `chloe/task`, …) : un corps énorme est lu en mémoire. | Moyenne | plafond global (ex. 200 Ko) dans un point d'entrée unique |
 | 3 | Le secret d'un outil transite par un fichier temporaire en clair (`/tmp/bkaiw-cred-in-*.json`), supprimé aussitôt, créé avec les droits par défaut. | Moyenne | `os.open(..., 0o600)` ou passage par l'entrée standard |
-| 4 | Aucun en-tête HTTP de sécurité (HSTS, CSP, `X-Content-Type-Options`, `Referrer-Policy`) ; pas de jeton anti-CSRF (SameSite=Lax seul). | Moyenne | directive `header` dans `deploy/Caddyfile.docker` ; jeton CSRF sur les POST à cookie |
+| 4 | Pas de politique CSP (le tableau de bord utilise des scripts inline) ; pas de jeton anti-CSRF (SameSite=Lax seul). | Moyenne | CSP à tester sur le tableau de bord avant activation ; jeton CSRF sur les POST à cookie |
 | 5 | **Corrigé dans cette branche.** Le site affichait « personne, pas même nous, ne peut les lire » (`dashboard/index.html`, section « Connectez votre outil ») et la politique de confidentialité §6 disait « y compris par l'équipe » : techniquement faux pour une personne qui détient la clé serveur. Les phrases (page d'accueil, FAQ, politique de confidentialité, dictionnaires anglais) disent maintenant « chiffrés au repos, jamais réaffichés ni renvoyés au navigateur ; une personne ayant accès au serveur et à son environnement pourrait techniquement les lire ». `tests/trust/test_trust_extras.py` refuse le retour de l'ancienne promesse. | Moyenne (honnêteté) | fait ; à relire par le propriétaire |
 | 6 | Conteneur exécuté en `root` (aucune directive `USER`). | Basse | utilisateur dédié, volume en lecture/écriture ciblée |
 | 7 | Les échecs de connexion ne sont pas journalisés (seulement comptés en mémoire). | Basse | événement `login_failed` dans `activity-log.json` |

@@ -3509,6 +3509,22 @@ input, textarea, select { border-radius: 14px; }
 .admin-pilot-usecase { white-space: pre-wrap; }
 .admin-pilot-actions { grid-column: 1 / -1; display: flex; gap: 14px; align-items: center; color: var(--ink-muted); font-size: 12px; }
 
+/* Moteur d'IA : ligne pres de la zone de mission, etiquette sous chaque reponse, carte « Mon moteur », reglages du proprietaire */
+.engine-line { margin: 0 0 10px; font-size: 13px; opacity: 0.9; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.engine-line-text { font-weight: 600; }
+.engine-more-btn { background: none; border: 0; color: var(--gold, #c9a86a); text-decoration: underline; cursor: pointer; font: inherit; font-size: 12.5px; padding: 0; }
+.engine-details { flex-basis: 100%; padding: 8px 12px; border: 1px solid rgba(201, 168, 106, 0.35); border-radius: 10px; font-size: 12.5px; line-height: 1.5; }
+.engine-details ul { margin: 4px 0 0 18px; padding: 0; }
+.engine-tag { margin-top: 8px; font-size: 12px; opacity: 0.7; }
+.engine-tag.is-failover { opacity: 1; color: #e2b254; }
+.engine-card-note { font-size: 13px; opacity: 0.8; }
+.engine-byok { margin-top: 12px; }
+.engine-byok summary { cursor: pointer; font-weight: 600; }
+.engine-byok-form, .engine-admin-form { display: grid; gap: 8px; max-width: 560px; margin-top: 10px; }
+.engine-byok-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.engine-admin-form label { display: grid; gap: 4px; font-size: 13px; }
+.engine-admin-state { font-size: 13px; line-height: 1.6; margin-bottom: 10px; }
+
 /* Niveau de travail des missions (Rapide / Equilibre / Approfondi) */
 .level-picker { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 10px; }
 .level-chip { border: 1px solid rgba(201, 168, 106, 0.45); background: transparent; color: inherit; border-radius: 999px; padding: 6px 12px; font: inherit; font-size: 13px; cursor: pointer; }

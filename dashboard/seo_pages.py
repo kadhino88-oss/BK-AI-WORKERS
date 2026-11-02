@@ -34,6 +34,8 @@ FOOTER_TRUST_LINKS = [
     ("/status.html", "Statut du service"),
 ]
 
+import html as _html
+import json
 import re
 
 # Palette et typo alignees sur dashboard/style.css (:root) — avant ce
@@ -56,7 +58,7 @@ _SHARED_STYLE = (
     ".page-hero-glow{position:absolute;top:-170px;left:50%;transform:translateX(-50%);width:640px;height:340px;"
     "background:radial-gradient(circle,var(--glow-gold) 0%,rgba(165,118,31,0) 70%);pointer-events:none}"
     ".page-hero-in{position:relative;max-width:760px;margin:0 auto}"
-    ".page-hero h1{color:#fff;font-size:1.9rem;margin:0 0 8px}"
+    ".page-hero h1{color:#fff;font-size:1.9rem;margin:0 0 8px;text-wrap:balance}"
     ".page-hero p.u{color:var(--dark-muted);margin:0}"
     "main{max-width:960px;margin:32px auto;padding:0 16px}"
     "article{background:#fff;border:1px solid var(--card-border);border-radius:var(--radius);padding:28px}"
@@ -100,11 +102,32 @@ _SHARED_STYLE = (
     "details.faq-item{border:1px solid var(--card-border);border-radius:var(--radius-sm);padding:12px 16px;margin-bottom:10px}"
     "details.faq-item summary{font-weight:700;cursor:pointer}"
     "details.faq-item p{margin:10px 0 0;color:var(--ink-muted);font-size:14px}"
+    ".wk-top{display:grid;grid-template-columns:200px 1fr;gap:24px;align-items:start;margin-bottom:8px}"
+    ".wk-portrait{width:200px;height:250px;object-fit:cover;border-radius:var(--radius-sm);background:#22242c;display:block}"
+    ".wk-cat{color:var(--gold);font-weight:800;font-size:13px;letter-spacing:.04em;text-transform:uppercase;margin:0 0 6px}"
+    ".wk-note{font-size:12.5px;margin:10px 0 0}"
+    ".wk-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;margin:14px 0}"
+    ".wk-card{border:1px solid var(--card-border);border-radius:var(--radius-sm);padding:14px 16px;background:#fff}"
+    ".wk-card h3{margin:0 0 6px;font-size:.98rem}"
+    ".wk-card p{margin:0;font-size:13.5px;color:var(--ink-muted)}"
+    ".wk-mode{margin:14px 0}"
+    ".wk-mode h3{margin:0 0 6px;font-size:.95rem}"
+    ".wk-mode ul{margin:0;padding-left:18px;color:var(--ink-muted);font-size:13.5px}"
+    ".chips{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0;padding:0;list-style:none}"
+    ".chips li{border:1px solid var(--card-border);border-radius:999px;padding:4px 12px;font-size:12.5px;background:#fff}"
+    ".chips li.soon{color:var(--ink-muted);border-style:dashed}"
+    ".wk-others{display:flex;flex-wrap:wrap;gap:8px 14px;font-size:13.5px}"
+    "@media(max-width:640px){.wk-top{grid-template-columns:1fr}.wk-portrait{width:100%;height:auto;aspect-ratio:4/5;max-height:360px}}"
     "a:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var(--gold);outline-offset:2px}"
 )
 
 
-def _head(title, description, canonical_path):
+def _head(title, description, canonical_path, og_image=None, json_ld=None):
+    og_image = og_image or "https://bk-ai-workers.com/portraits/chloe.jpg"
+    ld = ""
+    if json_ld:
+        # '<' devient \u003c (JSON valide, meme valeur) : un texte de fiche ne peut jamais fermer ni rouvrir une balise <script>.
+        ld = '<script type="application/ld+json">' + json.dumps(json_ld, ensure_ascii=False).replace("<", "\\u003c") + "</script>\n"
     return (
         "<!DOCTYPE html>\n"
         '<html lang="fr"><head><meta charset="UTF-8">'
@@ -116,7 +139,7 @@ def _head(title, description, canonical_path):
         '<meta property="og:type" content="website"><meta property="og:site_name" content="BK-AI-WORKERS">\n'
         f'<meta property="og:title" content="{title}"><meta property="og:description" content="{description}">\n'
         f'<meta property="og:url" content="https://bk-ai-workers.com{canonical_path}">\n'
-        '<meta property="og:image" content="https://bk-ai-workers.com/portraits/chloe.jpg">\n'
+        f'<meta property="og:image" content="{og_image}">\n'
         '<meta name="twitter:card" content="summary_large_image">\n'
         '<link rel="icon" type="image/svg+xml" href="/favicon.svg">\n'
         '<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">\n'
@@ -124,6 +147,7 @@ def _head(title, description, canonical_path):
         '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n'
         '<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap" rel="stylesheet">\n'
         f"<style>{_SHARED_STYLE}</style>\n"
+        f"{ld}"
         "</head><body>"
     )
 
@@ -162,7 +186,7 @@ def _footer():
 _HERO_RE = re.compile(r'\s*(<h1>.*?</h1>)\s*(<p class="u">.*?</p>)?', re.S)
 
 
-def _page(title, description, canonical_path, body_html, extra_scripts=""):
+def _page(title, description, canonical_path, body_html, extra_scripts="", og_image=None, json_ld=None):
     hero_html = ""
     rest = body_html
     m = _HERO_RE.match(body_html)
@@ -173,7 +197,7 @@ def _page(title, description, canonical_path, body_html, extra_scripts=""):
         )
         rest = body_html[m.end():]
     return (
-        _head(title, description, canonical_path)
+        _head(title, description, canonical_path, og_image=og_image, json_ld=json_ld)
         + _header()
         + hero_html
         + f"<main><article>{rest}</article></main>"
@@ -189,10 +213,11 @@ def render_workers_page(workers):
     """workers : liste de dicts issus de build_worker_summary() — memes
     donnees reelles que /api/workers, jamais un doublon invente."""
     cards = "".join(
-        f'<div class="worker-card"><img class="portrait" src="{w["portraitUrl"]}" alt="{w["name"]}" loading="lazy">'
+        f'<a class="worker-card" href="{worker_page_path(w["id"])}" style="text-decoration:none">'
+        f'<img class="portrait" src="{w["portraitUrl"]}" alt="{w["name"]}" loading="lazy">'
         f'<div class="body"><div class="name">{w["name"]}</div>'
         f'<div class="cat">{w["category"]}</div>'
-        f'<div class="role">{w["role"]}</div></div></div>'
+        f'<div class="role">{w["role"]}</div></div></a>'
         for w in workers
     )
     body = f"""
@@ -216,6 +241,179 @@ def render_workers_page(workers):
         "/workers.html",
         body,
     )
+
+
+BASE_URL = "https://bk-ai-workers.com"
+
+
+def worker_page_path(worker_id):
+    """Adresse publique de la page d'un Worker (une page par metier : c'est ce qui se reference, la liste seule ne suffit pas)."""
+    return f"/workers/{worker_id}.html"
+
+
+# Noms affiches des outils : memes noms que BRAND_LOGOS dans app.js (un identifiant de profil « gmail.controlled » devient « Gmail »).
+CONNECTOR_LABELS = {
+    "asana": "Asana", "calendar": "Google Agenda", "facebook": "Facebook", "figma": "Figma", "gmail": "Gmail",
+    "google_search_console": "Search Console", "hubspot": "HubSpot", "instagram": "Instagram", "intercom": "Intercom",
+    "linkedin": "LinkedIn", "meta_ads": "Meta Ads", "monday": "monday.com", "monitoring": "Surveillance",
+    "outlook_calendar": "Outlook Calendar", "outlook_mail": "Outlook", "pipedrive": "Pipedrive", "shopify": "Shopify",
+    "trello": "Trello", "woocommerce": "WooCommerce", "wordpress": "WordPress", "zendesk": "Zendesk",
+}
+CHANNEL_LABELS = {"web": "Application web", "schedule": "Missions planifiées", "email": "E-mail", "phone": "Téléphone", "whatsapp": "WhatsApp"}
+# defaultMode d'une regle d'autonomie (workers/<id>/install-profile.json) -> ce que le client lit.
+_MODE_TITLES = [
+    ("auto", "{name} le fait seul"),
+    ("draft", "Brouillon que vous validez"),
+    ("ask", "Demande votre confirmation"),
+    ("off", "Désactivé par défaut"),
+]
+
+
+def _e(value):
+    return _html.escape(str(value if value is not None else ""), quote=True)
+
+
+def _connector_label(connector_id):
+    key = str(connector_id).split(".")[0]
+    return CONNECTOR_LABELS.get(key) or key.replace("_", " ").title()
+
+
+def _profile_connectors(profile):
+    """(obligatoires, tous) : noms affiches, sans doublon, dans l'ordre de la fiche."""
+    required, every = [], []
+    for svc in (profile or {}).get("services", []):
+        if not isinstance(svc, dict):
+            continue
+        for cid in svc.get("requiredConnectors") or []:
+            label = _connector_label(cid)
+            if label not in required:
+                required.append(label)
+            if label not in every:
+                every.append(label)
+        for cid in (svc.get("optionalConnectors") or []) + [c for g in (svc.get("requiredAnyOf") or []) if isinstance(g, list) for c in g]:
+            label = _connector_label(cid)
+            if label not in every:
+                every.append(label)
+    return required, every
+
+
+def _autonomy_groups(profile, limit=5):
+    """{mode: [libelles]} d'apres les regles d'autonomie reelles des services (sans doublon, au plus `limit` par groupe)."""
+    groups = {}
+    for svc in (profile or {}).get("services", []):
+        for rule in (svc.get("autonomyRules") or []) if isinstance(svc, dict) else []:
+            label, mode = rule.get("label"), rule.get("defaultMode")
+            if label and mode and label not in groups.setdefault(mode, []):
+                groups[mode].append(label)
+    return {m: v[:limit] for m, v in groups.items()}
+
+
+def _plan(plan_id):
+    return next((p for p in PRICING_PLANS if p["id"] == plan_id), None)
+
+
+def render_worker_page(worker, profile, others=()):
+    """Page publique d'UN Worker : tout vient de sa fiche reelle (identity.json, install-profile.json) et de la grille de prix (PRICING_PLANS).
+    Rien n'est invente : ni avis, ni chiffre d'usage, ni exemple de resultat. Ce qui est prevu mais pas encore disponible est dit comme tel."""
+    wid, name, role, category = worker["id"], worker["name"], worker["role"], worker["category"]
+    profile = profile if isinstance(profile, dict) else {}
+    tagline = profile.get("tagline") or f"{name}, {role}, un agent IA spécialisé de BK-AI-WORKERS."
+    ideal = profile.get("idealFor") or ""
+    services = [s for s in profile.get("services", []) if isinstance(s, dict) and s.get("label")]
+    required, every = _profile_connectors(profile)
+    groups = _autonomy_groups(profile)
+    solo, essai = _plan("solo"), _plan("essai")
+    url = BASE_URL + worker_page_path(wid)
+    portrait = worker["portraitUrl"]
+
+    # --- questions frequentes : MEMES textes dans la page et dans le JSON-LD (une reponse n'est publiee qu'une fois, telle qu'affichee) ---
+    faq = []
+    if ideal:
+        faq.append((f"Pour qui est {name} ?", ideal))
+    if services:
+        faq.append((f"Que livre {name} concrètement ?", f"{name} prend en charge : " + " ; ".join(s["label"] for s in services) + "."))
+    off_example = (groups.get("off") or [""])[0]
+    answer = (f"Tout ce qui part vers l'extérieur reste validé par vous : {name} cherche, calcule et rédige seul, puis dépose un brouillon "
+              "ou demande votre confirmation.")
+    if off_example:
+        answer += f" Certaines actions sont désactivées par défaut, par exemple : {off_example[0].lower() + off_example[1:]}."
+    faq.append((f"{name} agit-il sans ma validation ?", answer))
+    if solo and essai:
+        faq.append((f"Combien coûte {name} ?",
+                    f"Le forfait {solo['name']} ({solo['price']} CHF par mois, {solo['credits']} crédits) donne accès à un Worker de votre choix. "
+                    f"Vous pouvez d'abord essayer gratuitement : {essai['period']}, {essai['credits']} crédits, sans carte bancaire."))
+    if every:
+        need = (f"Connexion nécessaire pour certaines missions : {', '.join(required)}. " if required
+                else "Aucune connexion n'est nécessaire pour démarrer. ")
+        faq.append((f"Quels outils {name} peut-il utiliser ?", need + "Outils connectables : " + ", ".join(every) + "."))
+
+    # --- contenu visible ---
+    parts = [f'<h1>{_e(name)} : {_e(role)}, agent IA</h1><p class="u">{_e(tagline)}</p>']
+    top = (f'<div class="wk-top"><img class="wk-portrait" src="{_e(portrait)}" width="200" height="250" '
+           f'alt="Portrait de {_e(name)}, {_e(role)}"><div><p class="wk-cat">{_e(category)}</p>')
+    if ideal:
+        top += f"<p><strong>Pour qui ?</strong> {_e(ideal)}</p>"
+    if essai:
+        top += (f'<div class="cta-row"><a class="btn btn-gold" href="/#nav-onboarding">Essayer {_e(name)} gratuitement</a>'
+                f'<a class="btn btn-ghost" href="/tarifs.html">Voir les tarifs</a></div>'
+                f'<p class="u wk-note">Essai de {_e(essai["period"])}, {essai["credits"]} crédits, sans carte bancaire.</p>')
+    parts.append(top + "</div></div>")
+
+    if services:
+        cards = "".join(f'<div class="wk-card"><h3>{_e(s["label"])}</h3><p>{_e(s.get("description", ""))}</p></div>' for s in services)
+        parts.append(f"<h2>Ce que {_e(name)} livre</h2><div class=\"wk-grid\">{cards}</div>")
+
+    modes = ""
+    for mode, title in _MODE_TITLES:
+        if groups.get(mode):
+            items = "".join(f"<li>{_e(x)}</li>" for x in groups[mode])
+            modes += f'<div class="wk-mode"><h3>{_e(title.format(name=name))}</h3><ul>{items}</ul></div>'
+    if modes:
+        parts.append(f"<h2>Vous gardez la main</h2>{modes}")
+
+    channels = profile.get("channelSupport") if isinstance(profile.get("channelSupport"), dict) else {}
+    chips = "".join(f"<li>{_e(CHANNEL_LABELS[k])}</li>" for k, v in channels.items() if v == "available" and k in CHANNEL_LABELS)
+    chips += "".join(f'<li class="soon">{_e(CHANNEL_LABELS[k])} (prévu)</li>' for k, v in channels.items() if v == "planned" and k in CHANNEL_LABELS)
+    if chips or every:
+        block = "<h2>Canaux et outils</h2>"
+        if chips:
+            block += f'<ul class="chips" aria-label="Canaux">{chips}</ul>'
+        if every:
+            block += f'<ul class="chips" aria-label="Outils connectables">' + "".join(f"<li>{_e(x)}</li>" for x in every) + "</ul>"
+        parts.append(block)
+
+    planned = [x for x in profile.get("plannedCapabilities", []) if isinstance(x, str)][:6]
+    if planned:
+        parts.append("<h2>Prévu, pas encore disponible</h2><p class=\"u\">Nous le disons plutôt que de le promettre :</p><ul>"
+                     + "".join(f"<li>{_e(x)}</li>" for x in planned) + "</ul>")
+
+    steps = [x for x in profile.get("installationSteps", []) if isinstance(x, str)]
+    if steps:
+        parts.append(f"<h2>Démarrer avec {_e(name)}</h2><ol>" + "".join(f"<li>{_e(x)}</li>" for x in steps) + "</ol>")
+
+    parts.append("<h2>Questions fréquentes</h2>" + "".join(
+        f'<details class="faq-item"><summary>{_e(q)}</summary><p>{_e(a)}</p></details>' for q, a in faq))
+
+    peers = [o for o in others if o.get("id") != wid]
+    if peers:
+        parts.append("<h2>Les autres Workers</h2><div class=\"wk-others\">" + "".join(
+            f'<a href="{worker_page_path(o["id"])}">{_e(o["name"])} · {_e(o["category"])}</a>' for o in peers) + "</div>")
+    parts.append('<div class="cta-row"><a class="btn btn-gold" href="/#nav-onboarding">Construire mon équipe</a>'
+                 '<a class="btn btn-ghost" href="/workers.html">Voir les 17 Workers</a></div>')
+
+    title = f"{name} — agent IA {category} | BK-AI-WORKERS"
+    description = f"{tagline} Essai gratuit, sans carte bancaire."
+    json_ld = {"@context": "https://schema.org", "@graph": [
+        {"@type": "WebPage", "name": title, "url": url, "description": description,
+         "primaryImageOfPage": {"@type": "ImageObject", "url": BASE_URL + portrait}},
+        {"@type": "BreadcrumbList", "itemListElement": [
+            {"@type": "ListItem", "position": 1, "name": "Accueil", "item": BASE_URL + "/"},
+            {"@type": "ListItem", "position": 2, "name": "Workers", "item": BASE_URL + "/workers.html"},
+            {"@type": "ListItem", "position": 3, "name": name, "item": url}]},
+        {"@type": "FAQPage", "mainEntity": [
+            {"@type": "Question", "name": q, "acceptedAnswer": {"@type": "Answer", "text": a}} for q, a in faq]},
+    ]}
+    return _page(_e(title), _e(description), worker_page_path(wid), "".join(parts), og_image=_e(BASE_URL + portrait), json_ld=json_ld)
 
 
 # Grille des forfaits (validee par le proprietaire le 2026-10-12, docs/PRICING.md). MEME liste que PRICING_PLANS dans app.js et que PLAN_CATALOG dans

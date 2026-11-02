@@ -27,6 +27,7 @@ import pwa_static
 import trust_pages
 import installations as inst
 import usage_wiring
+import provider_router
 
 # ---------------------------------------------------------------------
 # Ecritures concurrentes (2026-09-28) : le serveur traite les requetes en
@@ -119,6 +120,15 @@ PUBLIC_BASE_URL = os.environ.get("BK_PUBLIC_URL", "http://127.0.0.1:8787").rstri
 # Cookies de session en Lax (et Secure en https) : Strict empechait le retour
 # de Google ("Se connecter avec Google") de reconnaitre la session -> SESSION_MISMATCH.
 COOKIE_SECURE = "; Secure" if PUBLIC_BASE_URL.startswith("https") else ""
+# En-tetes de securite ajoutes a TOUTE reponse qui ne les pose pas deja (Handler.end_headers). Pas de Content-Security-Policy ici : le tableau de bord utilise
+# des scripts et styles inline, une CSP stricte le casserait sans test visuel (voir docs/SECURITY-OVERVIEW.md). HSTS seulement en https.
+SECURITY_HEADERS = [
+    ("X-Content-Type-Options", "nosniff"),
+    ("X-Frame-Options", "SAMEORIGIN"),
+    ("Referrer-Policy", "strict-origin-when-cross-origin"),
+]
+if PUBLIC_BASE_URL.startswith("https"):
+    SECURITY_HEADERS.append(("Strict-Transport-Security", "max-age=31536000"))
 REQUIRE_GATE = os.environ.get("BK_REQUIRE_GATE") == "1"
 GATE_SESSION_TTL_SECONDS = 60 * 60 * 12  # 12h
 GATE_SESSIONS = {}  # sha256(token) -> expiry (epoch seconds)
@@ -291,8 +301,9 @@ def _find_account_by_email(email):
 
 def _hash_password(password):
     salt = os.urandom(16)
-    h = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, 200000, dklen=32)
-    return f"{salt.hex()}:{h.hex()}:200000"
+    # 600000 : valeur recommandee par l'OWASP pour PBKDF2-HMAC-SHA256. Les anciens hash (200000) restent valides : le nombre d'iterations est stocke avec le hash.
+    h = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, 600000, dklen=32)
+    return f"{salt.hex()}:{h.hex()}:600000"
 
 
 def _verify_password(password, hash_line):
@@ -490,6 +501,7 @@ def get_worker_activity(worker_id_upper, client_id, limit=8):
                 "authorized": data.get("Authorized"),
                 "createdAtUtc": data.get("CreatedAtUtc"),
                 "answer": (data.get("Result") or {}).get("Answer"),
+                "engine": _engine_public((data.get("Result") or {}).get("Engine")),
                 "executionNote": data.get("ExecutionNote"),
                 "files": [{"filename": f.get("filename"), "sizeBytes": f.get("sizeBytes"), "mime": f.get("mime")}
                           for f in ((data.get("Result") or {}).get("Files") or []) if isinstance(f, dict) and f.get("filename")],
@@ -600,6 +612,17 @@ def submit_task(worker_hint_text, worker_id="", plan_only=False, client_id="", l
             child_env["BK_CHLOE_RUN_ID"] = job_ref
         else:
             child_env.pop("BK_CHLOE_RUN_ID", None)
+        # Moteur d'IA de CETTE mission (2026-10-25) : le routeur decide (niveau, essai, cle du client, reglages du proprietaire, sante des moteurs,
+        # plafond de depense Claude). Tant que le proprietaire n'a rien choisi, le plan est « implicite » : aucune variable n'est posee et la mission
+        # suit exactement le chemin Claude d'avant.
+        for _name in provider_router.PLAN_ENV_NAMES:
+            child_env.pop(_name, None)
+        engine_plan = None
+        try:
+            engine_plan = engine_plan_for(client_id, lvl, worker_hint_text)
+            child_env.update(provider_router.plan_env(engine_plan))
+        except Exception as exc:  # noqa: BLE001 - un souci de reglages ne doit jamais empecher une mission : chemin habituel
+            print("[engine] plan de moteurs impossible, chemin habituel : " + type(exc).__name__, flush=True)
         # Liste des Workers embauches pour Submit-Task.ps1 / Chloe (le routeur ne peut choisir qu'eux) ; absente = tous les Workers.
         allowed_env = allowed_workers_env(client_id)
         if allowed_env is not None:
@@ -619,6 +642,9 @@ def submit_task(worker_hint_text, worker_id="", plan_only=False, client_id="", l
         )
         stderr = (proc.stderr or b"").decode("utf-8", errors="replace")
         stdout = (proc.stdout or b"").decode("utf-8", errors="replace")
+        if engine_plan and engine_plan.get("explicit"):
+            engine_after_mission()
+        engine_report_fallback(stdout)
 
         if os.path.isfile(out_file):
             with open(out_file, encoding="utf-8-sig") as f:
@@ -1078,6 +1104,178 @@ def automation_level(client_id=""):
     return min(levels, key=lambda k: level_credits(k))
 
 
+# ---------------------------------------------------------------------
+# MOTEUR D'IA PAR MISSION (2026-10-25). Decision du proprietaire : le moteur est un CHOIX, jamais un remplacement global.
+#   1. essai gratuit et demonstrations : modele LOCAL (Ollama), cout nul, aucune donnee client reelle ;
+#   2. clients payants : Claude (ou un hote suisse), cout deja compris dans le prix du forfait (docs/PRICING.md) ;
+#   3. cle personnelle (BYOK) : le client paie son fournisseur, jamais nous ; sa cle vit dans le coffre chiffre, jamais renvoyee ;
+#   4. plafond de depense Claude (jour / mois) : le credit ne s'epuise plus en silence.
+# Tout vit dans dashboard/provider_router.py (aucun appel reseau) ; l'executeur PowerShell (core/ai/Invoke-EngineChain.ps1) suit le plan.
+# Tant que BK_AI_PROVIDER est absent et qu'aucun reglage n'est enregistre, rien ne change : le chemin Claude tourne comme avant.
+# ---------------------------------------------------------------------
+ENGINE_BYOK_PROVIDER = "ai_engine"      # nom du fichier chiffre du client (core/connectors/client-credentials/data/<ClientId>/ai_engine.json), jamais un connecteur
+
+
+def _notify_engine_alert(subject, text):
+    """E-mail au proprietaire (plafond de depense Claude a 80 % / atteint) par le meme chemin que les demandes d'embauche. Sans adresse configuree,
+    l'alerte reste visible dans GET /api/admin/engine (etat du plafond)."""
+    to = pilot_program.owner_notify_address(ROOT)
+    if not to:
+        print("[engine] alerte de depense Claude ; aucune adresse proprietaire configuree (BK_PILOT_NOTIFY_EMAIL)", flush=True)
+        return
+    import html as _html
+    body = "<p>" + "<br>".join(_html.escape(line) for line in str(text).splitlines()) + "</p>"
+    html_body = mailer.brand_email(_html.escape(subject), body)
+
+    def _send():
+        try:
+            ok, err = mailer.send_email(to, subject, html_body, text, gmail_bridge=run_mailer_bridge)
+            print("[engine] e-mail au proprietaire : " + ("envoye" if ok else f"ECHEC ({err})"), flush=True)
+        except Exception as exc:  # noqa: BLE001
+            print(f"[engine] e-mail au proprietaire : ECHEC ({type(exc).__name__})", flush=True)
+
+    threading.Thread(target=_send, daemon=True).start()
+
+
+def engine_report_fallback(stdout):
+    """Quand une mission retombe sur la reponse de secours (« Le fournisseur IA externe n'est pas disponible »), la RAISON n'etait nulle part : elle est
+    maintenant ecrite dans le journal du serveur et envoyee au proprietaire (une fois par heure et par raison). Un code seulement, jamais un secret."""
+    try:
+        reason = provider_router.parse_fallback_reason(stdout)
+        if not reason:
+            return
+        print("[engine] mission en reponse de secours, raison : " + reason, flush=True)
+        if provider_router.fallback_alert_due(reason):
+            _notify_engine_alert(
+                "Le moteur d'IA ne répond plus (mission en réponse de secours)",
+                "Une mission n'a pas pu être traitée par le moteur d'IA et a reçu la réponse de secours.\n"
+                f"Raison technique : {reason}\n"
+                "Pistes : crédit ou clé Anthropic (ANTHROPIC_EXIT_CODE_1 = l'appel a échoué), moteur désactivé dans core/ai/AI-PROVIDERS.json, clé absente sur le serveur.\n"
+                "Cet e-mail n'est envoyé qu'une fois par heure et par raison.")
+    except Exception as exc:  # noqa: BLE001 - un journal perdu ne doit jamais faire echouer une mission
+        print("[engine] rapport de secours impossible : " + type(exc).__name__, flush=True)
+
+
+def engine_after_mission():
+    """Apres une mission menee avec un plan de moteurs : la depense Claude a pu franchir 80 % d'un plafond -> alerte (une seule par periode)."""
+    try:
+        provider_router.maybe_alert(ROOT, provider_router.load_settings(ROOT), notify=_notify_engine_alert)
+    except Exception as exc:  # noqa: BLE001 - une alerte perdue ne doit jamais faire echouer une mission
+        print("[engine] alerte impossible : " + type(exc).__name__, flush=True)
+
+
+def _is_trial_account(client_id):
+    """L'essai public (visiteur sans compte) et tout compte au forfait Essai : la chaine GRATUITE seulement, des qu'elle existe."""
+    if client_id == TRIAL_CLIENT_ID:
+        return True
+    return _is_customer_id(client_id) and _client_plan(client_id).get("name") == PLAN_CATALOG["essai"]["name"]
+
+
+def engine_plan_for(client_id, level, objective=""):
+    """Plan de moteurs d'une mission de ce client au niveau donne (voir provider_router.resolve_plan)."""
+    byok = provider_router.load_byok_meta(ROOT, client_id) if _is_customer_id(client_id) else None
+    _, levels = mission_levels()
+    return provider_router.resolve_plan(ROOT, client_id, level or "", objective, trial=_is_trial_account(client_id), byok=byok, levels=levels,
+                                        env=os.environ, notify=_notify_engine_alert)
+
+
+def engine_status(client_id, level=None):
+    """GET /api/engine : le moteur que CE compte utilisera pour sa prochaine mission (au niveau demandé), ses capacites reelles, sa chaine de repli,
+    sa cle personnelle (jamais la cle) et la matrice de tous les moteurs. Aucune adresse, aucun jeton."""
+    lvl = normalize_level(level, client_id)
+    plan = engine_plan_for(client_id, lvl)
+    byok = provider_router.load_byok_meta(ROOT, client_id) if _is_customer_id(client_id) else None
+    view = provider_router.engine_view(plan, byok)
+    view["level"] = lvl
+    view["matrix"] = provider_router.capability_matrix(search_endpoint=bool(provider_router.search_url(provider_router.load_settings(ROOT), os.environ)))
+    return view
+
+
+def engine_capabilities(client_id, level=None):
+    """Capacites du moteur que ce compte utilisera (dictionnaire de provider_router.capabilities_for), ou None si aucun moteur n'est disponible.
+    POINT D'ENTREE DU MODE PROJET (docs/AUTONOMY-ENGINE.md, branche ws/chantier-design) : appeler cette fonction (ou provider_router.engine_supports) AVANT de
+    promettre un chantier long, des fichiers Office, du code ou une recherche web ; sur un moteur local, ne pas lancer ce qu'il ne sait pas faire."""
+    view = engine_status(client_id, level)
+    return view.get("capabilities")
+
+
+def _engine_public(engine):
+    """Ce que le client voit du moteur qui a repondu (jamais d'adresse ni de detail technique) ; None quand aucun plan de moteurs n'etait actif."""
+    if not isinstance(engine, dict) or not engine.get("provider"):
+        return None
+    return {"provider": engine.get("provider"), "model": engine.get("model"), "local": bool(engine.get("local")), "failedOver": bool(engine.get("failedOver")),
+            "label": engine.get("label"), "byok": bool(engine.get("byok"))}
+
+
+@_state_locked
+def admin_apply_engine_settings(body):
+    """POST /api/admin/engine (proprietaire) : valide et enregistre les reglages (chaine par defaut, adresse du moteur local, modeles, chaines par niveau,
+    plafond de depense Claude). Renvoie (charge utile, statut HTTP). Aucun jeton n'est accepte ici : ils vivent dans l'environnement du serveur."""
+    _, levels = mission_levels()
+    _, errors = provider_router.apply_settings(ROOT, body, levels=levels, env=os.environ)
+    if errors:
+        return {"error": "INVALID_SETTINGS", "errors": errors}, 400
+    log_activity("engine_settings", fields=sorted(str(k) for k in body.keys())[:12])
+    return {"ok": True, "engine": provider_router.settings_view(ROOT, env=os.environ)}, 200
+
+
+def store_byok(client_id, body):
+    """POST /api/engine/byok : le client enregistre SA cle (Anthropic ou compatible OpenAI). Validation par la forme seulement (aucun appel reel, aucun cout) ;
+    la cle est chiffree par le coffre existant, jamais renvoyee, jamais journalisee. Renvoie (charge utile, statut HTTP)."""
+    if not _is_customer_id(client_id):
+        return {"error": "NOT_ALLOWED", "message": "La clé personnelle est réservée aux comptes clients."}, 403
+    rows = _recent(CRED_SAVE_RATE, client_id, 3600)
+    if len(rows) >= CRED_SAVE_MAX_PER_HOUR:
+        return {"error": "RATE_LIMITED", "message": "Trop de tentatives. Réessayez dans une heure."}, 429
+    rows.append(time.time())
+    meta = provider_router.load_byok_meta(ROOT, client_id)
+    if "key" not in body and "enabled" in body:
+        if not meta:
+            return {"error": "NOT_CONFIGURED"}, 404
+        provider_router.save_byok_meta(ROOT, client_id, meta["kind"], meta.get("host"), meta.get("endpoint"), meta.get("model"), bool(body.get("enabled")))
+        return {"ok": True, "byok": provider_router.byok_public_view(provider_router.load_byok_meta(ROOT, client_id))}, 200
+    settings = provider_router.load_settings(ROOT)
+    key = body.get("key")
+    ok, err, info = provider_router.validate_byok(settings, body.get("kind"), key if isinstance(key, str) else "", str(body.get("endpoint") or ""), str(body.get("model") or ""))
+    if not ok:
+        return {"error": "INVALID_FIELD", "field": err["field"], "message": err["message"]}, 400
+    secret = json.dumps({"kind": body["kind"], "key": key.strip(), "endpoint": info["endpoint"], "model": info["model"]}, ensure_ascii=False)
+    saved = store_client_connector_credential(client_id, ENGINE_BYOK_PROVIDER, secret, reserved=True)
+    secret = None
+    if not saved.get("ok"):
+        # Seule la NATURE de l'echec est journalisee (jamais la valeur ni le texte de l'erreur) : un delai du coffre depasse (PowerShell a froid, machine chargee)
+        # se distingue ainsi d'une vraie panne, sans rien divulguer.
+        print("[engine] cle personnelle non enregistree : " + ("delai du coffre depasse" if saved.get("error") == "STORE_CREDENTIAL_TIMEOUT" else "erreur du coffre"), flush=True)
+        return {"error": "STORE_FAILED", "message": "Enregistrement impossible pour le moment. Réessayez."}, 500
+    provider_router.save_byok_meta(ROOT, client_id, info["kind"], info["host"], info["endpoint"], info["model"], True)
+    log_activity("byok_saved", clientId=client_id, engineKind=info["kind"], host=info["host"])
+    return {"ok": True, "byok": provider_router.byok_public_view(provider_router.load_byok_meta(ROOT, client_id))}, 200
+
+
+def remove_byok(client_id):
+    """Supprime la cle personnelle du client (fichier chiffre + description). Idempotent. La description n'est retiree qu'une fois le fichier chiffre
+    REELLEMENT absent du disque : le client ne voit jamais « Clé supprimée » (ni l'export « aucune clé ») pour une cle qui y est encore."""
+    if not _is_customer_id(client_id):
+        return {"error": "NOT_ALLOWED"}, 403
+    removed = store_client_connector_credential(client_id, ENGINE_BYOK_PROVIDER, "", reserved=True)
+    key_file = os.path.join(CLIENT_CREDENTIALS_DIR, client_id, ENGINE_BYOK_PROVIDER + ".json")
+    if not (isinstance(removed, dict) and removed.get("ok")):
+        # Supprimer ne demande aucun dechiffrement : si le coffre n'a pas repondu (PowerShell a froid au-dela de 20 s, machine chargee), le serveur retire
+        # lui-meme le fichier, comme le fait deja la suppression du compte. Seule la NATURE de l'echec est journalisee.
+        print("[engine] suppression de la cle personnelle par le coffre impossible (" + ("delai du coffre depasse" if isinstance(removed, dict) and removed.get("error") == "STORE_CREDENTIAL_TIMEOUT" else "erreur du coffre")
+              + "), suppression directe du fichier", flush=True)
+        try:
+            if os.path.isfile(key_file):
+                os.remove(key_file)
+        except OSError:
+            pass
+    if os.path.lexists(key_file):
+        return {"error": "STORE_FAILED", "message": "Suppression impossible pour le moment : votre clé est toujours enregistrée. Réessayez."}, 500
+    provider_router.delete_byok_meta(ROOT, client_id)
+    log_activity("byok_removed", clientId=client_id)
+    return {"ok": True, "byok": {"configured": False}}, 200
+
+
 
 def _pending_action_path(task_id):
     # task_id vient du corps de la requete (client) : sans ce controle
@@ -1368,14 +1566,15 @@ def get_client_configured_providers(client_id):
         return set()
 
 
-def store_client_connector_credential(client_id, provider, value):
+def store_client_connector_credential(client_id, provider, value, reserved=False):
     """Appelle Store-Client-Credential-Bridge.ps1 pour chiffrer et
     enregistrer (ou supprimer si value est vide) l'identifiant DE CE
     CLIENT pour ce connecteur. Passe par un fichier JSON, jamais par une
     commande PowerShell interpolee (meme raison que le pont de confirmation)."""
     import tempfile, uuid
 
-    if provider not in CLIENT_CONNECTOR_PROVIDERS:
+    # `reserved` : nom interne du coffre (cle personnelle du moteur d'IA, ENGINE_BYOK_PROVIDER), jamais un connecteur ni une valeur venue d'une requete.
+    if provider not in CLIENT_CONNECTOR_PROVIDERS and not (reserved and provider == "ai_engine"):
         return {"ok": False, "error": "UNKNOWN_PROVIDER"}
 
     in_file = os.path.join(tempfile.gettempdir(), f"bkaiw-cred-in-{uuid.uuid4().hex}.json")
@@ -1738,6 +1937,7 @@ def _summarize_mission_result(result):
                     "answer": (r.get("Result") or {}).get("Answer"),
                     "files": (r.get("Result") or {}).get("Files"),
                     "costCapped": bool((r.get("Result") or {}).get("CostCapped")),
+                    "engine": _engine_public((r.get("Result") or {}).get("Engine")),
                 }
                 for r in result.get("Results", []) if isinstance(r, dict)
             ],
@@ -1750,6 +1950,8 @@ def _summarize_mission_result(result):
         "files": (result.get("Result") or {}).get("Files"),
         # True = mission arretee a son plafond de cout par niveau : la reponse est partielle (la note de fin le dit).
         "costCapped": bool((result.get("Result") or {}).get("CostCapped")),
+        # Moteur qui a reellement repondu (Claude, moteur local, hote suisse, cle du client) ; null tant qu'aucun choix de moteur n'est actif.
+        "engine": _engine_public((result.get("Result") or {}).get("Engine")),
     }
 
 
@@ -2410,7 +2612,7 @@ def export_account_data(client_id):
     providers = []
     cdir = os.path.join(CLIENT_CREDENTIALS_DIR, client_id)
     if os.path.isdir(cdir):
-        providers = sorted(f[:-5] for f in os.listdir(cdir) if f.endswith(".json"))
+        providers = sorted(f[:-5] for f in os.listdir(cdir) if f.endswith(".json") and f[:-5] != ENGINE_BYOK_PROVIDER)
     all_auto = []
     try:
         with open(os.path.join(ROOT, "core", "automation", "data", "automations.json"), encoding="utf-8-sig") as f:
@@ -2429,6 +2631,7 @@ def export_account_data(client_id):
         "automations": all_auto,
         "usage": _export_usage(client_id),
         "connectedTools": providers,
+        "aiEngineKey": provider_router.byok_public_view(provider_router.load_byok_meta(ROOT, client_id)),
         "whatsappLinked": bool(wa),
         "note": "Les jetons et identifiants de vos outils connectés sont chiffrés et ne sont pas exportés.",
     }
@@ -2509,12 +2712,17 @@ def delete_account(client_id, password):
         # Un abonnement dont la resiliation est deja enregistree (cancelAtPeriodEnd : Stripe ne le renouvelle plus) ne bloque pas la suppression du compte
         # (droit a l'effacement) : seul un abonnement encore renouvele doit d'abord etre resilie. Le temps deja paye est alors perdu, l'interface le dit.
         return "ACTIVE_SUBSCRIPTION"
+    if billing.get("staleStripeSubscriptions"):
+        # Un ancien abonnement (montee en gamme) n'a pas pu etre annule chez Stripe et facture encore : supprimer le compte maintenant le laisserait
+        # sans plus aucun moyen de l'annuler. Le suivi des abonnements retente toutes les 6 heures (retry_stale_stripe_cancellations).
+        return "STRIPE_CLEANUP_PENDING"
     _save_accounts([a for a in accounts if a.get("clientId") != client_id])
     account_clear_all_sessions(client_id)
     WA_STORE.unlink_client(client_id)
     cdir = os.path.join(CLIENT_CREDENTIALS_DIR, client_id)
     if os.path.isdir(cdir):
-        shutil.rmtree(cdir, ignore_errors=True)
+        shutil.rmtree(cdir, ignore_errors=True)              # (dont la cle personnelle du moteur d'IA, ai_engine.json)
+    provider_router.delete_byok_meta(ROOT, client_id)
     try:
         path = os.path.join(ROOT, "core", "automation", "data", "automations.json")
         with open(path, encoding="utf-8-sig") as f:
@@ -2725,6 +2933,7 @@ def get_client_missions(client_id, limit=25):
                 "authorized": data.get("Authorized"),
                 "createdAtUtc": data.get("CreatedAtUtc"),
                 "answer": (data.get("Result") or {}).get("Answer"),
+                "engine": _engine_public((data.get("Result") or {}).get("Engine")),
                 "executionNote": data.get("ExecutionNote"),
                 "files": [{"filename": f.get("filename"), "sizeBytes": f.get("sizeBytes"), "mime": f.get("mime")}
                           for f in ((data.get("Result") or {}).get("Files") or []) if isinstance(f, dict) and f.get("filename")],
@@ -3466,7 +3675,8 @@ def cancel_billing_plan(client_id=DASHBOARD_CLIENT_ID):
         state["planId"] = "essai"
         # Le cycle n'est PAS remis a zero : la fenetre mensuelle en cours est conservee et ses missions restent comptees, sinon
         # s'abonner puis annuler redonnerait 15 credits d'essai gratuits a chaque fois (l'essai n'est pas renouvelable).
-        state["cycleStartUtc"] = billing_cycle(state.get("cycleStartUtc", now), old_plan.get("renews", True))[0]
+        # (_window_clock : pendant les jours de grace d'un forfait sur facture, la derniere fenetre PAYEE est gardee, pas la suivante, que personne n'a payee.)
+        state["cycleStartUtc"] = billing_cycle(state.get("cycleStartUtc", now), old_plan.get("renews", True), _window_clock(state))[0]
         state["extraCredits"] = 0
         for key in ("contractCredits", "usageOverride", "paidUntilUtc", "cancelAtPeriodEnd", "billingInterval"):
             state.pop(key, None)
@@ -3618,13 +3828,57 @@ def activate_checkout_plan(confirmation, fallback_client_id=None):
         cancellation = run_stripe_bridge("cancel-subscription", subscription_id=previous, prorate=True)
         if cancellation.get("Status") == "SUCCESS":
             _billing_note(client_id, "Ancien abonnement Stripe annulé : le nouveau forfait le remplace (aucune double facturation, le temps déjà payé est crédité chez Stripe).")
+        elif _stripe_subscription_gone(cancellation):
+            _billing_note(client_id, "Ancien abonnement Stripe introuvable chez Stripe : il n'y a plus rien à annuler.")
         else:
+            # L'ancien abonnement vit encore chez Stripe et continuerait de facturer : son identifiant est retenu et l'annulation est retentee a chaque
+            # passage du suivi des abonnements (retry_stale_stripe_cancellations) jusqu'a ce qu'elle aboutisse.
+            _remember_stale_subscription(client_id, previous)
             _billing_note(client_id, "ECHEC annulation de l'ancien abonnement Stripe (" + str(cancellation.get("Detail") or cancellation.get("Status"))
-                          + ") — à annuler à la main dans le tableau de bord Stripe pour éviter une double facturation.")
+                          + ") — nouvelle tentative automatique toutes les 6 heures ; à annuler à la main dans le tableau de bord Stripe si elle échoue encore.")
             log_activity("stripe_cancel_failed", clientId=client_id, subscriptionId=previous)
-            print(f"[billing] ALERTE : l'ancien abonnement Stripe {previous} de {client_id} n'a pas pu etre annule ; a annuler a la main dans Stripe.", flush=True)
+            print(f"[billing] ALERTE : l'ancien abonnement Stripe {previous} de {client_id} n'a pas pu etre annule ; nouvelle tentative au prochain suivi.", flush=True)
         result = get_billing(client_id)
     return result, 400 if "error" in result else 200
+
+
+STALE_SUBSCRIPTIONS_KEPT = 10
+
+
+def _remember_stale_subscription(client_id, subscription_id):
+    """Retient un ancien abonnement Stripe que la montee en gamme n'a pas pu annuler (staleStripeSubscriptions, 10 au plus)."""
+    with _STATE_LOCK:
+        state = _billing_load(client_id)
+        stale = [s for s in (state.get("staleStripeSubscriptions") or []) if s != subscription_id] + [subscription_id]
+        state["staleStripeSubscriptions"] = stale[-STALE_SUBSCRIPTIONS_KEPT:]
+        _billing_save(state, client_id)
+
+
+def retry_stale_stripe_cancellations(client_id):
+    """Retente l'annulation (avec prorata du temps paye) des anciens abonnements restes actifs chez Stripe apres une montee en gamme dont
+    l'annulation avait echoue. Un abonnement deja arrete ou introuvable chez Stripe est solde aussi. Renvoie le nombre d'abonnements soldes."""
+    state = _billing_load(client_id)
+    stale = [s for s in (state.get("staleStripeSubscriptions") or []) if isinstance(s, str)]
+    settled = []
+    for subscription_id in stale:
+        result = run_stripe_bridge("cancel-subscription", subscription_id=subscription_id, prorate=True)       # reseau : hors du verrou
+        if result.get("Status") != "SUCCESS" and not _stripe_subscription_gone(result):
+            read = run_stripe_bridge("get-subscription", subscription_id=subscription_id)
+            if not (read.get("Status") == "SUCCESS" and read.get("SubscriptionStatus") in STRIPE_ENDED_STATUSES) and not _stripe_subscription_gone(read):
+                continue
+        settled.append(subscription_id)
+    if settled:
+        with _STATE_LOCK:
+            state = _billing_load(client_id)
+            left = [s for s in (state.get("staleStripeSubscriptions") or []) if s not in settled]
+            if left:
+                state["staleStripeSubscriptions"] = left
+            else:
+                state.pop("staleStripeSubscriptions", None)
+            state.setdefault("history", []).append({"dateUtc": _utcnow().isoformat() + "Z",
+                                                    "event": "Ancien abonnement Stripe annulé à la nouvelle tentative : plus de double facturation."})
+            _billing_save(state, client_id)
+    return len(settled)
 
 
 # ---- SUIVI DES ABONNEMENTS STRIPE (revue du 2026-10-19). Sans webhook, un abonnement resilie dans le tableau de bord Stripe, impaye ou arrete apres des
@@ -3643,6 +3897,9 @@ def sync_stripe_subscription(client_id, force=False):
     if not _is_customer_id(client_id):
         return "no_subscription"
     first = _billing_load(client_id)
+    if first.get("staleStripeSubscriptions"):
+        retry_stale_stripe_cancellations(client_id)          # ancien abonnement reste actif apres une montee en gamme : on retente de le solder
+        first = _billing_load(client_id)
     subscription_id = first.get("stripeSubscriptionId")
     if not subscription_id:
         return "no_subscription"
@@ -3661,6 +3918,11 @@ def sync_stripe_subscription(client_id, force=False):
         now_dt = _utcnow()
         now = now_dt.isoformat() + "Z"
         state["stripeSyncedAtUtc"] = now
+        customer = result.get("CustomerId")
+        if _STRIPE_CUSTOMER_RE.fullmatch(str(customer or "")):
+            # Le client Stripe de l'abonnement en cours (les abonnes d'avant la conservation du client n'en avaient pas) : la prochaine Checkout Session
+            # du compte le reutilise, donc le credit de prorata de l'ancien abonnement s'applique au nouveau au lieu de rester sur un ancien client.
+            state["stripeCustomerId"] = customer
         outcome = "ok"
         history = state.setdefault("history", [])
         plan_name = PLAN_CATALOG.get(state.get("planId") or "essai", PLAN_CATALOG["essai"])["name"]
@@ -3710,7 +3972,7 @@ def sync_all_stripe_subscriptions(force=False):
         if not _is_customer_id(client_id):
             continue
         state = load_json(os.path.join(BILLING_DATA_DIR, name), {}) or {}
-        if not isinstance(state, dict) or not state.get("stripeSubscriptionId"):
+        if not isinstance(state, dict) or not (state.get("stripeSubscriptionId") or state.get("staleStripeSubscriptions")):
             continue
         try:
             outcome = sync_stripe_subscription(client_id, force=force)
@@ -4658,12 +4920,14 @@ def run_trial_mission(worker_id, objective, client_ip):
     # par Worker reellement execute — toutes a nettoyer, pas une seule).
     if worker_id == "chloe":
         answer = str(result.get("FinalSynthesis") or "")
-        provider, degraded = None, False
+        provider, degraded, trial_engine = None, False, None
         for item in (result.get("Results") or []):
             _cleanup_trial_task(item.get("TaskId"))
             item_result = item.get("Result") or {}
             if provider is None and item_result.get("Provider"):
                 provider = item_result.get("Provider")
+            if trial_engine is None:
+                trial_engine = _engine_public(item_result.get("Engine"))
             degraded = degraded or bool(item_result.get("Degraded"))
         if not answer.strip() and result.get("Status") == "NO_WORKER_MATCHED":
             # Routage par mots-cles de Chloe : aucun Worker identifie pour
@@ -4685,6 +4949,7 @@ def run_trial_mission(worker_id, objective, client_ip):
         answer = str(inner.get("Answer") or "")
         provider = inner.get("Provider")
         degraded = bool(inner.get("Degraded"))
+        trial_engine = _engine_public(inner.get("Engine"))
         _cleanup_trial_task(result.get("TaskId"))
 
     if not answer.strip():
@@ -4707,6 +4972,7 @@ def run_trial_mission(worker_id, objective, client_ip):
         "truncated": truncated,
         "provider": provider,
         "degraded": degraded,
+        "engine": trial_engine,
     }, 200
 
 
@@ -4725,6 +4991,17 @@ except Exception:  # noqa: BLE001 - un module optionnel ne casse jamais le serve
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         pass  # silence par defaut, evite le bruit console
+
+    def end_headers(self):
+        # Securite : en-tetes communs a toutes les reponses, sans doublon avec ceux qu'une route a deja poses (ex. nosniff des telechargements).
+        try:
+            already = b"".join(getattr(self, "_headers_buffer", [])).lower()
+            for name, value in SECURITY_HEADERS:
+                if (name.lower() + ":").encode("ascii") not in already:
+                    self.send_header(name, value)
+        except Exception:  # noqa: BLE001 - un en-tete manquant ne doit jamais casser une reponse
+            pass
+        super().end_headers()
 
     def _send_json(self, payload, status=200):
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
@@ -4962,7 +5239,8 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(body)
         elif path == "/sitemap.xml":
-            urls = "".join(f"<url><loc>{PUBLIC_BASE_URL}{p}</loc></url>" for p in SITEMAP_PATHS + [q for q in pilot_program.SITEMAP_PATHS if q not in SITEMAP_PATHS])
+            urls = "".join(f"<url><loc>{PUBLIC_BASE_URL}{p}</loc></url>" for p in SITEMAP_PATHS + [q for q in pilot_program.SITEMAP_PATHS if q not in SITEMAP_PATHS]
+                           + [seo_pages.worker_page_path(w) for w in get_worker_ids()])
             body = ('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
                     + urls + "</urlset>").encode("utf-8")
             self.send_response(200)
@@ -4976,6 +5254,16 @@ class Handler(BaseHTTPRequestHandler):
         elif path == "/workers.html":
             workers = [build_worker_summary(w) for w in get_worker_ids()]
             self._send_html(seo_pages.render_workers_page(workers))
+        elif path.startswith("/workers/") and path.endswith(".html"):
+            # Une page publique par Worker (SEO) : seuls les identifiants du catalogue existent, tout le reste est 404.
+            wid = path[len("/workers/"):-len(".html")]
+            ids = get_worker_ids()
+            if wid not in ids:
+                self._send_json({"error": "NOT_FOUND"}, 404)
+            else:
+                everyone = [build_worker_summary(w) for w in ids]
+                me = next(w for w in everyone if w["id"] == wid)
+                self._send_html(seo_pages.render_worker_page(me, inst.load_profile(ROOT, wid), everyone))
         elif path == "/demarrer.html":
             self._send_html(seo_pages.render_demarrer_page())
         elif path == "/chloe.html":
@@ -5255,6 +5543,26 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_account_required()
                 return
             self._send_json({"notes": list_client_memory(client_id)})
+        elif path == "/api/engine":
+            # Moteur d'IA que CE compte utilisera pour sa prochaine mission (au niveau demande), ses capacites reelles en francais simple, sa chaine de repli et la
+            # matrice de tous les moteurs. Affiche pres de la zone de mission et sur la page du Worker. Jamais d'adresse ni de jeton.
+            client_id = self._resolve_client_id()
+            if not client_id:
+                self._send_account_required()
+                return
+            self._send_json(engine_status(client_id, (parse_qs(parsed.query).get("level") or [None])[0]))
+        elif path == "/api/engine/byok":
+            client_id = self._resolve_client_id()
+            if not client_id:
+                self._send_account_required()
+                return
+            self._send_json(provider_router.byok_public_view(provider_router.load_byok_meta(ROOT, client_id) if _is_customer_id(client_id) else None))
+        elif path == "/api/admin/engine":
+            # Reserve au proprietaire (porte historique) : reglages effectifs, etat du plafond de depense Claude, sante des moteurs. Jamais de jeton.
+            if not self._gate_authenticated():
+                self._send_gate_required()
+                return
+            self._send_json({"engine": provider_router.settings_view(ROOT, env=os.environ), "matrix": provider_router.capability_matrix()})
         elif path == "/api/mission-levels":
             if (parse_qs(parsed.query).get("scale") or [""])[0] == "public":
                 self._send_json(public_mission_levels(""))     # l'echelle complete, la meme pour tous (page Tarifs) : aucune donnee de compte
@@ -5422,12 +5730,12 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if path == "/api/gate/login":
-            length = int(self.headers.get("Content-Length", 0))
-            raw = self.rfile.read(length) if length else b"{}"
-            try:
-                body = json.loads(raw.decode("utf-8"))
-            except Exception:
-                body = {}
+            # Route publique : taille du corps plafonnee (413 au-dela), un
+            # Content-Length absurde ou non numerique ne doit ni lever
+            # d'exception ni faire lire un corps de taille arbitraire.
+            body = self._read_json_limited(4096)
+            if body is None:
+                return
             password = body.get("password") or ""
             if not gate_is_enabled():
                 self._send_json({"ok": True, "note": "Porte desactivee (aucun mot de passe defini)."})
@@ -5668,7 +5976,7 @@ class Handler(BaseHTTPRequestHandler):
             if err:
                 if err == "INVALID_PASSWORD":
                     auth_record_fail(self._client_ip(), "del|" + client_id)
-                self._send_json({"error": err}, 400 if err != "ACTIVE_SUBSCRIPTION" else 409)
+                self._send_json({"error": err}, 409 if err in ("ACTIVE_SUBSCRIPTION", "STRIPE_CLEANUP_PENDING") else 400)
                 return
             self.send_response(200)
             self.send_header("Content-Type", "application/json; charset=utf-8")
@@ -6259,6 +6567,33 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json({"error": "WORKER_NOT_INCLUDED", "detail": refused}, 403)
                 return
             self._send_json(_summarize_mission_result(result))
+        elif path == "/api/admin/engine":
+            # Reglages du moteur d'IA, PROPRIETAIRE SEULEMENT (porte historique) : jamais un compte client, meme tres actif.
+            if not self._gate_authenticated():
+                self._send_gate_required()
+                return
+            body = self._read_json_limited(20000, strict=True)
+            if body is None:
+                return
+            payload, status = admin_apply_engine_settings(body)
+            self._send_json(payload, status)
+        elif path == "/api/engine/byok":
+            client_id = self._resolve_client_id()
+            if not client_id:
+                self._send_account_required()
+                return
+            body = self._read_json_limited(8000, strict=True)
+            if body is None:
+                return
+            payload, status = store_byok(client_id, body)
+            self._send_json(payload, status)
+        elif path == "/api/engine/byok/remove":
+            client_id = self._resolve_client_id()
+            if not client_id:
+                self._send_account_required()
+                return
+            payload, status = remove_byok(client_id)
+            self._send_json(payload, status)
         elif path == "/api/connectors/auto-approve/toggle":
             # Pre-autorisation globale : quand activee, les actions
             # d'ecriture proposees par un Worker s'executent pour de vrai
@@ -6478,6 +6813,13 @@ class Handler(BaseHTTPRequestHandler):
             automation_id = path.split("/")[3]
             result = run_automation_bridge("delete", automation_id=automation_id, client_id=client_id)
             self._send_json(result)
+        elif path == "/api/engine/byok":
+            client_id = self._resolve_client_id()
+            if not client_id:
+                self._send_account_required()
+                return
+            payload, status = remove_byok(client_id)
+            self._send_json(payload, status)
         else:
             self._send_json({"error": "NOT_FOUND"}, 404)
 

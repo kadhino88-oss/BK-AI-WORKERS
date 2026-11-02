@@ -189,6 +189,10 @@ function Invoke-AutomationRun {
     # Plafond du nombre de Workers qu'une automatisation de Chloe peut appeler (BK_MAX_WORKERS) : solde de credits // cout du niveau, donne par
     # dashboard/quota-check.py (server.chloe_worker_cap). Absent = pas de plafond.
     $MaxWorkersEnv = $null
+    # Plan de moteurs d'IA de la mission (BK_ENGINE_PLAN, BK_ENGINE_BUDGET_CHF), donne par dashboard/quota-check.py (server.engine_plan_for) : essai sur le moteur local,
+    # cle personnelle du client, plafond de depense Claude, disjoncteur. Absent = chemin Claude d'avant (aucune variable posee).
+    $EnginePlanEnv = $null
+    $EngineBudgetEnv = $null
 
     # Saute cette execution SANS lancer de mission : trace le saut comme une execution normale (meme forme de RunRecord, meme dossier runs/<id>/, lu par
     # Get-AutomationRuns), avance l'echeance, et renvoie l'enregistrement (le pont lira son statut).
@@ -260,6 +264,10 @@ function Invoke-AutomationRun {
                 }
                 if (-not $QuotaVerdict.blocked -and $QuotaVerdict.PSObject.Properties.Name -contains "maxWorkers" -and $QuotaVerdict.maxWorkers) {
                     $MaxWorkersEnv = [string]$QuotaVerdict.maxWorkers
+                }
+                if (-not $QuotaVerdict.blocked -and $QuotaVerdict.PSObject.Properties.Name -contains "enginePlan" -and $QuotaVerdict.enginePlan) {
+                    $EnginePlanEnv = [string]$QuotaVerdict.enginePlan
+                    if ($QuotaVerdict.PSObject.Properties.Name -contains "engineBudgetChf" -and $QuotaVerdict.engineBudgetChf) { $EngineBudgetEnv = [string]$QuotaVerdict.engineBudgetChf }
                 }
                 if ($QuotaVerdict.blocked) {
                     $SkipStatus = switch ([string]$QuotaVerdict.code) {
@@ -350,6 +358,11 @@ function Invoke-AutomationRun {
     # Plafond de Workers pour Chloe (voir plus haut) : meme principe, jamais de valeur heritee.
     $PreviousMaxWorkers = $env:BK_MAX_WORKERS
     if ($MaxWorkersEnv -match '^[0-9]{1,4}$') { $env:BK_MAX_WORKERS = $MaxWorkersEnv } else { Remove-Item Env:BK_MAX_WORKERS -ErrorAction SilentlyContinue }
+    # Plan de moteurs : meme principe, jamais de valeur heritee (une valeur d'un autre client ne doit pas servir a celui-ci).
+    $PreviousEnginePlan = $env:BK_ENGINE_PLAN
+    $PreviousEngineBudget = $env:BK_ENGINE_BUDGET_CHF
+    if ($EnginePlanEnv) { $env:BK_ENGINE_PLAN = $EnginePlanEnv } else { Remove-Item Env:BK_ENGINE_PLAN -ErrorAction SilentlyContinue }
+    if ($EngineBudgetEnv -match '^[0-9]+(\.[0-9]+)?$') { $env:BK_ENGINE_BUDGET_CHF = $EngineBudgetEnv } else { Remove-Item Env:BK_ENGINE_BUDGET_CHF -ErrorAction SilentlyContinue }
     try {
         $Proc = Start-Process -FilePath $PsExe -ArgumentList $ArgLine -NoNewWindow -Wait -PassThru `
             -RedirectStandardOutput $StdOutFile `
@@ -378,6 +391,8 @@ function Invoke-AutomationRun {
         if ($null -ne $PreviousAllowedWorkers) { $env:BK_ALLOWED_WORKERS = $PreviousAllowedWorkers } else { Remove-Item Env:BK_ALLOWED_WORKERS -ErrorAction SilentlyContinue }
         if ($null -ne $PreviousMissionLevel) { $env:BK_MISSION_LEVEL = $PreviousMissionLevel } else { Remove-Item Env:BK_MISSION_LEVEL -ErrorAction SilentlyContinue }
         if ($null -ne $PreviousMaxWorkers) { $env:BK_MAX_WORKERS = $PreviousMaxWorkers } else { Remove-Item Env:BK_MAX_WORKERS -ErrorAction SilentlyContinue }
+        if ($null -ne $PreviousEnginePlan) { $env:BK_ENGINE_PLAN = $PreviousEnginePlan } else { Remove-Item Env:BK_ENGINE_PLAN -ErrorAction SilentlyContinue }
+        if ($null -ne $PreviousEngineBudget) { $env:BK_ENGINE_BUDGET_CHF = $PreviousEngineBudget } else { Remove-Item Env:BK_ENGINE_BUDGET_CHF -ErrorAction SilentlyContinue }
         if (Test-Path -LiteralPath $OutFile -PathType Leaf) { Remove-Item -LiteralPath $OutFile -Force -ErrorAction SilentlyContinue }
         Remove-Item -LiteralPath $StdOutFile -Force -ErrorAction SilentlyContinue
         Remove-Item -LiteralPath $StdErrFile -Force -ErrorAction SilentlyContinue

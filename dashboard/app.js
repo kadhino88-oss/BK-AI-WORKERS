@@ -706,6 +706,7 @@ async function loadAdminActivity() {
 }
 
 async function loadAdminOverview() {
+  loadAdminEngine();
   loadAdminActivity();
   clearInterval(adminActivityTimer);
   adminActivityTimer = setInterval(() => { if (!adminView.hidden) loadAdminActivity(); }, 30000);
@@ -880,6 +881,7 @@ async function loadBilling() {
   content.hidden = false;
   const dataSection = document.getElementById("account-data-section");
   if (dataSection) dataSection.hidden = isOperator;
+  if (!isOperator) loadEngineCard();
   const vBanner = document.getElementById("verify-email-banner");
   if (vBanner) vBanner.hidden = isOperator || accountEmailVerified;
 
@@ -3138,6 +3140,7 @@ function fillProfileCommon(w) {
 async function openWorkerProfile(workerId) {
   currentWorkerId = workerId;
   loadMissionLevels();
+  loadEngineLine();
   const w = await fetchJson(`/api/workers/${workerId}`);
   fillProfileCommon(w);
 
@@ -3150,6 +3153,7 @@ async function openWorkerProfile(workerId) {
 async function openChloeProfile() {
   currentWorkerId = "chloe";
   loadMissionLevels();
+  loadEngineLine();
   const w = await fetchJson("/api/chloe");
   fillProfileCommon(w);
   loadInstallPanel("chloe");           // Chloe ne s'installe ni ne s'embauche : le panneau se masque
@@ -3210,7 +3214,7 @@ async function loadActivity(workerId, opts = {}) {
       const answer = a.answer || a.executionNote || "Aucune réponse enregistrée.";
       turn.innerHTML = `
         <div class="chat-msg chat-msg-user">${escapeHtml(a.request || "")}</div>
-        <div class="chat-msg chat-msg-worker ${cls}"><div class="status-line">${escapeHtml(statusLine)}</div>${renderAnswer(answer)}</div>
+        <div class="chat-msg chat-msg-worker ${cls}"><div class="status-line">${escapeHtml(statusLine)}</div>${renderAnswer(answer)}${engineTagHtml(a.engine)}</div>
       `;
       const replayFiles = renderTaskFilesBlock(a.taskId, a.files);
       if (replayFiles) turn.appendChild(replayFiles);
@@ -3299,6 +3303,7 @@ async function runTrialTask(objective) {
     resultEl.className = "task-result";
     resultEl.innerHTML = `<div class="status-line">Aperçu d'essai gratuit${result.degraded ? " (mode secours)" : ""}</div>
       ${renderAnswer(result.answer)}
+      ${engineTagHtml(result.engine)}
       ${result.truncated ? '<p class="trial-note">Réponse tronquée — inscrivez-vous pour recevoir le livrable complet.</p>' : ""}
       <button type="button" class="btn btn-gold" id="trial-cta-lead-btn" style="margin-top:10px">S'inscrire pour continuer &rarr;</button>`;
     resultEl.hidden = false;
@@ -3606,9 +3611,129 @@ async function loadMissionLevels() {
   picker.querySelectorAll(".level-chip").forEach((b) => b.addEventListener("click", () => {
     try { localStorage.setItem("bk_mission_level", b.dataset.level); } catch (e) { /* stockage indisponible : niveau par defaut */ }
     picker.querySelectorAll(".level-chip").forEach((x) => { const on = x === b; x.classList.toggle("active", on); x.setAttribute("aria-checked", on); });
+    loadEngineLine();
   }));
 }
 loadMissionLevels();
+
+// Moteur d'IA (Claude, moteur local, hote suisse, cle du client) : etiquette sous une reponse, ligne pres de la zone de mission, carte « Mon moteur »,
+// reglages du proprietaire. Tout vient de GET /api/engine (jamais d'adresse ni de jeton) ; les textes sont ceux du serveur, en francais simple.
+function engineTagHtml(engine) {
+  if (!engine || !engine.label) return "";
+  const text = engine.failedOver ? `Réponse du moteur de remplacement : ${engine.label}` : `Moteur : ${engine.label}`;
+  return `<div class="engine-tag${engine.failedOver ? " is-failover" : ""}">${escapeHtml(text)}</div>`;
+}
+function engineLimitsHtml(view) {
+  const caps = view && view.capabilities;
+  if (!caps) return "";
+  const lines = [];
+  if (Array.isArray(caps.limitsFr) && caps.limitsFr.length) lines.push(`<li>Ne sait pas faire : ${escapeHtml(caps.limitsFr.join(", "))}.</li>`);
+  if (caps.webFetchNote) lines.push(`<li>${escapeHtml(caps.webFetchNote)}</li>`);
+  if (caps.languageNote) lines.push(`<li>${escapeHtml(caps.languageNote)}</li>`);
+  if (view.failoverNote) lines.push(`<li>${escapeHtml(view.failoverNote)}</li>`);
+  return lines.length ? `<ul>${lines.join("")}</ul>` : "";
+}
+async function loadEngineLine() {
+  const line = document.getElementById("engine-line");
+  if (!line) return;
+  let view = null;
+  try { view = await fetchJson("/api/engine?level=" + encodeURIComponent(currentMissionLevel())); } catch (e) { view = null; }
+  if (!view || view.error || !view.summary) { line.hidden = true; return; }
+  document.getElementById("engine-line-text").textContent = view.summary;
+  const details = document.getElementById("engine-details");
+  const more = document.getElementById("engine-more-btn");
+  const html = engineLimitsHtml(view);
+  details.innerHTML = html;
+  details.hidden = true;
+  more.hidden = !html;
+  more.setAttribute("aria-expanded", "false");
+  more.onclick = () => { details.hidden = !details.hidden; more.setAttribute("aria-expanded", String(!details.hidden)); };
+  line.hidden = false;
+}
+
+// Carte « Mon moteur d'IA » (page Facturation) : le moteur utilise, ses limites, et la cle personnelle facultative (jamais renvoyee par le serveur).
+async function loadEngineCard() {
+  const section = document.getElementById("engine-section");
+  if (!section) return;
+  let view = null;
+  try { view = await fetchJson("/api/engine"); } catch (e) { view = null; }
+  if (!view || view.error) { section.hidden = true; return; }
+  section.hidden = false;
+  document.getElementById("engine-card-summary").textContent = view.summary || "";
+  document.getElementById("engine-card-limits").innerHTML = engineLimitsHtml(view);
+  const byok = view.byok || { configured: false };
+  const remove = document.getElementById("engine-byok-remove");
+  const msg = document.getElementById("engine-byok-msg");
+  remove.hidden = !byok.configured;
+  const kind = document.getElementById("engine-byok-kind");
+  const sync = () => {
+    const generic = kind.value === "openai_compat";
+    document.getElementById("engine-byok-endpoint").hidden = !generic;
+    document.getElementById("engine-byok-model").hidden = !generic;
+  };
+  kind.onchange = sync;
+  sync();
+  const state = byok.configured ? `Une clé ${byok.kind === "anthropic" ? "Anthropic" : "(" + (byok.host || "") + ")"} est enregistrée${byok.enabled ? "" : " mais désactivée"} : elle ne s'affiche jamais.` : "";
+  if (state) { msg.className = "task-error ok"; msg.textContent = state; msg.hidden = false; } else { msg.hidden = true; }
+  document.getElementById("engine-byok-form").onsubmit = async (ev) => {
+    ev.preventDefault();
+    const body = { kind: kind.value, key: document.getElementById("engine-byok-key").value.trim() };
+    if (kind.value === "openai_compat") { body.endpoint = document.getElementById("engine-byok-endpoint").value.trim(); body.model = document.getElementById("engine-byok-model").value.trim(); }
+    try {
+      const r = await fetchJson("/api/engine/byok", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      if (r.ok) { document.getElementById("engine-byok-key").value = ""; showToast("Clé enregistrée."); loadEngineCard(); return; }
+      msg.className = "task-error"; msg.textContent = r.message || r.error || "Enregistrement impossible."; msg.hidden = false;
+    } catch (e) { msg.className = "task-error"; msg.textContent = e.message; msg.hidden = false; }
+  };
+  remove.onclick = async () => {
+    if (!confirm("Supprimer votre clé ? Vos missions reviendront au moteur de la plateforme.")) return;
+    // « Clé supprimée » seulement si le serveur confirme : un coffre qui n'a pas repondu laisse la cle en place (HTTP 500, message a afficher).
+    try {
+      const r = await fetchJson("/api/engine/byok/remove", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+      if (r.ok) { showToast("Clé supprimée."); loadEngineCard(); return; }
+      msg.className = "task-error"; msg.textContent = r.message || r.error || "Suppression impossible."; msg.hidden = false;
+    } catch (e) { msg.className = "task-error"; msg.textContent = e.message; msg.hidden = false; }
+  };
+}
+
+// Reglages du moteur d'IA (vue proprietaire) : POST /api/admin/engine. Aucun jeton n'est saisi ici.
+async function loadAdminEngine() {
+  const stateEl = document.getElementById("admin-engine-state");
+  if (!stateEl) return;
+  let data = null;
+  try { data = await fetchJson("/api/admin/engine"); } catch (e) { data = null; }
+  if (!data || data.error || !data.engine) { stateEl.textContent = "Réglages indisponibles."; return; }
+  const e = data.engine;
+  const ceil = e.ceiling || {};
+  const ENGINE_NAMES = { anthropic: "Claude", ollama: "moteur local", swiss: "hôte suisse" };
+  const SOURCES = { defaut: "valeur par défaut", environnement: "variable BK_AI_PROVIDER du serveur", reglage: "réglage enregistré ici" };
+  const lines = [`Moteur choisi : ${(e.defaultChain || []).map((id) => ENGINE_NAMES[id] || id).join(" → ")} (${escapeHtml(SOURCES[e.defaultChainSource] || e.defaultChainSource || "")})`];
+  const oll = e.endpoints && e.endpoints.ollama;
+  lines.push(oll ? `Moteur local : ${escapeHtml(oll.url)} — modèle ${escapeHtml(oll.model)}` : "Moteur local : non configuré");
+  lines.push(ceil.configured
+    ? `Dépense Claude : ${ceil.dayChf} CHF aujourd'hui${ceil.dailyChf ? " sur " + ceil.dailyChf : ""}, ${ceil.monthChf} CHF ce mois${ceil.monthlyChf ? " sur " + ceil.monthlyChf : ""}${ceil.reached ? " — PLAFOND ATTEINT : les missions passent sur le moteur gratuit" : ""}`
+    : `Dépense Claude : ${ceil.dayChf || 0} CHF aujourd'hui, ${ceil.monthChf || 0} CHF ce mois — aucun plafond fixé`);
+  const sick = Object.keys(e.health || {});
+  if (sick.length) lines.push("Moteurs mis de côté : " + sick.map((k) => `${escapeHtml(ENGINE_NAMES[k] || k)} (${escapeHtml(e.health[k].reason)}, encore ${Math.ceil(e.health[k].retryInSec / 60)} min)`).join(", "));
+  stateEl.innerHTML = lines.map((l) => `<div>${l}</div>`).join("");
+  document.getElementById("admin-engine-chain").value = (e.defaultChain || ["anthropic"]).join(",");
+  if (oll) { document.getElementById("admin-engine-url").value = oll.url; document.getElementById("admin-engine-model").value = oll.model; }
+  document.getElementById("admin-engine-daily").value = ceil.dailyChf || "";
+  document.getElementById("admin-engine-monthly").value = ceil.monthlyChf || "";
+  document.getElementById("admin-engine-form").onsubmit = async (ev) => {
+    ev.preventDefault();
+    const msg = document.getElementById("admin-engine-msg");
+    const num = (id) => { const v = document.getElementById(id).value.trim(); return v === "" ? null : Number(v); };
+    const body = { defaultChain: document.getElementById("admin-engine-chain").value.split(","), ceiling: { dailyChf: num("admin-engine-daily"), monthlyChf: num("admin-engine-monthly") } };
+    const url = document.getElementById("admin-engine-url").value.trim();
+    if (url) body.endpoints = { ollama: { url, model: document.getElementById("admin-engine-model").value.trim() || "llama3:latest" } };
+    try {
+      const r = await fetchJson("/api/admin/engine", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      if (r.ok) { msg.className = "task-error ok"; msg.textContent = "Enregistré."; msg.hidden = false; loadAdminEngine(); return; }
+      msg.className = "task-error"; msg.textContent = (r.errors || []).map((x) => x.message).join(" ") || r.error || "Refusé."; msg.hidden = false;
+    } catch (err) { msg.className = "task-error"; msg.textContent = err.message; msg.hidden = false; }
+  };
+}
 
 // Aperçu d'un fichier produit AVANT de le télécharger (tableur, document, presentation, PDF, image, texte).
 async function openFilePreview(base, fname) {
@@ -3787,6 +3912,7 @@ async function runTask(objective, extra) {
     } else if (currentWorkerId === "chloe") {
       // Une carte par Worker (resultat, fichiers, actions a valider) quand la mission en a plusieurs ; l'affichage d'avant pour un seul Worker.
       renderChloeResult(result, turn, responseEl, null);
+      responseEl.insertAdjacentHTML("beforeend", engineTagHtml((result.Results || []).map((r) => r && r.Result && r.Result.Engine).find(Boolean)));
     } else {
       const needsChloe = result.Status === "NEEDS_CHLOE_VERIFICATION";
       const blocked = result.Authorized !== true;
@@ -3794,7 +3920,7 @@ async function runTask(objective, extra) {
       const statusLine = blocked ? (result.Reason || result.Status || "Bloqué") : "Exécuté";
       const answer = result.Result && result.Result.Answer ? result.Result.Answer
         : (result.ExecutionNote || (needsChloe ? "Cette action passe par le chat avec Chloé pour vérification." : "Tâche autorisée, en attente de routage vers un Worker."));
-      responseEl.innerHTML = `<div class="status-line">${escapeHtml(statusLine)}</div>${renderAnswer(answer)}`;
+      responseEl.innerHTML = `<div class="status-line">${escapeHtml(statusLine)}</div>${renderAnswer(answer)}${engineTagHtml(result.Result && result.Result.Engine)}`;
       await loadActivity(currentWorkerId, { keepThread: true });
     }
     // Fichiers produits (telechargement) — branche Chloe (un TaskId par
@@ -6371,6 +6497,7 @@ async function renderWhatsappCard(gridEl) {
     const texts = {
       INVALID_PASSWORD: "Mot de passe incorrect.",
       ACTIVE_SUBSCRIPTION: "Votre abonnement est encore renouvelé : résiliez-le d'abord avec « Annuler l'abonnement » (en haut de cette page), puis supprimez votre compte. Une fois la résiliation enregistrée, vous pouvez supprimer votre compte tout de suite.",
+      STRIPE_CLEANUP_PENDING: "Un ancien abonnement est en cours d'annulation chez notre prestataire de paiement : réessayez dans quelques heures, ou écrivez-nous pour que nous le fassions tout de suite.",
       TOO_MANY_ATTEMPTS: "Trop de tentatives. Réessayez plus tard.",
     };
     say(texts[r.error] || "Suppression impossible (" + (r.error || "erreur") + ").", false);

@@ -15,6 +15,7 @@
 memory/runtime/
 dashboard/.gate
 core/accounts/data/
+core/ai/data/
 **/backups
 **/*.bak
 

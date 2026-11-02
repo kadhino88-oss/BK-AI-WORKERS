@@ -209,6 +209,16 @@ function ConvertTo-StripeSubscriptionSummary {
     return [pscustomobject]$Summary
 }
 
+function Get-StripeCustomerId {
+    # Identifiant du client Stripe (cus_...) d'un objet Stripe : le texte tel quel, ou l'objet deplie (.id) ; $null sinon. Fonction PURE (testable
+    # sans Stripe) : le champ `customer` d'une Checkout Session ou d'un abonnement est un identifiant, sauf s'il a ete deplie avec expand.
+    param($Customer)
+    if ($null -eq $Customer) { return $null }
+    if ($Customer -is [string]) { return $Customer }
+    if ($Customer.PSObject.Properties["id"]) { return [string]$Customer.id }
+    return $null
+}
+
 function Get-StripeCheckoutSession {
     <#
     Relit une Checkout Session existante DIRECTEMENT DEPUIS STRIPE (pas
@@ -252,7 +262,7 @@ function Get-StripeCheckoutSession {
             SubscriptionStatus = $Sub.Status
             CurrentPeriodEnd   = $Sub.CurrentPeriodEnd
             # Client Stripe qui a paye : le serveur le garde pour que les Checkout Sessions suivantes du meme compte le reutilisent.
-            CustomerId         = if ($Response.customer -is [string]) { $Response.customer } elseif ($Response.customer) { [string]$Response.customer.id } else { $null }
+            CustomerId         = Get-StripeCustomerId -Customer $Response.customer
         }
     }
     catch {
@@ -319,8 +329,15 @@ function Remove-StripeSubscription {
             TimeoutSec = 20
         }
         if ($Fields.Count -gt 0) {
-            $Params["ContentType"] = "application/x-www-form-urlencoded"
-            $Params["Body"] = ConvertTo-StripeFormBody -Fields $Fields
+            if ($AtPeriodEnd) {
+                $Params["ContentType"] = "application/x-www-form-urlencoded"
+                $Params["Body"] = ConvertTo-StripeFormBody -Fields $Fields
+            }
+            else {
+                # DELETE : les parametres (prorate, invoice_now) vont dans l'URL, comme le font les SDK officiels de Stripe ; la documentation de
+                # l'API ne montre aucun corps de requete pour DELETE (controle sur papier du 2026-10-19).
+                $Params["Uri"] = $Params["Uri"] + "?" + (ConvertTo-StripeFormBody -Fields $Fields)
+            }
         }
         $Response = Invoke-RestMethod @Params
 
@@ -367,6 +384,7 @@ function Get-StripeSubscription {
             SubscriptionStatus = $Sub.Status
             CancelAtPeriodEnd  = $Sub.CancelAtPeriodEnd
             CurrentPeriodEnd   = $Sub.CurrentPeriodEnd
+            CustomerId         = Get-StripeCustomerId -Customer $Response.customer
         }
     }
     catch {

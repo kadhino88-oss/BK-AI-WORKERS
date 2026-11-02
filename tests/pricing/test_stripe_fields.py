@@ -38,6 +38,8 @@ foreach ($c in $cases) {
 }
 $resume = Get-StripeResumeFields
 $out += @{ name = "resume"; ok = $true; fields = $resume; body = (ConvertTo-StripeFormBody -Fields $resume) }
+$out += @{ name = "customers"; ok = $true; ids = @((Get-StripeCustomerId -Customer "cus_A1"), (Get-StripeCustomerId -Customer ([pscustomobject]@{ id = "cus_B2"; email = "x" })),
+    (Get-StripeCustomerId -Customer $null), (Get-StripeCustomerId -Customer ([pscustomobject]@{ email = "x" }))) }
 [System.IO.File]::WriteAllText($env:T_OUT, ($out | ConvertTo-Json -Depth 6 -AsArray), [System.Text.UTF8Encoding]::new($false))
 '''
 
@@ -149,6 +151,9 @@ class StripeFields(unittest.TestCase):
         self.assertEqual(self.f("resume"), {"cancel_at_period_end": "false"})
         self.assertEqual(self.r["resume"]["body"], "cancel_at_period_end=false")
 
+    def test_the_customer_id_is_read_from_a_plain_or_an_expanded_customer_field(self):
+        self.assertEqual(self.r["customers"]["ids"], ["cus_A1", "cus_B2", None, None])
+
     def test_the_bridge_exposes_the_subscription_read_and_resume_actions_and_the_customer(self):
         with open(os.path.join(REPO, "dashboard", "Stripe-Bridge.ps1"), encoding="utf-8-sig") as f:
             bridge = f.read()
@@ -186,6 +191,19 @@ $out["cancel-prorate"] = Get-StripeCancelFields -Prorate
 $out["cancel-prorate-body"] = ConvertTo-StripeFormBody -Fields (Get-StripeCancelFields -Prorate)
 $out["cancel-both"] = Get-StripeCancelFields -AtPeriodEnd -Prorate
 $out["cancel-plain-count"] = (Get-StripeCancelFields).Count
+# Requetes REELLEMENT construites par Remove-StripeSubscription (faux appel reseau : rien ne part vers Stripe).
+$global:BKCalls = @()
+function Test-StripeConfigured { return $true }
+function Get-StripeSecret { return [pscustomobject]@{ secret_key = "sk_test_fake" } }
+function Invoke-RestMethod {
+    param([string]$Uri, [string]$Method, $Headers, [int]$TimeoutSec, [string]$ContentType, $Body)
+    $global:BKCalls += @{ uri = $Uri; method = $Method; contentType = $ContentType; body = $Body }
+    return [pscustomobject]@{ id = "sub_fake1"; status = "canceled" }
+}
+$null = Remove-StripeSubscription -SubscriptionId "sub_fake1" -Prorate
+$null = Remove-StripeSubscription -SubscriptionId "sub_fake1" -AtPeriodEnd
+$null = Remove-StripeSubscription -SubscriptionId "sub_fake1"
+$out["requests"] = $global:BKCalls
 [System.IO.File]::WriteAllText($env:T_OUT, ($out | ConvertTo-Json -Depth 6), [System.Text.UTF8Encoding]::new($false))
 '''
 
@@ -234,6 +252,21 @@ class StripeSubscriptionHelpers(unittest.TestCase):
         self.assertEqual(self.r["cancel-prorate-body"], "prorate=true&invoice_now=true")
         self.assertEqual(self.r["cancel-both"], {"cancel_at_period_end": "true"})      # la resiliation de fin de periode l'emporte : rien n'est supprime
         self.assertEqual(self.r["cancel-plain-count"], 0)
+
+    def test_the_prorated_delete_carries_its_parameters_in_the_url_and_never_in_a_body(self):
+        """La doc de l'API Stripe ne montre aucun corps pour DELETE ; les SDK officiels mettent les parametres dans l'URL (controle du 2026-10-19)."""
+        prorate, at_end, plain = self.r["requests"]
+        self.assertEqual(prorate["method"], "DELETE")
+        self.assertEqual(prorate["uri"], "https://api.stripe.com/v1/subscriptions/sub_fake1?prorate=true&invoice_now=true")
+        self.assertIsNone(prorate["body"])
+        self.assertFalse(prorate["contentType"])
+        self.assertEqual(at_end["method"], "POST")                      # fin de periode : mise a jour (POST) avec corps, jamais un DELETE
+        self.assertEqual(at_end["uri"], "https://api.stripe.com/v1/subscriptions/sub_fake1")
+        self.assertEqual(at_end["body"], "cancel_at_period_end=true")
+        self.assertEqual(at_end["contentType"], "application/x-www-form-urlencoded")
+        self.assertEqual(plain["method"], "DELETE")                     # resiliation immediate simple : aucun parametre
+        self.assertEqual(plain["uri"], "https://api.stripe.com/v1/subscriptions/sub_fake1")
+        self.assertIsNone(plain["body"])
 
 
 if __name__ == "__main__":

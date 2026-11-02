@@ -7,19 +7,31 @@
 # =====================================================================
 
 param(
-    [Parameter(Mandatory=$true)][string]$Request,
+    [string]$Request = "",
     [string]$WorkerId = "",
     [string]$Mode = "SIMULATION",
     [string]$Environment = "SIMULATION",
     [switch]$PlanOnly,
-    [Parameter(Mandatory=$true)][string]$OutFile,
+    [string]$OutFile = "bridge-output.json",
     # Isole les missions d'essai public (voir /api/trial/mission) du profil
     # d'entreprise reel de Kader : sans fichier core/profile/data/<ClientId>.json,
     # Build-WorkerSystemPrompt.ps1 saute simplement le bloc entreprise (deja
     # tolerant a un profil absent). Ne change rien au comportement existant :
     # la valeur par defaut est strictement celle d'avant.
-    [string]$ClientId = "CLI-DASHBOARD"
+    [string]$ClientId = "CLI-DASHBOARD",
+    # Appels venant de Make (pont local, 2026-10-22) : memes noms que son flux, acceptes sans erreur. Ils ne servent JAMAIS a contourner les
+    # droits ni les credits : le TenantId reste fixe plus bas et le TaskId est regenere par le serveur.
+    [string]$TenantId = "TEN-DASHBOARD",
+    [string]$TaskId = "",
+    [string]$Objective = "",
+    [string]$ClientPlan = "",
+    [string]$ComputeMode = "",
+    [int]$TasksDoneToday = 0
 )
+
+# Make envoie "Objective" au lieu de "Request".
+if ([string]::IsNullOrWhiteSpace($Request) -and -not [string]::IsNullOrWhiteSpace($Objective)) { $Request = $Objective }
+if ([string]::IsNullOrWhiteSpace($Request)) { throw "EMPTY_REQUEST" }
 
 $ErrorActionPreference = "Stop"
 # PowerShell 7+ : ne pas convertir les dates ISO en [datetime] (Windows PowerShell 5.1 les laissait en texte ; le moteur compare/hashe ces textes).
@@ -72,6 +84,10 @@ function Get-BKMissionCredits {
     if (-not $Succeeded -or $null -eq $WorkerResult) { return 0 }
     $DegradedProp = $WorkerResult.PSObject.Properties["Degraded"]
     if ($null -ne $DegradedProp -and [bool]$DegradedProp.Value) { return 0 }
+    # Repli vers un autre moteur (Claude indisponible, plafond de depense atteint...) : le client n'a pas recu le moteur de son forfait, la mission ne coute aucun
+    # credit (Result.Engine.creditsFree, pose par core/ai/Invoke-EngineChain.ps1). Une mission voulue sur le moteur local (essai, niveau) coute le credit du niveau.
+    $EngineProp = $WorkerResult.PSObject.Properties["Engine"]
+    if ($null -ne $EngineProp -and $null -ne $EngineProp.Value -and $null -ne $EngineProp.Value.PSObject.Properties["creditsFree"] -and [bool]$EngineProp.Value.creditsFree) { return 0 }
     return $LevelCost
 }
 

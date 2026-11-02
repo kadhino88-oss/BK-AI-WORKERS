@@ -79,6 +79,7 @@ HOSTS = {
     # sous-traitants declares (identifiant de preuve de la page Securite)
     "api.anthropic.com": "sp-anthropic",
     "api.openai.com": "sp-openai",
+    "api.mistral.ai": "sp-byok",       # exemple d'adresse du formulaire « ma propre cle d'IA » (dashboard/index.html)
     "api.stripe.com": "stripe-hosted",
     "api.twilio.com": "sp-twilio", "console.twilio.com": "sp-twilio",
     "graph.facebook.com": "sp-meta", "wa.me": "sp-meta", "developers.facebook.com": "sp-meta", "business.facebook.com": "sp-meta",

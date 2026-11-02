@@ -88,6 +88,16 @@ def main():
             print(json.dumps(blocked_verdict(server.USAGE.block_message(client_id, block)), ensure_ascii=False))
             return 0
         verdict = {"blocked": False, "allowedWorkers": allowed, "level": level}
+        # Moteur d'IA de la mission recurrente (2026-10-25, dashboard/provider_router.py) : meme plan que pour une mission lancee a la main (essai -> moteur local,
+        # cle personnelle, plafond de depense, disjoncteur). Absent tant que le proprietaire n'a rien choisi : le moteur d'automatisation ne pose alors aucune variable.
+        try:
+            engine_env = server.provider_router.plan_env(server.engine_plan_for(client_id, level))
+            if engine_env.get("BK_ENGINE_PLAN"):
+                verdict["enginePlan"] = engine_env["BK_ENGINE_PLAN"]
+                if engine_env.get("BK_ENGINE_BUDGET_CHF"):
+                    verdict["engineBudgetChf"] = engine_env["BK_ENGINE_BUDGET_CHF"]
+        except Exception:  # noqa: BLE001 - un souci de reglages ne bloque jamais une automatisation : chemin habituel
+            pass
         if worker_id == "chloe":
             cap = server.chloe_worker_cap(client_id, level)
             if cap is not None and server.USAGE.enforced:
