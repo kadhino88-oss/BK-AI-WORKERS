@@ -1,0 +1,30 @@
+{
+  "_comment": "Schéma BK-RECIPE-V1 (docs/AUTONOMY-ENGINE.md section 9.2), sous-ensemble de JSON Schema compris par dashboard/project_checks.validate_schema. Les règles de fond (graphe sans cycle, couverture des critères, opérations de connecteur existantes, budget) sont dans dashboard/recipes.validate. Les recettes sont écrites par core/projects/recipes_src/build.py.",
+  "type": "object",
+  "required": ["schema", "id", "version", "title", "workerId", "definitionOfDone", "steps", "deliverables", "budget", "guidance", "triggers"],
+  "properties": {
+    "schema": {"const": "BK-RECIPE-V1"},
+    "id": {"type": "string"},
+    "version": {"type": "integer", "minimum": 1},
+    "title": {"type": "string"},
+    "summary": {"type": "string"},
+    "workerId": {"type": "string"},
+    "supportingWorkers": {"type": "array", "items": {"type": "string"}},
+    "languages": {"type": "array", "items": {"type": "string"}},
+    "minPlan": {"type": "string"},
+    "services": {"type": "array", "items": {"type": "string"}},
+    "triggers": {"type": "object", "required": ["keywords", "examples"], "properties": {"keywords": {"type": "array", "items": {"type": "string"}}, "examples": {"type": "array", "items": {"type": "string"}}}},
+    "definitionOfDone": {"type": "array", "items": {"type": "object", "required": ["id", "text", "kind"], "properties": {"id": {"type": "string"}, "text": {"type": "string"}, "kind": {"enum": ["auto", "rubric"]}}}},
+    "steps": {"type": "array", "items": {"type": "object", "required": ["id", "title", "worker", "goal", "estimateCredits"], "properties": {"id": {"type": "string"}, "title": {"type": "string"}, "worker": {"type": "string"}, "goal": {"type": "string"}, "dependsOn": {"type": "array", "items": {"type": "string"}}, "criteriaIds": {"type": "array", "items": {"type": "string"}}, "effort": {"enum": ["normal", "bulk", "deep"]}, "estimateCredits": {"type": "number", "minimum": 0}}}},
+    "deliverables": {"type": "array", "items": {"type": "object", "required": ["path", "title"], "properties": {"path": {"type": "string"}, "title": {"type": "string"}, "kind": {"type": "string"}}}},
+    "connectors": {"type": "object", "properties": {"required": {"type": "array", "items": {"type": "string"}}, "optional": {"type": "array", "items": {"type": "string"}}}},
+    "approvals": {"type": "array", "items": {"type": "object", "required": ["connector", "operation", "risk"], "properties": {"connector": {"type": "string"}, "operation": {"type": "string"}, "risk": {"enum": ["low", "medium", "high"]}, "when": {"type": "string"}}}},
+    "needsFromClient": {"type": "array", "items": {"type": "object", "required": ["id", "question"], "properties": {"id": {"type": "string"}, "question": {"type": "string"}, "blocking": {"type": "boolean"}, "default": {"type": "string"}}}},
+    "budget": {"type": "object", "required": ["typicalCredits", "typicalHours"], "properties": {"typicalCredits": {"type": "array", "items": {"type": "number"}}, "typicalHours": {"type": "array", "items": {"type": "number"}}}},
+    "guidance": {"type": "string"},
+    "forbidden": {"type": "array", "items": {"type": "string"}},
+    "sources": {"type": "array", "items": {"type": "string"}},
+    "legalNotice": {"type": "string"},
+    "evaluation": {"type": "object", "properties": {"scenarioIds": {"type": "array", "items": {"type": "string"}}}}
+  }
+}
