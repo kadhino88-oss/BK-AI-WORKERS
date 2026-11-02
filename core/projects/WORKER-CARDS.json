@@ -1,0 +1,634 @@
+{
+  "schema": "BK-WORKER-CARDS-V1",
+  "generatedBy": "chloe/Build-WorkerCards.ps1",
+  "sourcesSha256": "43cf15d75664f72297641dd4186d18b69b766bbbf5160936e0251eceafa37e41",
+  "cards": [
+    {
+      "id": "alex",
+      "name": "Alex",
+      "role": "Responsable Prospection & Sales",
+      "can": [
+        "Prospection : liste de prospects réels et séquence prête à partir",
+        "Qualification d'un lead entrant et réponse prête",
+        "Relances et réactivation du pipeline dormant",
+        "Prévision de pipeline et objectif de revenu",
+        "Préparation de rendez-vous de découverte et réponses aux objections",
+        "Suivi des opportunités dans votre CRM"
+      ],
+      "notFor": [
+        "Plan d'acquisition, pub, funnel, croissance (maya)"
+      ],
+      "connectors": [
+        "calendar",
+        "gmail",
+        "hubspot",
+        "outlook_calendar",
+        "outlook_mail",
+        "pipedrive"
+      ],
+      "recipes": [],
+      "keywords": [
+        "prospection",
+        "sales",
+        "vente",
+        "leads",
+        "qualification",
+        "followup",
+        "relance commerciale",
+        "crm",
+        "pipeline",
+        "negociation",
+        "prospect"
+      ],
+      "typicalStepCredits": [
+        4,
+        12
+      ]
+    },
+    {
+      "id": "amina",
+      "name": "Amina",
+      "role": "Research & Intelligence",
+      "can": [
+        "Note de synthèse sourcée sur un sujet",
+        "Veille concurrentielle : qui sont vos concurrents et que font-ils",
+        "Benchmark de prix daté et sourcé (fichier Excel)",
+        "Revue de marché et tendances",
+        "Vérification d'une affirmation ou d'un chiffre",
+        "Fiche persona documentée de vos clients"
+      ],
+      "notFor": [],
+      "connectors": [],
+      "recipes": [],
+      "keywords": [
+        "recherche marche",
+        "veille concurrentielle",
+        "etude de marche",
+        "tendances",
+        "intelligence economique",
+        "benchmark"
+      ],
+      "typicalStepCredits": [
+        4,
+        12
+      ]
+    },
+    {
+      "id": "clara",
+      "name": "Clara",
+      "role": "Juridique & Contrats",
+      "can": [
+        "Rédaction d'un contrat complet (prestation, mandat, bail, cession)",
+        "NDA et accords de confidentialité (unilatéral ou bilatéral)",
+        "CGV, CGU, politique de confidentialité et mentions légales",
+        "Relecture et audit d'un contrat reçu",
+        "Mise en conformité nLPD et RGPD",
+        "Clauses sensibles : non-concurrence, confidentialité, propriété intellectuelle"
+      ],
+      "notFor": [
+        "Rédiger un contrat de travail (sophie)"
+      ],
+      "connectors": [
+        "gmail",
+        "outlook_mail"
+      ],
+      "recipes": [],
+      "keywords": [
+        "juridique",
+        "contrat",
+        "clause",
+        "conformite legale",
+        "rgpd",
+        "cgv",
+        "nda",
+        "confidentialite"
+      ],
+      "typicalStepCredits": [
+        4,
+        12
+      ]
+    },
+    {
+      "id": "dario",
+      "name": "Dario",
+      "role": "Finance & Contrôle de gestion",
+      "can": [
+        "Budget et compte de résultat prévisionnel",
+        "Plan de trésorerie sur 12 mois",
+        "Prix de vente, marge et point mort",
+        "Écarts budget / réel et tableau de bord KPI",
+        "Calcul de paie et coût employeur",
+        "Préparation TVA et tri des dépenses pour la fiduciaire"
+      ],
+      "notFor": [
+        "Réclamation d'un client final (nora)"
+      ],
+      "connectors": [
+        "gmail",
+        "outlook_mail"
+      ],
+      "recipes": [],
+      "keywords": [
+        "finance",
+        "budget",
+        "controle de gestion",
+        "tresorerie",
+        "comptabilite",
+        "facture",
+        "factures",
+        "facturation",
+        "paiement",
+        "paiements",
+        "virement",
+        "virements"
+      ],
+      "typicalStepCredits": [
+        4,
+        12
+      ]
+    },
+    {
+      "id": "emma",
+      "name": "Emma",
+      "role": "Responsable Contenu & Social Media",
+      "can": [
+        "Voix de marque, piliers de contenu et calendrier éditorial",
+        "Posts rédigés à la demande, adaptés à chaque réseau",
+        "Scripts de vidéos courtes (Reels, TikTok, Shorts)",
+        "Un contenu long transformé en micro-contenus",
+        "Réponses aux commentaires et messages dans votre voix",
+        "Publication d'un post sur vos comptes connectés"
+      ],
+      "notFor": [
+        "Visuels, logo, charte (lea)"
+      ],
+      "connectors": [
+        "facebook",
+        "instagram",
+        "linkedin"
+      ],
+      "recipes": [],
+      "keywords": [
+        "contenu",
+        "social",
+        "reseaux sociaux",
+        "instagram",
+        "facebook",
+        "linkedin post",
+        "community management",
+        "copywriting",
+        "newsletter",
+        "publication",
+        "calendrier editorial",
+        "influence"
+      ],
+      "typicalStepCredits": [
+        4,
+        12
+      ]
+    },
+    {
+      "id": "ines",
+      "name": "Inès",
+      "role": "Data & Analytics",
+      "can": [
+        "Analyse complète d'un jeu de données",
+        "Audit qualité et nettoyage de vos données",
+        "KPI rigoureux : conversion, CAC, LTV, rétention et cohortes",
+        "Analyse d'un test A/B avec test de significativité",
+        "Tableau de bord orienté décisions",
+        "Analyse de trafic et plan de tracking GA4"
+      ],
+      "notFor": [],
+      "connectors": [
+        "google_search_console",
+        "meta_ads"
+      ],
+      "recipes": [],
+      "keywords": [
+        "data",
+        "donnees",
+        "analytics",
+        "tableau de bord",
+        "kpi",
+        "statistique",
+        "cohortes",
+        "modele predictif"
+      ],
+      "typicalStepCredits": [
+        4,
+        12
+      ]
+    },
+    {
+      "id": "lea",
+      "name": "Lea",
+      "role": "Directrice Créative & Design",
+      "can": [
+        "Identité visuelle et charte graphique complète",
+        "Bannière, visuel de réseau social, favicon ou maquette",
+        "Logo ou pictogramme vectoriel",
+        "Système de design et maquette d'interface",
+        "Brief créatif, moodboard et concept de campagne",
+        "Revue de design et contrôle d'accessibilité (WCAG 2.2)"
+      ],
+      "notFor": [
+        "Textes de posts et calendrier éditorial (emma)"
+      ],
+      "connectors": [
+        "figma"
+      ],
+      "recipes": [],
+      "keywords": [
+        "design",
+        "branding",
+        "identite visuelle",
+        "logo",
+        "charte graphique",
+        "ui",
+        "ux design",
+        "creative",
+        "maquette",
+        "moodboard",
+        "direction artistique",
+        "flyer"
+      ],
+      "typicalStepCredits": [
+        4,
+        12
+      ]
+    },
+    {
+      "id": "lucas",
+      "name": "Lucas",
+      "role": "Webmaster & Expert SEO",
+      "can": [
+        "Audit SEO technique priorisé avec correctifs prêts à coller",
+        "Optimisation de la vitesse et des Core Web Vitals",
+        "Plan de migration, refonte ou passage en HTTPS",
+        "Contrôle d'accessibilité de base (WCAG)",
+        "Surveillance de disponibilité et dépannage de site",
+        "Brouillons de pages dans WordPress ou Webflow"
+      ],
+      "notFor": [
+        "Mots-clés, contenu SEO, GEO (seoya)"
+      ],
+      "connectors": [
+        "google_search_console",
+        "monitoring"
+      ],
+      "recipes": [],
+      "keywords": [
+        "web",
+        "site web",
+        "developpement",
+        "developpeur",
+        "code",
+        "programmation",
+        "wordpress",
+        "webflow",
+        "landing page",
+        "architecture web",
+        "frontend",
+        "backend"
+      ],
+      "typicalStepCredits": [
+        4,
+        12
+      ]
+    },
+    {
+      "id": "maya",
+      "name": "Maya",
+      "role": "Directrice Marketing & Growth",
+      "can": [
+        "Plan de croissance : audit du funnel et expériences priorisées",
+        "Stratégie de lancement : cible, positionnement et messages",
+        "Campagne payante et plan média chiffré (Google, Meta, LinkedIn)",
+        "Page d'atterrissage et optimisation de la conversion",
+        "Séquences d'emails de bienvenue, de nurturing et de réactivation",
+        "Bilan de vos campagnes Meta Ads et de votre visibilité Search Console"
+      ],
+      "notFor": [
+        "Prospecter des clients nommés, séquences, qualification (alex)"
+      ],
+      "connectors": [
+        "google_search_console",
+        "meta_ads",
+        "wordpress"
+      ],
+      "recipes": [],
+      "keywords": [
+        "marketing",
+        "growth",
+        "campagne",
+        "acquisition",
+        "strategie marketing",
+        "publicite",
+        "ads",
+        "analytics marketing",
+        "fidelisation",
+        "croissance"
+      ],
+      "typicalStepCredits": [
+        4,
+        12
+      ]
+    },
+    {
+      "id": "noah",
+      "name": "Noah",
+      "role": "Assistant Exécutif & Administratif",
+      "can": [
+        "Réponse à un email, complète et prête à envoyer",
+        "Triage de boîte de réception et réponses urgentes préparées",
+        "Résumé d'un long fil d'emails",
+        "Agenda : créneaux concrets, invitation et conflits",
+        "Ordre du jour et compte-rendu de réunion avec actions assignées",
+        "Mémos, courriers, procédures et tableaux de suivi"
+      ],
+      "notFor": [],
+      "connectors": [
+        "calendar",
+        "gmail",
+        "outlook_calendar",
+        "outlook_mail"
+      ],
+      "recipes": [],
+      "keywords": [
+        "administration",
+        "email",
+        "mail",
+        "calendrier",
+        "agenda",
+        "documents",
+        "coordination",
+        "organisation",
+        "reunion",
+        "rendez-vous"
+      ],
+      "typicalStepCredits": [
+        4,
+        12
+      ]
+    },
+    {
+      "id": "nora",
+      "name": "Nora",
+      "role": "Customer Support",
+      "can": [
+        "Réponse complète à un client, dans sa langue et le ton de votre marque",
+        "Triage d'une file de tickets par gravité et ancienneté",
+        "Réclamation et client mécontent : désescalade et dossier préparé",
+        "FAQ, articles d'aide et macros de réponse",
+        "Suivi après résolution et analyse de la satisfaction",
+        "Réponses déposées en note interne dans Zendesk ou Intercom"
+      ],
+      "notFor": [
+        "Facturation, TVA, trésorerie, paie chiffrée (dario)"
+      ],
+      "connectors": [
+        "gmail",
+        "intercom",
+        "outlook_mail",
+        "zendesk"
+      ],
+      "recipes": [],
+      "keywords": [
+        "support client",
+        "ticket",
+        "reclamation",
+        "sav",
+        "assistance client",
+        "chat en direct",
+        "satisfaction client",
+        "remboursement"
+      ],
+      "typicalStepCredits": [
+        4,
+        12
+      ]
+    },
+    {
+      "id": "rayan",
+      "name": "Rayan",
+      "role": "Automation & Integrations",
+      "can": [
+        "Spécification d'automatisation « quand X, alors Y » testée à blanc",
+        "Intégration avec vos outils connectés, lecture d'abord",
+        "Synchronisation de données entre deux outils",
+        "Mission récurrente prête à créer dans l'application",
+        "Code de transformation de données, écrit et testé",
+        "Runbook et surveillance de vos automatisations"
+      ],
+      "notFor": [],
+      "connectors": [
+        "asana",
+        "calendar",
+        "gmail",
+        "hubspot",
+        "monday",
+        "monitoring",
+        "pipedrive",
+        "trello"
+      ],
+      "recipes": [],
+      "keywords": [
+        "automatisation",
+        "integration",
+        "workflow automatise",
+        "webhook",
+        "synchronisation",
+        "api integration",
+        "zapier",
+        "make"
+      ],
+      "typicalStepCredits": [
+        4,
+        12
+      ]
+    },
+    {
+      "id": "sam",
+      "name": "Sam",
+      "role": "Responsable IT, Infrastructure & Cybersécurité",
+      "can": [
+        "Audit de posture externe : suis-je exposé ?",
+        "Plan de durcissement d'un serveur, d'un poste ou d'un compte cloud",
+        "Réponse à incident : « j'ai été piraté »",
+        "Conformité nLPD / RGPD : registre des traitements et plan d'écarts",
+        "Plan de sauvegarde 3-2-1 et continuité d'activité",
+        "Surveillance de disponibilité et lecture des alertes"
+      ],
+      "notFor": [],
+      "connectors": [
+        "monitoring"
+      ],
+      "recipes": [],
+      "keywords": [
+        "it",
+        "infrastructure",
+        "cybersecurite",
+        "securite informatique",
+        "monitoring",
+        "audit securite",
+        "conformite",
+        "risque informatique",
+        "reseau informatique",
+        "serveur",
+        "backup",
+        "incident"
+      ],
+      "typicalStepCredits": [
+        4,
+        12
+      ]
+    },
+    {
+      "id": "seoya",
+      "name": "Séoya",
+      "role": "SEO & Search Intelligence",
+      "can": [
+        "Mission SEO et GEO complète à partir de l'adresse de votre site",
+        "Article ou page optimisée, écrite en entier",
+        "Cluster thématique : une page pilier et ses pages satellites",
+        "Audit on-page d'une page existante",
+        "Visibilité dans les réponses des assistants IA (GEO)",
+        "Suivi de vos vraies requêtes et positions (Search Console)"
+      ],
+      "notFor": [
+        "SEO technique (crawl, sitemap, indexation, Core Web Vitals, redirections) (lucas)"
+      ],
+      "connectors": [
+        "google_search_console",
+        "wordpress"
+      ],
+      "recipes": [],
+      "keywords": [
+        "seo",
+        "referencement",
+        "google",
+        "classement",
+        "ranking",
+        "mots-cles",
+        "keyword",
+        "backlink",
+        "netlinking",
+        "serp",
+        "search console",
+        "positionnement"
+      ],
+      "typicalStepCredits": [
+        4,
+        12
+      ]
+    },
+    {
+      "id": "sophie",
+      "name": "Sophie",
+      "role": "RH & Recrutement — Agent ATS IA",
+      "can": [
+        "Fiche de poste et annonce prête à diffuser",
+        "Tri et comparaison des candidatures sur des faits",
+        "Entretien structuré, scorecard et vérification de références",
+        "Projet de contrat de travail (relecture Clara avant signature)",
+        "Checklists d'accueil (jour J à J+90) et de départ",
+        "Contrôle de non-discrimination et de protection des données candidats"
+      ],
+      "notFor": [
+        "Relire un contrat, CGV, RGPD (clara)"
+      ],
+      "connectors": [
+        "gmail",
+        "outlook_mail"
+      ],
+      "recipes": [],
+      "keywords": [
+        "recrutement",
+        "rh",
+        "ressources humaines",
+        "candidat",
+        "sourcing",
+        "cv",
+        "entretien",
+        "onboarding",
+        "offboarding",
+        "embauche",
+        "offre d'emploi",
+        "contrat de travail"
+      ],
+      "typicalStepCredits": [
+        4,
+        12
+      ]
+    },
+    {
+      "id": "thomas",
+      "name": "Thomas",
+      "role": "E-commerce & Marketplace",
+      "can": [
+        "Fiches produit optimisées pour le référencement et la vente",
+        "Prix de vente et marge nette par canal, frais inclus",
+        "Préparation d'une mise en vente sur une marketplace",
+        "Conformité d'une boutique en ligne (suisse, française ou européenne)",
+        "Suivi du stock et des commandes (lecture seule)",
+        "Promotions conformes et amélioration du parcours d'achat"
+      ],
+      "notFor": [],
+      "connectors": [
+        "shopify",
+        "woocommerce"
+      ],
+      "recipes": [],
+      "keywords": [
+        "e-commerce",
+        "marketplace",
+        "boutique en ligne",
+        "shopify",
+        "fiche produit",
+        "fiches produits",
+        "panier abandonne",
+        "commande"
+      ],
+      "typicalStepCredits": [
+        4,
+        12
+      ]
+    },
+    {
+      "id": "yanis",
+      "name": "Yanis",
+      "role": "Project Management / PMO",
+      "can": [
+        "Cadrage et plan de projet complet (charte, WBS, Gantt daté, RACI)",
+        "Point d'avancement honnête : tableau de bord vert, orange, rouge",
+        "Découpage d'un projet en briefs pour vos autres Workers",
+        "Ordre du jour et compte-rendu de comité de pilotage",
+        "Registre des risques, hypothèses, problèmes et dépendances",
+        "Choix de méthode, planification de sprints et bilan de clôture"
+      ],
+      "notFor": [],
+      "connectors": [
+        "asana",
+        "monday",
+        "trello"
+      ],
+      "recipes": [],
+      "keywords": [
+        "gestion de projet",
+        "planning",
+        "planning projet",
+        "roadmap",
+        "sprint",
+        "jalons",
+        "pmo",
+        "avancement",
+        "risques projet"
+      ],
+      "typicalStepCredits": [
+        4,
+        12
+      ]
+    }
+  ]
+}
