@@ -1,0 +1,76 @@
+{
+ "ok": true,
+ "mode": "shadow",
+ "enforced": false,
+ "sessionHours": 4.0,
+ "weekDays": 7.0,
+ "warnPercent": 80,
+ "planId": "equipe",
+ "planName": "Équipe",
+ "limits": {
+  "session": 83,
+  "week": 207,
+  "month": 900
+ },
+ "upgrade": {
+  "planId": "pro",
+  "planName": "Pro",
+  "priceChf": {
+   "month": 139,
+   "year": 1390
+  },
+  "limits": {
+   "session": 115,
+   "week": 287,
+   "month": 1250
+  },
+  "onQuote": false,
+  "selfService": true,
+  "creditsPerMonth": 1250,
+  "contactEmail": "contact@bk-entreprise.com"
+ },
+ "exempt": false,
+ "windowsApply": true,
+ "binding": "session",
+ "allowedNow": 54,
+ "nextRenewalUtc": "2026-11-02T14:52:46Z",
+ "session": {
+  "limit": 83,
+  "used": 10,
+  "reserved": 19,
+  "remaining": 54,
+  "opened": true,
+  "startUtc": "2026-11-02T10:52:46Z",
+  "resetsAtUtc": "2026-11-02T14:52:46Z",
+  "percentUsed": 35,
+  "windowHours": 4.0
+ },
+ "week": {
+  "limit": 207,
+  "used": 10,
+  "reserved": 19,
+  "remaining": 178,
+  "opened": true,
+  "startUtc": "2026-11-02T10:52:46Z",
+  "resetsAtUtc": "2026-11-09T10:52:46Z",
+  "percentUsed": 14,
+  "windowDays": 7.0
+ },
+ "month": {
+  "limit": 900,
+  "used": 10,
+  "reserved": 19,
+  "remaining": 871,
+  "opened": true,
+  "startUtc": "2026-11-02T10:52:46Z",
+  "resetsAtUtc": "2026-12-02T10:52:46Z",
+  "percentUsed": 3
+ },
+ "activeReservations": [
+  {
+   "kind": "project_step",
+   "credits": 19,
+   "ref": "PRJ-82A14EAA5962EB30D6A485860FB01528:S1"
+  }
+ ]
+}

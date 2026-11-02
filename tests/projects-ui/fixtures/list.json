@@ -1,0 +1,141 @@
+{
+ "projects": [
+  {
+   "projectId": "PRJ-7C0CA74C1F7586FED6787FB4E5B3375D",
+   "title": "Auditer le referencement de mon site et proposer les corrections",
+   "goal": "Auditer le referencement de mon site et proposer les corrections",
+   "status": "PLANNING",
+   "waitingFor": null,
+   "statusReason": "SLOT_FREE",
+   "leadWorker": "chloe",
+   "workers": [
+    "chloe"
+   ],
+   "percent": 0,
+   "currentStep": {
+    "id": "PLAN1",
+    "title": "Plan du projet",
+    "worker": "chloe",
+    "startedUtc": null,
+    "kind": "plan"
+   },
+   "createdUtc": "2026-11-02T10:54:28Z",
+   "updatedUtc": "2026-11-02T11:00:24Z",
+   "creditsCharged": 0,
+   "creditsCap": 12,
+   "approvalsPending": 0,
+   "inputsPending": 0,
+   "resumeAtUtc": null,
+   "queuePosition": null
+  },
+  {
+   "projectId": "PRJ-82A14EAA5962EB30D6A485860FB01528",
+   "title": "Preparer le calendrier editorial de 30 jours pour trois reseaux sociaux",
+   "goal": "Preparer le calendrier editorial de 30 jours pour trois reseaux sociaux",
+   "status": "RUNNING",
+   "waitingFor": null,
+   "statusReason": "PLAN_AUTO_APPROVED",
+   "leadWorker": "chloe",
+   "workers": [
+    "chloe",
+    "lucas",
+    "emma"
+   ],
+   "percent": 0,
+   "currentStep": {
+    "id": "S1",
+    "title": "Accueil",
+    "worker": "lucas",
+    "startedUtc": "2026-11-02T10:59:18Z",
+    "kind": "execute"
+   },
+   "createdUtc": "2026-11-02T10:52:57Z",
+   "updatedUtc": "2026-11-02T11:01:39Z",
+   "creditsCharged": 1,
+   "creditsCap": 20,
+   "approvalsPending": 0,
+   "inputsPending": 0,
+   "resumeAtUtc": null,
+   "queuePosition": null
+  },
+  {
+   "projectId": "PRJ-7E1A6F6A347942AFD82E64221E10AC7E",
+   "title": "Lancer la newsletter de ma boulangerie avec trois messages prets a partir",
+   "goal": "Lancer la newsletter de ma boulangerie avec trois messages prets a partir",
+   "status": "DONE",
+   "waitingFor": null,
+   "statusReason": "COMPLETE",
+   "leadWorker": "chloe",
+   "workers": [
+    "chloe",
+    "lucas",
+    "emma"
+   ],
+   "percent": 100,
+   "currentStep": null,
+   "createdUtc": "2026-11-02T10:52:54Z",
+   "updatedUtc": "2026-11-02T10:59:16Z",
+   "creditsCharged": 4,
+   "creditsCap": 20,
+   "approvalsPending": 0,
+   "inputsPending": 0,
+   "resumeAtUtc": null,
+   "queuePosition": null
+  },
+  {
+   "projectId": "PRJ-6C7F1DFB5793B4082F0EEDB8E60B3C4B",
+   "title": "Preparer une liste de 30 prospects qualifies dans le secteur de la comptabilite",
+   "goal": "Preparer une liste de 30 prospects qualifies dans le secteur de la comptabilite",
+   "status": "RUNNING",
+   "waitingFor": null,
+   "statusReason": "CLIENT_RESUMED",
+   "leadWorker": "chloe",
+   "workers": [
+    "chloe",
+    "lucas",
+    "emma"
+   ],
+   "percent": 0,
+   "currentStep": {
+    "id": "S1",
+    "title": "Accueil",
+    "worker": "lucas",
+    "startedUtc": null,
+    "kind": "execute"
+   },
+   "createdUtc": "2026-11-02T10:52:53Z",
+   "updatedUtc": "2026-11-02T11:00:30Z",
+   "creditsCharged": 1,
+   "creditsCap": 20,
+   "approvalsPending": 0,
+   "inputsPending": 0,
+   "resumeAtUtc": null,
+   "queuePosition": null
+  },
+  {
+   "projectId": "PRJ-24F313830D751F44EE4FD74BCC1CAF3D",
+   "title": "Creer le site vitrine de mon cabinet de physiotherapie a Lausanne",
+   "goal": "Creer le site vitrine de mon cabinet de physiotherapie a Lausanne",
+   "status": "DONE",
+   "waitingFor": null,
+   "statusReason": "COMPLETE",
+   "leadWorker": "chloe",
+   "workers": [
+    "chloe",
+    "lucas",
+    "emma"
+   ],
+   "percent": 100,
+   "currentStep": null,
+   "createdUtc": "2026-11-02T10:52:46Z",
+   "updatedUtc": "2026-11-02T10:52:53Z",
+   "creditsCharged": 4,
+   "creditsCap": 20,
+   "approvalsPending": 0,
+   "inputsPending": 0,
+   "resumeAtUtc": null,
+   "queuePosition": null
+  }
+ ],
+ "nextCursor": null
+}

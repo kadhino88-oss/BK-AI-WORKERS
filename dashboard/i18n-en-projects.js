@@ -60,7 +60,7 @@ Object.assign(window.BK_EN, {
   "Atteint": "Met", "Non atteint": "Not met", "Non vérifiable": "Cannot be verified", "À vérifier": "To verify", "Écart accepté": "Gap accepted",
   "contrôle automatique": "automatic check", "relecture du contrôle qualité": "quality-check review",
   "planification": "planning", "contrôle qualité": "quality check", "correction": "fix", "révision du plan": "plan revision", "rapport final": "final report", "réponse": "answer", "étape": "step",
-  "Statut :": "Status:", "après {d}": "after {d}", "{n} livrable(s)": "{n} deliverable(s)", "{n} crédits": "{n} credits", "~{n} crédits estimés": "~{n} credits estimated",
+  "Statut :": "Status:", "après {d}": "after {d}", "{n} livrable(s)": "{n} deliverable(s)", "{n} crédits": "{n} credits", "{n} crédit": "{n} credit", "~{n} crédits estimés": "~{n} credits estimated",
   "{n} essais": "{n} attempts", "Relancer": "Retry", "Note de passation": "Hand-off note", "Hypothèses du plan": "Plan assumptions", "Risques identifiés": "Identified risks",
   "Le plan est en préparation : il apparaîtra ici avec ses critères d'acceptation et ses étapes.": "The plan is being prepared: it will appear here with its acceptance criteria and steps.",
   "Aucun plan pour le moment.": "No plan yet.", "Critères d'acceptation": "Acceptance criteria", "Étapes": "Steps",
@@ -94,7 +94,7 @@ Object.assign(window.BK_EN, {
   "Envoyer mes remarques": "Send my remarks", "Dites en quelques mots ce qu'il faut changer.": "Say in a few words what needs to change.",
   "Plan validé : le travail commence.": "Plan approved: the work begins.", "Vos remarques sont envoyées : le plan est revu.": "Your remarks are sent: the plan is being revised.",
   "bloquant": "blocking", "Votre réponse": "Your answer", "Répondre": "Reply", "Réponse envoyée.": "Answer sent.",
-  "Quota {w} atteint.": "{w} quota reached.", "Quota atteint.": "Quota reached.", "de la semaine": "weekly", "de session": "session", "Reprise automatique :": "Automatic resume:",
+  "Quota de la semaine atteint.": "Weekly quota reached.", "Quota de session atteint.": "Session quota reached.", "Quota atteint.": "Quota reached.", "Reprise automatique :": "Automatic resume:",
   "Passer au forfait supérieur": "Move up to the next plan", "Voir mes limites d'usage": "See my usage limits",
   "{u} crédits utilisés sur un plafond de {c}.": "{u} credits used out of a cap of {c}.", "Il faut environ {n} crédits de plus pour terminer.": "About {n} more credits are needed to finish.",
   "Nouveau plafond": "New cap", "Relever le plafond et continuer": "Raise the cap and continue", "Accepter en l'état": "Accept as it is",
@@ -109,7 +109,7 @@ Object.assign(window.BK_EN, {
   "Télécharger": "Download", "Lire": "Read", "Aperçu": "Preview",
 
   /* Chronologie, livrables, equipe */
-  "Aucun évènement pour le moment.": "No event yet.", "Les livrables apparaissent ici dès qu'un Worker en produit un.": "Deliverables appear here as soon as a Worker produces one.",
+  "Statut : {a} → {b}": "Status: {a} → {b}", "Aucun évènement pour le moment.": "No event yet.", "Les livrables apparaissent ici dès qu'un Worker en produit un.": "Deliverables appear here as soon as a Worker produces one.",
   "Les fichiers de ce projet ont été supprimés à la fin de la durée de conservation (90 jours).": "This project's files were deleted at the end of the retention period (90 days).",
   "Tout télécharger (.zip)": "Download everything (.zip)", "Tout l'espace de travail (.zip)": "Whole workspace (.zip)",
   "L'équipe apparaît ici une fois le plan prêt.": "The team appears here once the plan is ready.",
@@ -126,7 +126,7 @@ Object.assign(window.BK_EN, {
   "Risque faible": "Low risk", "Risque moyen": "Medium risk", "Risque élevé": "High risk", "réversible": "reversible", "irréversible": "irreversible", "modifié": "edited",
   "brouillon validé automatiquement selon vos réglages": "draft approved automatically according to your settings",
   "Contenu exact": "Exact content", "Pourquoi :": "Why:", "Ce qui va se passer :": "What will happen:", "Outil :": "Tool:", "Montant engagé :": "Amount committed:",
-  "Destinataires ({n}) :": "Recipients ({n}):", "Lot de {n} actions": "Batch of {n} actions", "Tout sélectionner": "Select all",
+  "Destinataires ({n}) :": "Recipients ({n}):", "Nombre de destinataires : {n}": "Number of recipients: {n}", "(vérifiez le contenu exact ci-dessous)": "(check the exact content below)", "Lot de {n} actions": "Batch of {n} actions", "Tout sélectionner": "Select all",
   "Trois exemples sont ouverts au hasard ; ouvrez les autres pour les lire.": "Three examples are opened at random; open the others to read them.",
   "Les actions à risque élevé se valident une par une, avec une confirmation écrite.": "High-risk actions are approved one by one, with a written confirmation.",
   "J'autorise": "I authorize", "Action à risque élevé : tapez « {c} » pour confirmer": "High-risk action: type “{c}” to confirm",
@@ -139,6 +139,7 @@ Object.assign(window.BK_EN, {
   "{n} action(s) n'ont pas pu être traitées (déjà décidées, expirées ou à risque élevé).": "{n} action(s) could not be handled (already decided, expired or high-risk).",
   "Nombre attendu.": "A number is expected.", "Oui ou non attendu.": "Yes or no expected.", "Format JSON invalide.": "Invalid JSON format.",
 
+  "Action à faire vous-même : rien n'est envoyé par la plateforme.": "An action for you to do yourself: nothing is sent by the platform.", "C'est fait": "Done",
   "Valider": "Approve", "Rejeter": "Reject", "Enregistrer": "Save", "Vous": "You", "Modification": "Change", "modification": "change", "Question": "Question", "question": "question",
   "Renouvellement": "Renewal", "Estimation du plan : {a} à {b} crédits": "Plan estimate: {a} to {b} credits",
 
@@ -159,7 +160,7 @@ Object.assign(window.BK_EN, {
 
   /* Budget et quota (colonne de droite) */
   "Budget du projet": "Project budget", "Crédits utilisés": "Credits used", "Plafond (crédits)": "Cap (credits)", "Modifier le plafond": "Change the cap",
-  "Pour finir : environ {n} crédits": "To finish: about {n} credits", "Votre quota d'usage": "Your usage quota", "Crédits utilisables maintenant : {n}": "Credits usable now: {n}",
+  "Pour finir : environ {n} crédits": "To finish: about {n} credits", "Votre quota d'usage": "Your usage quota", "Crédits utilisables maintenant : {n}": "Credits usable now: {n}", "Crédits restants ce mois-ci : {n}": "Credits left this month: {n}",
   "Limite la plus proche : la semaine.": "Closest limit: the week.", "Limite la plus proche : la session.": "Closest limit: the session.", "Limite la plus proche : le mois.": "Closest limit: the month.",
   "Compte sans limite d'usage.": "Account with no usage limit.", "Voir mes limites et mon forfait": "See my limits and my plan",
 

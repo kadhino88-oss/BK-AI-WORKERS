@@ -1,0 +1,13 @@
+{
+ "messages": [
+  {
+   "seq": 1,
+   "id": "MSG-92cf2932",
+   "ts": "2026-11-02T11:00:30Z",
+   "from": "client",
+   "type": "note",
+   "text": "Utilisez le vouvoiement partout",
+   "stepId": null
+  }
+ ]
+}

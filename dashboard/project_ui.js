@@ -287,6 +287,8 @@
     const fn = g("workerNameById");
     try { return typeof fn === "function" ? fn(id) : id; } catch (e) { return id; }
   };
+  // « 1 crédit » / « 12 crédits » (singulier au besoin, dans les deux langues).
+  function credLabel(n) { return TF(Number(n) === 1 ? "{n} crédit" : "{n} crédits", { n: num(n) }); }
   function when(iso) {
     const d = new Date(iso);
     if (!iso || isNaN(d)) return "";
@@ -791,8 +793,8 @@
   function quotaHtml(d) {
     const u = d.usage || {};
     const at = d.resumeAtUtc || u.nextRenewalUtc;
-    const which = u.binding === "week" ? "de la semaine" : u.binding === "session" ? "de session" : "";
-    return `<p class="pj-quota">${esc(TF(which ? "Quota {w} atteint." : "Quota atteint.", { w: T(which) }))} ${at ? `<span>${esc(T("Reprise automatique :"))}</span> ${countdownHtml(at)}` : ""}</p>
+    const msg = u.binding === "week" ? "Quota de la semaine atteint." : u.binding === "session" ? "Quota de session atteint." : "Quota atteint.";
+    return `<p class="pj-quota">${esc(T(msg))} ${at ? `<span>${esc(T("Reprise automatique :"))}</span> ${countdownHtml(at)}` : ""}</p>
       <div class="pj-row"><button type="button" class="btn btn-gold" data-pj="upgrade">${esc(T("Passer au forfait supérieur"))}</button>
       <button type="button" class="btn btn-ghost" data-pj="go-billing">${esc(T("Voir mes limites d'usage"))}</button></div>`;
   }
@@ -1016,7 +1018,7 @@
       const why = s.status === "BLOCKED" && s.blockedReason ? ` — ${esc(T(PJ_BLOCKED_REASON[s.blockedReason] || s.blockedReason))}` : "";
       const deps = (s.dependsOn || []).length ? `<span class="pj-muted">${esc(TF("après {d}", { d: s.dependsOn.join(", ") }))}</span>` : "";
       const dl = (s.deliverables || []).length ? `<span class="pj-muted">${esc(TF("{n} livrable(s)", { n: s.deliverables.length }))}</span>` : "";
-      const credits = s.credits ? `<span class="pj-muted">${esc(TF("{n} crédits", { n: num(s.credits) }))}</span>` : (s.estimateCredits ? `<span class="pj-muted">${esc(TF("~{n} crédits estimés", { n: num(s.estimateCredits) }))}</span>` : "");
+      const credits = s.credits ? `<span class="pj-muted">${esc(credLabel(s.credits))}</span>` : (s.estimateCredits ? `<span class="pj-muted">${esc(TF("~{n} crédits estimés", { n: num(s.estimateCredits) }))}</span>` : "");
       const attempts = s.attempts > 1 ? `<span class="pj-muted">${esc(TF("{n} essais", { n: s.attempts }))}</span>` : "";
       const retry = (s.status === "FAILED" || (s.status === "BLOCKED" && ["APPROVAL_EXPIRED", "CONNECTOR", "DEPENDENCY_FAILED"].includes(s.blockedReason))) && (d.capabilities || {}).canCancel
         ? `<button type="button" class="btn btn-ghost pj-small" data-retry="${esc(s.id)}">${esc(T("Relancer"))}</button>` : "";
@@ -1045,12 +1047,21 @@
     return { plan: "planification", verify: "contrôle qualité", fix: "correction", replan: "révision du plan", consolidate: "rapport final", answer: "réponse" }[k] || "étape";
   }
 
+  // « Statut : PAUSED -> RUNNING (CLIENT_RESUMED) » (evenement technique du moteur) devient « Statut : En pause → En cours » : jamais de code brut chez le client.
+  function eventText(e) {
+    const t = String(e.text || e.type || "");
+    const m = /^Statut : ([A-Z_]+) -> ([A-Z_]+)/.exec(t);
+    if (!m) return t;
+    const lab = (c) => T((PJ_STATUS[c] || { label: c }).label);
+    return TF("Statut : {a} → {b}", { a: lab(m[1]), b: lab(m[2]) });
+  }
+
   function timelineHtml() {
     if (!S.events.length) return `<p class="pj-muted">${esc(T("Aucun évènement pour le moment."))}</p>`;
     return `<ol class="pj-timeline">${S.events.filter((e) => e.type !== "step_cost").map((e) => `<li class="pj-ev" data-type="${esc(e.type)}">
         <span class="pj-ev-icon" aria-hidden="true">${PJ_EVENT_ICON[e.type] || "•"}</span>
         <time datetime="${esc(e.ts)}">${esc(when(e.ts))}</time>
-        <span class="pj-ev-text">${e.worker ? `<strong>${esc(workerName(e.worker))}</strong> · ` : ""}${esc(e.text || e.type)}</span></li>`).join("")}</ol>`;
+        <span class="pj-ev-text">${e.worker ? `<strong>${esc(workerName(e.worker))}</strong> · ` : ""}${esc(eventText(e))}</span></li>`).join("")}</ol>`;
   }
 
   function deliverablesHtml(d) {
@@ -1082,7 +1093,7 @@
     return `<ul class="pj-team">${ws.map((w) => `<li class="pj-member" data-status="${esc(w.status)}">
         <img src="${esc(w.portraitUrl || `/portraits/${encodeURIComponent(w.id)}.jpg`)}" alt="" aria-hidden="true" loading="lazy">
         <div><strong>${esc(w.name || workerName(w.id))}</strong> <span class="pj-muted">${esc(w.role || "")}</span>
-          <div class="pj-member-meta">${esc(T(label[w.status] || w.status || ""))} · ${esc(TF("{a} étape(s) sur {b}", { a: w.stepsDone || 0, b: w.stepsTotal || 0 }))} · ${esc(TF("{n} crédits", { n: num(w.creditsUsed) }))}${w.approvalsPending ? ` · ${esc(TF("{n} action(s) à valider", { n: w.approvalsPending }))}` : ""}</div>
+          <div class="pj-member-meta">${esc(T(label[w.status] || w.status || ""))} · ${esc(TF("{a} étape(s) sur {b}", { a: w.stepsDone || 0, b: w.stepsTotal || 0 }))} · ${esc(credLabel(w.creditsUsed))}${w.approvalsPending ? ` · ${esc(TF("{n} action(s) à valider", { n: w.approvalsPending }))}` : ""}</div>
           ${w.lastSummary ? `<p class="pj-muted" data-no-i18n="1">${esc(w.lastSummary)}</p>` : ""}</div></li>`).join("")}</ul>
       ${(d.scope && d.scope.denied && d.scope.denied.length && d.scope.chloe) ? `<p class="pj-muted">${esc(TF("Chloé peut déléguer à {n} Worker(s) de votre forfait ; les autres peuvent être embauchés depuis leur fiche.", { n: (d.scope.allowed || []).length }))}</p>` : ""}`;
   }
@@ -1119,7 +1130,7 @@
     S.selected[gr.batchId] = sel;
     const head = multi ? `<div class="pj-batch-head"><strong>${esc(TF("Lot de {n} actions", { n: items.length }))}</strong> · <span data-no-i18n="1">${esc((items[0].display || {}).title || items[0].operation || "")}</span>
         ${items.length > 10 ? `<p class="pj-muted">${esc(T("Trois exemples sont ouverts au hasard ; ouvrez les autres pour les lire."))}</p>` : ""}
-        <div class="pj-row"><label class="pj-check"><input type="checkbox" data-select-all="${esc(gr.batchId)}"${sel.size === items.length ? " checked" : ""}> ${esc(T("Tout sélectionner"))}</label>
+        <div class="pj-row"><label class="pj-check"><input type="checkbox" data-select-all="${esc(gr.batchId)}"${items.filter((i) => i.risk !== "high").every((i) => sel.has(i.id)) && sel.size ? " checked" : ""}> ${esc(T("Tout sélectionner"))}</label>
         <button type="button" class="btn btn-gold pj-small" data-batch="approve" data-group="${esc(gr.batchId)}">${esc(TF("Valider la sélection ({n})", { n: pjBatchIds(gr, "approve", [...sel]).length }))}</button>
         <button type="button" class="btn btn-ghost pj-small" data-batch="reject" data-group="${esc(gr.batchId)}">${esc(T("Rejeter la sélection"))}</button></div>
         ${items.some((i) => i.risk === "high") ? `<p class="pj-warn">${esc(T("Les actions à risque élevé se valident une par une, avec une confirmation écrite."))}</p>` : ""}</div>` : "";
@@ -1138,21 +1149,24 @@
         : `<pre class="pj-param-val">${esc(pjParamText(v))}</pre>`;
       return `<tr><th scope="row">${esc(k)}${(it.editedFields || []).includes(k) ? ` <span class="pj-pill" data-tone="act">${esc(T("modifié"))}</span>` : ""}</th><td>${val}</td></tr>`;
     }).join("");
-    const recips = Array.isArray(it.recipients) ? it.recipients : (it.recipients ? [it.recipients] : []);
+    // L'API donne un NOMBRE de destinataires (display.recipients, entier) ; une liste de noms reste acceptee si un jour elle existe.
+    const recips = Array.isArray(it.recipients) ? it.recipients : (typeof it.recipients === "string" && it.recipients ? [it.recipients] : []);
+    const recipCount = typeof it.recipients === "number" && it.recipients > 0 ? it.recipients : 0;
     const high = it.risk === "high";
+    const manual = it.kind === "manual_action" || !it.connectorId;    // action que le client fait lui-meme (ex. enregistrement DNS chez son hebergeur)
     const spend = it.spendChf != null && it.spendChf !== "" ? `<p><strong>${esc(T("Montant engagé :"))}</strong> <span data-no-i18n="1">${esc(it.spendChf)} CHF</span></p>` : "";
     const body = `<div class="pj-approval-body" data-no-i18n-scope="1">
         ${d.what ? `<p><strong>${esc(T("Ce qui va se passer :"))}</strong> <span data-no-i18n="1">${esc(d.what)}</span></p>` : ""}
         ${d.why ? `<p><strong>${esc(T("Pourquoi :"))}</strong> <span data-no-i18n="1">${esc(d.why)}</span></p>` : ""}
-        ${recips.length ? `<p><strong>${esc(TF("Destinataires ({n}) :", { n: recips.length }))}</strong> <span data-no-i18n="1">${esc(recips.join(", "))}</span></p>` : ""}
+        ${recips.length ? `<p><strong>${esc(TF("Destinataires ({n}) :", { n: recips.length }))}</strong> <span data-no-i18n="1">${esc(recips.join(", "))}</span></p>` : (recipCount ? `<p><strong>${esc(TF("Nombre de destinataires : {n}", { n: num(recipCount) }))}</strong> ${esc(T("(vérifiez le contenu exact ci-dessous)"))}</p>` : "")}
         ${spend}
-        <p class="pj-muted">${esc(T("Outil :"))} <span data-no-i18n="1">${esc(it.connectorId || "")} · ${esc(it.operation || "")}</span> · ${esc(T(it.reversible ? "réversible" : "irréversible"))} · ${esc(T("expire"))} ${esc(when(it.expiresUtc))}</p>
+        <p class="pj-muted">${manual ? esc(T("Action à faire vous-même : rien n'est envoyé par la plateforme.")) : `${esc(T("Outil :"))} <span data-no-i18n="1">${esc(it.connectorId || "")} · ${esc(it.operation || "")}</span> · ${esc(T(it.reversible ? "réversible" : "irréversible"))}`} · ${esc(T("expire"))} ${esc(when(it.expiresUtc))}</p>
         ${rows ? `<div class="pj-params-wrap"><table class="pj-params" data-no-i18n="1"><caption>${esc(T("Contenu exact"))}</caption><tbody>${rows}</tbody></table></div>` : ""}
         ${high ? `<label class="pj-confirm">${esc(TF("Action à risque élevé : tapez « {c} » pour confirmer", { c: PJ_CONFIRM_TEXT }))} <input type="text" data-confirm="${esc(it.id)}" autocomplete="off" spellcheck="false"></label>` : ""}
         <div class="pj-row">
           ${editing ? `<button type="button" class="btn btn-gold pj-small" data-approve="${esc(it.id)}" data-with-edits="1">${esc(T("Valider avec mes modifications"))}</button>
              <button type="button" class="btn btn-ghost pj-small" data-edit="${esc(it.id)}">${esc(T("Annuler les modifications"))}</button>`
-          : `<button type="button" class="btn btn-gold pj-small" data-approve="${esc(it.id)}">${esc(T("Valider"))}</button>
+          : `<button type="button" class="btn btn-gold pj-small" data-approve="${esc(it.id)}">${esc(T(manual ? "C'est fait" : "Valider"))}</button>
              ${editable.size ? `<button type="button" class="btn btn-ghost pj-small" data-edit="${esc(it.id)}">${esc(T("Modifier"))}</button>` : ""}`}
           <button type="button" class="btn btn-ghost pj-small pj-danger" data-reject="${esc(it.id)}">${esc(T("Rejeter"))}</button>
         </div>
@@ -1201,9 +1215,14 @@
     const est = bu.estimate || {};
     const u = d.usage || {};
     const caps = d.capabilities || {};
+    // Regle de la plateforme : aucune limite annoncee qui ne soit pas appliquee. Session et semaine ne s'affichent que si elles s'appliquent
+    // reellement (meme test que les jauges de app.js : usageActive) ; sinon seul le mois, toujours applique, est montre.
+    const winOn = typeof G.usageActive === "function" && G.usageActive(appUsageState());
     const usageLine = u.exempt ? `<p class="pj-muted">${esc(T("Compte sans limite d'usage."))}</p>`
-      : `<p>${esc(TF("Crédits utilisables maintenant : {n}", { n: num(u.allowedNow) }))}</p>
-         ${u.binding && u.nextRenewalUtc ? `<p class="pj-muted">${esc(T(u.binding === "session" ? "Limite la plus proche : la session." : u.binding === "week" ? "Limite la plus proche : la semaine." : "Limite la plus proche : le mois."))} <span>${esc(T("Renouvellement"))}</span> ${countdownHtml(u.nextRenewalUtc)}</p>` : ""}`;
+      : winOn ? `<p>${esc(TF("Crédits utilisables maintenant : {n}", { n: num(u.allowedNow) }))}</p>
+         ${u.binding && u.nextRenewalUtc ? `<p class="pj-muted">${esc(T(u.binding === "session" ? "Limite la plus proche : la session." : u.binding === "week" ? "Limite la plus proche : la semaine." : "Limite la plus proche : le mois."))} <span>${esc(T("Renouvellement"))}</span> ${countdownHtml(u.nextRenewalUtc)}</p>` : ""}`
+      : (u.month && u.month.remaining != null ? `<p>${esc(TF("Crédits restants ce mois-ci : {n}", { n: num(u.month.remaining) }))}</p>
+         ${u.month.resetsAtUtc ? `<p class="pj-muted"><span>${esc(T("Renouvellement"))}</span> ${countdownHtml(u.month.resetsAtUtc)}</p>` : ""}` : "");
     const html = `<section class="pj-card-side"><h3>${esc(T("Budget du projet"))}</h3>
         <div class="usage-meter" data-level="${bu.level}"><div class="usage-meter-head"><span class="usage-meter-name">${esc(T("Crédits utilisés"))}</span>
           <span class="usage-meter-figures"><strong>${num(bu.used)}</strong> / <strong>${num(bu.cap)}</strong></span></div>

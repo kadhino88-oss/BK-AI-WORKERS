@@ -1,0 +1,470 @@
+{
+ "seq": 39,
+ "status": "DONE",
+ "waitingFor": null,
+ "statusReason": "COMPLETE",
+ "percent": 100,
+ "currentStep": null,
+ "stepsRunning": 0,
+ "queuePosition": null,
+ "resumeAtUtc": null,
+ "approvalsPending": 0,
+ "inputsPending": 0,
+ "creditsCharged": 4,
+ "creditsCap": 20,
+ "usage": {
+  "binding": "session",
+  "allowedNow": 54,
+  "nextRenewalUtc": "2026-11-02T14:52:46Z"
+ },
+ "etaMinutes": null,
+ "events": [
+  {
+   "seq": 1,
+   "ts": "2026-11-02T10:52:54Z",
+   "type": "project_created",
+   "text": "Projet créé : Lancer la newsletter de ma boulangerie avec trois messages prets a partir",
+   "worker": "chloe",
+   "data": {
+    "level": "standard",
+    "queued": false,
+    "inputs": []
+   }
+  },
+  {
+   "seq": 2,
+   "ts": "2026-11-02T10:52:54Z",
+   "type": "step_started",
+   "text": "Chloé prépare le plan",
+   "stepId": "PLAN1",
+   "worker": "chloe",
+   "data": {
+    "kind": "plan",
+    "attempt": 1
+   }
+  },
+  {
+   "seq": 3,
+   "ts": "2026-11-02T10:52:55Z",
+   "type": "step_cost",
+   "text": "1 crédit(s) pour l'étape « Plan du projet ».",
+   "stepId": "PLAN1",
+   "data": {
+    "credits": 1,
+    "total": 1
+   }
+  },
+  {
+   "seq": 4,
+   "ts": "2026-11-02T10:52:55Z",
+   "type": "plan_ready",
+   "text": "Plan prêt : 3 étape(s), 3 critère(s) d'acceptation.",
+   "stepId": "PLAN1",
+   "data": {
+    "steps": 3,
+    "criteria": 3,
+    "estimate": {
+     "creditsMin": 8.0,
+     "creditsMax": 16.0,
+     "hoursMin": 0.5,
+     "hoursMax": 1.0
+    }
+   }
+  },
+  {
+   "seq": 5,
+   "ts": "2026-11-02T10:52:55Z",
+   "type": "plan_approved",
+   "text": "Le plan démarre automatiquement.",
+   "data": {
+    "auto": true
+   }
+  },
+  {
+   "seq": 6,
+   "ts": "2026-11-02T10:52:55Z",
+   "type": "status_changed",
+   "text": "Statut : PLANNING -> RUNNING (PLAN_AUTO_APPROVED)",
+   "data": {
+    "from": "PLANNING",
+    "to": "RUNNING",
+    "reason": "PLAN_AUTO_APPROVED",
+    "waitingFor": null
+   }
+  },
+  {
+   "seq": 7,
+   "ts": "2026-11-02T10:52:55Z",
+   "type": "step_started",
+   "text": "Lucas travaille : Accueil",
+   "stepId": "S1",
+   "worker": "lucas",
+   "data": {
+    "kind": "execute",
+    "attempt": 1
+   }
+  },
+  {
+   "seq": 8,
+   "ts": "2026-11-02T10:52:55Z",
+   "type": "step_cost",
+   "text": "1 crédit(s) pour l'étape « Accueil ».",
+   "stepId": "S1",
+   "data": {
+    "credits": 1,
+    "total": 2
+   }
+  },
+  {
+   "seq": 9,
+   "ts": "2026-11-02T10:52:55Z",
+   "type": "deliverable_added",
+   "text": "Livrable ajouté : site/index.html",
+   "stepId": "S1",
+   "worker": "lucas",
+   "data": {
+    "path": "site/index.html"
+   }
+  },
+  {
+   "seq": 10,
+   "ts": "2026-11-02T10:52:55Z",
+   "type": "step_finished",
+   "text": "Étape terminée : Accueil",
+   "stepId": "S1",
+   "worker": "lucas",
+   "data": {
+    "summary": "S1 fait."
+   }
+  },
+  {
+   "seq": 11,
+   "ts": "2026-11-02T10:52:56Z",
+   "type": "step_started",
+   "text": "Emma travaille : A propos",
+   "stepId": "S2",
+   "worker": "emma",
+   "data": {
+    "kind": "execute",
+    "attempt": 1
+   }
+  },
+  {
+   "seq": 12,
+   "ts": "2026-11-02T10:52:57Z",
+   "type": "approval_created",
+   "text": "5 action(s) préparée(s) attendent votre validation.",
+   "stepId": "S2",
+   "worker": "emma",
+   "data": {
+    "count": 5
+   }
+  },
+  {
+   "seq": 13,
+   "ts": "2026-11-02T10:52:57Z",
+   "type": "deliverable_added",
+   "text": "Livrable ajouté : A propos",
+   "stepId": "S2",
+   "worker": "emma",
+   "data": {
+    "path": "site/about.html"
+   }
+  },
+  {
+   "seq": 14,
+   "ts": "2026-11-02T10:52:57Z",
+   "type": "step_finished",
+   "text": "Étape terminée : A propos",
+   "stepId": "S2",
+   "worker": "emma",
+   "data": {
+    "summary": "S2 fait."
+   }
+  },
+  {
+   "seq": 15,
+   "ts": "2026-11-02T10:52:57Z",
+   "type": "status_changed",
+   "text": "Statut : RUNNING -> WAITING_APPROVAL (APPROVAL_REQUIRED)",
+   "data": {
+    "from": "RUNNING",
+    "to": "WAITING_APPROVAL",
+    "reason": "APPROVAL_REQUIRED",
+    "waitingFor": "APPROVAL"
+   }
+  },
+  {
+   "seq": 16,
+   "ts": "2026-11-02T10:57:51Z",
+   "type": "approval_decided",
+   "text": "Action validée : Message 0",
+   "stepId": "S2",
+   "worker": "emma",
+   "data": {
+    "approvalId": "APR-d49c3e96",
+    "status": "EXECUTING"
+   }
+  },
+  {
+   "seq": 17,
+   "ts": "2026-11-02T10:57:51Z",
+   "type": "approval_decided",
+   "text": "Action validée : Message 1",
+   "stepId": "S2",
+   "worker": "emma",
+   "data": {
+    "approvalId": "APR-26141589",
+    "status": "EXECUTING"
+   }
+  },
+  {
+   "seq": 18,
+   "ts": "2026-11-02T10:57:51Z",
+   "type": "approval_executed",
+   "text": "Action exécutée : Message 0",
+   "stepId": "S2",
+   "worker": "emma",
+   "data": {
+    "approvalId": "APR-d49c3e96"
+   }
+  },
+  {
+   "seq": 19,
+   "ts": "2026-11-02T10:57:51Z",
+   "type": "approval_decided",
+   "text": "Action validée : Message 2",
+   "stepId": "S2",
+   "worker": "emma",
+   "data": {
+    "approvalId": "APR-b68ac35b",
+    "status": "EXECUTING"
+   }
+  },
+  {
+   "seq": 20,
+   "ts": "2026-11-02T10:57:52Z",
+   "type": "approval_executed",
+   "text": "Action exécutée : Message 1",
+   "stepId": "S2",
+   "worker": "emma",
+   "data": {
+    "approvalId": "APR-26141589"
+   }
+  },
+  {
+   "seq": 21,
+   "ts": "2026-11-02T10:57:53Z",
+   "type": "approval_executed",
+   "text": "Action exécutée : Message 2",
+   "stepId": "S2",
+   "worker": "emma",
+   "data": {
+    "approvalId": "APR-b68ac35b"
+   }
+  },
+  {
+   "seq": 22,
+   "ts": "2026-11-02T10:59:01Z",
+   "type": "approval_decided",
+   "text": "Action validée : Envoi a 30 personnes",
+   "stepId": "S2",
+   "worker": "emma",
+   "data": {
+    "approvalId": "APR-b7927127",
+    "status": "EXECUTING"
+   }
+  },
+  {
+   "seq": 23,
+   "ts": "2026-11-02T10:59:01Z",
+   "type": "approval_executed",
+   "text": "Action exécutée : Envoi a 30 personnes",
+   "stepId": "S2",
+   "worker": "emma",
+   "data": {
+    "approvalId": "APR-b7927127"
+   }
+  },
+  {
+   "seq": 24,
+   "ts": "2026-11-02T10:59:11Z",
+   "type": "approval_decided",
+   "text": "Action validée : Ajouter le DNS",
+   "stepId": "S2",
+   "worker": "emma",
+   "data": {
+    "approvalId": "APR-c64a7841",
+    "status": "EXECUTED"
+   }
+  },
+  {
+   "seq": 25,
+   "ts": "2026-11-02T10:59:11Z",
+   "type": "status_changed",
+   "text": "Statut : WAITING_APPROVAL -> RUNNING (STEPS_READY)",
+   "data": {
+    "from": "WAITING_APPROVAL",
+    "to": "RUNNING",
+    "reason": "STEPS_READY",
+    "waitingFor": null
+   }
+  },
+  {
+   "seq": 26,
+   "ts": "2026-11-02T10:59:11Z",
+   "type": "step_started",
+   "text": "Lucas travaille : Liens",
+   "stepId": "S3",
+   "worker": "lucas",
+   "data": {
+    "kind": "execute",
+    "attempt": 1
+   }
+  },
+  {
+   "seq": 27,
+   "ts": "2026-11-02T10:59:12Z",
+   "type": "step_cost",
+   "text": "1 crédit(s) pour l'étape « Liens ».",
+   "stepId": "S3",
+   "data": {
+    "credits": 1,
+    "total": 3
+   }
+  },
+  {
+   "seq": 28,
+   "ts": "2026-11-02T10:59:12Z",
+   "type": "deliverable_added",
+   "text": "Livrable ajouté : site/links.html",
+   "stepId": "S3",
+   "worker": "lucas",
+   "data": {
+    "path": "site/links.html"
+   }
+  },
+  {
+   "seq": 29,
+   "ts": "2026-11-02T10:59:12Z",
+   "type": "step_finished",
+   "text": "Étape terminée : Liens",
+   "stepId": "S3",
+   "worker": "lucas",
+   "data": {
+    "summary": "S3 fait."
+   }
+  },
+  {
+   "seq": 30,
+   "ts": "2026-11-02T10:59:12Z",
+   "type": "status_changed",
+   "text": "Statut : RUNNING -> VERIFYING (VERIFY)",
+   "data": {
+    "from": "RUNNING",
+    "to": "VERIFYING",
+    "reason": "VERIFY",
+    "waitingFor": null
+   }
+  },
+  {
+   "seq": 31,
+   "ts": "2026-11-02T10:59:12Z",
+   "type": "verification_started",
+   "text": "Vérification indépendante (tour 1) : 3 critère(s).",
+   "data": {
+    "round": 1
+   }
+  },
+  {
+   "seq": 32,
+   "ts": "2026-11-02T10:59:12Z",
+   "type": "step_started",
+   "text": "Le contrôleur qualité vérifie le travail",
+   "stepId": "VER1",
+   "worker": "qa",
+   "data": {
+    "kind": "verify",
+    "attempt": 1
+   }
+  },
+  {
+   "seq": 33,
+   "ts": "2026-11-02T10:59:14Z",
+   "type": "step_started",
+   "text": "Le contrôleur qualité vérifie le travail",
+   "stepId": "VERC1",
+   "worker": "qa",
+   "data": {
+    "kind": "verify",
+    "attempt": 1
+   }
+  },
+  {
+   "seq": 34,
+   "ts": "2026-11-02T10:59:15Z",
+   "type": "step_cost",
+   "text": "1 crédit(s) pour l'étape « Relecture de cohérence entre Workers ».",
+   "stepId": "VERC1",
+   "data": {
+    "credits": 1,
+    "total": 4
+   }
+  },
+  {
+   "seq": 35,
+   "ts": "2026-11-02T10:59:15Z",
+   "type": "verification_result",
+   "text": "Vérification (tour 1) : PASS.",
+   "data": {
+    "round": 1,
+    "overall": "PASS",
+    "failed": []
+   }
+  },
+  {
+   "seq": 36,
+   "ts": "2026-11-02T10:59:15Z",
+   "type": "status_changed",
+   "text": "Statut : VERIFYING -> RUNNING (CONSOLIDATION)",
+   "data": {
+    "from": "VERIFYING",
+    "to": "RUNNING",
+    "reason": "CONSOLIDATION",
+    "waitingFor": null
+   }
+  },
+  {
+   "seq": 37,
+   "ts": "2026-11-02T10:59:15Z",
+   "type": "step_started",
+   "text": "Chloé prépare le rapport final",
+   "stepId": "CONS1",
+   "worker": "chloe",
+   "data": {
+    "kind": "consolidate",
+    "attempt": 1
+   }
+  },
+  {
+   "seq": 38,
+   "ts": "2026-11-02T10:59:16Z",
+   "type": "status_changed",
+   "text": "Statut : RUNNING -> DONE (COMPLETE)",
+   "data": {
+    "from": "RUNNING",
+    "to": "DONE",
+    "reason": "COMPLETE",
+    "waitingFor": null
+   }
+  },
+  {
+   "seq": 39,
+   "ts": "2026-11-02T10:59:16Z",
+   "type": "done",
+   "text": "Le projet est terminé et vérifié. Le rapport final est disponible."
+  }
+ ],
+ "hasMore": false,
+ "reset": false
+}

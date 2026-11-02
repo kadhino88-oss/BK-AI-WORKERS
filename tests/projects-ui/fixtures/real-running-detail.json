@@ -1,0 +1,423 @@
+{
+ "projectId": "PRJ-82A14EAA5962EB30D6A485860FB01528",
+ "title": "Preparer le calendrier editorial de 30 jours pour trois reseaux sociaux",
+ "goal": "Preparer le calendrier editorial de 30 jours pour trois reseaux sociaux",
+ "status": "RUNNING",
+ "waitingFor": null,
+ "statusReason": "PLAN_AUTO_APPROVED",
+ "leadWorker": "chloe",
+ "workers": [
+  {
+   "id": "lucas",
+   "name": "Lucas",
+   "portraitUrl": "/portraits/lucas.jpg",
+   "role": "Webmaster & Expert SEO",
+   "stepsDone": 0,
+   "stepsTotal": 2,
+   "status": "RUNNING",
+   "creditsUsed": 0,
+   "lastSummary": null,
+   "deliverables": [],
+   "approvalsPending": 0
+  },
+  {
+   "id": "emma",
+   "name": "Emma",
+   "portraitUrl": "/portraits/emma.jpg",
+   "role": "Responsable Contenu & Social Media",
+   "stepsDone": 0,
+   "stepsTotal": 1,
+   "status": "WAITING",
+   "creditsUsed": 0,
+   "lastSummary": null,
+   "deliverables": [],
+   "approvalsPending": 0
+  },
+  {
+   "id": "chloe",
+   "name": "Chloé",
+   "portraitUrl": "/portraits/chloe.jpg",
+   "role": "Interface principale & Orchestration",
+   "stepsDone": 1,
+   "stepsTotal": 1,
+   "status": "DONE",
+   "creditsUsed": 1,
+   "lastSummary": "Plan établi",
+   "deliverables": [],
+   "approvalsPending": 0
+  }
+ ],
+ "percent": 0,
+ "currentStep": {
+  "id": "S1",
+  "title": "Accueil",
+  "worker": "lucas",
+  "startedUtc": "2026-11-02T10:59:18Z",
+  "kind": "execute"
+ },
+ "createdUtc": "2026-11-02T10:52:57Z",
+ "updatedUtc": "2026-11-02T11:01:39Z",
+ "creditsCharged": 1,
+ "creditsCap": 20,
+ "approvalsPending": 0,
+ "inputsPending": 0,
+ "resumeAtUtc": null,
+ "queuePosition": null,
+ "plan": {
+  "goal": "Creer le site vitrine",
+  "language": "fr",
+  "version": 1,
+  "assumptions": [
+   {
+    "id": "A1",
+    "text": "3 pages"
+   }
+  ],
+  "criteria": [
+   {
+    "id": "C1",
+    "text": "Les pages existent",
+    "kind": "auto",
+    "verdict": null,
+    "note": null,
+    "accepted": false
+   },
+   {
+    "id": "C2",
+    "text": "Le ton est professionnel",
+    "kind": "rubric",
+    "verdict": null,
+    "note": null,
+    "accepted": false
+   },
+   {
+    "id": "C-coherence",
+    "text": "Les contenus destinés au même public et produits par des Workers différents ne se contredisent pas (mêmes faits, mêmes promesses, ton et marque cohérents).",
+    "kind": "rubric",
+    "verdict": null,
+    "note": null,
+    "accepted": false
+   }
+  ],
+  "steps": [
+   {
+    "id": "S1",
+    "title": "Accueil",
+    "worker": "lucas",
+    "goal": "Ecrire l'accueil",
+    "dependsOn": [],
+    "criteriaIds": [
+     "C1"
+    ],
+    "effort": "normal",
+    "status": "RUNNING",
+    "attempts": 1,
+    "blockedReason": null,
+    "summary": null,
+    "handoffNote": null,
+    "credits": 0,
+    "estimateCredits": 4.0,
+    "deliverables": [],
+    "kind": "execute",
+    "system": false,
+    "startedUtc": "2026-11-02T10:59:18Z",
+    "finishedUtc": null
+   },
+   {
+    "id": "S2",
+    "title": "A propos",
+    "worker": "emma",
+    "goal": "Ecrire a propos",
+    "dependsOn": [],
+    "criteriaIds": [
+     "C2"
+    ],
+    "effort": "normal",
+    "status": "READY",
+    "attempts": 0,
+    "blockedReason": null,
+    "summary": null,
+    "handoffNote": null,
+    "credits": 0,
+    "estimateCredits": 4.0,
+    "deliverables": [],
+    "kind": "execute",
+    "system": false,
+    "startedUtc": null,
+    "finishedUtc": null
+   },
+   {
+    "id": "S3",
+    "title": "Liens",
+    "worker": "lucas",
+    "goal": "Relier les pages",
+    "dependsOn": [
+     "S1",
+     "S2"
+    ],
+    "criteriaIds": [
+     "C1"
+    ],
+    "effort": "normal",
+    "status": "PENDING",
+    "attempts": 0,
+    "blockedReason": null,
+    "summary": null,
+    "handoffNote": null,
+    "credits": 0,
+    "estimateCredits": 4.0,
+    "deliverables": [],
+    "kind": "execute",
+    "system": false,
+    "startedUtc": null,
+    "finishedUtc": null
+   },
+   {
+    "id": "PLAN1",
+    "title": "Plan du projet",
+    "worker": "chloe",
+    "goal": null,
+    "dependsOn": [],
+    "criteriaIds": [],
+    "effort": "normal",
+    "status": "DONE",
+    "attempts": 1,
+    "blockedReason": null,
+    "summary": "Plan établi",
+    "handoffNote": null,
+    "credits": 1,
+    "estimateCredits": null,
+    "deliverables": [],
+    "kind": "plan",
+    "system": true,
+    "startedUtc": "2026-11-02T10:59:16Z",
+    "finishedUtc": "2026-11-02T10:59:18Z"
+   }
+  ],
+  "estimate": {
+   "creditsMin": 8.0,
+   "creditsMax": 16.0,
+   "hoursMin": 0.5,
+   "hoursMax": 1.0
+  },
+  "needsFromClient": [],
+  "risks": [],
+  "unassignable": [],
+  "delegation": null,
+  "fallback": false,
+  "milestones": [],
+  "approved": true
+ },
+ "budget": {
+  "creditsCap": 20,
+  "creditsCharged": 1,
+  "chfCeiling": 0.75,
+  "estimate": {
+   "creditsMin": 8.0,
+   "creditsMax": 16.0,
+   "hoursMin": 0.5,
+   "hoursMax": 1.0
+  },
+  "capSetByClient": false,
+  "level": "standard",
+  "costToFinishCredits": 12
+ },
+ "usage": {
+  "binding": "session",
+  "allowedNow": 54,
+  "exempt": false,
+  "session": {
+   "limit": 83,
+   "used": 10,
+   "reserved": 19,
+   "remaining": 54,
+   "opened": true,
+   "startUtc": "2026-11-02T10:52:46Z",
+   "resetsAtUtc": "2026-11-02T14:52:46Z"
+  },
+  "week": {
+   "limit": 207,
+   "used": 10,
+   "reserved": 19,
+   "remaining": 178,
+   "opened": true,
+   "startUtc": "2026-11-02T10:52:46Z",
+   "resetsAtUtc": "2026-11-09T10:52:46Z"
+  },
+  "month": {
+   "limit": 900,
+   "used": 10,
+   "reserved": 19,
+   "remaining": 871,
+   "opened": true,
+   "startUtc": "2026-11-02T10:52:46Z",
+   "resetsAtUtc": "2026-12-02T10:52:46Z"
+  },
+  "nextRenewalUtc": "2026-11-02T14:52:46Z"
+ },
+ "deliverables": [],
+ "approvals": {
+  "counts": {}
+ },
+ "questions": [],
+ "verification": null,
+ "events": [
+  {
+   "seq": 1,
+   "ts": "2026-11-02T10:52:57Z",
+   "type": "project_created",
+   "worker": "chloe",
+   "text": "Projet créé : Preparer le calendrier editorial de 30 jours pour trois reseaux sociaux",
+   "data": {
+    "level": "standard",
+    "queued": true,
+    "inputs": []
+   }
+  },
+  {
+   "seq": 2,
+   "ts": "2026-11-02T10:52:57Z",
+   "type": "status_changed",
+   "text": "Votre projet est en file d'attente : la planification commence dès qu'une place se libère.",
+   "data": {
+    "reason": "QUEUED"
+   }
+  },
+  {
+   "seq": 3,
+   "ts": "2026-11-02T10:59:16Z",
+   "type": "status_changed",
+   "text": "Statut : QUEUED -> PLANNING (SLOT_FREE)",
+   "data": {
+    "from": "QUEUED",
+    "to": "PLANNING",
+    "reason": "SLOT_FREE",
+    "waitingFor": null
+   }
+  },
+  {
+   "seq": 4,
+   "ts": "2026-11-02T10:59:16Z",
+   "type": "status_changed",
+   "text": "Votre projet quitte la file d'attente : la planification commence."
+  },
+  {
+   "seq": 5,
+   "ts": "2026-11-02T10:59:16Z",
+   "type": "step_started",
+   "stepId": "PLAN1",
+   "worker": "chloe",
+   "text": "Chloé prépare le plan",
+   "data": {
+    "kind": "plan",
+    "attempt": 1
+   }
+  },
+  {
+   "seq": 6,
+   "ts": "2026-11-02T10:59:18Z",
+   "type": "step_cost",
+   "stepId": "PLAN1",
+   "text": "1 crédit(s) pour l'étape « Plan du projet ».",
+   "data": {
+    "credits": 1,
+    "total": 1
+   }
+  },
+  {
+   "seq": 7,
+   "ts": "2026-11-02T10:59:18Z",
+   "type": "plan_ready",
+   "stepId": "PLAN1",
+   "text": "Plan prêt : 3 étape(s), 3 critère(s) d'acceptation.",
+   "data": {
+    "steps": 3,
+    "criteria": 3,
+    "estimate": {
+     "creditsMin": 8.0,
+     "creditsMax": 16.0,
+     "hoursMin": 0.5,
+     "hoursMax": 1.0
+    }
+   }
+  },
+  {
+   "seq": 8,
+   "ts": "2026-11-02T10:59:18Z",
+   "type": "plan_approved",
+   "text": "Le plan démarre automatiquement.",
+   "data": {
+    "auto": true
+   }
+  },
+  {
+   "seq": 9,
+   "ts": "2026-11-02T10:59:18Z",
+   "type": "status_changed",
+   "text": "Statut : PLANNING -> RUNNING (PLAN_AUTO_APPROVED)",
+   "data": {
+    "from": "PLANNING",
+    "to": "RUNNING",
+    "reason": "PLAN_AUTO_APPROVED",
+    "waitingFor": null
+   }
+  },
+  {
+   "seq": 10,
+   "ts": "2026-11-02T10:59:18Z",
+   "type": "step_started",
+   "stepId": "S1",
+   "worker": "lucas",
+   "text": "Lucas travaille : Accueil",
+   "data": {
+    "kind": "execute",
+    "attempt": 1
+   }
+  }
+ ],
+ "site": null,
+ "capabilities": {
+  "canPause": true,
+  "canResume": false,
+  "canCancel": true,
+  "canApprove": true,
+  "canApprovePlan": false,
+  "canAcceptGaps": false,
+  "canRaiseBudget": true,
+  "canDelete": false,
+  "canMessage": true
+ },
+ "notices": [],
+ "acceptedGaps": [],
+ "doneProblems": [],
+ "scope": {
+  "chloe": true,
+  "allowedWorkers": [
+   "alex",
+   "emma",
+   "lea",
+   "lucas",
+   "maya",
+   "noah",
+   "sam",
+   "seoya",
+   "nora",
+   "sophie",
+   "dario",
+   "ines",
+   "yanis",
+   "clara",
+   "amina",
+   "thomas",
+   "rayan"
+  ],
+  "deniedWorkers": []
+ },
+ "level": "standard",
+ "autoStart": true,
+ "recipeId": null,
+ "language": "fr",
+ "hasFinalReport": false,
+ "planNotice": null,
+ "workspacePurged": false
+}
