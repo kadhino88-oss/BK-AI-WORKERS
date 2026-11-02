@@ -89,7 +89,7 @@
           "re:resultats? assures",
           "re:\\d+ ?% (de )?(ventes|clients|conversions|croissance)",
           "re:le meilleur|n[°o] ?1",
-          "re:(augmentez|boostez|multipliez|doublez)[^;\n]{0,40}\\d+ ?%"
+          "re:(augmentez|boostez|multipliez|doublez)[^;\\n]{0,40}\\d+ ?%"
         ]
       }
     },
