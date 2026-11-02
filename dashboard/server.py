@@ -536,13 +536,20 @@ def detect_reply_language(text):
     return None
 
 
-def submit_task(worker_hint_text, worker_id="", plan_only=False, client_id="", level=None):
+def submit_task(worker_hint_text, worker_id="", plan_only=False, client_id="", level=None, chloe_mode=None):
     """Appelle le vrai pipeline via Submit-Task.ps1 (PowerShell).
     Le resultat est ecrit par le script dans un fichier temporaire
     dedie (evite tout parsing fragile de stdout, pollue par les
     bannieres Write-Host des scripts imbriques)."""
     import tempfile, uuid
 
+    # Budget de Chloe (nombre de Workers payables MAINTENANT, phrase de renouvellement) lu EN PREMIER, avant toute reservation des credits de cette
+    # mission (fenetres d'usage, chantier « limites ») : la reservation de la mission ne doit jamais reduire son propre plafond (sinon une mission
+    # qui a reserve 7 Workers n'en appellerait plus qu'un). La reservation borne ensuite ce nombre (MissionRun.cap_workers).
+    is_chloe = str(worker_id or "").lower() == "chloe"
+    chloe_lvl = normalize_level(level, client_id) if is_chloe else None
+    chloe_max_workers = chloe_worker_cap(client_id, chloe_lvl) if is_chloe else None
+    chloe_env = CHLOE_SCOPE.child_env(client_id, chloe_lvl, worker_id) if is_chloe else {}
     # Offre "Worker a l'unite" : DERNIER verrou, valable pour TOUS les points d'entree (routes, WhatsApp, essai, API publique) : un Worker
     # non embauche ne demarre jamais de mission (donc aucun credit consomme), meme si une route l'avait oublie.
     block = worker_block(client_id, worker_id or "-")
@@ -578,14 +585,29 @@ def submit_task(worker_hint_text, worker_id="", plan_only=False, client_id="", l
             child_env["BK_MISSION_LEVEL"] = lvl
         else:
             child_env.pop("BK_MISSION_LEVEL", None)
+        # Chloe : quand les credits reviennent (phrase fabriquee par CHLOE_SCOPE, jamais recopiee d'un texte) et identifiant de suivi en direct de la mission
+        # en arriere-plan (le job : chloe/Chloe-Executor.ps1 ecrit son avancement sous runtime/chloe-runs/<ClientId>/<job>/).
+        child_env.pop("BK_CHLOE_RESET_NOTE", None)
+        child_env.update(chloe_env)
+        # « Juste une reponse rapide » (BK_PROJECTS=1) : le client a refuse le projet propose par Chloe, elle traite la demande comme une mission. Choix du client
+        # (champ mode de la requete), jamais lu dans un texte.
+        if chloe_mode == "mission" and str(worker_id or "").lower() == "chloe":
+            child_env["BK_CHLOE_MODE"] = "mission"
+        else:
+            child_env.pop("BK_CHLOE_MODE", None)
+        job_ref = getattr(_JOB_CONTEXT, "job_id", "")
+        if job_ref and str(worker_id or "").lower() == "chloe":
+            child_env["BK_CHLOE_RUN_ID"] = job_ref
+        else:
+            child_env.pop("BK_CHLOE_RUN_ID", None)
         # Liste des Workers embauches pour Submit-Task.ps1 / Chloe (le routeur ne peut choisir qu'eux) ; absente = tous les Workers.
         allowed_env = allowed_workers_env(client_id)
         if allowed_env is not None:
             child_env["BK_ALLOWED_WORKERS"] = allowed_env
         else:
             child_env.pop("BK_ALLOWED_WORKERS", None)
-        # Chloe appelle PLUSIEURS Workers et chacun coute le niveau de la mission : on plafonne leur nombre au solde de credits du client.
-        max_workers = chloe_worker_cap(client_id, lvl) if str(worker_id or "").lower() == "chloe" else None
+        # Chloe appelle PLUSIEURS Workers et chacun coute le niveau de la mission : on plafonne leur nombre aux credits utilisables (lus plus haut).
+        max_workers = chloe_max_workers
         if max_workers is not None:
             max_workers = usage_run.cap_workers(max_workers)       # ... et a ce que les fenetres de session et de semaine ont accorde
             child_env["BK_MAX_WORKERS"] = str(max_workers)
@@ -646,7 +668,31 @@ def read_async_job(job_id):
                 job = dict(job, status="ERROR", error="La mission a pris trop de temps ou a été interrompue. Relancez-la.")
         except OSError:
             pass
+        if isinstance(job, dict) and job.get("status") == "RUNNING" and job.get("worker") == "chloe":
+            progress = _chloe_run_progress(job.get("clientId"), job_id)
+            if progress:
+                job = dict(job, progress=progress)          # avancement en direct : quel Worker travaille, lequel a fini (aucun texte de Worker)
+    elif isinstance(job, dict) and job.get("status") == "QUEUED":
+        try:
+            if time.time() - os.path.getmtime(path) > ASYNC_QUEUE_MAX_WAIT_SECONDS + 120:
+                job = dict(job, status="ERROR", error="Le service est resté très sollicité : la mission n'a pas pu démarrer. Relancez-la.")
+        except OSError:
+            pass
+        if isinstance(job, dict) and job.get("status") == "QUEUED":
+            job = dict(job, queuePosition=_async_queue_position(job_id))
     return job
+
+
+def _chloe_run_progress(client_id, run_id):
+    """Avancement d'une mission de Chloe en cours (runtime/chloe-runs/<ClientId>/<run>/progress.json, ecrit par chloe/Chloe-Executor.ps1) : liste des
+    sous-taches {id, worker, name, status}. None s'il n'existe pas encore. Jamais de texte de Worker, jamais de contenu du client."""
+    if not CLIENT_ID_RE.match(client_id or "") and client_id != DASHBOARD_CLIENT_ID:
+        return None
+    doc = load_json(os.path.join(ROOT, "runtime", "chloe-runs", re.sub(r"[^A-Za-z0-9_-]", "_", client_id or ""), run_id, "progress.json"))
+    if not isinstance(doc, dict) or not isinstance(doc.get("tasks"), list):
+        return None
+    return {"tasks": [{"id": str(t.get("id") or ""), "worker": str(t.get("worker") or ""), "name": str(t.get("name") or ""), "status": str(t.get("status") or "")}
+                      for t in doc["tasks"] if isinstance(t, dict)][:40]}
 
 
 # Plafonds de missions en arriere-plan (petit serveur : 2 vCPU / 3,8 Go). Sans plafond, un client pouvait
@@ -655,8 +701,16 @@ ASYNC_MAX_PER_CLIENT = int(os.environ.get("BK_ASYNC_MAX_PER_CLIENT", "2"))
 ASYNC_MAX_GLOBAL = int(os.environ.get("BK_ASYNC_MAX_GLOBAL", "6"))
 ASYNC_STALE_SECONDS = 20 * 60          # un job RUNNING plus vieux que ca a ete tue par un redemarrage
 ASYNC_KEEP_DAYS = 7
+# FILE D'ATTENTE (2026-10-19) : quand le serveur est occupe, une mission en arriere-plan attend son tour au lieu d'etre refusee. Les plafonds ci-dessus
+# bornent ce qui TOURNE (petit serveur : 2 vCPU / 3,8 Go) ; la file est elle-meme bornee, et une mission ne reste pas en file plus de 8 minutes.
+ASYNC_QUEUE_MAX_PER_CLIENT = int(os.environ.get("BK_ASYNC_QUEUE_MAX_PER_CLIENT", "5"))
+ASYNC_QUEUE_MAX_GLOBAL = int(os.environ.get("BK_ASYNC_QUEUE_MAX_GLOBAL", "20"))
+ASYNC_QUEUE_MAX_WAIT_SECONDS = int(os.environ.get("BK_ASYNC_QUEUE_MAX_WAIT", str(8 * 60)))
 _ASYNC_ACTIVE = {}                      # client_id -> nombre de missions en cours
 _ASYNC_ACTIVE_LOCK = threading.Lock()
+_ASYNC_QUEUE = []                       # missions en attente, dans l'ordre d'arrivee : [{"client": client_id, "job": job_id}]
+_ASYNC_TURN = threading.Condition(_ASYNC_ACTIVE_LOCK)
+_JOB_CONTEXT = threading.local()        # identifiant du job en cours dans CE thread (lu par submit_task : suivi en direct d'une mission de Chloe)
 
 
 def _async_acquire(client_id):
@@ -679,6 +733,63 @@ def _async_release(client_id):
             _ASYNC_ACTIVE[client_id] = left
         else:
             _ASYNC_ACTIVE.pop(client_id, None)
+        _ASYNC_TURN.notify_all()        # une place se libere : la premiere mission de la file qui peut partir se reveille
+
+
+def _async_can_start(client_id):
+    """Vrai (verrou deja pris) quand ce client et le serveur ont une place libre."""
+    return _ASYNC_ACTIVE.get(client_id, 0) < ASYNC_MAX_PER_CLIENT and sum(_ASYNC_ACTIVE.values()) < ASYNC_MAX_GLOBAL
+
+
+def _async_first_eligible():
+    """Premiere mission de la file dont le client a de la place (verrou deja pris) : l'ordre d'arrivee compte, mais une mission bloquee par le plafond
+    de SON client ne retient pas celles des autres clients."""
+    for item in _ASYNC_QUEUE:
+        if _ASYNC_ACTIVE.get(item["client"], 0) < ASYNC_MAX_PER_CLIENT:
+            return item
+    return None
+
+
+def _async_acquire_or_queue(client_id, job_id):
+    """("RUN", None) : une place est prise, la mission part tout de suite. ("QUEUED", n) : le serveur est occupe, la mission est la n-ieme de la file.
+    ("FULL", message) : la file est pleine (le seul refus qui reste)."""
+    with _ASYNC_ACTIVE_LOCK:
+        if _async_can_start(client_id) and _async_first_eligible() is None:
+            _ASYNC_ACTIVE[client_id] = _ASYNC_ACTIVE.get(client_id, 0) + 1
+            return "RUN", None
+        mine = sum(1 for i in _ASYNC_QUEUE if i["client"] == client_id)
+        if mine >= ASYNC_QUEUE_MAX_PER_CLIENT:
+            return "FULL", f"Vous avez déjà {mine} mission(s) en attente de place, en plus de celles en cours. Attendez qu'une se termine avant d'en lancer une autre."
+        if len(_ASYNC_QUEUE) >= ASYNC_QUEUE_MAX_GLOBAL:
+            return "FULL", "Le service est très sollicité : la file d'attente est pleine. Réessayez dans quelques minutes."
+        _ASYNC_QUEUE.append({"client": client_id, "job": job_id})
+        return "QUEUED", len(_ASYNC_QUEUE)
+
+
+def _async_wait_turn(client_id, job_id, max_wait):
+    """Attend (dans le thread de la mission, sans rien consommer) que ce soit son tour. True : la place est prise. False : trop long, retiree de la file."""
+    end = time.time() + max_wait
+    with _ASYNC_ACTIVE_LOCK:
+        while True:
+            first = _async_first_eligible()
+            if first is not None and first["job"] == job_id and _async_can_start(client_id):
+                _ASYNC_QUEUE.remove(first)
+                _ASYNC_ACTIVE[client_id] = _ASYNC_ACTIVE.get(client_id, 0) + 1
+                return True
+            left = end - time.time()
+            if left <= 0:
+                _ASYNC_QUEUE[:] = [i for i in _ASYNC_QUEUE if i["job"] != job_id]
+                _ASYNC_TURN.notify_all()
+                return False
+            _ASYNC_TURN.wait(min(left, 5.0))
+
+
+def _async_queue_position(job_id):
+    with _ASYNC_ACTIVE_LOCK:
+        for n, item in enumerate(_ASYNC_QUEUE, 1):
+            if item["job"] == job_id:
+                return n
+    return 0
 
 
 def reap_async_jobs(now=None, boot=False):
@@ -699,12 +810,17 @@ def reap_async_jobs(now=None, boot=False):
                 os.remove(p)
                 continue
             job = load_json(p)
-            if isinstance(job, dict) and job.get("status") == "RUNNING" and (boot or age > ASYNC_STALE_SECONDS):
+            if isinstance(job, dict) and job.get("status") in ("RUNNING", "QUEUED") and (boot or age > ASYNC_STALE_SECONDS):
                 job.update(status="ERROR", error="Mission interrompue par un redémarrage du service. Relancez-la.",
                            finishedAtUtc=datetime.datetime.utcnow().isoformat() + "Z")
                 _write_async_job(job)
         except Exception:
             continue
+
+
+def _chloe_mode_of(body):
+    """Champ « mode » d'une requete a Chloe : « mission » (= juste une reponse rapide, sans proposition de projet) ou rien."""
+    return "mission" if isinstance(body, dict) and str(body.get("mode") or "").strip().lower() == "mission" else None
 
 
 def submit_task_limited(objective, **kw):
@@ -719,7 +835,7 @@ def submit_task_limited(objective, **kw):
         _async_release(cid)
 
 
-def submit_task_async(objective, worker_id="", client_id="", plan_only=False, level=None):
+def submit_task_async(objective, worker_id="", client_id="", plan_only=False, level=None, chloe_mode=None):
     """Lance une mission en arriere-plan, renvoie un jobId a interroger.
     Le job (runtime/async-jobs/<jobId>.json) passe de RUNNING a DONE/ERROR.
     IMPORTANT : le job n'est PAS un TASK-*.json -> aucun double comptage de
@@ -728,21 +844,37 @@ def submit_task_async(objective, worker_id="", client_id="", plan_only=False, le
     submit_task garde EXACTEMENT sa signature synchrone
     (worker_hint_text, worker_id, plan_only, client_id) : on se contente de
     la lancer dans un thread demon pour debloquer la connexion HTTP."""
-    refusal = _async_acquire(client_id)
-    if refusal:
-        return {"error": "TOO_MANY_RUNNING_MISSIONS", "detail": refusal}
     job_id = "JOB-" + secrets.token_hex(16).upper()
+    state, info = _async_acquire_or_queue(client_id, job_id)
+    if state == "FULL":
+        return {"error": "TOO_MANY_RUNNING_MISSIONS", "detail": info}
     now = datetime.datetime.utcnow().isoformat() + "Z"
-    base = {"jobId": job_id, "status": "RUNNING", "clientId": client_id,
+    base = {"jobId": job_id, "status": "RUNNING" if state == "RUN" else "QUEUED", "clientId": client_id,
             "worker": worker_id or "chloe", "objective": objective,
             "planOnly": bool(plan_only), "createdAtUtc": now}
     _write_async_job(base)
 
     def _run():
         record = dict(base)
+        if state == "QUEUED":
+            # Serveur occupe : la mission attend son tour (file bornee, 8 minutes au plus) au lieu d'etre refusee.
+            if not _async_wait_turn(client_id, job_id, ASYNC_QUEUE_MAX_WAIT_SECONDS):
+                record.update(status="ERROR", errorCode="QUEUE_TIMEOUT", finishedAtUtc=datetime.datetime.utcnow().isoformat() + "Z",
+                              error="Le service est resté très sollicité : la mission n'a pas pu démarrer. Relancez-la dans un instant.")
+                try:
+                    _write_async_job(record)
+                except Exception:
+                    pass
+                return
+            record.update(status="RUNNING", startedAtUtc=datetime.datetime.utcnow().isoformat() + "Z")
+            try:
+                _write_async_job(record)
+            except Exception:
+                pass
         try:
+            _JOB_CONTEXT.job_id = job_id
             result = submit_task(objective, worker_id=worker_id,
-                                 plan_only=plan_only, client_id=client_id, level=level)
+                                 plan_only=plan_only, client_id=client_id, level=level, **({"chloe_mode": chloe_mode} if chloe_mode else {}))
             if not plan_only:
                 try:
                     result = attach_pending_action(result)
@@ -776,10 +908,14 @@ def submit_task_async(objective, worker_id="", client_id="", plan_only=False, le
                 except Exception:
                     time.sleep(0.2 * (attempt + 1))
         finally:
+            _JOB_CONTEXT.job_id = ""
             _async_release(client_id)
 
     threading.Thread(target=_run, daemon=True).start()
-    return {"jobId": job_id, "status": "RUNNING"}
+    out = {"jobId": job_id, "status": base["status"]}
+    if state == "QUEUED":
+        out["queuePosition"] = info
+    return out
 
 
 TASK_ID_PATTERN = re.compile(r"^TASK-[A-F0-9]{32}$")
@@ -1029,6 +1165,7 @@ def attach_pending_action(result):
                 "connectorId": pending.get("connectorId"),
                 "operation": pending.get("operation"),
                 "reason": pending.get("reason"),
+                "workerId": pending.get("workerId"),          # le Worker qui l'a preparee : l'interface range chaque carte sous son Worker
             }
             # Contenu exact qui sera envoye (destinataire, objet, corps,
             # montant…), remonte depuis le fichier PENDING-ACTION, avec
@@ -2336,6 +2473,7 @@ def _purge_client_mission_artifacts(client_id, task_ids):
     shutil.rmtree(os.path.join(ROOT, "runtime", "client-memory", client_id), ignore_errors=True)   # notes durables
     PROJECTS.purge_client(client_id)                                                               # projets : lanceurs arretes, dossier runtime/projects/<ClientId> supprime
     USAGE.purge(client_id)                                                                         # grand livre des fenetres d'usage (session / semaine / mois)
+    shutil.rmtree(os.path.join(ROOT, "runtime", "chloe-runs", re.sub(r"[^A-Za-z0-9_-]", "_", client_id)), ignore_errors=True)   # missions multi-Workers de Chloe (espace de travail partage)
     INSTALLS.delete_client(client_id)                                                              # installations des Workers (fiches de connaissances)
     try:                                                                                           # demandes d'embauche du client
         rows = _read_hire_requests()
@@ -3780,13 +3918,48 @@ def chloe_worker_cap(client_id, level=None):
     """Nombre maximal de Workers que Chloe peut appeler pour UNE mission de ce client : chaque Worker appele est trace (et facture) au niveau de
     la mission, donc solde de credits // cout du niveau. Au moins 1 (subscription_blocks_mission a deja verifie qu'une mission de ce niveau est
     payable). Sans cela, une mission de Chloe qui rassemble 5 ou 17 Workers depassait le quota de plusieurs dizaines de credits. None = pas de
-    plafond (proprietaire, essai public, identifiant qui n'est pas un compte client). `level` est le niveau tel que normalize_level le donne."""
-    if not _is_customer_id(client_id):
-        return None
-    remaining = get_billing(client_id).get("creditsRemaining")
-    remaining = remaining if isinstance(remaining, int) and not isinstance(remaining, bool) and remaining > 0 else 0
-    cost = level_credits(level) if level else 1
-    return max(1, remaining // max(1, cost))
+    plafond (proprietaire, essai public, identifiant qui n'est pas un compte client). `level` est le niveau tel que normalize_level le donne.
+    Seule borne du nombre de Workers : les credits utilisables maintenant (mois, et session et semaine quand les fenetres d'usage sont actives).
+    Le calcul est dans dashboard/chloe_scope.py (adaptateur mince, CHLOE_SCOPE plus bas)."""
+    return CHLOE_SCOPE.worker_cap(client_id, level)
+
+
+CHLOE_TRIAGE_RATE = {}
+
+
+def chloe_triage_rate_ok(client_id):
+    """20 aiguillages par heure et par client (chacun lance un processus PowerShell et un appel au modele)."""
+    with _STATE_LOCK:
+        rows = _recent(CHLOE_TRIAGE_RATE, client_id, 3600)
+        if len(rows) >= 20:
+            return False
+        CHLOE_TRIAGE_RATE[client_id] = rows + [time.time()]
+    return True
+
+
+def chloe_triage(client_id, objective):
+    """POST /api/chloe/triage : Chloe lit la demande et dit si c'est une reponse rapide (mission) ou un travail a plusieurs etapes (projet), avec les
+    Workers prevus, ceux qui ne sont pas dans le forfait et une estimation. Aucun Worker lance, aucun credit (chloe/Chloe-Triage.ps1)."""
+    env = dict(os.environ)
+    reply_lang = detect_reply_language(objective)
+    if reply_lang:
+        env["BK_REPLY_LANG"] = reply_lang
+    else:
+        env.pop("BK_REPLY_LANG", None)
+    lvl = normalize_level(None, client_id)
+    if lvl:
+        env["BK_MISSION_LEVEL"] = lvl
+    else:
+        env.pop("BK_MISSION_LEVEL", None)
+    allowed_env = allowed_workers_env(client_id)
+    if allowed_env is not None:
+        env["BK_ALLOWED_WORKERS"] = allowed_env
+    else:
+        env.pop("BK_ALLOWED_WORKERS", None)
+    result = _chloe_scope.run_triage(ROOT, PS_CMD, objective, env)
+    if result.get("ok"):
+        result["scope"] = CHLOE_SCOPE.project_scope(client_id)
+    return result
 
 
 def subscription_required_payload(client_id, detail):
@@ -4260,6 +4433,26 @@ def installation_paused(client_id, worker_id):
     except Exception:
         return False
     return bool(rec) and rec.get("status") == "paused"
+
+
+# Chloe delegue a TOUS les Workers (dashboard/chloe_scope.py) : droits du forfait (Equipe et au-dessus : les 17 ; Trio : les 3 embauches, avec l'offre
+# d'embauche pour les autres ; Solo : pas de Chloe) et credits utilisables maintenant. Lu par chloe_worker_cap, submit_task et le moteur de projets.
+import chloe_scope as _chloe_scope
+
+
+def _chloe_fr_when(iso):
+    try:
+        import usage as _usage_mod
+        return _usage_mod.fr_when(_usage_mod.parse_iso(iso), time.time())
+    except Exception:  # noqa: BLE001 - sans le module des fenetres d'usage, Chloe ecrit sa phrase sans heure de renouvellement
+        return None
+
+
+CHLOE_SCOPE = _chloe_scope.ChloeScope(
+    worker_ids=get_worker_ids, allowed_workers_env=allowed_workers_env, worker_block=worker_block, installation_paused=installation_paused,
+    plans_with_chloe=inst.PLANS_WITH_CHLOE, plan_id_of=lambda c: (_billing_state_readonly(c) or {}).get("planId"), root=ROOT,
+    worker_name=worker_display_name, credits_remaining=lambda c: get_billing(c).get("creditsRemaining"), level_credits=level_credits,
+    usage=lambda: globals().get("USAGE"), is_customer=_is_customer_id, fr_when=_chloe_fr_when)
 
 
 @_state_locked
@@ -5508,7 +5701,7 @@ class Handler(BaseHTTPRequestHandler):
             if not objective:
                 self._send_json({"error": "OBJECTIVE_REQUIRED"}, 400)
                 return
-            result = submit_task_limited(objective, worker_id="chloe", client_id=client_id, level=body.get("level"))
+            result = submit_task_limited(objective, worker_id="chloe", client_id=client_id, level=body.get("level"), chloe_mode=_chloe_mode_of(body))
             usage_refused = refused_for_usage(result)
             if usage_refused:
                 self._send_json(usage_refused, 402)
@@ -5544,8 +5737,44 @@ class Handler(BaseHTTPRequestHandler):
             if not objective:
                 self._send_json({"error": "OBJECTIVE_REQUIRED"}, 400)
                 return
-            res = submit_task_async(objective, worker_id="chloe", client_id=client_id, level=body.get("level"))
+            res = submit_task_async(objective, worker_id="chloe", client_id=client_id, level=body.get("level"), chloe_mode=_chloe_mode_of(body))
             self._send_json(res, 429 if res.get("error") else 202)
+        elif path == "/api/chloe/triage":
+            # Aiguillage « mission ou projet ? » (BK_PROJECTS=1 seulement, comme les routes du moteur de projets) : Chloe lit la demande, dit si c'est une
+            # reponse rapide ou un travail a plusieurs etapes et plusieurs Workers, lesquels, et ce qui n'est pas dans le forfait. Aucun credit, aucun Worker.
+            if str(os.environ.get("BK_PROJECTS", "")).strip().lower() not in ("1", "true", "yes", "on"):
+                self._send_json({"error": "PROJECTS_DISABLED", "detail": "Les projets ne sont pas activés."}, 503)
+                return
+            client_id = self._resolve_client_id()
+            if not client_id:
+                self._send_account_required()
+                return
+            if self._worker_not_included(client_id, "chloe"):
+                return
+            if not chloe_triage_rate_ok(client_id):
+                self.send_response(429)
+                self.send_header("Retry-After", "600")
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                out = json.dumps({"error": "RATE_LIMITED", "detail": "Trop d'aiguillages : réessayez dans quelques minutes."}).encode("utf-8")
+                self.send_header("Content-Length", str(len(out)))
+                self.end_headers()
+                self.wfile.write(out)
+                return
+            body = self._read_json_limited(6000)
+            if body is None:
+                return
+            objective = str(body.get("objective") or "").strip()
+            if not objective:
+                self._send_json({"error": "OBJECTIVE_REQUIRED"}, 400)
+                return
+            if len(objective) > 4000:
+                self._send_json({"error": "GOAL_TOO_LONG", "detail": "La demande dépasse 4 000 caractères."}, 400)
+                return
+            result = chloe_triage(client_id, objective)
+            if not result.get("ok"):
+                self._send_json({"error": "INTERNAL", "detail": "L'aiguillage n'a pas pu être fait pour le moment. Réessayez."}, 500)
+                return
+            self._send_json(result)
         elif path == "/api/chloe/plan":
             # Etape "Demander a Chloe" du parcours Demarrer : reservee aux
             # comptes clients (plus au mot de passe proprietaire, qui

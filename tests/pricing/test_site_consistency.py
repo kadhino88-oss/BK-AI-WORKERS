@@ -123,7 +123,7 @@ class PriceLists(unittest.TestCase):
         self.assertEqual({k for k, p in server.PLAN_CATALOG.items() if p.get("legacy")}, {"starter", "business"})
 
     def test_chloe_quotes_the_same_prices(self):
-        texts = {"playbook": read("chloe/identity/playbook.md"), "router": read("chloe/Invoke-Chloe-Orchestration.ps1")}
+        texts = {"playbook": read("chloe/identity/playbook.md"), "router": read("chloe/Chloe-Router.ps1")}
         for where, text in texts.items():
             flat = text.replace("1 250", "1250").replace("4 000", "4000").replace(" ", " ")
             for pid in ("solo", "trio", "equipe", "pro", "scale"):
@@ -195,7 +195,7 @@ class NothingRetiredIsLeft(unittest.TestCase):
 
     def test_no_competitor_is_named_on_the_public_site_or_in_chloe(self):
         found = []
-        for rel in self.SERVED + ["chloe/identity/playbook.md", "chloe/Invoke-Chloe-Orchestration.ps1"]:
+        for rel in self.SERVED + ["chloe/identity/playbook.md", "chloe/Invoke-Chloe-Orchestration.ps1", "chloe/Chloe-Router.ps1"]:
             for n, line in visible_lines(rel):
                 if re.search(self.COMPETITORS, line):
                     found.append(f"{rel}:{n} {line.strip()[:110]}")

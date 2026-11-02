@@ -57,11 +57,16 @@ function Invoke-RestMethod {
     if ($SystemIsArray) { foreach ($B in $Req.system) { if ($B.cache_control.type -eq "ephemeral") { $CacheControl = $true } } }
     $SystemText = if ($SystemIsArray) { (@($Req.system | ForEach-Object { [string]$_.text }) -join "`n") } else { [string]$Req.system }
     $WebTool = @($Req.tools | Where-Object { $_.name -eq "web_search" }) | Select-Object -First 1
+    # Dernier message du client (texte) et noms des outils : lus par les tests de la delegation de Chloe (tests/chloe-delegation).
+    $LastUser = @($Req.messages | Where-Object { $_.role -eq "user" }) | Select-Object -Last 1
+    $UserText = if ($LastUser) { if ($LastUser.content -is [string]) { [string]$LastUser.content } else { (@($LastUser.content | ForEach-Object { [string]$_.text }) -join "`n") } } else { "" }
+    $ToolNames = @(); foreach ($T in @($Req.tools)) { if ($null -ne $T) { $ToolNames += [string]$T.name } }
     Add-FakeLog ([ordered]@{
         kind = "messages"; index = $Index; model = [string]$Req.model; systemIsArray = $SystemIsArray; systemCacheControl = $CacheControl
         toolTypes = $ToolTypes; betaHeader = [string]$Headers["anthropic-beta"]; messageCount = @($Req.messages).Count
         effort = [string]$Req.output_config.effort; webMaxUses = $(if ($WebTool) { [int]$WebTool.max_uses } else { 0 })
         systemHasMemory = ($SystemText -like "*<client_memory>*"); systemText = $SystemText
+        userText = $UserText; toolNames = $ToolNames
         timeoutSec = [int]$TimeoutSec
     })
     $Responses = @($Global:FakeCassette.responses)

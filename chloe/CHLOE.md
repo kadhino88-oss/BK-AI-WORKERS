@@ -79,19 +79,28 @@ derrière, pas seulement une compétence déclarée :
   (memory/data/<client>/<project>/CHLOE/mission-<execution_id>.json)
   via le vrai moteur mémoire — champ `LearnStatus` (WRITTEN/ERROR/SKIPPED).
 
-Limite honnête : UNDERSTAND reste un matching de mots-clés (comme
-Invoke-Orchestrator.ps1), pas une vraie compréhension de langage —
-une compréhension plus fine nécessite un vrai appel LLM (OpenAI,
-bloqué par manque de crédits au 2026-09-15). DELIVER concatène les
-réponses des Workers (elles-mêmes des réponses locales de secours
-tant qu'OpenAI n'a pas de crédits) plutôt que de générer une synthèse
-rédigée par une IA — possible dès que le provider réel répondra.
+Mise à jour du 2026-10-25 (docs/CHLOE-DELEGATION.md) : UNDERSTAND et PLAN
+sont faits par un appel peu coûteux à un modèle (Haiku 5.5) qui lit la
+demande et les fiches des 17 Workers et rend un plan de sous-tâches au
+schéma dur (un Worker par sous-tâche, avec ses dépendances). Le code
+valide le plan, applique les droits du forfait et les crédits ; EXECUTE
+fait travailler les Workers en parallèle borné avec relais des résultats
+de l'un à l'autre ; COMBINE rédige une synthèse déterministe qui dit qui
+a fait quoi (fichiers et actions à valider par Worker, ce qui a échoué).
+Les mots-clés ne servent plus que de repli (modèle indisponible) ;
+BK_CHLOE_PLANNER=0 rend l'ancien comportement à l'identique.
+Limite honnête : le routeur est un modèle, il peut se tromper de Worker ;
+sa précision n'a pas pu être mesurée sur le vrai modèle (crédit de l'API
+épuisé le 2026-10-25) : seule la référence des mots-clés seuls l'a été
+(tests/chloe-delegation/test_routing_accuracy.py).
 
 MODES DE COLLABORATION (Invoke-Chloe-Orchestration.ps1 -CollaborationMode)
 
-- PARALLEL (défaut) : tous les Workers sélectionnés reçoivent la même
-  demande, travaillent indépendamment (pattern D, section 22 du doc
-  officiel). Testé.
+- PARALLEL (défaut du repli par mots-clés) : tous les Workers
+  sélectionnés reçoivent la même demande, travaillent indépendamment
+  (pattern D, section 22 du doc officiel). Testé. Quand le routeur à
+  modèle découpe la demande, ce sont les dépendances du plan qui
+  décident, par sous-tâche : parallèle borné ou séquence avec relais.
 - CHAIN : exécution séquentielle dans l'ordre de
   orchestrator/worker-routing.json, chaque Worker recevant en plus la
   réponse du précédent (pattern C, ex. AMINA → MAYA → EMMA → SÉOYA).
@@ -164,8 +173,9 @@ NOTE TECHNIQUE
 
 L'orchestration multi-Workers est implémentée dans
 `chloe/Invoke-Chloe-Orchestration.ps1` (2026-09-14) : elle sélectionne
-tous les Workers pertinents via `orchestrator/worker-routing.json`
-(pas seulement le premier match, contrairement au routage simple
+tous les Workers pertinents (routeur à modèle, repli par mots-clés de
+`orchestrator/worker-routing.json`) — pas seulement le premier match,
+contrairement au routage simple
 utilisé par `Invoke-Orchestrator.ps1` pour une demande mono-Worker),
 délègue à chacun via le même chemin d'autorisation réel (chaîne à
 14 étapes, aucun raccourci), puis assemble les résultats.
