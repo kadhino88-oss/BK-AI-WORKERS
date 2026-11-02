@@ -61,7 +61,7 @@
     },
     {
       "id": "CH",
-      "text": "Le rapport principal contient une section « Sources et limites » : ce qui est source, ce qui est a completer, ce qui n'a pas pu etre fait",
+      "text": "Le rapport principal contient une section « Sources et limites » : ce qui est sourcé, ce qui est à compléter, ce qui n'a pas pu être fait",
       "kind": "auto",
       "check": {
         "type": "file_contains",
@@ -171,5 +171,5 @@
     "gdpr-art21",
     "uwg-fedlex"
   ],
-  "legalNotice": "Prospection par message : le moteur ne fournit pas un avis juridique. En Suisse, l'envoi de publicite de masse par moyen de telecommunication (e-mail, SMS) est encadre par l'art. 3 al. 1 lit. o de la loi contre la concurrence deloyale (LCD / UWG) ; le texte officiel sur fedlex.admin.ch n'a PAS pu etre relu par le moteur le 2026-11-02 : a faire confirmer par un juriste avant tout envoi. Dans l'UE, la directive ePrivacy (art. 13) et les lois nationales fixent le consentement prealable, avec des regimes B2B differents selon les pays ; le RGPD art. 21 al. 2-3 donne un droit d'opposition immediat a la prospection. Le Worker prepare des BROUILLONS ; le client decide et envoie, et reste responsable de la base legale."
+  "legalNotice": "Prospection par message : le moteur ne fournit pas un avis juridique. En Suisse, l'envoi de publicité de masse par moyen de télécommunication (e-mail, SMS) est encadré par l'art. 3 al. 1 lit. o de la loi contre la concurrence déloyale (LCD / UWG) ; le texte officiel sur fedlex.admin.ch n'a PAS pu être relu par le moteur le 2026-11-02 : a faire confirmer par un juriste avant tout envoi. Dans l'UE, la directive ePrivacy (art. 13) et les lois nationales fixent le consentement préalable, avec des régimes B2B différents selon les pays ; le RGPD art. 21 al. 2-3 donne un droit d'opposition immédiat à la prospection. Le Worker prépare des BROUILLONS ; le client decide et envoie, et reste responsable de la base légale."
 }

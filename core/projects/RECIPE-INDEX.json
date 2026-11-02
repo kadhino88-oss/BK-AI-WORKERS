@@ -4,7 +4,7 @@
   "recipes": [
     {
       "id": "alex/gestion-prospects",
-      "title": "Gestion de prospects : 30 prospects qualifies et brouillons d'approche",
+      "title": "Gestion de prospects : 30 prospects qualifiés et brouillons d'approche",
       "workerId": "alex",
       "supportingWorkers": [
         "amina",
@@ -144,7 +144,7 @@
     },
     {
       "id": "chloe/lancement-offre",
-      "title": "Lancement d'une offre : site, reseaux, publicites et SEO coherents",
+      "title": "Lancement d'une offre : site, réseaux, publicités et SEO cohérents",
       "workerId": "chloe",
       "supportingWorkers": [
         "lucas",
@@ -288,7 +288,7 @@
     },
     {
       "id": "emma/calendrier-social-30j",
-      "title": "Calendrier de contenu social sur 30 jours (3 reseaux)",
+      "title": "Calendrier de contenu social sur 30 jours (3 réseaux)",
       "workerId": "emma",
       "supportingWorkers": [
         "lea"
@@ -430,7 +430,7 @@
     },
     {
       "id": "ines/rapport-xlsx-docx-pdf",
-      "title": "Rapport d'analyse : classeur a formules vivantes, document et PDF",
+      "title": "Rapport d'analyse : classeur à formules vivantes, document et PDF",
       "workerId": "ines",
       "supportingWorkers": [
         "dario"
@@ -645,7 +645,7 @@
     },
     {
       "id": "maya/publicites-meta-google",
-      "title": "Publicites Meta et Google : strategie et jeu complet pret a importer",
+      "title": "Publicités Meta et Google : stratégie et jeu complet prêt à importer",
       "workerId": "maya",
       "supportingWorkers": [
         "emma",

@@ -111,10 +111,10 @@ def build(slug, worker, title, summary, services, keywords, examples, criteria, 
           languages=("fr",), needs=(), approvals=(), required=(), optional=(), forbidden=(), sources=(), legal=None, credits=None, hours=None,
           variants=None, scenarios=(), deep=False):
     """Assemble une recette. `main` = rapport texte (.md) du livrable principal : le critere d'honnetete « Sources et limites » lui est ajoute et
-    rattache a la derniere etape. Les budgets sont deduits des estimations d'etapes sauf indication."""
+    rattache à la derniere etape. Les budgets sont deduits des estimations d'etapes sauf indication."""
     criteria = list(criteria)
     steps = [dict(s) for s in steps]
-    criteria.append(A("CH", "Le rapport principal contient une section « Sources et limites » : ce qui est source, ce qui est a completer, ce qui n'a pas pu etre fait",
+    criteria.append(A("CH", "Le rapport principal contient une section « Sources et limites » : ce qui est sourcé, ce qui est à compléter, ce qui n'a pas pu être fait",
                       fc(main, must=["Sources et limites"])))
     steps[-1]["criteriaIds"] = list(steps[-1]["criteriaIds"]) + ["CH"]
     if main not in [d["path"] for d in deliverables]:

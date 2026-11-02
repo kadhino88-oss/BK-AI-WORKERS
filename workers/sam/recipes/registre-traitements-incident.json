@@ -61,7 +61,7 @@
     },
     {
       "id": "CH",
-      "text": "Le rapport principal contient une section « Sources et limites » : ce qui est source, ce qui est a completer, ce qui n'a pas pu etre fait",
+      "text": "Le rapport principal contient une section « Sources et limites » : ce qui est sourcé, ce qui est à compléter, ce qui n'a pas pu être fait",
       "kind": "auto",
       "check": {
         "type": "file_contains",
