@@ -1,0 +1,89 @@
+{
+  "_comment": "Plafonds du moteur de projets (docs/AUTONOMY-ENGINE.md, sections 2.5, 2.8, 6). Le serveur est un 2 vCPU / 3,8 Go partage : ces valeurs sont des plafonds de capacite et de securite, reglables par le proprietaire sans toucher au code. Les forfaits herites (starter, business) suivent les memes regles que solo et equipe.",
+  "version": 1,
+  "runners": {
+    "global": 2,
+    "perClient": 1,
+    "perClientByPlan": {"scale": 2, "enterprise": 2}
+  },
+  "minAvailableMemoryMb": 700,
+  "activeProjects": {"essai": 0, "solo": 1, "trio": 1, "equipe": 2, "pro": 3, "scale": 6, "enterprise": 10, "starter": 1, "business": 2},
+  "queuedProjects": 3,
+  "createPerDay": {"essai": 0, "solo": 3, "trio": 5, "equipe": 8, "pro": 12, "scale": 30, "enterprise": 60, "starter": 3, "business": 8},
+  "maxDurationHours": {"essai": 0, "solo": 72, "trio": 72, "equipe": 168, "pro": 168, "scale": 336, "enterprise": 336, "starter": 72, "business": 168},
+  "absoluteMaxChf": {"essai": 0, "solo": 8, "trio": 12, "equipe": 20, "pro": 30, "scale": 120, "enterprise": 200, "starter": 8, "business": 20},
+  "workspaceMb": {"default": 100, "scale": 300, "enterprise": 300},
+  "clientDiskMb": {"default": 1024, "scale": 5120, "enterprise": 5120},
+  "chloeDelegation": {"trio": "hired_only", "default": "all"},
+  "step": {
+    "softDeadlineSec": 480,
+    "hardDeadlineSec": 540,
+    "maxAttempts": 3,
+    "maxStepsPerProject": 120,
+    "maxPlanSteps": 40,
+    "maxCriteria": 25,
+    "maxAddedSteps": 8,
+    "maxReplans": 3,
+    "maxFixRounds": 2,
+    "maxMilestoneFixes": 2,
+    "noProgressLimit": 3,
+    "retryLaterDelaysSec": [60, 300, 1200],
+    "heartbeatSec": 20,
+    "noHeartbeatSec": 120,
+    "killGraceSec": 15
+  },
+  "budget": {
+    "creditCostChf": 0.0375,
+    "minStartCredits": 6,
+    "capMargin": 1.25,
+    "defaultCap": {"standard": 150, "approfondi": 300},
+    "verifyShareOfCap": 0.15
+  },
+  "input": {
+    "goalMaxChars": 4000,
+    "messageMaxChars": 4000,
+    "inputFilesMax": 10,
+    "inputFilesMaxBytes": 10485760,
+    "inputFileExtensions": ["txt", "csv", "md", "json", "pdf", "docx", "xlsx", "png", "jpg", "jpeg", "webp", "svg"]
+  },
+  "approvals": {
+    "ttlDays": 7,
+    "reminderDays": [1, 3],
+    "pendingPerProject": 50,
+    "pendingPerClient": 200,
+    "paramsMaxBytes": 8192,
+    "batchMax": 50,
+    "executeSpacingSec": 1.0,
+    "executePerMinutePerClient": 25,
+    "highRecipients": 20
+  },
+  "lifecycle": {
+    "idleExpiryDays": 14,
+    "idleReminderDays": [3, 10],
+    "retentionDays": 90,
+    "cancelledDownloadDays": 7
+  },
+  "rates": {
+    "create": [6, 3600],
+    "createAttempts": [60, 3600],
+    "messages": [60, 3600],
+    "approvals": [300, 3600],
+    "control": [60, 3600],
+    "progress": [120, 60],
+    "get": [120, 60],
+    "download": [120, 3600],
+    "zip": [10, 3600],
+    "sitePreview": [20, 3600],
+    "triage": [20, 3600]
+  },
+  "notifications": {
+    "perTypePerProjectPerHourMax": 1,
+    "perClientPerDayMax": 10,
+    "approvalNeededMinGapMin": 30
+  },
+  "abuse": {
+    "spendSpikeFactor": 3.0,
+    "capFractionAlert": 0.8,
+    "capFractionWindowMin": 30
+  }
+}

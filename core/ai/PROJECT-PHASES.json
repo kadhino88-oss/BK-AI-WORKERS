@@ -1,0 +1,20 @@
+{
+  "_comment": "Phases d'une ETAPE DE PROJET (docs/AUTONOMY-ENGINE.md, section 3.7). levelRef renvoie a core/ai/LEVELS.json pour le modele et l'effort ; les autres champs sont propres aux etapes : maxIterations = appels API au plus par etape, maxCostChf = plafond de cout d'UNE etape (le plafond reel est le plus petit de celui-ci, du reste du plafond du projet et du reste des fenetres d'usage), webMaxUses = recherches web au plus par appel, callTimeoutSec = delai d'un appel API. Planification et verification restent TOUJOURS sur le niveau fort : ce sont les deux endroits ou une erreur coute cher (mauvais plan, faux « termine »). Le niveau Approfondi d'un projet fait monter la phase execute sur le niveau de execute_deep (voir levelUpgrade). Le proprietaire peut regler ce fichier sans toucher au code.",
+  "version": 1,
+  "phases": {
+    "plan":         {"levelRef": "approfondi", "maxIterations": 8,  "maxCostChf": 0.60, "webMaxUses": 6,  "callTimeoutSec": 420},
+    "execute":      {"levelRef": "equilibre",  "maxIterations": 24, "maxCostChf": 0.80, "webMaxUses": 8,  "callTimeoutSec": 300},
+    "execute_bulk": {"levelRef": "rapide",     "maxIterations": 30, "maxCostChf": 0.25, "webMaxUses": 6,  "callTimeoutSec": 180},
+    "execute_deep": {"levelRef": "approfondi", "maxIterations": 20, "maxCostChf": 1.50, "webMaxUses": 12, "callTimeoutSec": 420},
+    "verify":       {"levelRef": "approfondi", "maxIterations": 16, "maxCostChf": 0.80, "webMaxUses": 4,  "callTimeoutSec": 420},
+    "replan":       {"levelRef": "approfondi", "maxIterations": 6,  "maxCostChf": 0.40, "webMaxUses": 4,  "callTimeoutSec": 420},
+    "consolidate":  {"levelRef": "equilibre",  "maxIterations": 8,  "maxCostChf": 0.40, "webMaxUses": 0,  "callTimeoutSec": 300}
+  },
+  "kindToPhase": {
+    "plan": "plan", "execute": "execute", "fix": "execute", "verify": "verify",
+    "replan": "replan", "consolidate": "consolidate", "answer": "execute_bulk"
+  },
+  "answer": {"maxIterations": 4, "maxCostChf": 0.10},
+  "levelUpgrade": {"approfondi": {"execute": "approfondi"}},
+  "stepCeilingMinChf": 0.05
+}

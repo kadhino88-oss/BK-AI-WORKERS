@@ -1,0 +1,53 @@
+{
+  "_comment": "Classes de risque des articles d'approbation d'un projet (docs/AUTONOMY-ENGINE.md, section 5.3). Une entree est « connecteur:OPERATION » ; * remplace n'importe quelle suite. La regle la plus precise gagne (connecteur et operation sans joker > un seul joker > deux jokers) ; a precision egale, la classe la plus severe l'emporte. Une ecriture absente de la table est traitee comme « medium ». Le proprietaire peut durcir cette table, jamais l'assouplir sans y penser : high = article par article, confirmation saisie « J'autorise », jamais de lot.",
+  "version": 1,
+  "unknownWrite": "medium",
+  "highRecipientsThreshold": 20,
+  "low": [
+    "gmail:DRAFT_MESSAGE", "outlook_mail:DRAFT_MESSAGE",
+    "wordpress:CREATE_DRAFT", "wordpress:UPDATE_DRAFT",
+    "zendesk:DRAFT_REPLY", "intercom:DRAFT_REPLY",
+    "*:CREATE_TASK", "*:CREATE_CARD", "*:CREATE_ITEM", "*:CREATE_NOTE",
+    "calendar:CREATE_EVENT", "outlook_calendar:CREATE_EVENT",
+    "slack:DRAFT_MESSAGE"
+  ],
+  "medium": [
+    "*:CREATE_DRAFT_POST",
+    "slack:POST_MESSAGE",
+    "teams:DRAFT_MESSAGE", "whatsapp_business:DRAFT_MESSAGE",
+    "webflow:UPDATE_DRAFT",
+    "*:UPDATE_*"
+  ],
+  "high": [
+    "twilio:PLACE_CALL",
+    "*:CREATE_REFUND", "*:CREATE_PAYOUT", "*:CREATE_PAYMENT",
+    "meta_ads:*", "google_ads:*",
+    "*:DELETE_*",
+    "site:PUBLISH"
+  ],
+  "irreversible": [
+    "slack:POST_MESSAGE", "teams:DRAFT_MESSAGE", "whatsapp_business:DRAFT_MESSAGE",
+    "*:CREATE_DRAFT_POST", "twilio:PLACE_CALL",
+    "*:CREATE_REFUND", "*:CREATE_PAYOUT", "*:CREATE_PAYMENT", "*:DELETE_*"
+  ],
+  "autoApproveSafeOps": [
+    "gmail|DRAFT_MESSAGE", "outlook_mail|DRAFT_MESSAGE",
+    "wordpress|CREATE_DRAFT", "wordpress|UPDATE_DRAFT",
+    "zendesk|DRAFT_REPLY", "intercom|DRAFT_REPLY"
+  ],
+  "whatItDoes": {
+    "gmail:DRAFT_MESSAGE": "Dépose un brouillon dans votre boîte Gmail ; rien n'est envoyé.",
+    "outlook_mail:DRAFT_MESSAGE": "Dépose un brouillon dans votre boîte Outlook ; rien n'est envoyé.",
+    "wordpress:CREATE_DRAFT": "Crée un brouillon sur votre site WordPress ; rien n'est publié.",
+    "wordpress:UPDATE_DRAFT": "Met à jour un brouillon sur votre site WordPress ; rien n'est publié.",
+    "*:CREATE_DRAFT_POST": "PUBLIE un message sur le réseau concerné au nom de votre entreprise.",
+    "slack:POST_MESSAGE": "ENVOIE un message dans votre espace Slack.",
+    "teams:DRAFT_MESSAGE": "ENVOIE un message dans Teams.",
+    "whatsapp_business:DRAFT_MESSAGE": "ENVOIE un message WhatsApp à un contact.",
+    "twilio:PLACE_CALL": "PLACE un vrai appel téléphonique.",
+    "*:CREATE_TASK": "Crée une tâche dans votre outil ; rien ne part chez un tiers.",
+    "*:CREATE_CARD": "Crée une fiche dans votre outil ; rien ne part chez un tiers.",
+    "*:CREATE_ITEM": "Crée un élément dans votre outil ; rien ne part chez un tiers.",
+    "*:UPDATE_*": "MODIFIE une donnée existante dans votre outil."
+  }
+}

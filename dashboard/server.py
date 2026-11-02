@@ -2259,7 +2259,7 @@ def export_account_data(client_id):
     except Exception:
         pass
     wa = WA_STORE.phone_for(client_id)
-    return {
+    export = {
         "exportedAtUtc": datetime.datetime.utcnow().isoformat() + "Z",
         "account": {k: v for k, v in acc.items() if k != "passwordHash"},
         "companyProfile": get_company_profile(client_id),
@@ -2272,6 +2272,10 @@ def export_account_data(client_id):
         "whatsappLinked": bool(wa),
         "note": "Les jetons et identifiants de vos outils connectés sont chiffrés et ne sont pas exportés.",
     }
+    projects = PROJECTS.export_client(client_id)["projects"]          # objectifs, plans, livrables et journaux des projets (rien si le client n'en a pas)
+    if projects:
+        export["projects"] = projects
+    return export
 
 
 TASK_FILES_KEEP_DAYS = 30
@@ -2307,7 +2311,8 @@ def _purge_client_mission_artifacts(client_id, task_ids):
                 pass
     shutil.rmtree(os.path.join(ROOT, "runtime", "threads", client_id), ignore_errors=True)   # memoire de conversation v2
     shutil.rmtree(os.path.join(ROOT, "runtime", "client-memory", client_id), ignore_errors=True)   # notes durables
-    INSTALLS.delete_client(client_id)                                                              # installations des Workers (fiches de connaissances)
+    PROJECTS.purge_client(client_id)                                                               # projets : lanceurs arretes, dossier runtime/projects/<ClientId> supprime
+    INSTALLS.delete_client(client_id)                                                            # installations des Workers (fiches de connaissances)
     try:                                                                                           # demandes d'embauche du client
         rows = _read_hire_requests()
         if any(r.get("clientId") == client_id for r in rows):
@@ -4390,6 +4395,12 @@ def run_trial_mission(worker_id, objective, client_ip):
     }, 200
 
 
+import projects_wiring
+
+# Moteur de projets (dashboard/projects*.py, docs/AUTONOMY-ENGINE.md) : DORMANT tant que BK_PROJECTS n'est pas 1 (routes en 503, superviseur arrete).
+PROJECTS, PROJECTS_API = projects_wiring.build(projects_wiring.ModuleView(globals()))
+
+
 class Handler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         pass  # silence par defaut, evite le bruit console
@@ -4575,6 +4586,8 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if TRUST.handle_get(self, path):  # /securite.html /status.html /api/status /api/health /.well-known/security.txt
+            return
+        if PROJECTS_API.handle_get(self, path, parsed):  # projets (dormant : BK_PROJECTS=1) : /api/projects*, /api/recipes, /api/admin/projects
             return
 
         if path == "/" or path == "/index.html":
@@ -5065,6 +5078,8 @@ class Handler(BaseHTTPRequestHandler):
             return
 
         if TRUST.handle_post(self, path):  # journal d'incidents (proprietaire)
+            return
+        if PROJECTS_API.handle_post(self, path, parsed):  # projets (dormant : BK_PROJECTS=1)
             return
 
         if path == "/api/gate/login":
@@ -6064,6 +6079,9 @@ class Handler(BaseHTTPRequestHandler):
             self._send_gate_required()
             return
 
+        if PROJECTS_API.handle_delete(self, path, parsed):  # projets (dormant : BK_PROJECTS=1)
+            return
+
         if path.startswith("/api/automations/"):
             client_id = self._resolve_client_id()
             if not client_id:
@@ -6082,12 +6100,14 @@ if __name__ == "__main__":
         raise SystemExit("BK_REQUIRE_GATE=1 mais aucune porte d'acces definie (BK_GATE_HASH ou dashboard/.gate/password.hash) : demarrage refuse.")
     _load_sessions()
     reap_async_jobs(boot=True)
+    PROJECTS.reap(boot=True)   # projets : etapes sans processus -> reprise, articles EXECUTING -> a verifier (sans effet si BK_PROJECTS=0)
     purge_old_task_files()
     server = ThreadingHTTPServer((os.environ.get("BK_LISTEN_HOST", "127.0.0.1"), port), Handler)
     print(f"BK-AI-WORKERS dashboard sur http://{os.environ.get('BK_LISTEN_HOST', '127.0.0.1')}:{port}")
     if not gate_is_enabled():
         print("ATTENTION : aucune porte d'acces definie (.secrets\\Set-DashboardGate.ps1) — les vues operationnelles sont ouvertes a quiconque atteint ce serveur.")
     PHONE_AGENT.warm_up()
+    PROJECTS.start_supervisor()   # superviseur des projets (thread demon ; ne demarre pas si BK_PROJECTS=0)
     TRUST.start(port, os.environ.get("BK_LISTEN_HOST", "127.0.0.1"))  # mesure de disponibilite toutes les 60 s
     threading.Thread(target=_stripe_sync_loop, daemon=True).start()   # relit les abonnements Stripe (resilies, impayes) toutes les 6 h
     server.serve_forever()

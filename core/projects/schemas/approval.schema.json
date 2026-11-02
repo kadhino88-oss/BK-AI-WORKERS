@@ -1,0 +1,33 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "BK-APPROVAL-V1",
+  "title": "Article d'approbation d'un projet (docs/AUTONOMY-ENGINE.md, section 5.2)",
+  "type": "object",
+  "required": ["id", "projectId", "stepId", "kind", "status", "risk", "display"],
+  "properties": {
+    "id": {"type": "string", "pattern": "^APR-[0-9a-f]{8}$"},
+    "batchId": {"type": ["string", "null"]},
+    "projectId": {"type": "string"},
+    "stepId": {"type": "string"},
+    "worker": {"type": "string"},
+    "createdUtc": {"type": "string"},
+    "expiresUtc": {"type": "string"},
+    "validUntilUtc": {"type": ["string", "null"]},
+    "kind": {"enum": ["connector_action", "manual_action", "site_publish"]},
+    "connectorId": {"type": ["string", "null"]},
+    "operation": {"type": ["string", "null"]},
+    "params": {"type": "object"},
+    "display": {"type": "object", "required": ["title", "what"], "properties": {"title": {"type": "string"}, "what": {"type": "string"}, "why": {"type": "string"}, "recipients": {"type": ["integer", "null"]}, "spendChf": {"type": ["number", "null"]}}},
+    "risk": {"enum": ["low", "medium", "high"]},
+    "reversible": {"type": "boolean"},
+    "supersedes": {"type": ["string", "null"]},
+    "status": {"enum": ["PENDING", "APPROVED", "EXECUTING", "EXECUTED", "FAILED", "UNKNOWN_CHECK_MANUALLY", "REJECTED", "EXPIRED", "SUPERSEDED"]},
+    "decision": {"type": ["string", "null"]},
+    "decidedUtc": {"type": ["string", "null"]},
+    "editedParams": {"type": ["object", "null"]},
+    "execution": {"type": ["object", "null"], "properties": {"startedUtc": {"type": "string"}, "finishedUtc": {"type": ["string", "null"]}, "connectorStatus": {"type": ["string", "null"]}, "detail": {"type": ["string", "null"]}}},
+    "idempotencyKey": {"type": "string"},
+    "dedupKey": {"type": "string"},
+    "autoApproved": {"type": "boolean"}
+  }
+}
