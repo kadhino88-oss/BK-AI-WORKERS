@@ -4901,7 +4901,8 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(body)
         elif path == "/sitemap.xml":
-            urls = "".join(f"<url><loc>{PUBLIC_BASE_URL}{p}</loc></url>" for p in SITEMAP_PATHS + [q for q in pilot_program.SITEMAP_PATHS if q not in SITEMAP_PATHS])
+            urls = "".join(f"<url><loc>{PUBLIC_BASE_URL}{p}</loc></url>" for p in SITEMAP_PATHS + [q for q in pilot_program.SITEMAP_PATHS if q not in SITEMAP_PATHS]
+                           + [seo_pages.worker_page_path(w) for w in get_worker_ids()])
             body = ('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
                     + urls + "</urlset>").encode("utf-8")
             self.send_response(200)
@@ -4915,6 +4916,16 @@ class Handler(BaseHTTPRequestHandler):
         elif path == "/workers.html":
             workers = [build_worker_summary(w) for w in get_worker_ids()]
             self._send_html(seo_pages.render_workers_page(workers))
+        elif path.startswith("/workers/") and path.endswith(".html"):
+            # Une page publique par Worker (SEO) : seuls les identifiants du catalogue existent, tout le reste est 404.
+            wid = path[len("/workers/"):-len(".html")]
+            ids = get_worker_ids()
+            if wid not in ids:
+                self._send_json({"error": "NOT_FOUND"}, 404)
+            else:
+                everyone = [build_worker_summary(w) for w in ids]
+                me = next(w for w in everyone if w["id"] == wid)
+                self._send_html(seo_pages.render_worker_page(me, inst.load_profile(ROOT, wid), everyone))
         elif path == "/demarrer.html":
             self._send_html(seo_pages.render_demarrer_page())
         elif path == "/chloe.html":
