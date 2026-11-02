@@ -26,6 +26,7 @@ import seo_pages
 import pwa_static
 import trust_pages
 import installations as inst
+import usage_wiring
 
 # ---------------------------------------------------------------------
 # Ecritures concurrentes (2026-09-28) : le serveur traite les requetes en
@@ -547,6 +548,11 @@ def submit_task(worker_hint_text, worker_id="", plan_only=False, client_id="", l
     block = worker_block(client_id, worker_id or "-")
     if block:
         return block
+    # Fenetres d'usage (session 4 h, semaine, mois ; BK_USAGE_WINDOWS=shadow|1) : les credits de la mission sont RESERVES ici, dans la meme section
+    # critique que le controle des trois fenetres, et regles dans le finally sur les credits reellement tracees. Rien n'est reserve pour un plan.
+    usage_run = USAGE.mission_begin(client_id, worker_id, level, plan_only)
+    if usage_run.blocked:
+        return usage_run.blocked
     out_file = os.path.join(tempfile.gettempdir(), f"bkaiw-dashboard-{uuid.uuid4().hex}.json")
     try:
         cmd = [
@@ -581,6 +587,7 @@ def submit_task(worker_hint_text, worker_id="", plan_only=False, client_id="", l
         # Chloe appelle PLUSIEURS Workers et chacun coute le niveau de la mission : on plafonne leur nombre au solde de credits du client.
         max_workers = chloe_worker_cap(client_id, lvl) if str(worker_id or "").lower() == "chloe" else None
         if max_workers is not None:
+            max_workers = usage_run.cap_workers(max_workers)       # ... et a ce que les fenetres de session et de semaine ont accorde
             child_env["BK_MAX_WORKERS"] = str(max_workers)
         else:
             child_env.pop("BK_MAX_WORKERS", None)
@@ -594,6 +601,7 @@ def submit_task(worker_hint_text, worker_id="", plan_only=False, client_id="", l
         if os.path.isfile(out_file):
             with open(out_file, encoding="utf-8-sig") as f:
                 result = json.load(f)
+            usage_run.result = result
             if not plan_only and not refused_for_hiring(result):
                 dispatch_webhook_if_configured(client_id, result)
             return result
@@ -604,6 +612,7 @@ def submit_task(worker_hint_text, worker_id="", plan_only=False, client_id="", l
     except Exception as e:
         return {"error": "SUBMIT_EXCEPTION", "detail": str(e)}
     finally:
+        USAGE.mission_end(usage_run)       # regle la reservation sur les credits reellement consommes (0 si la mission n'a rien livre)
         try:
             if os.path.isfile(out_file):
                 os.remove(out_file)
@@ -740,10 +749,15 @@ def submit_task_async(objective, worker_id="", client_id="", plan_only=False, le
                 except Exception:
                     pass
             refused = refused_for_hiring(result)
+            usage_refused = refused_for_usage(result)
             if refused:
                 # Offre "Worker a l'unite" : le Worker choisi n'est pas embauche -> erreur claire (aucune mission lancee, aucun credit)
                 record.update(status="ERROR", error=refused, errorCode="WORKER_NOT_INCLUDED",
                               finishedAtUtc=datetime.datetime.utcnow().isoformat() + "Z")
+            elif usage_refused:
+                # Fenetre d'usage epuisee entre le controle de la route et la reservation : l'erreur nomme la fenetre et l'heure de renouvellement
+                record.update(status="ERROR", error=str(usage_refused.get("detail")), errorCode=usage_refused.get("error"),
+                              errorPayload=usage_refused, finishedAtUtc=datetime.datetime.utcnow().isoformat() + "Z")
             else:
                 record.update(status="DONE",
                               finishedAtUtc=datetime.datetime.utcnow().isoformat() + "Z",
@@ -2246,6 +2260,14 @@ def reset_password_with_token(token, new_password):
     return "RESET_LINK_INVALID"
 
 
+def _export_usage(client_id):
+    """Compteurs de session / semaine / mois du client (grand livre d'usage), ou None quand les fenetres ne sont pas actives."""
+    try:
+        return USAGE.snapshot(client_id) if USAGE.enabled else None
+    except Exception:  # noqa: BLE001 - l'export du reste du compte ne depend pas de ce fichier
+        return None
+
+
 def export_account_data(client_id):
     acc = next((a for a in _load_accounts() if a.get("clientId") == client_id), None) or {}
     providers = []
@@ -2268,6 +2290,7 @@ def export_account_data(client_id):
         "installations": INSTALLS.list(client_id),
         "hireRequests": [r for r in _read_hire_requests() if r.get("clientId") == client_id],
         "automations": all_auto,
+        "usage": _export_usage(client_id),
         "connectedTools": providers,
         "whatsappLinked": bool(wa),
         "note": "Les jetons et identifiants de vos outils connectés sont chiffrés et ne sont pas exportés.",
@@ -2312,7 +2335,8 @@ def _purge_client_mission_artifacts(client_id, task_ids):
     shutil.rmtree(os.path.join(ROOT, "runtime", "threads", client_id), ignore_errors=True)   # memoire de conversation v2
     shutil.rmtree(os.path.join(ROOT, "runtime", "client-memory", client_id), ignore_errors=True)   # notes durables
     PROJECTS.purge_client(client_id)                                                               # projets : lanceurs arretes, dossier runtime/projects/<ClientId> supprime
-    INSTALLS.delete_client(client_id)                                                            # installations des Workers (fiches de connaissances)
+    USAGE.purge(client_id)                                                                         # grand livre des fenetres d'usage (session / semaine / mois)
+    INSTALLS.delete_client(client_id)                                                              # installations des Workers (fiches de connaissances)
     try:                                                                                           # demandes d'embauche du client
         rows = _read_hire_requests()
         if any(r.get("clientId") == client_id for r in rows):
@@ -2842,9 +2866,12 @@ def next_plan_info(plan_id):
     nxt = PLAN_CATALOG.get(nxt_id) if nxt_id else None
     if not nxt:
         return None
-    return {"planId": nxt_id, "name": nxt["name"], "credits": None if nxt.get("contractual") else nxt["credits"],
+    info = {"planId": nxt_id, "name": nxt["name"], "credits": None if nxt.get("contractual") else nxt["credits"],
             "priceChf": nxt.get("priceChf"), "onQuote": bool(nxt.get("onQuote")), "selfService": not nxt.get("onQuote") and not nxt.get("legacy"),
             "workerSlots": nxt.get("workerSlots")}
+    if USAGE.enforced:        # limites par session et par semaine du forfait du dessus (jamais annoncees tant qu'elles ne s'appliquent pas)
+        info["limits"] = USAGE.next_limits(info["credits"])
+    return info
 
 
 def upgrade_payload(billing):
@@ -2854,9 +2881,12 @@ def upgrade_payload(billing):
     plan = PLAN_CATALOG.get(pid)
     if not plan:
         return None
-    return {"planId": pid, "planName": plan["name"], "creditsIncluded": billing.get("creditsIncluded"),
+    card = {"planId": pid, "planName": plan["name"], "creditsIncluded": billing.get("creditsIncluded"),
             "renews": bool(billing.get("renewsAtUtc")), "renewsAtUtc": billing.get("renewsAtUtc"), "next": next_plan_info(pid),
             "interval": billing.get("billingInterval") or "month", "contactEmail": CONTACT_EMAIL}
+    if USAGE.enforced:        # limites par session et par semaine du forfait ACTUEL (celles du forfait suivant sont dans card["next"]["limits"])
+        card["limits"] = USAGE.next_limits(billing.get("creditsTotal"))
+    return card
 
 
 def _upgrade_sentence(billing):
@@ -2962,13 +2992,14 @@ def _apply_lapse(state, now=None, reason=None):
     # la liste et le plafond du client sans les reconstituer (lapsedFrom, relu par set_client_plan ; efface a la prochaine activation).
     kept_workers = inst.hired_workers(state)
     kept_cap = state.get("contractCredits") if isinstance(state.get("contractCredits"), int) and not isinstance(state.get("contractCredits"), bool) else None
+    kept_usage = dict(state["usageOverride"]) if isinstance(state.get("usageOverride"), dict) else None      # plafonds de session / semaine du contrat
     state["planId"] = "essai"
     state["extraCredits"] = 0
-    for key in ("contractCredits", "paidUntilUtc", "cancelAtPeriodEnd", "billingInterval", "paymentIssue"):
+    for key in ("contractCredits", "usageOverride", "paidUntilUtc", "cancelAtPeriodEnd", "billingInterval", "paymentIssue"):
         state.pop(key, None)
     state["stripeSubscriptionId"] = None
     state["lapsedFrom"] = {"planId": old_plan_id, "hiredWorkers": kept_workers,
-                           "contractCredits": kept_cap, "atUtc": now.isoformat() + "Z"}
+                           "contractCredits": kept_cap, "usageOverride": kept_usage, "atUtc": now.isoformat() + "Z"}
     inst.adapt_hired_to_plan(state)
     carried = ((f" Workers embauchés : {', '.join(kept_workers)}." if kept_workers else "")
                + (f" Plafond contractuel : {_fr_int(kept_cap)} crédits par mois." if kept_cap else ""))
@@ -3017,6 +3048,7 @@ def _billing_load(client_id=DASHBOARD_CLIENT_ID):
 def _billing_save(state, client_id=DASHBOARD_CLIENT_ID):
     os.makedirs(BILLING_DATA_DIR, exist_ok=True)
     _write_json_atomic(_billing_path(client_id), state, ensure_ascii=False, indent=2)
+    USAGE.on_billing_saved(client_id)     # les allocations session / semaine se recalculent seules ; il reste a reveiller les projets en attente
 
 
 def _picker_plans(current_plan_id, state):
@@ -3027,9 +3059,12 @@ def _picker_plans(current_plan_id, state):
     for pid, p in PLAN_CATALOG.items():
         if pid == "essai" or (p.get("legacy") and pid != current_plan_id):
             continue
-        out.append({"planId": pid, "name": p["name"], "credits": plan_monthly_credits(pid, state if pid == current_plan_id else None),
-                    "priceChf": p.get("priceChf"), "onQuote": bool(p.get("onQuote")), "legacy": bool(p.get("legacy")),
-                    "workerSlots": p.get("workerSlots"), "chloeIncluded": pid in inst.PLANS_WITH_CHLOE if p.get("workerSlots") else True})
+        item = {"planId": pid, "name": p["name"], "credits": plan_monthly_credits(pid, state if pid == current_plan_id else None),
+                "priceChf": p.get("priceChf"), "onQuote": bool(p.get("onQuote")), "legacy": bool(p.get("legacy")),
+                "workerSlots": p.get("workerSlots"), "chloeIncluded": pid in inst.PLANS_WITH_CHLOE if p.get("workerSlots") else True}
+        if USAGE.enforced and item["credits"] and not p.get("contractual"):
+            item["limits"] = USAGE.next_limits(item["credits"])        # plafonds de session et de semaine de ce forfait (jamais annonces tant qu'ils ne s'appliquent pas)
+        out.append(item)
     return out
 
 
@@ -3079,8 +3114,11 @@ def get_billing(client_id=DASHBOARD_CLIENT_ID):
     # Forfait sur facture dont la fenetre en cours est la DERNIERE payee : « renouvele » serait faux, rien ne repart sans le reglement de la facture suivante.
     awaiting_invoice = bool(paid_until and not cancel_pending and renews_at and _parse_utc(renews_at) >= _parse_utc(paid_until))
 
-    used = 0
-    if os.path.isdir(TASKS_DIR):
+    # Fenetres d'usage actives (BK_USAGE_WINDOWS=shadow|1) : les credits du cycle viennent du grand livre (O(1), et ils comptent aussi les etapes
+    # de projet, qui ne sont pas des fichiers TASK-*.json). Service inerte, compte exempte ou grand livre illisible : balayage d'origine.
+    ledger_used = USAGE.billing_used(client_id)
+    used = ledger_used if ledger_used is not None else 0
+    if ledger_used is None and os.path.isdir(TASKS_DIR):
         for fname in os.listdir(TASKS_DIR):
             if not fname.startswith("TASK-") or not fname.endswith(".json"):
                 continue
@@ -3144,6 +3182,11 @@ def get_billing(client_id=DASHBOARD_CLIENT_ID):
     out["upgrade"] = upgrade_payload(out)
     # Montee en gamme proposee des 80 % du quota (et quand il est epuise) ; sans forfait superieur (Enterprise) : « nous ecrire ».
     out["upgradeSuggested"] = bool(alert and out["upgrade"])
+    if USAGE.enabled and not USAGE.exempt_client(client_id):
+        try:
+            out["usage"] = USAGE.payload(client_id)      # fenetres session / semaine / mois (meme corps que GET /api/usage)
+        except Exception as exc:  # noqa: BLE001 - le bloc d'usage est un plus : la facturation reste lisible sans lui
+            USAGE._fail_open("billing_usage", client_id, exc)
     return out
 
 
@@ -3171,6 +3214,7 @@ def set_billing_plan(plan_id, via_stripe=False, stripe_subscription_id=None, cli
     state["cycleStartUtc"] = now
     state["extraCredits"] = 0
     state.pop("contractCredits", None)   # le plafond contractuel d'Enterprise est propre a un contrat : il ne suit pas un changement de forfait
+    state.pop("usageOverride", None)     # ... ni les plafonds de session / semaine negocies avec lui
     state.pop("lapsedFrom", None)
     # Stripe renouvelle lui-meme l'abonnement : pas de date de fin de periode payee (elle n'existe que pour une resiliation ou une facture).
     state.pop("paidUntilUtc", None)
@@ -3286,7 +3330,7 @@ def cancel_billing_plan(client_id=DASHBOARD_CLIENT_ID):
         # s'abonner puis annuler redonnerait 15 credits d'essai gratuits a chaque fois (l'essai n'est pas renouvelable).
         state["cycleStartUtc"] = billing_cycle(state.get("cycleStartUtc", now), old_plan.get("renews", True))[0]
         state["extraCredits"] = 0
-        for key in ("contractCredits", "paidUntilUtc", "cancelAtPeriodEnd", "billingInterval"):
+        for key in ("contractCredits", "usageOverride", "paidUntilUtc", "cancelAtPeriodEnd", "billingInterval"):
             state.pop(key, None)
         state["stripeSubscriptionId"] = None
         inst.adapt_hired_to_plan(state)
@@ -3576,6 +3620,39 @@ def _kept_contract_cap(state, old_plan_id, plan_id):
     return ENTERPRISE_DEFAULT_CREDITS
 
 
+def _valid_usage_override(value, monthly):
+    """{"sessionCredits": s, "weekCredits": w} si les plafonds de session et de semaine d'un contrat sont coherents (entiers, session <= semaine <= credits du
+    mois), sinon None. L'un des deux peut manquer : l'autre garde alors la valeur calculee par le forfait."""
+    if not isinstance(value, dict):
+        return None
+    out = {}
+    for key in ("sessionCredits", "weekCredits"):
+        v = value.get(key)
+        if v is None:
+            continue
+        if not isinstance(v, int) or isinstance(v, bool) or not 1 <= v <= monthly:
+            return None
+        out[key] = v
+    if not out or ("sessionCredits" in out and "weekCredits" in out and out["sessionCredits"] > out["weekCredits"]):
+        return None
+    return out
+
+
+def _kept_usage_override(state, old_plan_id, plan_id):
+    """Plafonds de session / semaine d'un Enterprise reconduit sans nouveaux plafonds : ceux du contrat en cours (meme forfait) ou ceux du forfait arrive a
+    echeance (lapsedFrom) ; sinon aucun (les plafonds suivent alors la formule du forfait)."""
+    candidates = []
+    if old_plan_id == plan_id:
+        candidates.append(state.get("usageOverride"))
+    lapsed = state.get("lapsedFrom") if isinstance(state.get("lapsedFrom"), dict) else {}
+    if lapsed.get("planId") == plan_id:
+        candidates.append(lapsed.get("usageOverride"))
+    for cand in candidates:
+        if isinstance(cand, dict) and cand:
+            return cand
+    return None
+
+
 def _stripe_blocks_invoice_plan(state):
     """Reponse 409 quand le client a un abonnement Stripe encore renouvele (a annuler d'abord, sinon il serait facture deux fois) ; None sinon. Un
     abonnement deja resilie en fin de periode ne se renouvelle plus : le forfait sur facture peut le remplacer (son identifiant est alors oublie)."""
@@ -3606,12 +3683,13 @@ def _set_invoice_period(state, now_dt, months, base=None):
 
 
 @_state_locked
-def set_client_plan(client_id, plan_id, contract_credits=None, paid_months=1):
+def set_client_plan(client_id, plan_id, contract_credits=None, paid_months=1, usage_override=None):
     """Proprietaire, apres facture reglee ou devis signe : active un forfait SANS liste de Workers (Equipe, Pro, Scale, Enterprise ; Solo et
     Trio passent par grant_workers). Pour Enterprise, contract_credits fixe le plafond mensuel CONTRACTUEL du client (entier de 1 a
     ENTERPRISE_MAX_CREDITS, sinon ENTERPRISE_DEFAULT_CREDITS) : il n'existe aucun forfait illimite. paid_months = mois couverts par la facture
     (1 a INVOICE_MONTHS_MAX) : au-dela, le forfait retombe a l'Essai (periode payee, voir plus haut) tant que le proprietaire ne le reconduit pas.
-    Renvoie (corps, statut HTTP)."""
+    usage_override = plafonds de SESSION et de SEMAINE du contrat ({"sessionCredits", "weekCredits"}, Enterprise seulement ; sans lui la formule du forfait
+    s'applique, voir dashboard/usage.py). Renvoie (corps, statut HTTP)."""
     months = _paid_months(paid_months)
     if months is None:
         return {"error": "INVALID_PERIOD", "detail": f"Mois facturés attendus : un entier de 1 à {INVOICE_MONTHS_MAX}."}, 400
@@ -3626,6 +3704,8 @@ def set_client_plan(client_id, plan_id, contract_credits=None, paid_months=1):
             return {"error": "CAP_NOT_ALLOWED", "detail": "Un plafond de crédits contractuel n'existe que pour Enterprise."}, 400
         if not isinstance(contract_credits, int) or isinstance(contract_credits, bool) or not 1 <= contract_credits <= ENTERPRISE_MAX_CREDITS:
             return {"error": "INVALID_CAP", "detail": f"Plafond mensuel attendu : un entier de 1 à {ENTERPRISE_MAX_CREDITS}."}, 400
+    if usage_override is not None and not plan.get("contractual"):
+        return {"error": "USAGE_OVERRIDE_NOT_ALLOWED", "detail": "Des plafonds de session et de semaine sur mesure n'existent que pour Enterprise."}, 400
     state = _billing_load(client_id)
     blocked = _stripe_blocks_invoice_plan(state)
     if blocked:
@@ -3642,8 +3722,18 @@ def set_client_plan(client_id, plan_id, contract_credits=None, paid_months=1):
         state["extraCredits"] = 0
     if plan.get("contractual"):
         state["contractCredits"] = contract_credits if contract_credits is not None else _kept_contract_cap(state, old_plan_id, plan_id)
+        override = _kept_usage_override(state, old_plan_id, plan_id) if usage_override is None else usage_override
+        valid = _valid_usage_override(override, state["contractCredits"]) if override is not None else None
+        if usage_override is not None and valid is None:
+            return {"error": "INVALID_USAGE_OVERRIDE", "detail": "Plafonds attendus : sessionCredits et weekCredits, des entiers de 1 aux crédits du mois, "
+                                                                  "la session ne dépassant pas la semaine."}, 400
+        if valid:
+            state["usageOverride"] = valid
+        else:
+            state.pop("usageOverride", None)
     else:
         state.pop("contractCredits", None)
+        state.pop("usageOverride", None)
     state.pop("lapsedFrom", None)
     _set_invoice_period(state, now_dt, months, base=extend_from)
     inst.adapt_hired_to_plan(state, plan_changed=old_plan_id != plan_id)
@@ -3652,7 +3742,8 @@ def set_client_plan(client_id, plan_id, contract_credits=None, paid_months=1):
         "dateUtc": now, "event": f"Forfait {plan['name']} activé par BK Entreprise{cap} pour {months} mois (jusqu'au {_fr_date(state['paidUntilUtc'])}), "
                                  f"ancien forfait : {old_name}."})
     _billing_save(state, client_id)
-    log_activity("set_plan", clientId=client_id, planId=plan_id, contractCredits=state.get("contractCredits"), paidMonths=months)
+    log_activity("set_plan", clientId=client_id, planId=plan_id, contractCredits=state.get("contractCredits"), paidMonths=months,
+                 usageOverride=state.get("usageOverride"))
     billing = get_billing(client_id)
     return {"ok": True, "clientId": client_id, "planId": plan_id, "planName": plan["name"], "credits": billing["creditsIncluded"],
             "renewsAtUtc": billing["renewsAtUtc"], "paidUntilUtc": billing["paidUntilUtc"]}, 200
@@ -3676,7 +3767,8 @@ def subscription_blocks_mission(client_id, level=None):
     lvl = normalize_level(level, client_id)
     needed = level_credits(lvl) if lvl else 1
     if remaining >= needed:
-        return None
+        # Quota du mois suffisant : restent la session (4 h) et la semaine (BK_USAGE_WINDOWS=1) ; le refus nomme la fenetre et l'heure de renouvellement.
+        return USAGE.gate(client_id, needed)
     if remaining > 0:
         sentence = _upgrade_sentence(billing)
         return (f"Il vous reste {remaining} crédit(s), ce niveau en demande {needed}. Choisissez un niveau plus rapide"
@@ -3700,11 +3792,22 @@ def chloe_worker_cap(client_id, level=None):
 def subscription_required_payload(client_id, detail):
     """Corps de la reponse 402 : le message, plus de quoi afficher le bouton de montee en gamme (forfait actuel, credits inclus, date de
     renouvellement, forfait suivant avec ses credits et son prix)."""
+    if getattr(detail, "usage_block", None) is not None:       # refus de la SESSION ou de la SEMAINE (usage_wiring.UsageLimitMessage)
+        try:
+            return USAGE.limit_payload(client_id, detail)
+        except Exception:  # noqa: BLE001 - le message suffit
+            return {"error": "USAGE_LIMIT_REACHED", "detail": str(detail), "limit": detail.usage_block.limit,
+                    "resetsAtUtc": detail.usage_block.resetsAtUtc, "needed": detail.usage_block.needed, "remaining": detail.usage_block.remaining}
     try:
         upgrade = upgrade_payload(get_billing(client_id))
     except Exception:  # noqa: BLE001 - le message suffit si la facturation est illisible
         upgrade = None
     return {"error": "SUBSCRIPTION_REQUIRED", "detail": detail, "upgrade": upgrade}
+
+
+# Fenetres d'usage (session 4 h, semaine, mois) : grand livre par client, branche ici. Inerte tant que BK_USAGE_WINDOWS n'est pas shadow ou 1
+# (docs/PRICING.md section 6, dashboard/usage.py, dashboard/usage_wiring.py).
+USAGE = usage_wiring.build(globals())
 
 
 # ---------------------------------------------------------------------
@@ -3967,6 +4070,8 @@ def grant_workers(client_id, plan_id, workers, new_cycle=True, paid_months=1):
     extend_from = _invoice_renewal_base(state, old_plan, plan_id, now_dt) if new_cycle and not plan_changed else None
     state["planId"] = plan_id
     state["gridVersion"] = GRID_VERSION
+    if plan_changed:
+        state.pop("usageOverride", None)      # plafonds de session / semaine d'un contrat precedent : ils ne suivent pas un changement de forfait
     state.pop("lapsedFrom", None)
     if plan_changed or new_cycle:
         if extend_from is None:
@@ -4106,6 +4211,23 @@ def refused_for_hiring(result):
             return str(result.get("detail") or "Ce Worker ne fait pas partie de votre forfait.")
         if result.get("Status") == "WORKER_NOT_INCLUDED":
             return str(result.get("FinalSynthesis") or "Ce Worker ne fait pas partie de votre forfait.")
+    return None
+
+
+def _seo_usage():
+    """Plafonds de session / semaine par forfait pour les pages statiques (Tarifs, FAQ, Facturation) ; None tant qu'ils ne s'appliquent pas
+    (BK_USAGE_WINDOWS=1) : aucune page n'annonce une limite qui ne soit pas appliquee."""
+    try:
+        return USAGE.public_limits() if USAGE.enforced else None
+    except Exception:  # noqa: BLE001 - une page statique ne casse jamais pour ca
+        return None
+
+
+def refused_for_usage(result):
+    """Corps de la reponse 402 si le resultat de submit_task est un refus de la reservation d'usage (session, semaine ou mois : une autre mission a
+    consomme le reste entre le controle de la route et la reservation), sinon None. Les routes le renvoient tel quel, le job asynchrone l'enregistre."""
+    if isinstance(result, dict) and result.get("error") in ("USAGE_LIMIT_REACHED", "SUBSCRIPTION_REQUIRED") and result.get("detail"):
+        return result
     return None
 
 
@@ -4660,11 +4782,11 @@ class Handler(BaseHTTPRequestHandler):
         elif path == "/analytics.html":
             self._send_html(seo_pages.render_analytics_page())
         elif path == "/facturation.html":
-            self._send_html(seo_pages.render_facturation_page())
+            self._send_html(seo_pages.render_facturation_page(_seo_usage()))
         elif path == "/tarifs.html":
-            self._send_html(seo_pages.render_tarifs_page(public_mission_levels()))
+            self._send_html(seo_pages.render_tarifs_page(public_mission_levels(), _seo_usage()))
         elif path == "/faq.html":
-            self._send_html(seo_pages.render_faq_page())
+            self._send_html(seo_pages.render_faq_page(_seo_usage()))
         elif path == "/cgv.html":
             self._send_html(seo_pages.render_cgv_page())
         elif path == "/mentions-legales.html":
@@ -4982,6 +5104,20 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_account_required()
                 return
             self._send_json(get_analytics(client_id))
+        elif path == "/api/usage":
+            # Fenetres d'usage du client (session 4 h, semaine, mois) : ce qui reste, l'heure du prochain renouvellement, le forfait du dessus et ses
+            # limites. Le proprietaire (exempt) recoit exempt:true. BK_USAGE_WINDOWS=0 : seul le mois, enforced:false (l'interface masque alors les jauges).
+            client_id = self._resolve_client_id()
+            if not client_id:
+                self._send_account_required()
+                return
+            try:
+                self._send_json(USAGE.payload(client_id))
+            except Exception as exc:  # noqa: BLE001 - un grand livre illisible ne doit jamais casser la page : la facturation reste la
+                USAGE._fail_open("api_usage", client_id, exc)
+                self._send_json({"error": "USAGE_UNAVAILABLE", "detail": "Les compteurs d'usage sont momentanément indisponibles."}, 503)
+        elif path == "/api/usage-limits":
+            self._send_json(USAGE.public_limits())      # page Tarifs : plafonds de session et de semaine par forfait (aucune donnee de compte)
         elif path == "/api/billing":
             client_id = self._resolve_client_id()
             if not client_id:
@@ -5373,6 +5509,10 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json({"error": "OBJECTIVE_REQUIRED"}, 400)
                 return
             result = submit_task_limited(objective, worker_id="chloe", client_id=client_id, level=body.get("level"))
+            usage_refused = refused_for_usage(result)
+            if usage_refused:
+                self._send_json(usage_refused, 402)
+                return
             refused = refused_for_hiring(result)
             if refused:
                 self._send_json({"error": "WORKER_NOT_INCLUDED", "detail": refused, "notIncludedWorkers": result.get("NotIncludedWorkers") or []}, 403)
@@ -5459,6 +5599,10 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_json({"error": "OBJECTIVE_REQUIRED"}, 400)
                 return
             result = submit_task_limited(objective, worker_id=wid, client_id=client_id, level=body.get("level"))
+            usage_refused = refused_for_usage(result)
+            if usage_refused:
+                self._send_json(usage_refused, 402)
+                return
             refused = refused_for_hiring(result)
             if refused:
                 self._send_json({"error": "WORKER_NOT_INCLUDED", "detail": refused, "workerId": wid}, 403)
@@ -5594,7 +5738,8 @@ class Handler(BaseHTTPRequestHandler):
             if body is None:
                 return
             payload, status = set_client_plan(str(body.get("clientId") or "").strip(), str(body.get("planId") or "").strip().lower(),
-                                              contract_credits=body.get("contractCredits"), paid_months=body.get("paidMonths"))
+                                              contract_credits=body.get("contractCredits"), paid_months=body.get("paidMonths"),
+                                              usage_override=body.get("usageOverride"))
             self._send_json(payload, status)
         elif path == "/api/admin/stripe-sync":
             # Proprietaire uniquement : relit maintenant l'abonnement Stripe d'un client (clientId) ou de tous, sans attendre le passage automatique de 6 h.
@@ -5866,6 +6011,10 @@ class Handler(BaseHTTPRequestHandler):
             if self._worker_not_included(client_id, worker_id or "chloe"):
                 return
             result = submit_task_limited(objective, worker_id=worker_id or "chloe", client_id=client_id)
+            usage_refused = refused_for_usage(result)
+            if usage_refused:
+                self._send_json(usage_refused, 402)
+                return
             refused = refused_for_hiring(result)
             if refused:
                 self._send_json({"error": "WORKER_NOT_INCLUDED", "detail": refused}, 403)
@@ -6101,6 +6250,10 @@ if __name__ == "__main__":
     _load_sessions()
     reap_async_jobs(boot=True)
     PROJECTS.reap(boot=True)   # projets : etapes sans processus -> reprise, articles EXECUTING -> a verifier (sans effet si BK_PROJECTS=0)
+    try:
+        USAGE.reap(boot=True)        # les reservations d'usage des missions tuees par le redemarrage sont liberees (les etapes de projet suivent leur delai)
+    except Exception as exc:  # noqa: BLE001 - un grand livre abime ne bloque pas le demarrage
+        USAGE._fail_open("reap", "-", exc)
     purge_old_task_files()
     server = ThreadingHTTPServer((os.environ.get("BK_LISTEN_HOST", "127.0.0.1"), port), Handler)
     print(f"BK-AI-WORKERS dashboard sur http://{os.environ.get('BK_LISTEN_HOST', '127.0.0.1')}:{port}")

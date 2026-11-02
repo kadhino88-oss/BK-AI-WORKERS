@@ -14,7 +14,9 @@
 # Usage : quota-check.py <ClientId> [<WorkerId> [scheduled]]
 # Sortie : une ligne JSON sur stdout. {"blocked": false} si la mission est
 # autorisee, sinon {"blocked": true, "code": "...", "detail": "<message>"}.
-#   - code QUOTA_EXCEEDED       : credits epuises (ancien comportement, "detail" seul) ;
+#   - code QUOTA_EXCEEDED       : credits du mois epuises (ancien comportement, "detail" seul) ;
+#   - code USAGE_LIMIT_REACHED  : quota de SESSION (4 h) ou de SEMAINE atteint (BK_USAGE_WINDOWS=1) : "limit", "resetsAtUtc" et "detail" disent laquelle
+#                                 et quand elle se renouvelle ; l'automatisation est sautee sans erreur, elle repartira au passage suivant ;
 #   - code WORKER_NOT_INCLUDED  : offre "Worker a l'unite" (forfait Solo/Trio) : ce Worker n'est pas embauche par le client ;
 #   - code INSTALLATION_PAUSED  : (appel "scheduled", donc automatique) le client a mis ce Worker en pause : interrupteur d'arret,
 #                                 plus aucune mission automatique ; "Executer maintenant" (manuel) reste possible.
@@ -23,6 +25,10 @@
 # mis en pause en sont retires (une automatisation de Chloe ne doit jamais appeler un Worker en pause : null devient alors la liste explicite des
 # autres Workers) ; si tous sont en pause, la mission est bloquee (INSTALLATION_PAUSED). Pour Chloe, "maxWorkers" = nombre maximal de Workers qu'elle
 # peut appeler avec le solde de credits restant (variable BK_MAX_WORKERS) : chaque Worker appele coute le niveau de la mission.
+# Quand une fenetre d'usage est active, la mission autorisee est AUSSI debitee ici (server.USAGE.charge, 1 credit, "automation") : le moteur des
+# automatisations lance Submit-Task.ps1 lui-meme, sans passer par server.submit_task, et c'est le seul endroit ou le grand livre peut la compter. Le debit
+# vient en DERNIER, apres tous les autres controles : une automatisation sautee ne coute rien. Les traces TASK-*.json restent la source de verite
+# (la reconciliation corrige un debit sans mission livree).
 # Les automatisations (missions recurrentes) tournent TOUJOURS au niveau Rapide, 1 credit (server.automation_level) : le quota est controle a
 # ce niveau-la, et "level" (« rapide », ou « » quand les niveaux sont coupes par BK_LEVELS=0) est a transmettre a Submit-Task.ps1 via
 # BK_MISSION_LEVEL pour que la mission tourne reellement a ce niveau et soit comptee 1 credit.
@@ -33,6 +39,15 @@
 import sys
 import os
 import json
+
+
+def blocked_verdict(msg):
+    """Verdict « bloque » pour un refus de quota : USAGE_LIMIT_REACHED (+ fenetre et heure de renouvellement) pour la session ou la semaine,
+    QUOTA_EXCEEDED pour le mois."""
+    block = getattr(msg, "usage_block", None)
+    if block is not None and block.limit in ("session", "week"):
+        return {"blocked": True, "code": "USAGE_LIMIT_REACHED", "limit": block.limit, "resetsAtUtc": block.resetsAtUtc, "detail": str(msg)}
+    return {"blocked": True, "code": "QUOTA_EXCEEDED", "detail": str(msg)}
 
 
 def main():
@@ -54,7 +69,7 @@ def main():
         level = server.automation_level(client_id)
         msg = server.subscription_blocks_mission(client_id, level)
         if msg:
-            print(json.dumps({"blocked": True, "code": "QUOTA_EXCEEDED", "detail": msg}, ensure_ascii=False))
+            print(json.dumps(blocked_verdict(msg), ensure_ascii=False))
             return 0
         if scheduled and worker_id and server.installation_paused(client_id, worker_id):
             print(json.dumps({"blocked": True, "code": "INSTALLATION_PAUSED",
@@ -67,9 +82,20 @@ def main():
                 print(json.dumps({"blocked": True, "code": "INSTALLATION_PAUSED",
                                   "detail": "Tous vos Workers sont en pause : aucune mission automatique tant que vous n'en reprenez pas un."}, ensure_ascii=False))
                 return 0
+        # Dernier controle : le debit atomique de la fenetre de session / semaine / mois (inerte quand BK_USAGE_WINDOWS=0 ou compte exempte).
+        block = server.USAGE.charge(client_id, server.level_credits(level) if level else 1, "automation", worker_id or "-")
+        if block is not None:
+            print(json.dumps(blocked_verdict(server.USAGE.block_message(client_id, block)), ensure_ascii=False))
+            return 0
         verdict = {"blocked": False, "allowedWorkers": allowed, "level": level}
         if worker_id == "chloe":
             cap = server.chloe_worker_cap(client_id, level)
+            if cap is not None and server.USAGE.enforced:
+                # ... et a ce qui reste dans la session et la semaine : le premier Worker est deja debite, chacun des autres coute le niveau
+                view = server.USAGE.remaining(client_id)
+                if not view.exempt:
+                    cost = server.level_credits(level) if level else 1
+                    cap = max(1, min(cap, 1 + int(view.allowedNow) // max(1, cost)))
             if cap is not None:
                 verdict["maxWorkers"] = cap
         print(json.dumps(verdict))
