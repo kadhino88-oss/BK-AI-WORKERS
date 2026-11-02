@@ -83,7 +83,7 @@ $WebMaxUses = if ($LevelCfg -and $LevelCfg.webMaxUses) { [int]$LevelCfg.webMaxUs
 $CallTimeout = if ($LevelCfg -and $LevelCfg.callTimeoutSec) { [int]$LevelCfg.callTimeoutSec } else { 240 }
 # output_config.effort : GA sur les modeles 5.x, PAS sur Haiku 4.5 (le modele historique des Workers).
 $UseEffort = ($LevelCfg -and $LevelCfg.effort -and $EffectiveModel -notlike "claude-haiku-4*")
-$MissionDeadline = (Get-Date).AddSeconds(540)   # le serveur coupe a 600 s : on rend un resultat partiel avant
+$MissionDeadline = (Get-Date).AddSeconds($(if ($env:BK_MISSION_DEADLINE_SEC -match '^[0-9]{2,3}$' -and [int]$env:BK_MISSION_DEADLINE_SEC -le 540) { [int]$env:BK_MISSION_DEADLINE_SEC } else { 540 }))   # le serveur coupe a 600 s : on rend un resultat partiel avant (Chloe donne un delai plus court a chaque Worker d'une mission multi-Workers : BK_MISSION_DEADLINE_SEC)
 # Executeur de moteurs (Invoke-EngineChain.ps1) : l'echeance de TOUTE la mission, partagee entre les moteurs d'une chaine de repli. Sans variable : inchange.
 if ($env:BK_ENGINE_DEADLINE_EPOCH -match '^\d{9,11}(\.\d+)?$') { $MissionDeadline = [DateTimeOffset]::FromUnixTimeMilliseconds([long]([double]$env:BK_ENGINE_DEADLINE_EPOCH * 1000)).LocalDateTime }
 # Plafond de cout de la mission (maxCostChf du niveau) et suivi du cout reel appel par appel : Mission-Cost.ps1, tarifs dans
@@ -101,45 +101,8 @@ Write-Host "ANTHROPIC ADAPTER | worker=$WorkerId | model=$EffectiveModel"
 
 function Write-Result($Object) { $Object | ConvertTo-Json -Depth 10 -Compress }
 
-# =====================================================================
-# OUTIL "use_connector" — construit dynamiquement a partir des SEULS
-# connecteurs que CE client a actives pour son compte (jamais tous les
-# connecteurs du catalogue), et des operations reellement cablees dans
-# Connector-Dispatch.ps1. Si le client n'a rien active, pas d'outil du
-# tout : Claude repond en texte, comme avant.
-# =====================================================================
+. (Join-Path $ProjectRoot "core/ai/adapters/Adapter-Common.ps1")   # fonctions communes (connecteurs, texte, fichiers) : extraites le 2026-10-19
 
-# Description des connecteurs, outil use_connector, pre-autorisation et garde-fou d'approbation : core/ai/adapters/Connector-Tool.ps1
-# (partage avec OPENAI-COMPAT-ADAPTER.ps1 ; Invoke-BKConnectorToolCall y applique la regle unique « un Worker prepare, il n'envoie jamais seul »).
-. (Join-Path $ProjectRoot "core/ai/adapters/Connector-Tool.ps1")
-
-function Get-ResponseText {
-    # Texte (blocs "text") d'UNE reponse de l'API.
-    param($Resp)
-    if ($null -eq $Resp -or $null -eq $Resp.content) { return "" }
-    return (@($Resp.content | Where-Object { $_.type -eq "text" } | ForEach-Object { $_.text }) -join "`n").Trim()
-}
-
-function Get-CodeExecFileIds {
-    # file_id des fichiers produits par l'execution de code dans UNE reponse de l'API.
-    param($Resp)
-    $Ids = @()
-    if ($null -eq $Resp -or $null -eq $Resp.content) { return $Ids }
-    foreach ($Block in $Resp.content) {
-        if ($null -eq $Block) { continue }
-        $IsCurrent = ($Block.type -eq "bash_code_execution_tool_result")
-        $IsLegacy  = ($Block.type -eq "code_execution_tool_result")
-        if (-not ($IsCurrent -or $IsLegacy)) { continue }
-        $Inner = $Block.content
-        if ($null -eq $Inner -or $null -eq $Inner.content) { continue }
-        $WantType = if ($IsCurrent) { "bash_code_execution_output" } else { "code_execution_output" }
-        foreach ($Entry in @($Inner.content)) {
-            if ($null -eq $Entry) { continue }
-            if ($Entry.type -eq $WantType -and $Entry.file_id) { $Ids += [string]$Entry.file_id }
-        }
-    }
-    return $Ids
-}
 
 $PlainKey = $null
 $ResponseText = $null; $ErrorDetail = $null; $ExitCode = 1
@@ -361,88 +324,15 @@ try {
     }
 
     # ---------------- CAPTURE DES FICHIERS GENERES (2026-10-08) --------
-    # Les Workers peuvent produire un livrable (Excel/Word/PDF/CSV/image)
-    # via code execution. Anthropic renvoie alors des blocs resultat
-    # contenant un file_id ; on recupere les metadonnees puis les octets
-    # via la Files API et on depose chaque fichier dans
-    # runtime/task-files/<TaskId>/. Tout est encapsule dans un try/catch :
-    # la moindre erreur laisse $CapturedFiles tel quel et la mission se
-    # poursuit normalement (jamais de throw depuis ce bloc).
+    # Les Workers peuvent produire un livrable (Excel/Word/PDF/CSV/image) via code execution : les fichiers sont recuperes par
+    # Save-BKCodeExecFiles (Adapter-Common.ps1) et deposes dans runtime/task-files/<TaskId>/. Jamais de throw depuis ce bloc :
+    # la moindre erreur laisse $CapturedFiles tel quel et la mission se poursuit normalement.
     $CapturedFiles = @()
+    $SkippedFiles = @()
     try {
-        $FileIds = @($AllFileIds | Select-Object -Unique)
-        $MaxFiles = 10; $MaxFileBytes = 25MB; $MaxTotalBytes = 60MB; $TotalBytes = 0
-        $SkippedFiles = @()
-        $AuthHdr = @{ "x-api-key" = $PlainKey; "anthropic-version" = "2023-06-01" }
-
-        $Counter = 0
-        foreach ($FileId in $FileIds) {
-            $Counter++
-            $FileName = $null; $Mime = $null; $SizeBytes = 0
-            try {
-                $Meta = Invoke-RestMethod -Uri "https://api.anthropic.com/v1/files/$FileId" `
-                    -Headers @{ "x-api-key" = $PlainKey; "anthropic-version" = "2023-06-01" } -TimeoutSec 60
-                $FileName  = [string]$Meta.filename
-                $Mime      = [string]$Meta.mime_type
-                $SizeBytes = [long]$Meta.size_bytes
-            }
-            catch {
-                $FileName  = "$FileId.bin"
-                $Mime      = "application/octet-stream"
-                $SizeBytes = 0
-            }
-            if ([string]::IsNullOrWhiteSpace($Mime)) { $Mime = "application/octet-stream" }
-
-            # Plafonds (serveur de 3,8 Go partage entre tous les clients) : un fichier trop gros ou en trop est ignore
-            # et sa copie chez Anthropic supprimee.
-            if (($Counter -gt $MaxFiles) -or ($SizeBytes -gt $MaxFileBytes) -or (($TotalBytes + $SizeBytes) -gt $MaxTotalBytes)) {
-                $SkippedFiles += $FileName
-                try { Invoke-RestMethod -Uri "https://api.anthropic.com/v1/files/$FileId" -Method Delete -Headers $AuthHdr -TimeoutSec 30 | Out-Null } catch { }
-                continue
-            }
-
-            # Nom de fichier sur : on ne garde que le basename, puis on ne
-            # conserve que [A-Za-z0-9._-], on borne la longueur.
-            $SafeName = ""
-            if (-not [string]::IsNullOrWhiteSpace($FileName)) {
-                $Leaf = $FileName -replace '.*[\\/]', ''
-                $SafeName = ($Leaf -replace '[^A-Za-z0-9._-]', '_')
-                if ($SafeName.Length -gt 120) { $SafeName = $SafeName.Substring(0, 120) }
-            }
-            if ([string]::IsNullOrWhiteSpace($SafeName) -or $SafeName -eq "." -or $SafeName -eq "..") {
-                $SafeName = "$FileId.bin"
-            }
-
-            $DestDir = Join-Path (Join-Path $ProjectRoot "runtime/task-files") $TaskId
-            $DestPath = Join-Path $DestDir $SafeName
-            if (Test-Path -LiteralPath $DestPath) {
-                $SafeName = "$Counter-$SafeName"
-                $DestPath = Join-Path $DestDir $SafeName
-            }
-            New-Item -ItemType Directory -Force -Path $DestDir | Out-Null
-
-            Invoke-WebRequest -Uri "https://api.anthropic.com/v1/files/$FileId/content" `
-                -Headers $AuthHdr -TimeoutSec 240 -OutFile $DestPath | Out-Null
-
-            # Taille reelle (la metadonnee peut manquer) puis suppression de la copie chez Anthropic : les fichiers du client
-            # ne doivent pas rester stockes la-bas (ils y persistent jusqu'a un DELETE, partages par tout le compte API).
-            $RealLen = (Get-Item -LiteralPath $DestPath).Length
-            try { Invoke-RestMethod -Uri "https://api.anthropic.com/v1/files/$FileId" -Method Delete -Headers $AuthHdr -TimeoutSec 30 | Out-Null } catch { }
-            if (($RealLen -gt $MaxFileBytes) -or (($TotalBytes + $RealLen) -gt $MaxTotalBytes)) {
-                Remove-Item -LiteralPath $DestPath -Force -ErrorAction SilentlyContinue
-                $SkippedFiles += $SafeName
-                continue
-            }
-            $TotalBytes += $RealLen
-
-            $CapturedFiles += [ordered]@{
-                fileId    = $FileId
-                filename  = $SafeName
-                mime      = $Mime
-                sizeBytes = $SizeBytes
-                path      = "$TaskId/$SafeName"
-            }
-        }
+        $Saved = Save-BKCodeExecFiles -FileIds $AllFileIds -PlainKey $PlainKey -DestDir (Join-Path (Join-Path $ProjectRoot "runtime/task-files") $TaskId) -PathPrefix $TaskId
+        $CapturedFiles = @($Saved.Captured)
+        $SkippedFiles = @($Saved.Skipped)
     }
     catch {
         # Jamais fatal : on conserve ce qui a ete capture jusqu'ici.

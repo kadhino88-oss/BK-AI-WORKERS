@@ -46,6 +46,7 @@
       <a href="#" id="nav-onboarding">Démarrer</a>
       <a href="#" id="nav-catalog">Workers</a>
       <a href="#" id="nav-automations">Automatisations</a>
+      <a href="#" id="nav-projets" hidden>Projets</a>
       <a href="#" id="nav-analytics">Analytics</a>
       <a href="#" id="nav-pricing">Tarifs</a>
       <a href="#" id="nav-faq">FAQ</a>
@@ -54,6 +55,10 @@
       <a href="#" id="nav-admin" hidden>Admin</a>
     </nav>
     <div class="topbar-actions">
+      <button class="usage-chip" id="usage-chip" type="button" hidden>
+        <span class="usage-chip-ring" aria-hidden="true"></span>
+        <span class="usage-chip-text"></span>
+      </button>
       <button class="lang-toggle" id="lang-toggle" type="button" data-no-i18n="1" aria-label="Switch language">EN</button>
       <button class="btn btn-ghost" id="nav-chloe-btn">Discuter avec Chloé</button>
       <button class="btn btn-gold" id="topbar-account-btn">Se connecter</button>
@@ -473,6 +478,7 @@
       <div class="pricing-grid" id="pricing-grid"></div>
 
       <div class="pricing-scale" id="pricing-scale"></div>
+      <div class="pricing-scale pricing-usage" id="pricing-usage" hidden></div>
 
       <section class="activity-helper" id="activity-helper" aria-labelledby="activity-helper-title">
         <h2 id="activity-helper-title">Quel Worker pour mon activité ?</h2>
@@ -520,6 +526,16 @@
             </div>
             <button type="button" class="btn btn-ghost" id="billing-cancel-btn">Annuler l'abonnement</button>
           </div>
+          <section class="usage-windows" id="usage-windows" aria-labelledby="usage-windows-title" hidden>
+            <h3 class="usage-windows-title" id="usage-windows-title">Vos limites d'usage</h3>
+            <p class="usage-windows-sub">En plus du quota du mois, votre forfait a une limite par session de 4 heures et une limite par semaine. Elles se renouvellent d'elles-mêmes : rien à faire.</p>
+            <div class="usage-meters" id="usage-meters"></div>
+            <div class="usage-banner" id="usage-banner" role="status" hidden></div>
+            <div class="billing-upgrade usage-upgrade" id="usage-upgrade" hidden>
+              <p id="usage-upgrade-text"></p>
+              <button type="button" class="btn btn-gold" id="usage-upgrade-btn">Passer à la formule supérieure</button>
+            </div>
+          </section>
           <div class="billing-usage-track">
             <div class="billing-usage-fill" id="billing-usage-fill"></div>
           </div>
@@ -802,6 +818,20 @@
       </div>
     </section>
 
+    <!-- Projets (project_ui.js) : visible seulement quand le moteur de projets est actif (BK_PROJECTS=1) -->
+    <section id="projets-view" class="view page-wrap" hidden>
+      <div class="page-band">
+        <div class="page-band-glow"></div>
+        <button id="projets-back-btn" class="back-btn">&larr; Accueil</button>
+        <div class="catalog-intro">
+          <h1 class="workers-title">Projets</h1>
+          <p class="hero-sub">Un objectif complet, un plan que vous validez, des Workers qui vont jusqu'au bout et un contrôle qualité qui vérifie chaque critère. Rien n'est envoyé, publié ni payé sans votre validation.</p>
+        </div>
+      </div>
+      <div id="pj-root" class="pj-root"></div>
+      <div id="pj-live" class="sr-only" aria-live="polite"></div>
+    </section>
+
     <section id="profile-view" class="view page-wrap" hidden>
       <div id="app-profile">
         <button id="back-btn" class="back-btn">&larr; Retour</button>
@@ -851,6 +881,8 @@
               <div id="task-error" class="task-error" hidden></div>
               <div id="task-result" class="task-result" hidden></div>
             </div>
+
+            <div class="profile-block pj-launch" id="pj-launch-block" hidden></div>
 
             <div class="profile-block" id="activity-block">
               <div class="block-title">Activité récente <span class="block-subtitle">(données réelles du système)</span></div>
@@ -1069,8 +1101,10 @@
   <script src="/i18n-en-app.js"></script>
   <script src="/i18n-en-pwa.js"></script>
   <script src="/i18n-en-pilot.js"></script>
+  <script src="/i18n-en-projects.js"></script>
   <script src="/i18n.js"></script>
   <script src="/app.js"></script>
+  <script src="/project_ui.js"></script>
   <script src="/pwa-install.js"></script>
   <script src="/pilot-admin.js"></script>
 </body>

@@ -1,0 +1,50 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "BK-PROJECT-STATE-V1",
+  "title": "state.json d'un projet (ecrit par Python seul ; docs/AUTONOMY-ENGINE.md, section 2.2)",
+  "type": "object",
+  "required": ["schema", "projectId", "clientId", "status", "seq", "steps", "budget", "counters"],
+  "properties": {
+    "schema": {"const": "BK-PROJECT-STATE-V1"},
+    "projectId": {"type": "string", "pattern": "^PRJ-[0-9A-F]{32}$"},
+    "clientId": {"type": "string", "pattern": "^CLI-[A-Z0-9-]{3,40}$"},
+    "title": {"type": "string"},
+    "goal": {"type": "string"},
+    "leadWorker": {"type": "string"},
+    "recipeId": {"type": ["string", "null"]},
+    "language": {"type": "string"},
+    "createdUtc": {"type": "string"},
+    "startedUtc": {"type": ["string", "null"]},
+    "finishedUtc": {"type": ["string", "null"]},
+    "updatedUtc": {"type": "string"},
+    "status": {"enum": ["PLANNING", "QUEUED", "RUNNING", "WAITING_APPROVAL", "WAITING_INPUT", "WAITING_QUOTA", "VERIFYING", "PAUSED", "BUDGET_REACHED", "DONE", "FAILED", "CANCELLED"]},
+    "waitingFor": {"enum": [null, "INPUT", "PLAN_VALIDATION", "APPROVAL", "CONNECTOR", "CRITERIA_FAILED", "QUOTA", "BUDGET"]},
+    "statusReason": {"type": ["string", "null"]},
+    "resumeAtUtc": {"type": ["string", "null"]},
+    "seq": {"type": "integer", "minimum": 0},
+    "level": {"enum": ["standard", "approfondi"]},
+    "autoStart": {"type": "boolean"},
+    "planVersion": {"type": "integer"},
+    "steps": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object", "required": ["status", "attempts"],
+        "properties": {
+          "kind": {"enum": ["plan", "execute", "fix", "verify", "replan", "consolidate", "answer"]},
+          "status": {"enum": ["PENDING", "READY", "RUNNING", "DONE", "PARTIAL", "FAILED", "SKIPPED", "BLOCKED"]},
+          "blockedReason": {"enum": [null, "APPROVAL", "INPUT", "QUOTA", "CONNECTOR", "INSTALLATION_PAUSED", "WORKER_NOT_INCLUDED", "DEPENDENCY_FAILED", "APPROVAL_EXPIRED"]},
+          "attempts": {"type": "integer", "minimum": 0},
+          "worker": {"type": "string"},
+          "credits": {"type": "number"}
+        }
+      }
+    },
+    "budget": {
+      "type": "object",
+      "properties": {"creditsCap": {"type": "number"}, "creditsCharged": {"type": "number"}, "chfCeiling": {"type": "number"}, "chfSpent": {"type": "number"}, "estimate": {"type": ["object", "null"]}}
+    },
+    "counters": {"type": "object"},
+    "scope": {"type": "object"},
+    "owner": {"type": "object"}
+  }
+}

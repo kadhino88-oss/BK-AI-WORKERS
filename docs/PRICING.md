@@ -115,23 +115,115 @@ Règle du propriétaire : quand un client épuise **tous** ses crédits du mois 
 - **`BK_LEVELS=0` est une mesure d'urgence de courte durée, pas un mode normal.** L'ancien comportement qu'il restaure (1 crédit par mission) tourne sur Haiku 4.5 (1/5 USD par million de jetons), dix fois plus cher par appel que Haiku 5.5 : au scénario lourd, 0,1278 CHF par mission, donc Solo 110 %, Trio 108 %, Équipe 116 %, Pro 115 % et Scale 114 % du prix (typique : environ 43-46 %). À utiliser pour rétablir un service, puis à lever.
 - **Coupon de lancement** (`BK_STRIPE_LAUNCH_COUPON`, vide par défaut, 30 % sur les deux premiers mois de tout abonnement mensuel y compris Solo, Trio et Équipe) : sur ces deux mois le pire cas passe à Solo 46,6 %, Trio 45,8 %, Équipe 49,1 %, Pro 48,6 %, Scale 48,1 % du prix payé. À ne renseigner que si le propriétaire accepte cette marge pendant deux mois.
 
-## 6. Ce qui n'est PAS construit (décisions ouvertes)
+## 6. Limites d'usage : session, semaine et mois (consigne du propriétaire du 2026-10-18)
+
+Comme les limites de Claude, en plus du prix mensuel et des crédits du mois : une limite par **session de 4 heures** (fenêtre glissante, ouverte par la première mission qui consomme des crédits, qui se renouvelle seule) et une limite par **semaine** (7 jours à partir de la première utilisation de la semaine). **Aucun forfait n'est illimité.** Toute consommation (mission, automatisation, étape de projet) doit passer les trois fenêtres (session, semaine, mois) ; la plus restrictive borne. Le code : `dashboard/usage.py` (grand livre, indépendant de `server.py`), `dashboard/usage_wiring.py` (branchement), `dashboard/usage-cli.py` (automatisations), réglages dans `core/usage/USAGE-LIMITS.json`. Le contrat détaillé (réservation atomique, réconciliation, projets) est `docs/AUTONOMY-ENGINE.md`, section 6b.
+
+### 6.1 Les chiffres
+
+Réglages (`core/usage/USAGE-LIMITS.json`, versionné ; les allocations ne sont **jamais stockées**, elles sont recalculées à chaque contrôle depuis le forfait **actuel** du client) :
+
+| Constante | Valeur | Sens |
+|---|---|---|
+| `weeklyDivisor` | 4,35 | semaine = crédits du mois ÷ 4,35 (arrondi à l'entier le plus proche, .5 vers le haut) |
+| `sessionShareOfWeek` | 0,40 | session = 40 % de la semaine |
+| `minSessionCredits` | 12 | plancher : une mission Approfondi (12 crédits) tient toujours dans une session vide |
+| `sessionHours` / `weekDays` | 4 / 7 | durée des fenêtres glissantes |
+| `warnPercent` | 80 | seuil d'alerte de l'interface |
+| `minStartCredits` | 6 | en dessous, un projet n'est pas relancé (il attend) |
+| `exemptClients`, `exemptPlans` | propriétaire, essai public ; **Essai** | exemptés des fenêtres (15 crédits uniques sur 3 jours : une fenêtre n'ajouterait rien) |
+
+Ce que cela donne (le coût IA au pire cas est celui de la section 5, 0,0378 CHF par crédit, le plus haut des trois niveaux) :
+
+| Forfait | Mois | Semaine | Session | Missions Équilibre par session | Coût IA au pire cas, session / semaine / mois | Part du prix (mois) |
+|---|---|---|---|---|---|---|
+| Solo | 250 | 57 | 23 | 3 | 0,87 / 2,15 / 9,45 CHF | 32,6 % |
+| Trio | 500 | 115 | 46 | 7 | 1,74 / 4,35 / 18,90 CHF | 32,0 % |
+| Équipe | 900 | 207 | 83 | 13 | 3,14 / 7,82 / 34,02 CHF | 34,4 % |
+| Pro | 1 250 | 287 | 115 | 19 | 4,35 / 10,85 / 47,25 CHF | 34,0 % |
+| Scale | 4 000 | 920 | 368 | 61 | 13,91 / 34,78 / 151,20 CHF | 33,7 % |
+| Enterprise (défaut 10 000) | 10 000 | 2 299 | 920 | 153 | 34,78 / 86,90 / 378,00 CHF | sur contrat |
+| *Starter* (hérité) | 150 | 34 | 14 | 2 | 0,53 / 1,29 / 5,67 CHF | 14,5 % |
+| *Business* (hérité) | 600 | 138 | 55 | 9 | 2,08 / 5,22 / 22,68 CHF | 22,9 % |
+| *Pro* d'avant la grille (1 500) | 1 500 | 345 | 138 | 23 | 5,22 / 13,04 / 56,70 CHF | 40,8 % (voir ci-dessous) |
+
+**Règle des 35 % (section 5) : les fenêtres ne la changent pas, elles ne peuvent que la servir.** Le plafond du mois reste le troisième plafond, actif en plus des deux autres : quel que soit le chevauchement des fenêtres (jusqu'à 5 semaines glissantes peuvent démarrer dans un même cycle), un cycle ne consomme jamais plus que les crédits du mois, donc le coût IA au pire cas est celui du tableau de la section 5. Les fenêtres ne servent pas à tenir la marge : elles servent à **lisser** l'usage (un client ne vide plus son mois en une journée, et l'exposition d'une journée est bornée à la session : au plus 0,87 CHF d'IA par session pour Solo, 3,14 CHF pour Équipe). Le seul chiffre au-dessus de 35 % du tableau est le Pro d'avant la grille (1 500 crédits pour CHF 139, 40,8 %) : c'est le maintien des conditions d'origine décidé en section 1, qui date d'avant les fenêtres et que les fenêtres ne modifient pas ; il se règle avec le préavis de 30 jours.
+
+Derniers détails : une session ne dépasse jamais la semaine, ni la semaine le mois (petit contrat). Une allocation absente, négative ou illisible vaut 0 et la mission est refusée (jamais « tout est permis »). Enterprise : les fenêtres se déduisent du plafond du contrat (`contractCredits`), ou sont fixées sur mesure par `POST /api/admin/set-plan` avec `"usageOverride": {"sessionCredits": 1200, "weekCredits": 3000}` (Enterprise seulement ; `USAGE_OVERRIDE_NOT_ALLOWED` pour un autre forfait ; effacé à un changement de forfait).
+
+### 6.2 Les règles exactes (tout en UTC)
+
+- **La fenêtre s'ouvre à la première réservation qui passe** (`début = maintenant`, `fin = début + 4 h` pour la session, `+ 7 j` pour la semaine). Pendant la fenêtre, les crédits consommés s'accumulent. À l'instant exact de la fin (`maintenant ≥ fin`), la fenêtre est refermée ; la suivante s'ouvre à la prochaine réservation (il n'y a pas de fenêtre « vide » qui court). Une réservation libérée sans aucun crédit consommé referme la fenêtre qu'elle avait ouverte : un incident au premier appel n'ouvre pas de session.
+- **Le mois** est le cycle de facturation existant (section 3), pas une fenêtre glissante.
+- **Réservation atomique** : le contrôle des trois fenêtres et leur mise à jour se font dans la même section critique, par client (verrou de fichier entre le serveur et `quota-check.py`, qui est un autre processus). Deux missions et trois étapes simultanées ne peuvent pas dépasser une fenêtre. Une mission réserve ses crédits **avant** de lancer le sous-processus, et les règle sur les crédits réellement tracés à la fin (0 si elle n'a rien livré, règle de la section 3). Une réservation oubliée (processus tué) est libérée à l'échéance : mission 12 minutes, étape de projet 15, automatisation 5 ; au démarrage du serveur, les réservations de missions orphelines sont libérées tout de suite. Dans les deux cas, ce que la mission avait déjà livré est recompté d'après ses traces à la prochaine écriture du grand livre (réconciliation avancée) : une mission livrée juste avant un arrêt n'est jamais offerte.
+- **Grand livre O(1)** : un fichier par client, `runtime/usage/<ClientId>.json` (schéma `BK-USAGE-LEDGER-V1`), jamais un balayage des fichiers `TASK-*.json` à chaque appel. Les traces font foi : `reconcile` (au plus toutes les 6 heures par client actif, et à la demande) recalcule le mois, la session et la semaine à partir de `runtime/tasks/TASK-*.json` (`task_credits`) et des règlements de projet, **corrige le cache, jamais les traces**, et journalise l'écart. `creditsUsed` de `GET /api/billing` vient du grand livre (le balayage ne subsiste que dans la réconciliation et dans un test qui compare les deux). Un grand livre illisible ne coupe jamais le service : on journalise et la mission passe (le quota du mois d'origine reste appliqué).
+- **Horloge** : injectée dans le service (tests) ; une horloge qui recule ne referme rien et n'efface aucun compteur ; un saut en avant referme les fenêtres échues.
+- **Changement de forfait en cours de fenêtre** : une montée en gamme élargit tout de suite les trois fenêtres (les crédits déjà consommés restent comptés) ; une descente les réduit sans rien rembourser ; les fenêtres de session et de semaine **ne sont pas remises à zéro** (comme Claude). Un nouveau cycle (renouvellement, nouveau forfait) repart avec un mois neuf. Les anciens abonnés (Starter, Business, Pro et Scale d'avant la grille) suivent leurs crédits d'origine (tableau ci-dessus), par le même calcul.
+- **Isolation** : un grand livre par `ClientId` ; l'identifiant est validé avant tout accès au disque ; la suppression du compte efface le grand livre et l'export du compte l'inclut.
+- **Qui passe par la porte** : `submit_task` (point d'entrée unique des missions : routes Worker, Chloé, asynchrones, WhatsApp, API) réserve `crédits du niveau × Workers que Chloé peut appeler` (la réservation partielle réduit le nombre de Workers que Chloé appelle plutôt que de refuser) ; les automatisations (`dashboard/quota-check.py` → `usage-cli.py charge`) débitent 1 crédit et **sautent sans erreur** quand une fenêtre est pleine (elles repassent au tick suivant) ; les étapes de projet (moteur d'autonomie, section 6.3 de `docs/AUTONOMY-ENGINE.md`) réservent avant chaque étape et, fenêtre atteinte, passent le projet en `WAITING_QUOTA` avec l'heure de reprise au lieu d'échouer. Un mode « plan seulement » ne réserve rien (aucun crédit).
+
+### 6.3 Ce que le client voit
+
+Refus d'une mission, `402 USAGE_LIMIT_REACHED` pour la session et la semaine (le mois garde `402 SUBSCRIPTION_REQUIRED`, déjà géré par l'interface) ; le message nomme la limite, ce qui reste, l'heure exacte de renouvellement dans le fuseau du client, la durée et le forfait du dessus avec ses chiffres :
+
+> Vous avez utilisé votre quota de session (83 crédits). Il se renouvelle à 14:12 (dans 1 h 12). Pour continuer sans attendre, passez au forfait Pro (115 crédits par session).
+
+> Il vous reste 5 crédit(s) dans votre quota de session, ce niveau en demande 12. Il se renouvelle à 14:12 (dans 1 h 12). Choisissez un niveau plus rapide, attendez le renouvellement ou passez au forfait Pro (115 crédits par session).
+
+```json
+{"error": "USAGE_LIMIT_REACHED", "limit": "session", "needed": 12, "remaining": 5, "resetsAtUtc": "2026-10-20T12:12:00Z",
+ "detail": "Vous avez utilisé votre quota de session …",
+ "usage": {"… comme GET /api/usage": ""}, "upgrade": {"planId": "pro", "planName": "Pro", "priceChf": {"month": 139, "year": 1390},
+          "limits": {"session": 115, "week": 287, "month": 1250}, "onQuote": false, "selfService": true}}
+```
+
+`GET /api/usage` (compte client ; le propriétaire reçoit `exempt: true` et aucune fenêtre) : `session`, `week` (`limit`, `used`, `reserved`, `remaining`, `opened`, `startUtc`, `resetsAtUtc`), `month`, `binding` (la fenêtre qui borne), `allowedNow`, `nextRenewalUtc`, `upgrade` (forfait du dessus et ses limites), `activeReservations`. `GET /api/billing` porte le même bloc `usage`, les cartes de forfait portent leurs `limits`, et `upgrade.next.limits` donne celles du forfait suivant. `GET /api/usage-limits` (public, sans compte) donne les plafonds de session et de semaine de chaque forfait vendu pour la page Tarifs.
+
+### 6.4 Les messages et l'interface (anglais par `i18n-en-app.js`, lisible à 375 px)
+
+- **Vue Facturation** : bloc « Vos limites d'usage » avec deux jauges (Session 4 h, Semaine) : crédits utilisés / limite, crédits restants, heure de renouvellement avec compte à rebours (« à 14:12 (dans 1 h 12) ») ou « Démarre à votre prochaine mission » quand la fenêtre n'est pas ouverte ; **à partir de 80 %** le texte d'alerte et le bouton **« Passer à <forfait> »** avec les limites du forfait du dessus ; à 100 %, « Quota de session atteint : vous pourrez lancer de nouvelles missions à 14:12 ». Le niveau (normal, alerte, plein) est écrit en toutes lettres : la couleur n'est jamais la seule information. Chaque jauge est un `progressbar` annoncé aux lecteurs d'écran (« 72 sur 83 crédits utilisés, 11 restants »).
+- **Pastille de la barre du haut** (bouton, atteignable au clavier) : la fenêtre la plus avancée (« Session 87 % »), un anneau, `aria-label` complet, ouvre Facturation.
+- **Refus** dans le chat d'un Worker, de Chloé et des automatisations : le message du serveur, le prochain renouvellement avec compte à rebours, les limites du forfait du dessus et le bouton de montée en gamme.
+- **Page Tarifs, FAQ et page Facturation** (`/tarifs.html`, `/faq.html`, `/facturation.html`, `dashboard/seo_pages.py`, et la vue Tarifs de l'application) : chaque carte de forfait affiche « 83 crédits par session de 4 h · 207 par semaine » sous ses crédits du mois ; un encadré dit que chaque forfait est **un prix mensuel plus des limites d'usage** et qu'**aucun forfait n'est illimité** ; une question de FAQ explique ce qui se passe à la limite. **Ces textes n'apparaissent que si les fenêtres s'appliquent réellement (`BK_USAGE_WINDOWS=1`)** : aucune page n'annonce une limite qui ne soit pas appliquée.
+- Les mentions de l'essai public (« sans limite ») ont été reformulées : aucun texte du site ne laisse entendre un usage illimité.
+
+### 6.5 Mise en service (interrupteur `BK_USAGE_WINDOWS`)
+
+| Valeur | Effet |
+|---|---|
+| `0` (défaut) | service inerte : seul le mois borne, **aucune réponse existante ne change** (testé), aucune jauge, aucune page modifiée |
+| `shadow` | le grand livre tourne, **rien n'est bloqué**, chaque refus qui aurait eu lieu est journalisé (`usage_would_block`, avec la fenêtre, le forfait et l'heure) ; sert à calibrer les constantes sur sept jours de vraies données avant de freiner un client. `BK_PROJECTS=1` impose au moins `shadow` (les crédits des projets ne sont pas des fichiers `TASK-*.json`) |
+| `1` | actif : refus `USAGE_LIMIT_REACHED`, jauges, pages et FAQ |
+
+Retour arrière : `BK_USAGE_WINDOWS=0` (puis `docker compose up -d`), sans perte de données. **Les fenêtres durcissent les conditions des abonnés existants** : les CGV (art. 4 et 8) demandent 30 jours de préavis effectif au renouvellement suivant ; l'activation se fait d'abord pour les nouveaux abonnements, le préavis des autres est une décision du propriétaire (section 7).
+
+### 6.6 Valeurs à confirmer par le propriétaire
+
+4 heures de session et 7 jours de semaine ; 40 % de la semaine par session ; diviseur 4,35 ; plancher de 12 crédits (au pire une session de Solo vaut 3 missions Équilibre : c'est le prix de la protection contre un client qui vide son mois en une journée). Ces valeurs sont des **réglages**, pas du code : on les change dans `core/usage/USAGE-LIMITS.json` (redémarrage) après la période `shadow`.
+
+### 6.7 Ce qui reste à relier
+
+Le moteur de projets (`docs/AUTONOMY-ENGINE.md`) appelle la même interface Python (`remaining`, `reserve`, `settle`, `release`, `charge`, `next_renewal`) ; la reprise automatique de `WAITING_QUOTA` et son interface appartiennent à ce moteur et ne sont pas livrées ici. Rien n'en est annoncé tant que ce moteur n'est pas construit et testé.
+
+## 7. Ce qui n'est PAS construit (décisions ouvertes)
 
 - **Moteur d'IA par mission** (2026-10-25, `docs/PROVIDERS.md`) : l'essai gratuit tourne sur un modèle local (coût 0) quand le propriétaire l'a configuré, un repli vers un autre moteur ne coûte **aucun crédit**, et le propriétaire peut fixer un plafond de dépense Claude (jour / mois). **Décision ouverte** : les crédits d'une mission en **clé personnelle** du client (BYOK). Livré : ils restent ceux du forfait ; alternatives et recommandation dans `docs/PROVIDERS.md` §8.
-
-- **Fenêtres hebdomadaire et de session** (comme les limites de 5 heures et de la semaine de Claude) : non construites. Aujourd'hui un client peut consommer tout son quota mensuel en une journée. Décision du propriétaire : les ajouter ou non, et avec quelles valeurs.
+- **Fenêtres hebdomadaire et de session** : **construites** (section 6) et inertes par défaut (`BK_USAGE_WINDOWS=0`). Reste à décider : l'activation (ombre puis actif), les constantes (4 h, 40 %, 4,35, plancher 12), et le préavis de 30 jours pour les abonnés existants (CGV art. 4 et 8).
 - Paquets de crédits : **décidé : il n'y en a pas** (l'étude recommandait CHF 12 les 100 crédits ; le propriétaire a choisi le passage au forfait supérieur).
 - Facturation du **téléphone et de WhatsApp** en crédits (1,5 crédit par minute dans l'étude) : le numéro et WhatsApp pour les clients de nos clients ne sont pas en production ; rien n'est annoncé ni facturé. L'essai n'inclut aucune minute de téléphone (`phoneMinutes: 0`).
 - **Suivi des abonnements Stripe (sans webhook)** : le serveur relit chaque abonnement Stripe par le pont, en lecture seule (`Stripe-Bridge.ps1 -Action get-subscription`), toutes les 6 heures (`STRIPE_SYNC_INTERVAL_S`, premier passage 10 minutes après le démarrage, un client à la fois) et à la demande du propriétaire (`POST /api/admin/stripe-sync`, `{"clientId"}` ou tous). Abonnement `canceled`, `unpaid`, `incomplete_expired` ou introuvable (404) : retour immédiat à l'Essai (l'essai n'est pas renouvelable) ; résilié dans le tableau de bord Stripe : fin de période enregistrée ; résiliation annulée : reprise ; `past_due` : l'accès reste ouvert pendant que Stripe relance le paiement, une ligne d'historique le signale, et l'abonnement s'arrête quand Stripe le passe à `unpaid` ou `canceled`. **À régler dans Stripe** (Réglages, Abonnements, Relances de paiement) : « résilier l'abonnement » ou « marquer comme impayé » après les relances, sinon un abonnement `past_due` garde son accès sans limite. Un webhook signé (`invoice.payment_failed`, `customer.subscription.deleted`) reste préférable pour réagir en minutes : il demande un secret de signature à ajouter, non construit. **Pour les forfaits activés sur facture, c'est réglé** : ils portent une fin de période payée (`paidMonths`) et retombent à l'Essai tout seuls, sauf reconduction par le propriétaire (`docs/HIRE-API.md`). **Ancien abonnement non annulé après une montée en gamme** : si Stripe ne répond pas au moment d'annuler l'ancien abonnement (avec prorata), son identifiant est retenu (`staleStripeSubscriptions`, 10 au plus) et l'annulation est retentée à chaque passage du suivi ci-dessus (ou par `POST /api/admin/stripe-sync`) jusqu'à ce qu'elle aboutisse ou que Stripe dise qu'il est déjà arrêté ; tant qu'il en reste un, la suppression du compte est refusée (`409 STRIPE_CLEANUP_PENDING`), sinon l'abonnement continuerait de facturer sans plus aucun moyen de l'annuler.
 - **Textes juridiques** (décision du propriétaire, non modifiés ici) : les CGV (art. 5, 6) parlent de paiement par carte via Stripe et d'abonnements mensuels ; elles ne mentionnent ni l'activation sur facture (Solo, Trio, Équipe et Pro/Scale sans Stripe) ni les abonnements annuels. À compléter, par exemple : « Les abonnements peuvent aussi être réglés sur facture ; le plan est alors activé par BK-ENTREPRISE à réception du paiement pour la période facturée et prend fin à son terme si la facture suivante n'est pas réglée. »
 
-## 7. Interface
+## 8. Interface
 
+- **Jauges et pastille d'usage** (`BK_USAGE_WINDOWS=1`) : voir la section 6.4 ; rien n'est affiché ni annoncé tant que les fenêtres ne s'appliquent pas.
 - Page Tarifs (`PRICING_PLANS` dans `dashboard/app.js`, `renderPricing`) et page statique `/tarifs.html` (`PRICING_PLANS` dans `dashboard/seo_pages.py`) : la **même** liste que `PLAN_CATALOG` (test automatique). Solo dit « Choisissez le Worker de votre activité » ; Solo et Trio disent clairement que vous choisissez vos Workers (Trio inclut Chloé).
 - Aide **« Quel Worker pour mon activité ? »** sous la grille (`ACTIVITY_WORKERS` dans `dashboard/app.js`) : boutique en ligne, restaurant ou commerce local, cabinet ou profession libérale, agence ou freelance, PME de services, artisan, association. Chaque correspondance vient du rôle et des services réels du Worker (`workers/<id>/identity/identity.json` et `workers/<id>/install-profile.json`) ; chaque résultat ouvre la fiche du Worker (où se trouve « Embaucher »). Aucun témoignage, aucun chiffre inventé.
 - Page d'accueil : la phrase « au moins 5 % moins cher que les alternatives comparables » est retirée (non étayée, fausse face à plusieurs concurrents) ; elle est remplacée par un énoncé factuel (« Dès CHF 29 par mois, sans engagement »). **Aucune comparaison nommant un concurrent n'est publiée** : la publicité comparative demande l'accord du propriétaire et d'un juriste (loi contre la concurrence déloyale), avec chiffre, source et date.
 - Chloé : `chloe/identity/playbook.md` (section TARIFS) et la consigne du routeur dans `chloe/Invoke-Chloe-Orchestration.ps1` citent la même grille ; `dashboard/phone-agent/CLI-DASHBOARD.md` (standard du propriétaire) aussi.
 
-## 8. Tests
+## 9. Tests
+
+`tests/usage/` (fenêtres d'usage, section 6) : `test_usage_core.py` (le service sur une racine jetable, horloge injectée : allocations, ouverture à la première utilisation, secondes aux bornes, refus qui nomment la fenêtre, concurrence entre fils et entre processus, changement de forfait, réservations échues, amorçage et réconciliation sur 200 traces, dérive d'horloge), `test_usage_wiring.py` (le vrai `server.py` : porte des missions, 402, `get_billing`, Chloé, anciens forfaits, Enterprise sur mesure, automatisations, suppression et export du compte, grand livre illisible), `e2e_server.py` (vrai serveur HTTP sur une copie jetable, deux comptes, pages et interface ; `python tests/usage/e2e_server.py`, sans modèle, sans réseau, sans secret).
 
 `tests/pricing/` (voir l'en-tête de chaque fichier) : `test_pricing.py` (catalogue, quota, niveaux, paiement, ratio de coût), `test_billing_review.py` (revue du 2026-10-13 : confirmation Stripe idempotente, résiliation en fin de période, période payée sur facture, anciens abonnés Pro/Scale, crédits des missions livrées), `test_billing_review2.py` (2e revue : grâce sans crédits neufs, anciens abonnés sans preuve de paiement, plafond Enterprise conservé, suivi des abonnements Stripe, client Stripe réutilisé, garde-fous de `stripe-confirm`, suppression de compte après résiliation, corps mal typés), `test_site_consistency.py` (aucun ancien prix, une seule liste, aide par activité, anglais), `test_stripe_fields.py` (montants Stripe, PowerShell), `test_automation_level.py` (automatisations au niveau Rapide, 1 crédit ; PowerShell 7), `e2e_server.py` (vrai serveur HTTP sur une copie jetable). Les attentes des suites `tests/levels` et `tests/hire` ont été mises à jour **uniquement** là où l'échelle de crédits ou le catalogue sont affirmés (commentaire « Expectation changed on 2026-10-12 »).

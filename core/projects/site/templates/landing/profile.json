@@ -1,0 +1,73 @@
+{
+  "schema": "BK-SITE-PROFILE-V1",
+  "profile": "landing",
+  "description": "Page unique d'atterrissage (une offre, une action) + mentions légales et confidentialité.",
+  "pages": [
+    {
+      "key": "home",
+      "slug": {
+        "fr": "index",
+        "en": "index"
+      },
+      "title": {
+        "fr": "Accueil",
+        "en": "Home"
+      },
+      "nav": true,
+      "sections": [
+        "hero",
+        "services",
+        "facts",
+        "faq",
+        "cta"
+      ]
+    },
+    {
+      "key": "contact",
+      "slug": {
+        "fr": "contact",
+        "en": "contact"
+      },
+      "title": {
+        "fr": "Contact",
+        "en": "Contact"
+      },
+      "nav": true,
+      "sections": [
+        "contact"
+      ]
+    },
+    {
+      "key": "legal",
+      "slug": {
+        "fr": "mentions-legales",
+        "en": "legal-notice"
+      },
+      "title": {
+        "fr": "Mentions légales",
+        "en": "Legal notice"
+      },
+      "nav": false,
+      "footer": true,
+      "sections": [
+        "legal"
+      ]
+    },
+    {
+      "key": "privacy",
+      "slug": {
+        "fr": "confidentialite",
+        "en": "privacy"
+      },
+      "title": {
+        "fr": "Confidentialité",
+        "en": "Privacy"
+      },
+      "nav": false,
+      "footer": true,
+      "sections": [
+        "privacy"
+      ]
+    }
+  ]
+}

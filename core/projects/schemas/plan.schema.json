@@ -1,0 +1,55 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "BK-PROJECT-PLAN-V1",
+  "title": "Plan d'un projet (docs/AUTONOMY-ENGINE.md, section 1.2)",
+  "type": "object",
+  "required": ["schema", "goal", "criteria", "steps"],
+  "properties": {
+    "schema": {"const": "BK-PROJECT-PLAN-V1"},
+    "version": {"type": "integer", "minimum": 1},
+    "goal": {"type": "string", "minLength": 1, "maxLength": 4000},
+    "language": {"type": "string", "maxLength": 20},
+    "recipeId": {"type": ["string", "null"], "maxLength": 80},
+    "assumptions": {"type": "array", "items": {"type": "object", "required": ["id", "text"], "properties": {"id": {"type": "string"}, "text": {"type": "string"}}}},
+    "criteria": {
+      "type": "array", "minItems": 1, "maxItems": 25,
+      "items": {
+        "type": "object", "required": ["id", "text", "kind"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^C[A-Za-z0-9-]{0,18}$"},
+          "text": {"type": "string", "minLength": 1, "maxLength": 500},
+          "kind": {"enum": ["auto", "rubric"]},
+          "check": {"type": "object", "required": ["type"], "properties": {"type": {"enum": ["file_exists", "file_contains", "site_check", "xlsx_check", "docx_check", "csv_check", "json_schema", "approval_executed", "count_matches"]}}},
+          "rubric": {"type": "string", "maxLength": 1500}
+        }
+      }
+    },
+    "steps": {
+      "type": "array", "minItems": 1, "maxItems": 40,
+      "items": {
+        "type": "object", "required": ["id", "title", "worker", "goal"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^S[0-9]{1,3}$"},
+          "title": {"type": "string", "maxLength": 160},
+          "worker": {"type": "string", "pattern": "^[a-z]{2,20}$"},
+          "goal": {"type": "string", "minLength": 1, "maxLength": 2000},
+          "dependsOn": {"type": "array", "items": {"type": "string"}},
+          "criteriaIds": {"type": "array", "items": {"type": "string"}},
+          "inputs": {"type": "array", "items": {"type": "string"}},
+          "expectedOutputs": {"type": "array", "items": {"type": "string"}},
+          "effort": {"enum": ["normal", "bulk", "deep"]},
+          "connectors": {"type": "array", "items": {"type": "string"}},
+          "requiresApprovalsFrom": {"type": "array", "items": {"type": "string"}},
+          "estimateCredits": {"type": "number", "minimum": 0}
+        }
+      }
+    },
+    "milestones": {"type": "array", "items": {"type": "object", "required": ["id", "afterSteps", "criteriaIds"]}},
+    "estimate": {"type": "object", "properties": {"creditsMin": {"type": "number"}, "creditsMax": {"type": "number"}, "hoursMin": {"type": "number"}, "hoursMax": {"type": "number"}}},
+    "needsFromClient": {"type": "array", "items": {"type": "object", "required": ["id", "question"]}},
+    "risks": {"type": "array", "items": {"type": "string"}},
+    "unassignable": {"type": "array", "items": {"type": "object", "properties": {"capability": {"type": "string"}, "bestWorker": {"type": "string"}, "reason": {"type": "string"}}}},
+    "delegation": {"type": "object"},
+    "fallback": {"type": "boolean"}
+  }
+}

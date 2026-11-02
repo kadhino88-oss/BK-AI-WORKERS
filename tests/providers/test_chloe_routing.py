@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Le repli de routage de Chloe (Invoke-BKChloeAIRouting) est un appel DIRECT a Claude avec la cle de la plateforme. Avec un plan de moteurs il ne doit partir que
+"""Le repli de routage de Chloe (Invoke-BKChloeAIRouting, chloe/Chloe-LegacyRouting.ps1) est un appel DIRECT a Claude avec la cle de la plateforme. Avec un plan de moteurs il ne doit partir que
 si Claude est le moteur prevu, non ecarte et sous le plafond de depense ; sa depense compte dans le registre. Sans plan : comme avant.
 
 L'API d'Anthropic est simulee (tests/providers/shim_anthropic.ps1). PowerShell 7 requis (sous Windows : dans WSL).
@@ -23,10 +23,9 @@ DRIVER = r'''
 param($ClientId, $ProjectId, $WorkerId, $TaskId, $Objective, $Model)
 $Root = $env:BK_ROOT
 . (Join-Path $Root "core/ai/BK-Secret.ps1")
-$Src = Get-Content -LiteralPath (Join-Path $Root "chloe/Invoke-Chloe-Orchestration.ps1") -Raw -Encoding UTF8
+$Src = Get-Content -LiteralPath (Join-Path $Root "chloe/Chloe-LegacyRouting.ps1") -Raw -Encoding UTF8
 $Start = $Src.IndexOf("function Invoke-BKChloeAIRouting")
-$End = $Src.IndexOf('$Lower = $Request.ToLowerInvariant()')
-Invoke-Expression $Src.Substring($Start, $End - $Start)
+Invoke-Expression $Src.Substring($Start)
 $Routing = Get-Content -LiteralPath (Join-Path $Root "orchestrator/worker-routing.json") -Raw -Encoding UTF8 | ConvertFrom-Json
 $R = Invoke-BKChloeAIRouting -UserRequest "Aide-moi avec une chose vague" -RoutingConfig $Routing -Excluded @($Routing.excluded_from_routing) -PreferredIds $null
 [ordered]@{ routed = ($null -ne $R); workers = @($R.Workers) } | ConvertTo-Json -Compress | Write-Output
@@ -40,7 +39,7 @@ def prepare(root):
         f.write(DRIVER)
     os.makedirs(os.path.join(root, "chloe"), exist_ok=True)
     os.makedirs(os.path.join(root, "orchestrator"), exist_ok=True)
-    shutil.copy2(os.path.join(REPO, "chloe", "Invoke-Chloe-Orchestration.ps1"), os.path.join(root, "chloe", "Invoke-Chloe-Orchestration.ps1"))
+    shutil.copy2(os.path.join(REPO, "chloe", "Chloe-LegacyRouting.ps1"), os.path.join(root, "chloe", "Chloe-LegacyRouting.ps1"))
     shutil.copy2(os.path.join(REPO, "orchestrator", "worker-routing.json"), os.path.join(root, "orchestrator", "worker-routing.json"))
 
 

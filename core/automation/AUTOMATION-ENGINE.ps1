@@ -273,6 +273,7 @@ function Invoke-AutomationRun {
                     $SkipStatus = switch ([string]$QuotaVerdict.code) {
                         "WORKER_NOT_INCLUDED" { "worker_not_included" }
                         "INSTALLATION_PAUSED" { "installation_paused" }
+                        "USAGE_LIMIT_REACHED" { "usage_limit" }
                         default { "quota_exceeded" }
                     }
                     # Quota epuise, Worker non embauche ou en pause : on NE soumet PAS la tache. On trace le saut avec le MEME mecanisme de

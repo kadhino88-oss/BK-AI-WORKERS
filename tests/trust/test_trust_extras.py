@@ -112,6 +112,12 @@ HOSTS = {
     "www.atelier-martin.example": NO_CALL,
     # espace de noms XML des fichiers Office (dashboard/file_preview.py) : identifiant dans un document, jamais appele
     "schemas.openxmlformats.org": NO_CALL,
+    # references officielles CITEES par les recettes de projet (core/projects/RECIPE-SOURCES.json) : adresses affichees dans les livrables, jamais appelees par le code
+    # (une lecture eventuelle passe par la recherche / lecture web du moteur d'IA, deja declare comme sous-traitant)
+    "www.fedlex.admin.ch": NO_CALL, "www.edpb.europa.eu": NO_CALL, "gdpr-info.eu": NO_CALL, "support.google.com": NO_CALL,
+    "transparency.meta.com": NO_CALL, "www.facebook.com": NO_CALL,
+    # atelier de sites (dashboard/site_factory.py) : espace de noms SVG/HTML et domaine d'exemple des sites generes, jamais appeles
+    "www.w3.org": NO_CALL, "votre-domaine.example": NO_CALL,
 }
 SCAN_DIRS = ("dashboard", "core", "workers", "chloe", "orchestrator")
 SCAN_EXT = (".py", ".ps1", ".js", ".html", ".json")

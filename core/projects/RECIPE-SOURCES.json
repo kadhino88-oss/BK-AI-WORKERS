@@ -1,0 +1,98 @@
+{
+  "schema": "BK-RECIPE-SOURCES-V1",
+  "fetchedUtc": "2026-11-02",
+  "note": "Sources lues par le moteur à la date indiquée. verified=false : la page n'a pas pu être lue en entier ; aucune règle n'en est tirée et le point est signalé « à confirmer par un juriste ».",
+  "sources": {
+    "seo-starter": {
+      "title": "Google Search Central : guide de démarrage SEO",
+      "url": "https://developers.google.com/search/docs/fundamentals/seo-starter-guide",
+      "fetchedUtc": "2026-11-02",
+      "verified": true,
+      "claim": "Titres et descriptions uniques, texte de lien descriptif, alt des images, plan de site facultatif."
+    },
+    "title-link": {
+      "title": "Google Search Central : titres de page",
+      "url": "https://developers.google.com/search/docs/appearance/title-link",
+      "fetchedUtc": "2026-11-02",
+      "verified": true,
+      "claim": "Un titre par page, descriptif et concis, sans répétition ni bourrage, dans la langue de la page."
+    },
+    "spam-policies": {
+      "title": "Google Search Central : règles anti-spam",
+      "url": "https://developers.google.com/search/docs/essentials/spam-policies",
+      "fetchedUtc": "2026-11-02",
+      "verified": true,
+      "claim": "Cloaking, pages satellites, contenu produit en masse, liens achetés, texte caché, bourrage de mots-clés : interdits."
+    },
+    "wcag22": {
+      "title": "W3C : WCAG 2.2, référence rapide",
+      "url": "https://www.w3.org/WAI/WCAG22/quickref/",
+      "fetchedUtc": "2026-11-02",
+      "verified": true,
+      "claim": "Contraste 4,5:1 (3:1 pour grand texte), alternatives textuelles, étiquettes de formulaire, clavier, focus visible. Seuils de la taille des cibles non relus."
+    },
+    "gads-rsa": {
+      "title": "Google Ads : annonces responsives du réseau de recherche",
+      "url": "https://support.google.com/google-ads/answer/7684791",
+      "fetchedUtc": "2026-11-02",
+      "verified": true,
+      "claim": "Jusqu'à 15 titres de 30 caractères et 4 descriptions de 90 caractères (minimum 3 titres et 2 descriptions)."
+    },
+    "gads-editorial": {
+      "title": "Google Ads : règles éditoriales",
+      "url": "https://support.google.com/adspolicy/answer/6021546",
+      "fetchedUtc": "2026-11-02",
+      "verified": true,
+      "claim": "Ponctuation, majuscules et répétitions abusives interdites ; l'annonce doit nommer l'entité promue."
+    },
+    "meta-feed-specs": {
+      "title": "Meta : spécifications des annonces image du fil",
+      "url": "https://www.facebook.com/business/ads-guide/image/facebook-feed/traffic",
+      "fetchedUtc": "2026-11-02",
+      "verified": true,
+      "claim": "Ratio 4:5, 1440 x 1800 px conseillés ; texte principal de 50 à 150 caractères ; titre court (27)."
+    },
+    "meta-ad-standards": {
+      "title": "Meta : normes publicitaires",
+      "url": "https://transparency.meta.com/policies/ad-standards/",
+      "fetchedUtc": "2026-11-02",
+      "verified": false,
+      "claim": "La page n'a pas pu être lue en entier par le moteur : relire les normes (attributs personnels, allégations trompeuses, avant/après) avant toute campagne."
+    },
+    "gdpr-art21": {
+      "title": "RGPD art. 21 : droit d'opposition",
+      "url": "https://gdpr-info.eu/art-21-gdpr/",
+      "fetchedUtc": "2026-11-02",
+      "verified": true,
+      "claim": "Al. 2-3 : la personne peut s'opposer à tout moment à la prospection ; ses données ne doivent plus être traitées à cette fin. (Miroir non officiel du texte ; texte officiel : eur-lex.europa.eu.)"
+    },
+    "uwg-fedlex": {
+      "title": "LCD / UWG (RS 241), art. 3 al. 1 lit. o : publicité de masse par télécommunication",
+      "url": "https://www.fedlex.admin.ch/eli/cc/1988/223_223_223/fr",
+      "fetchedUtc": "2026-11-02",
+      "verified": false,
+      "claim": "Texte officiel NON relu par le moteur (page non lisible le 2026-11-02) : aucune règle n'est affirmée ici ; à confirmer par un juriste."
+    },
+    "eprivacy-edpb": {
+      "title": "Directive ePrivacy art. 13 et lignes directrices CEPD 1/2024 sur l'intérêt légitime",
+      "url": "https://www.edpb.europa.eu/our-work-tools/documents/public-consultations/2024/guidelines-12024-processing-personal-data-based_en",
+      "fetchedUtc": "2026-11-02",
+      "verified": false,
+      "claim": "Sources secondaires seulement : le consentement préalable est la règle de l'art. 13 ; le régime B2B varie selon les États. Aucun texte primaire relu : à confirmer par un juriste."
+    },
+    "nlpd-fedlex": {
+      "title": "Loi fédérale sur la protection des données (nLPD, RS 235.1)",
+      "url": "https://www.fedlex.admin.ch/eli/cc/2022/491/fr",
+      "fetchedUtc": "2026-11-02",
+      "verified": false,
+      "claim": "Texte officiel non relu par le moteur : toute obligation citée doit être confirmée sur le texte en vigueur."
+    },
+    "co-fedlex": {
+      "title": "Code des obligations (RS 220)",
+      "url": "https://www.fedlex.admin.ch/eli/cc/27/317_321_377/fr",
+      "fetchedUtc": "2026-11-02",
+      "verified": false,
+      "claim": "Texte officiel non relu par le moteur : clauses à faire valider par un juriste."
+    }
+  }
+}

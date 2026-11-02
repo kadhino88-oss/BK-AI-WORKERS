@@ -1,0 +1,1194 @@
+{
+  "schema": "BK-RECIPE-INDEX-V1",
+  "count": 58,
+  "recipes": [
+    {
+      "id": "alex/gestion-prospects",
+      "title": "Gestion de prospects : 30 prospects qualifiés et brouillons d'approche",
+      "workerId": "alex",
+      "supportingWorkers": [
+        "amina",
+        "emma"
+      ],
+      "minPlan": "solo",
+      "typicalCredits": [
+        60,
+        120
+      ],
+      "typicalHours": [
+        1,
+        3
+      ],
+      "services": [
+        "prospection-sortante",
+        "suivi-crm-opportunites"
+      ],
+      "path": "workers/alex/recipes/gestion-prospects.json"
+    },
+    {
+      "id": "alex/preparation-rendez-vous-decouverte",
+      "title": "Préparation d'un rendez-vous de découverte",
+      "workerId": "alex",
+      "supportingWorkers": [],
+      "minPlan": "solo",
+      "typicalCredits": [
+        13,
+        22
+      ],
+      "typicalHours": [
+        0.5,
+        0.5
+      ],
+      "services": [
+        "preparation-rendez-vous"
+      ],
+      "path": "workers/alex/recipes/preparation-rendez-vous-decouverte.json"
+    },
+    {
+      "id": "alex/qualification-leads-entrants",
+      "title": "Qualification des leads entrants et réponses prêtes",
+      "workerId": "alex",
+      "supportingWorkers": [],
+      "minPlan": "solo",
+      "typicalCredits": [
+        14,
+        24
+      ],
+      "typicalHours": [
+        0.5,
+        1.0
+      ],
+      "services": [
+        "qualification-lead-entrant"
+      ],
+      "path": "workers/alex/recipes/qualification-leads-entrants.json"
+    },
+    {
+      "id": "alex/relance-pipeline-dormant",
+      "title": "Relance du pipeline dormant : brouillons de relance et réactivation",
+      "workerId": "alex",
+      "supportingWorkers": [],
+      "minPlan": "solo",
+      "typicalCredits": [
+        19,
+        32
+      ],
+      "typicalHours": [
+        0.5,
+        1.0
+      ],
+      "services": [
+        "relances-reactivation"
+      ],
+      "path": "workers/alex/recipes/relance-pipeline-dormant.json"
+    },
+    {
+      "id": "amina/note-synthese-sourcee",
+      "title": "Note de synthèse sourcée sur un sujet",
+      "workerId": "amina",
+      "supportingWorkers": [],
+      "minPlan": "solo",
+      "typicalCredits": [
+        22,
+        38
+      ],
+      "typicalHours": [
+        0.5,
+        1.5
+      ],
+      "services": [
+        "note-synthese-sourcee",
+        "revue-de-marche"
+      ],
+      "path": "workers/amina/recipes/note-synthese-sourcee.json"
+    },
+    {
+      "id": "amina/veille-concurrentielle",
+      "title": "Veille concurrentielle : qui sont vos concurrents et que font-ils",
+      "workerId": "amina",
+      "supportingWorkers": [],
+      "minPlan": "solo",
+      "typicalCredits": [
+        22,
+        38
+      ],
+      "typicalHours": [
+        0.5,
+        1.5
+      ],
+      "services": [
+        "veille-concurrentielle",
+        "benchmark-prix"
+      ],
+      "path": "workers/amina/recipes/veille-concurrentielle.json"
+    },
+    {
+      "id": "amina/verification-fait-persona",
+      "title": "Vérification d'une affirmation et fiche persona documentée",
+      "workerId": "amina",
+      "supportingWorkers": [],
+      "minPlan": "solo",
+      "typicalCredits": [
+        12,
+        20
+      ],
+      "typicalHours": [
+        0.5,
+        0.5
+      ],
+      "services": [
+        "verification-de-fait",
+        "fiche-persona"
+      ],
+      "path": "workers/amina/recipes/verification-fait-persona.json"
+    },
+    {
+      "id": "chloe/lancement-offre",
+      "title": "Lancement d'une offre : site, réseaux, publicités et SEO cohérents",
+      "workerId": "chloe",
+      "supportingWorkers": [
+        "lucas",
+        "lea",
+        "emma",
+        "seoya",
+        "maya"
+      ],
+      "minPlan": "equipe",
+      "typicalCredits": [
+        250,
+        450
+      ],
+      "typicalHours": [
+        4,
+        8
+      ],
+      "services": [
+        "coordination-multi-workers"
+      ],
+      "path": "chloe/recipes/lancement-offre.json"
+    },
+    {
+      "id": "clara/audit-contrat-recu",
+      "title": "Relecture et audit d'un contrat reçu, avec NDA si besoin",
+      "workerId": "clara",
+      "supportingWorkers": [],
+      "minPlan": "solo",
+      "typicalCredits": [
+        19,
+        32
+      ],
+      "typicalHours": [
+        0.5,
+        1.0
+      ],
+      "services": [
+        "audit-contrat-recu",
+        "nda-confidentialite"
+      ],
+      "path": "workers/clara/recipes/audit-contrat-recu.json"
+    },
+    {
+      "id": "clara/cgv-cgu-confidentialite",
+      "title": "CGV, CGU, mentions légales et politique de confidentialité",
+      "workerId": "clara",
+      "supportingWorkers": [],
+      "minPlan": "solo",
+      "typicalCredits": [
+        21,
+        35
+      ],
+      "typicalHours": [
+        0.5,
+        1.0
+      ],
+      "services": [
+        "cgv-cgu-mentions-legales",
+        "conformite-donnees"
+      ],
+      "path": "workers/clara/recipes/cgv-cgu-confidentialite.json"
+    },
+    {
+      "id": "clara/redaction-contrat-prestation",
+      "title": "Rédaction d'un contrat de prestation complet",
+      "workerId": "clara",
+      "supportingWorkers": [],
+      "minPlan": "solo",
+      "typicalCredits": [
+        21,
+        35
+      ],
+      "typicalHours": [
+        0.5,
+        1.0
+      ],
+      "services": [
+        "redaction-contrat",
+        "clauses-sensibles"
+      ],
+      "path": "workers/clara/recipes/redaction-contrat-prestation.json"
+    },
+    {
+      "id": "dario/budget-resultat-previsionnel",
+      "title": "Budget et compte de résultat prévisionnel",
+      "workerId": "dario",
+      "supportingWorkers": [],
+      "minPlan": "solo",
+      "typicalCredits": [
+        19,
+        32
+      ],
+      "typicalHours": [
+        0.5,
+        1.0
+      ],
+      "services": [
+        "budget-compte-de-resultat",
+        "prix-de-vente-marge"
+      ],
+      "path": "workers/dario/recipes/budget-resultat-previsionnel.json"
+    },
+    {
+      "id": "dario/ecarts-budget-reel-kpi",
+      "title": "Écarts budget / réel et tableau de bord KPI",
+      "workerId": "dario",
+      "supportingWorkers": [],
+      "minPlan": "solo",
+      "typicalCredits": [
+        14,
+        24
+      ],
+      "typicalHours": [
+        0.5,
+        1.0
+      ],
+      "services": [
+        "ecarts-budget-reel-kpi",
+        "preparation-tva-comptabilite"
+      ],
+      "path": "workers/dario/recipes/ecarts-budget-reel-kpi.json"
+    },
+    {
+      "id": "dario/plan-tresorerie-12-mois",
+      "title": "Plan de trésorerie sur 12 mois",
+      "workerId": "dario",
+      "supportingWorkers": [],
+      "minPlan": "solo",
+      "typicalCredits": [
+        14,
+        24
+      ],
+      "typicalHours": [
+        0.5,
+        1.0
+      ],
+      "services": [
+        "plan-de-tresorerie"
+      ],
+      "path": "workers/dario/recipes/plan-tresorerie-12-mois.json"
+    },
+    {
+      "id": "emma/calendrier-social-30j",
+      "title": "Calendrier de contenu social sur 30 jours (3 réseaux)",
+      "workerId": "emma",
+      "supportingWorkers": [
+        "lea"
+      ],
+      "minPlan": "solo",
+      "typicalCredits": [
+        25,
+        60
+      ],
+      "typicalHours": [
+        0.5,
+        1.5
+      ],
+      "services": [
+        "strategie-calendrier-editorial",
+        "posts-a-la-demande",
+        "publication-reseaux-sociaux"
+      ],
+      "path": "workers/emma/recipes/calendrier-social-30j.json"
+    },
+    {
+      "id": "emma/recyclage-contenu-long",
+      "title": "Un contenu long transformé en micro-contenus",
+      "workerId": "emma",
+      "supportingWorkers": [],
+      "minPlan": "solo",
+      "typicalCredits": [
+        13,
+        22
+      ],
+      "typicalHours": [
+        0.5,
+        0.5
+      ],
+      "services": [
+        "recyclage-de-contenu"
+      ],
+      "path": "workers/emma/recipes/recyclage-contenu-long.json"
+    },
+    {
+      "id": "emma/reponses-commentaires",
+      "title": "Réponses aux commentaires et messages, dans votre voix",
+      "workerId": "emma",
+      "supportingWorkers": [
+        "nora"
+      ],
+      "minPlan": "solo",
+      "typicalCredits": [
+        11,
+        19
+      ],
+      "typicalHours": [
+        0.5,
+        0.5
+      ],
+      "services": [
+        "community-management"
+      ],
+      "path": "workers/emma/recipes/reponses-commentaires.json"
+    },
+    {
+      "id": "emma/scripts-videos-courtes",
+      "title": "Pack de scripts de vidéos courtes (Reels, TikTok, Shorts)",
+      "workerId": "emma",
+      "supportingWorkers": [
+        "lea"
+      ],
+      "minPlan": "solo",
+      "typicalCredits": [
+        16,
+        27
+      ],
+      "typicalHours": [
+        0.5,
+        1.0
+      ],
+      "services": [
+        "scripts-videos-courtes"
+      ],
+      "path": "workers/emma/recipes/scripts-videos-courtes.json"
+    },
+    {
+      "id": "ines/analyse-test-ab",
+      "title": "Analyse d'un test A/B avec test de significativité",
+      "workerId": "ines",
+      "supportingWorkers": [],
+      "minPlan": "solo",
+      "typicalCredits": [
+        11,
+        19
+      ],
+      "typicalHours": [
+        0.5,
+        0.5
+      ],
+      "services": [
+        "test-ab-significativite"
+      ],
+      "path": "workers/ines/recipes/analyse-test-ab.json"
+    },
+    {
+      "id": "ines/audit-qualite-donnees",
+      "title": "Audit de qualité et nettoyage de données",
+      "workerId": "ines",
+      "supportingWorkers": [],
+      "minPlan": "solo",
+      "typicalCredits": [
+        14,
+        24
+      ],
+      "typicalHours": [
+        0.5,
+        1.0
+      ],
+      "services": [
+        "audit-qualite-donnees"
+      ],
+      "path": "workers/ines/recipes/audit-qualite-donnees.json"
+    },
+    {
+      "id": "ines/kpi-conversion-cohortes",
+      "title": "KPI de conversion, acquisition et cohortes",
+      "workerId": "ines",
+      "supportingWorkers": [],
+      "minPlan": "solo",
+      "typicalCredits": [
+        13,
+        22
+      ],
+      "typicalHours": [
+        0.5,
+        0.5
+      ],
+      "services": [
+        "kpi-conversion-cohortes",
+        "tableau-de-bord-decisionnel"
+      ],
+      "path": "workers/ines/recipes/kpi-conversion-cohortes.json"
+    },
+    {
+      "id": "ines/rapport-xlsx-docx-pdf",
+      "title": "Rapport d'analyse : classeur à formules vivantes, document et PDF",
+      "workerId": "ines",
+      "supportingWorkers": [
+        "dario"
+      ],
+      "minPlan": "solo",
+      "typicalCredits": [
+        15,
+        40
+      ],
+      "typicalHours": [
+        0.3,
+        1
+      ],
+      "services": [
+        "analyse-de-donnees",
+        "audit-qualite-donnees",
+        "tableau-de-bord-decisionnel"
+      ],
+      "path": "workers/ines/recipes/rapport-xlsx-docx-pdf.json"
+    },
+    {
+      "id": "lea/charte-graphique",
+      "title": "Identité visuelle et charte graphique",
+      "workerId": "lea",
+      "supportingWorkers": [],
+      "minPlan": "solo",
+      "typicalCredits": [
+        19,
+        32
+      ],
+      "typicalHours": [
+        0.5,
+        1.0
+      ],
+      "services": [
+        "charte-graphique",
+        "logo-pictogramme"
+      ],
+      "path": "workers/lea/recipes/charte-graphique.json"
+    },
+    {
+      "id": "lea/systeme-design-ui",
+      "title": "Système de design et revue d'accessibilité d'une interface",
+      "workerId": "lea",
+      "supportingWorkers": [],
+      "minPlan": "solo",
+      "typicalCredits": [
+        19,
+        32
+      ],
+      "typicalHours": [
+        0.5,
+        1.0
+      ],
+      "services": [
+        "systeme-de-design-ui",
+        "revue-design-accessibilite"
+      ],
+      "path": "workers/lea/recipes/systeme-design-ui.json"
+    },
+    {
+      "id": "lea/visuels-reseaux-sociaux",
+      "title": "Visuels et bannières : briefs et fichiers vectoriels",
+      "workerId": "lea",
+      "supportingWorkers": [
+        "emma"
+      ],
+      "minPlan": "solo",
+      "typicalCredits": [
+        16,
+        27
+      ],
+      "typicalHours": [
+        0.5,
+        1.0
+      ],
+      "services": [
+        "visuel-ponctuel",
+        "brief-creatif-moodboard"
+      ],
+      "path": "workers/lea/recipes/visuels-reseaux-sociaux.json"
+    },
+    {
+      "id": "lucas/audit-accessibilite-wcag",
+      "title": "Contrôle d'accessibilité de base (WCAG 2.2 AA)",
+      "workerId": "lucas",
+      "supportingWorkers": [
+        "lea"
+      ],
+      "minPlan": "solo",
+      "typicalCredits": [
+        21,
+        35
+      ],
+      "typicalHours": [
+        0.5,
+        1.0
+      ],
+      "services": [
+        "accessibilite-web"
+      ],
+      "path": "workers/lucas/recipes/audit-accessibilite-wcag.json"
+    },
+    {
+      "id": "lucas/audit-technique-site",
+      "title": "Audit technique d'un site avec correctifs prêts à coller",
+      "workerId": "lucas",
+      "supportingWorkers": [
+        "seoya"
+      ],
+      "minPlan": "solo",
+      "typicalCredits": [
+        27,
+        46
+      ],
+      "typicalHours": [
+        0.5,
+        1.5
+      ],
+      "services": [
+        "audit-seo-technique",
+        "core-web-vitals-performance"
+      ],
+      "path": "workers/lucas/recipes/audit-technique-site.json"
+    },
+    {
+      "id": "lucas/plan-migration-refonte",
+      "title": "Plan de migration, refonte ou passage en HTTPS",
+      "workerId": "lucas",
+      "supportingWorkers": [],
+      "minPlan": "solo",
+      "typicalCredits": [
+        23,
+        39
+      ],
+      "typicalHours": [
+        0.5,
+        1.5
+      ],
+      "services": [
+        "migration-refonte-https"
+      ],
+      "path": "workers/lucas/recipes/plan-migration-refonte.json"
+    },
+    {
+      "id": "lucas/site-vitrine-pro",
+      "title": "Site vitrine professionnel (FR/EN)",
+      "workerId": "lucas",
+      "supportingWorkers": [
+        "lea",
+        "emma",
+        "seoya"
+      ],
+      "minPlan": "equipe",
+      "typicalCredits": [
+        70,
+        140
+      ],
+      "typicalHours": [
+        1.5,
+        4
+      ],
+      "services": [
+        "brouillons-wordpress-webflow",
+        "accessibilite-web",
+        "core-web-vitals-performance"
+      ],
+      "path": "workers/lucas/recipes/site-vitrine-pro.json"
+    },
+    {
+      "id": "maya/bilan-campagnes-visibilite",
+      "title": "Bilan de campagnes et de visibilité",
+      "workerId": "maya",
+      "supportingWorkers": [
+        "ines"
+      ],
+      "minPlan": "solo",
+      "typicalCredits": [
+        16,
+        27
+      ],
+      "typicalHours": [
+        0.5,
+        1.0
+      ],
+      "services": [
+        "bilan-campagnes-visibilite"
+      ],
+      "path": "workers/maya/recipes/bilan-campagnes-visibilite.json"
+    },
+    {
+      "id": "maya/plan-croissance-funnel",
+      "title": "Plan de croissance : audit du funnel et expériences priorisées",
+      "workerId": "maya",
+      "supportingWorkers": [
+        "ines"
+      ],
+      "minPlan": "solo",
+      "typicalCredits": [
+        21,
+        35
+      ],
+      "typicalHours": [
+        0.5,
+        1.0
+      ],
+      "services": [
+        "plan-de-croissance",
+        "go-to-market-lancement"
+      ],
+      "path": "workers/maya/recipes/plan-croissance-funnel.json"
+    },
+    {
+      "id": "maya/publicites-meta-google",
+      "title": "Publicités Meta et Google : stratégie et jeu complet prêt à importer",
+      "workerId": "maya",
+      "supportingWorkers": [
+        "emma",
+        "lea"
+      ],
+      "minPlan": "equipe",
+      "typicalCredits": [
+        50,
+        110
+      ],
+      "typicalHours": [
+        1.5,
+        3
+      ],
+      "services": [
+        "campagne-payante-plan-media",
+        "go-to-market-lancement"
+      ],
+      "path": "workers/maya/recipes/publicites-meta-google.json"
+    },
+    {
+      "id": "maya/sequences-email-nurturing",
+      "title": "Séquences d'e-mails : bienvenue, nurturing, réactivation",
+      "workerId": "maya",
+      "supportingWorkers": [],
+      "minPlan": "solo",
+      "typicalCredits": [
+        18,
+        30
+      ],
+      "typicalHours": [
+        0.5,
+        1.0
+      ],
+      "services": [
+        "sequences-email-nurturing"
+      ],
+      "path": "workers/maya/recipes/sequences-email-nurturing.json"
+    },
+    {
+      "id": "noah/documents-administratifs",
+      "title": "Documents administratifs : courriers, mémos, procédures",
+      "workerId": "noah",
+      "supportingWorkers": [],
+      "minPlan": "solo",
+      "typicalCredits": [
+        11,
+        19
+      ],
+      "typicalHours": [
+        0.5,
+        0.5
+      ],
+      "services": [
+        "documents-administratifs",
+        "resume-fil-email",
+        "briefing-et-planification"
+      ],
+      "path": "workers/noah/recipes/documents-administratifs.json"
+    },
+    {
+      "id": "noah/reunion-ordre-du-jour-compte-rendu",
+      "title": "Réunion : ordre du jour, compte-rendu et actions assignées",
+      "workerId": "noah",
+      "supportingWorkers": [],
+      "minPlan": "solo",
+      "typicalCredits": [
+        11,
+        19
+      ],
+      "typicalHours": [
+        0.5,
+        0.5
+      ],
+      "services": [
+        "reunion-ordre-du-jour-compte-rendu",
+        "agenda-rendez-vous"
+      ],
+      "path": "workers/noah/recipes/reunion-ordre-du-jour-compte-rendu.json"
+    },
+    {
+      "id": "noah/triage-boite-reception",
+      "title": "Triage de boîte de réception et réponses urgentes prêtes",
+      "workerId": "noah",
+      "supportingWorkers": [],
+      "minPlan": "solo",
+      "typicalCredits": [
+        16,
+        27
+      ],
+      "typicalHours": [
+        0.5,
+        1.0
+      ],
+      "services": [
+        "triage-boite-reception",
+        "reponse-email"
+      ],
+      "path": "workers/noah/recipes/triage-boite-reception.json"
+    },
+    {
+      "id": "nora/faq-base-connaissance",
+      "title": "FAQ, articles d'aide et suivi de satisfaction",
+      "workerId": "nora",
+      "supportingWorkers": [],
+      "minPlan": "solo",
+      "typicalCredits": [
+        12,
+        20
+      ],
+      "typicalHours": [
+        0.5,
+        0.5
+      ],
+      "services": [
+        "base-connaissance-faq",
+        "suivi-satisfaction"
+      ],
+      "path": "workers/nora/recipes/faq-base-connaissance.json"
+    },
+    {
+      "id": "nora/reponse-client-complete",
+      "title": "Réponses complètes à des clients, dans leur langue et votre ton",
+      "workerId": "nora",
+      "supportingWorkers": [],
+      "minPlan": "solo",
+      "typicalCredits": [
+        14,
+        24
+      ],
+      "typicalHours": [
+        0.5,
+        1.0
+      ],
+      "services": [
+        "reponse-client",
+        "note-interne-helpdesk"
+      ],
+      "path": "workers/nora/recipes/reponse-client-complete.json"
+    },
+    {
+      "id": "nora/triage-tickets-desescalade",
+      "title": "Triage de file de tickets et désescalade d'une réclamation",
+      "workerId": "nora",
+      "supportingWorkers": [],
+      "minPlan": "solo",
+      "typicalCredits": [
+        14,
+        24
+      ],
+      "typicalHours": [
+        0.5,
+        1.0
+      ],
+      "services": [
+        "triage-file-tickets",
+        "desescalade-reclamation"
+      ],
+      "path": "workers/nora/recipes/triage-tickets-desescalade.json"
+    },
+    {
+      "id": "rayan/code-transformation-teste",
+      "title": "Script de transformation de données, écrit et testé",
+      "workerId": "rayan",
+      "supportingWorkers": [],
+      "minPlan": "solo",
+      "typicalCredits": [
+        16,
+        27
+      ],
+      "typicalHours": [
+        0.5,
+        1.0
+      ],
+      "services": [
+        "code-transformation-teste",
+        "synchronisation-donnees"
+      ],
+      "path": "workers/rayan/recipes/code-transformation-teste.json"
+    },
+    {
+      "id": "rayan/runbook-surveillance",
+      "title": "Runbook et surveillance de vos automatisations",
+      "workerId": "rayan",
+      "supportingWorkers": [],
+      "minPlan": "solo",
+      "typicalCredits": [
+        12,
+        20
+      ],
+      "typicalHours": [
+        0.5,
+        0.5
+      ],
+      "services": [
+        "runbook-surveillance",
+        "mission-recurrente"
+      ],
+      "path": "workers/rayan/recipes/runbook-surveillance.json"
+    },
+    {
+      "id": "rayan/spec-automatisation-testee",
+      "title": "Spécification d'automatisation « quand X, alors Y », testée à blanc",
+      "workerId": "rayan",
+      "supportingWorkers": [],
+      "minPlan": "solo",
+      "typicalCredits": [
+        19,
+        32
+      ],
+      "typicalHours": [
+        0.5,
+        1.0
+      ],
+      "services": [
+        "spec-automatisation",
+        "integration-outils-connectes"
+      ],
+      "path": "workers/rayan/recipes/spec-automatisation-testee.json"
+    },
+    {
+      "id": "sam/audit-posture-externe",
+      "title": "Audit de posture externe : suis-je exposé ?",
+      "workerId": "sam",
+      "supportingWorkers": [],
+      "minPlan": "solo",
+      "typicalCredits": [
+        21,
+        35
+      ],
+      "typicalHours": [
+        0.5,
+        1.0
+      ],
+      "services": [
+        "audit-posture-externe",
+        "surveillance-disponibilite"
+      ],
+      "path": "workers/sam/recipes/audit-posture-externe.json"
+    },
+    {
+      "id": "sam/plan-durcissement-sauvegardes",
+      "title": "Plan de durcissement et de sauvegarde 3-2-1",
+      "workerId": "sam",
+      "supportingWorkers": [],
+      "minPlan": "solo",
+      "typicalCredits": [
+        16,
+        27
+      ],
+      "typicalHours": [
+        0.5,
+        1.0
+      ],
+      "services": [
+        "durcissement-serveur-poste",
+        "sauvegardes-continuite",
+        "politiques-acces-sensibilisation"
+      ],
+      "path": "workers/sam/recipes/plan-durcissement-sauvegardes.json"
+    },
+    {
+      "id": "sam/registre-traitements-incident",
+      "title": "Registre des traitements de données et réponse à incident",
+      "workerId": "sam",
+      "supportingWorkers": [],
+      "minPlan": "solo",
+      "typicalCredits": [
+        16,
+        27
+      ],
+      "typicalHours": [
+        0.5,
+        1.0
+      ],
+      "services": [
+        "conformite-donnees-registre",
+        "reponse-incident"
+      ],
+      "path": "workers/sam/recipes/registre-traitements-incident.json"
+    },
+    {
+      "id": "seoya/article-seo-complet",
+      "title": "Article de blog optimisé, rédigé en entier",
+      "workerId": "seoya",
+      "supportingWorkers": [],
+      "minPlan": "solo",
+      "typicalCredits": [
+        18,
+        30
+      ],
+      "typicalHours": [
+        0.5,
+        1.0
+      ],
+      "services": [
+        "article-optimise-complet"
+      ],
+      "path": "workers/seoya/recipes/article-seo-complet.json"
+    },
+    {
+      "id": "seoya/audit-seo-complet",
+      "title": "Audit SEO complet d'un site, avec preuve par URL et plan de correction",
+      "workerId": "seoya",
+      "supportingWorkers": [
+        "lucas",
+        "emma"
+      ],
+      "minPlan": "solo",
+      "typicalCredits": [
+        50,
+        110
+      ],
+      "typicalHours": [
+        1,
+        3
+      ],
+      "services": [
+        "mission-seo-geo-complete",
+        "audit-on-page",
+        "article-optimise-complet"
+      ],
+      "path": "workers/seoya/recipes/audit-seo-complet.json"
+    },
+    {
+      "id": "seoya/cluster-thematique",
+      "title": "Cluster thématique : page pilier et pages satellites",
+      "workerId": "seoya",
+      "supportingWorkers": [],
+      "minPlan": "solo",
+      "typicalCredits": [
+        16,
+        27
+      ],
+      "typicalHours": [
+        0.5,
+        1.0
+      ],
+      "services": [
+        "cluster-thematique"
+      ],
+      "path": "workers/seoya/recipes/cluster-thematique.json"
+    },
+    {
+      "id": "seoya/visibilite-assistants-ia",
+      "title": "Visibilité dans les réponses des assistants IA (GEO)",
+      "workerId": "seoya",
+      "supportingWorkers": [],
+      "minPlan": "solo",
+      "typicalCredits": [
+        16,
+        27
+      ],
+      "typicalHours": [
+        0.5,
+        1.0
+      ],
+      "services": [
+        "optimisation-geo"
+      ],
+      "path": "workers/seoya/recipes/visibilite-assistants-ia.json"
+    },
+    {
+      "id": "sophie/fiche-poste-annonce",
+      "title": "Fiche de poste et annonce prête à diffuser",
+      "workerId": "sophie",
+      "supportingWorkers": [],
+      "minPlan": "solo",
+      "typicalCredits": [
+        12,
+        20
+      ],
+      "typicalHours": [
+        0.5,
+        0.5
+      ],
+      "services": [
+        "fiche-poste-annonce",
+        "conformite-recrutement"
+      ],
+      "path": "workers/sophie/recipes/fiche-poste-annonce.json"
+    },
+    {
+      "id": "sophie/onboarding-contrat-travail",
+      "title": "Checklists d'accueil et projet de contrat de travail",
+      "workerId": "sophie",
+      "supportingWorkers": [
+        "clara"
+      ],
+      "minPlan": "solo",
+      "typicalCredits": [
+        12,
+        20
+      ],
+      "typicalHours": [
+        0.5,
+        0.5
+      ],
+      "services": [
+        "onboarding-offboarding",
+        "projet-contrat-travail"
+      ],
+      "path": "workers/sophie/recipes/onboarding-contrat-travail.json"
+    },
+    {
+      "id": "sophie/tri-candidatures-entretiens",
+      "title": "Tri des candidatures et entretien structuré",
+      "workerId": "sophie",
+      "supportingWorkers": [],
+      "minPlan": "solo",
+      "typicalCredits": [
+        16,
+        27
+      ],
+      "typicalHours": [
+        0.5,
+        1.0
+      ],
+      "services": [
+        "tri-candidatures",
+        "entretien-structure-scorecard"
+      ],
+      "path": "workers/sophie/recipes/tri-candidatures-entretiens.json"
+    },
+    {
+      "id": "thomas/conformite-boutique-promotions",
+      "title": "Conformité d'une boutique en ligne et promotions conformes",
+      "workerId": "thomas",
+      "supportingWorkers": [],
+      "minPlan": "solo",
+      "typicalCredits": [
+        16,
+        27
+      ],
+      "typicalHours": [
+        0.5,
+        1.0
+      ],
+      "services": [
+        "conformite-boutique",
+        "promotions-parcours-achat",
+        "suivi-stock-commandes"
+      ],
+      "path": "workers/thomas/recipes/conformite-boutique-promotions.json"
+    },
+    {
+      "id": "thomas/fiches-produit-optimisees",
+      "title": "Fiches produit optimisées pour la vente et le référencement",
+      "workerId": "thomas",
+      "supportingWorkers": [],
+      "minPlan": "solo",
+      "typicalCredits": [
+        18,
+        30
+      ],
+      "typicalHours": [
+        0.5,
+        1.0
+      ],
+      "services": [
+        "fiche-produit-optimisee"
+      ],
+      "path": "workers/thomas/recipes/fiches-produit-optimisees.json"
+    },
+    {
+      "id": "thomas/prix-marge-marketplace",
+      "title": "Prix de vente, marge nette et mise en vente sur une marketplace",
+      "workerId": "thomas",
+      "supportingWorkers": [],
+      "minPlan": "solo",
+      "typicalCredits": [
+        14,
+        24
+      ],
+      "typicalHours": [
+        0.5,
+        1.0
+      ],
+      "services": [
+        "pricing-marge-marketplace",
+        "mise-sur-marketplace"
+      ],
+      "path": "workers/thomas/recipes/prix-marge-marketplace.json"
+    },
+    {
+      "id": "yanis/cadrage-plan-projet",
+      "title": "Cadrage et plan de projet complet",
+      "workerId": "yanis",
+      "supportingWorkers": [],
+      "minPlan": "solo",
+      "typicalCredits": [
+        16,
+        27
+      ],
+      "typicalHours": [
+        0.5,
+        1.0
+      ],
+      "services": [
+        "cadrage-plan-projet",
+        "registre-risques-raid"
+      ],
+      "path": "workers/yanis/recipes/cadrage-plan-projet.json"
+    },
+    {
+      "id": "yanis/coordination-sprints-cloture",
+      "title": "Briefs pour les autres Workers, sprints et bilan de clôture",
+      "workerId": "yanis",
+      "supportingWorkers": [],
+      "minPlan": "solo",
+      "typicalCredits": [
+        12,
+        20
+      ],
+      "typicalHours": [
+        0.5,
+        0.5
+      ],
+      "services": [
+        "coordination-multi-workers",
+        "methode-sprints-cloture"
+      ],
+      "path": "workers/yanis/recipes/coordination-sprints-cloture.json"
+    },
+    {
+      "id": "yanis/point-avancement-comite",
+      "title": "Point d'avancement honnête et comité de pilotage",
+      "workerId": "yanis",
+      "supportingWorkers": [],
+      "minPlan": "solo",
+      "typicalCredits": [
+        12,
+        20
+      ],
+      "typicalHours": [
+        0.5,
+        0.5
+      ],
+      "services": [
+        "point-avancement-rag",
+        "comite-de-pilotage"
+      ],
+      "path": "workers/yanis/recipes/point-avancement-comite.json"
+    }
+  ]
+}

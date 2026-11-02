@@ -1,0 +1,145 @@
+/* Feuille de style de l'atelier de sites BK-AI-WORKERS (kit de conception).
+   Mobile d'abord, aucune police ni ressource externe, focus visible, mouvement réduit respecté.
+   Les couleurs, la police et l'arrondi sont des variables : site_scaffold remplit le bloc :root ci-dessous
+   à partir de la marque (contrastes vérifiés >= 4,5:1). Changez les variables, pas les composants. */
+
+/* @tokens */
+
+/* ---------- base ---------- */
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.6;
+  text-rendering: optimizeLegibility;
+}
+img, svg { max-width: 100%; height: auto; display: block; }
+h1, h2, h3, h4 { font-family: var(--font-heading); line-height: 1.15; margin: 0 0 var(--space-3); color: var(--heading); letter-spacing: -0.01em; }
+h1 { font-size: var(--step-4); }
+h2 { font-size: var(--step-3); }
+h3 { font-size: var(--step-1); }
+p, ul, ol, dl { margin: 0 0 var(--space-3); }
+ul, ol { padding-left: 1.25em; }
+a { color: var(--link); text-underline-offset: 0.18em; }
+a:hover { text-decoration-thickness: 2px; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; border-radius: 2px; }
+.skip-link { position: absolute; left: var(--space-2); top: -4rem; z-index: 100; background: var(--primary); color: var(--on-primary); padding: var(--space-2) var(--space-3); border-radius: var(--radius); }
+.skip-link:focus { top: var(--space-2); }
+.visually-hidden { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ---------- mise en page ---------- */
+.container { width: min(100% - 2 * var(--space-3), var(--max-width)); margin-inline: auto; }
+.section { padding-block: var(--space-7); }
+.section--alt { background: var(--surface); }
+.section__head { max-width: 46rem; margin-bottom: var(--space-5); }
+.section__head p { color: var(--muted); font-size: var(--step-1); }
+.eyebrow { display: inline-block; font-size: var(--step--1); font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent-text); margin-bottom: var(--space-2); }
+.grid { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); }
+.stack > * + * { margin-top: var(--space-3); }
+.prose { max-width: 44rem; }
+.prose h2 { margin-top: var(--space-6); font-size: var(--step-2); }
+.prose h3 { margin-top: var(--space-4); }
+
+/* ---------- en-tête et navigation (sans JavaScript : la navigation passe à la ligne sur mobile) ---------- */
+.site-header { border-bottom: 1px solid var(--border); background: var(--bg); }
+.site-header__inner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-4); padding-block: var(--space-3); }
+.brand { display: inline-flex; align-items: center; gap: var(--space-2); font-family: var(--font-heading); font-weight: 700; font-size: var(--step-1); color: var(--heading); text-decoration: none; }
+.brand__mark { width: 2rem; height: 2rem; flex: none; }
+.nav ul { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-3); list-style: none; margin: 0; padding: 0; }
+.nav a { display: inline-block; padding: var(--space-1) 0; color: var(--text); text-decoration: none; font-weight: 600; }
+.nav a:hover, .nav a[aria-current="page"] { color: var(--link); text-decoration: underline; text-decoration-thickness: 2px; }
+.lang-switch { display: flex; gap: var(--space-2); list-style: none; margin: 0; padding: 0; font-size: var(--step--1); }
+.lang-switch a { color: var(--muted); }
+
+/* ---------- boutons ---------- */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); min-height: 2.75rem; padding: var(--space-2) var(--space-4); border-radius: var(--radius); border: 2px solid var(--primary); background: var(--primary); color: var(--on-primary); font: inherit; font-weight: 700; text-decoration: none; cursor: pointer; transition: background-color 0.2s ease, color 0.2s ease; }
+.btn:hover { background: var(--primary-strong); border-color: var(--primary-strong); color: var(--on-primary); }
+.btn--ghost { background: transparent; color: var(--link); }
+.btn--ghost:hover { background: var(--surface); color: var(--link); }
+.actions { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-4); }
+
+/* ---------- héros ---------- */
+.hero { padding-block: var(--space-7) var(--space-6); background: var(--hero-bg); }
+.hero__inner { display: grid; gap: var(--space-5); align-items: center; }
+.hero h1 { font-size: var(--step-5); max-width: 18ch; }
+.hero__lead { font-size: var(--step-1); color: var(--muted); max-width: 40rem; }
+.hero__art { justify-self: center; width: min(100%, 26rem); }
+
+/* ---------- cartes (services, atouts, offres) ---------- */
+.card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: var(--space-4); }
+.section--alt .card { background: var(--bg); }
+.card__icon { width: 2.5rem; height: 2.5rem; margin-bottom: var(--space-3); color: var(--accent-text); }
+.card h3 { margin-bottom: var(--space-2); }
+.card p:last-child { margin-bottom: 0; }
+
+/* ---------- étapes (déroulement) ---------- */
+.steps { counter-reset: step; list-style: none; padding: 0; display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); }
+.steps li { counter-increment: step; position: relative; padding-top: var(--space-6); }
+.steps li::before { content: counter(step); position: absolute; top: 0; left: 0; width: 2.5rem; height: 2.5rem; display: grid; place-items: center; border-radius: 50%; background: var(--primary); color: var(--on-primary); font-weight: 700; }
+
+/* ---------- preuves vérifiables (jamais d'avis ni de chiffres inventés) ---------- */
+.facts { list-style: none; padding: 0; display: grid; gap: var(--space-3); grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); }
+.facts li { border-left: 4px solid var(--accent); padding: var(--space-2) var(--space-3); background: var(--bg); }
+
+/* ---------- tarifs ---------- */
+.pricing { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); }
+.price { display: flex; flex-direction: column; }
+.price__amount { font-size: var(--step-3); font-weight: 800; color: var(--heading); margin-bottom: var(--space-2); }
+.price ul { flex: 1; }
+.price--featured { border: 2px solid var(--primary); }
+
+/* ---------- FAQ (details/summary : accessible sans script) ---------- */
+.faq details { border-bottom: 1px solid var(--border); padding-block: var(--space-3); }
+.faq summary { cursor: pointer; font-weight: 700; color: var(--heading); }
+.faq details p { margin-top: var(--space-2); margin-bottom: 0; }
+
+/* ---------- appel à l'action ---------- */
+.cta { background: var(--primary); color: var(--on-primary); border-radius: var(--radius); padding: var(--space-6) var(--space-4); text-align: center; }
+.cta h2 { color: var(--on-primary); }
+.cta p { margin-inline: auto; max-width: 40rem; }
+.cta .btn { background: var(--on-primary); color: var(--primary); border-color: var(--on-primary); }
+.cta .btn:hover { background: transparent; color: var(--on-primary); }
+
+/* ---------- contact et formulaire (le formulaire n'envoie rien à un serveur : il ouvre la messagerie) ---------- */
+.contact { display: grid; gap: var(--space-5); grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); }
+.contact dl { display: grid; grid-template-columns: max-content 1fr; gap: var(--space-2) var(--space-3); }
+.contact dt { font-weight: 700; }
+.contact dd { margin: 0; }
+.form { display: grid; gap: var(--space-3); }
+.form label { font-weight: 600; display: block; margin-bottom: var(--space-1); }
+.form input, .form textarea, .form select { width: 100%; font: inherit; color: var(--text); background: var(--bg); border: 1px solid var(--border-strong); border-radius: var(--radius); padding: var(--space-2) var(--space-3); }
+.form textarea { min-height: 8rem; resize: vertical; }
+.form__note { font-size: var(--step--1); color: var(--muted); }
+.notice { border: 1px solid var(--border); border-left: 4px solid var(--accent); padding: var(--space-3); border-radius: var(--radius); background: var(--surface); }
+
+/* ---------- blog ---------- */
+.posts { display: grid; gap: var(--space-4); }
+.post-meta { color: var(--muted); font-size: var(--step--1); }
+
+/* ---------- pied de page ---------- */
+.site-footer { margin-top: var(--space-7); padding-block: var(--space-6); background: var(--footer-bg); color: var(--on-footer); font-size: var(--step--1); }
+.site-footer a { color: var(--on-footer); }
+.site-footer__inner { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); }
+.site-footer ul { list-style: none; padding: 0; margin: 0; }
+.site-footer li + li { margin-top: var(--space-1); }
+
+/* ---------- écrans plus larges ---------- */
+@media (min-width: 48rem) {
+  .hero__inner { grid-template-columns: 1.2fr 1fr; }
+  .section { padding-block: var(--space-8); }
+}
+
+/* ---------- mouvement réduit ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}
+
+/* ---------- impression ---------- */
+@media print {
+  .site-header nav, .lang-switch, .skip-link, .actions { display: none; }
+  body { background: #fff; color: #000; }
+}
