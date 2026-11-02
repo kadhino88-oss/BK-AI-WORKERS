@@ -90,7 +90,7 @@
       else if (r === "MAX_DURATION") { out.label = "En pause : durée maximale"; out.actionKind = "resume"; out.action = "Le projet a atteint la durée maximale de votre forfait. Reprenez-le pour continuer, ou annulez."; }
       else { out.actionKind = "resume"; out.action = "Le projet est en pause : aucune nouvelle étape ne démarre. Reprenez quand vous voulez."; }
     } else if (s === "QUEUED") {
-      out.action = p && p.queuePosition ? `Position ${p.queuePosition} dans la file : la planification commence dès qu'une place se libère.` : "La planification commence dès qu'une place se libère.";
+      out.action = p && p.queuePosition ? `Position ${Number(p.queuePosition) || 0} dans la file : la planification commence dès qu'une place se libère.` : "La planification commence dès qu'une place se libère.";
     } else if (s === "FAILED") {
       out.actionKind = "failed";
       out.action = "Le projet s'est arrêté sur une erreur. Les livrables déjà produits restent disponibles ; vous pouvez relancer une étape en échec.";
