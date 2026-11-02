@@ -69,6 +69,12 @@ class RecipeIntegrity(unittest.TestCase):
         cls.schema = _load("core/projects/RECIPE-SCHEMA.json")
         cls.sources = recipes.source_ids(REPO)
 
+    def setUp(self):
+        # Les recettes de sites (lucas/site-vitrine-pro, chloe/lancement-offre) portent des criteres « site_check » : comme dans le serveur, l'atelier de sites
+        # (dashboard/site_factory.py) enregistre ce type. Re-enregistre a chaque test : un autre test peut l'avoir retire (test_plan).
+        import site_factory
+        site_factory.register_checks()
+
     def test_count_and_every_worker_has_three(self):
         self.assertGreaterEqual(len(self.all), 51)
         for w in WORKERS17:

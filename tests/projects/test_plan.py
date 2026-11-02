@@ -43,6 +43,12 @@ def good_plan():
 
 class PlanValidation(unittest.TestCase):
     def test_good_plan_is_valid_and_normalised(self):
+        # dans le serveur, l'atelier de sites (site_factory) enregistre site_check a son import : ici on teste le moteur SEUL, type non enregistre
+        projects_plan = sys.modules["projects_plan"]
+        was_registered = "site_check" in projects_plan._EXTRA_CHECK_TYPES
+        projects_plan._EXTRA_CHECK_TYPES.discard("site_check")
+        if was_registered:
+            self.addCleanup(projects_plan.register_check_type, "site_check")
         r = projects.validate_plan(good_plan(), SCOPE)
         self.assertTrue(r.ok, r.errors)
         self.assertEqual(len(r.plan["steps"]), 4)
