@@ -1,0 +1,176 @@
+<!-- section:hero -->
+<section class="hero" aria-labelledby="main-title">
+  <div class="container hero__inner">
+    <div>
+      <p class="eyebrow">[TO WRITE: trade and place, 3 to 5 words]</p>
+      <h1 id="main-title">[TO WRITE: clear promise, what the customer gets, 6 to 10 words]</h1>
+      <p class="hero__lead">[TO WRITE: for whom, which problem, how; 1 to 2 concrete sentences, no superlatives, no figure the client did not give]</p>
+      <div class="actions">
+        <a class="btn" href="{{page:contact}}">[TO WRITE: main action, e.g. Book an appointment]</a>
+        <a class="btn btn--ghost" href="{{page:services}}">[TO WRITE: secondary action, e.g. See our services]</a>
+      </div>
+    </div>
+    <div class="hero__art">{{illustration}}</div>
+  </div>
+</section>
+<!-- section:services -->
+<section class="section" aria-labelledby="services-title">
+  <div class="container">
+    <div class="section__head">
+      <h2 id="services-title">[TO WRITE: services section title]</h2>
+      <p>[TO WRITE: one introductory sentence]</p>
+    </div>
+    <div class="grid">
+      <article class="card">{{icon:check}}<h3>[TO WRITE: service 1]</h3><p>[TO WRITE: concrete benefit in 1 to 2 sentences]</p></article>
+      <article class="card">{{icon:check}}<h3>[TO WRITE: service 2]</h3><p>[TO WRITE: concrete benefit in 1 to 2 sentences]</p></article>
+      <article class="card">{{icon:check}}<h3>[TO WRITE: service 3]</h3><p>[TO WRITE: concrete benefit in 1 to 2 sentences]</p></article>
+    </div>
+  </div>
+</section>
+<!-- section:process -->
+<section class="section section--alt" aria-labelledby="process-title">
+  <div class="container">
+    <div class="section__head"><h2 id="process-title">[TO WRITE: how it works]</h2></div>
+    <ol class="steps">
+      <li><h3>[TO WRITE: step 1]</h3><p>[TO WRITE: what happens, one sentence]</p></li>
+      <li><h3>[TO WRITE: step 2]</h3><p>[TO WRITE: what happens, one sentence]</p></li>
+      <li><h3>[TO WRITE: step 3]</h3><p>[TO WRITE: what happens, one sentence]</p></li>
+    </ol>
+  </div>
+</section>
+<!-- section:facts -->
+<section class="section" aria-labelledby="facts-title">
+  <div class="container">
+    <div class="section__head">
+      <h2 id="facts-title">[TO WRITE: why choose us]</h2>
+      <p>[TO WRITE: only verifiable facts given by the client (training, area served, opening hours, real guarantees); never invented reviews, ratings or customer counts]</p>
+    </div>
+    <ul class="facts">
+      <li>[TO WRITE: verifiable fact 1]</li>
+      <li>[TO WRITE: verifiable fact 2]</li>
+      <li>[TO WRITE: verifiable fact 3]</li>
+    </ul>
+  </div>
+</section>
+<!-- section:pricing -->
+<section class="section" aria-labelledby="pricing-title">
+  <div class="container">
+    <div class="section__head"><h2 id="pricing-title">[TO WRITE: pricing]</h2><p>[TO WRITE: what is included; prices given by the client only, otherwise "on request"]</p></div>
+    <div class="pricing">
+      <article class="card price"><h3>[TO WRITE: package]</h3><p class="price__amount">[À COMPLÉTER : prix de la formule]</p><ul><li>[TO WRITE: included]</li></ul><a class="btn btn--ghost" href="{{page:contact}}">[TO WRITE: ask]</a></article>
+    </div>
+  </div>
+</section>
+<!-- section:faq -->
+<section class="section section--alt faq" aria-labelledby="faq-title">
+  <div class="container prose">
+    <h2 id="faq-title">[TO WRITE: frequently asked questions]</h2>
+    <details><summary>[TO WRITE: question 1]</summary><p>[TO WRITE: answer]</p></details>
+    <details><summary>[TO WRITE: question 2]</summary><p>[TO WRITE: answer]</p></details>
+    <details><summary>[TO WRITE: question 3]</summary><p>[TO WRITE: answer]</p></details>
+  </div>
+</section>
+<!-- section:cta -->
+<section class="section">
+  <div class="container cta">
+    <h2>[TO WRITE: call to action]</h2>
+    <p>[TO WRITE: one reassuring, concrete sentence]</p>
+    <a class="btn" href="{{page:contact}}">[TO WRITE: button]</a>
+  </div>
+</section>
+<!-- section:about -->
+<section class="section" aria-labelledby="about-title">
+  <div class="container prose">
+    <h1 id="about-title">[TO WRITE: about page title]</h1>
+    <p>[TO WRITE: story and approach, from the client's information only]</p>
+    <h2>[TO WRITE: our method]</h2>
+    <p>[TO WRITE: text]</p>
+  </div>
+</section>
+<!-- section:page-title -->
+<section class="section section--alt">
+  <div class="container section__head">
+    <h1>[TO WRITE: page title]</h1>
+    <p>[TO WRITE: page introduction]</p>
+  </div>
+</section>
+<!-- section:contact -->
+<section class="section" aria-labelledby="contact-title">
+  <div class="container">
+    <div class="section__head"><h1 id="contact-title">[TO WRITE: contact page title]</h1><p>[TO WRITE: when and how you answer]</p></div>
+    <div class="contact">
+      <div>
+        <h2>Contact details</h2>
+        <dl>
+          <dt>E-mail</dt><dd>{{contact.email_link}}</dd>
+          <dt>Phone</dt><dd>{{contact.phone_link}}</dd>
+          <dt>Address</dt><dd>{{contact.address}}</dd>
+          <dt>Opening hours</dt><dd>{{contact.hours}}</dd>
+        </dl>
+      </div>
+      <form class="form" action="{{contact.mailto}}" method="post" enctype="text/plain">
+        <h2>Write a message</h2>
+        <div><label for="name">Name</label><input id="name" name="name" type="text" autocomplete="name" required></div>
+        <div><label for="email">E-mail</label><input id="email" name="email" type="email" autocomplete="email" required></div>
+        <div><label for="message">Message</label><textarea id="message" name="message" required></textarea></div>
+        <p class="form__note">This form opens your e-mail program with the message ready to send: the website stores and transmits no data.</p>
+        <button class="btn" type="submit">Prepare the message</button>
+      </form>
+    </div>
+  </div>
+</section>
+<!-- section:legal -->
+<section class="section">
+  <div class="container prose">
+    <h1>Legal notice</h1>
+    <h2>Publisher</h2>
+    <p>{{legal.company}}<br>{{legal.address}}<br>Company number: {{legal.uid}}<br>Responsible for publication: {{legal.responsible}}<br>Contact: {{contact.email_link}}</p>
+    <h2>Hosting</h2>
+    <p>{{legal.host}}</p>
+    <h2>Intellectual property</h2>
+    <p>The texts, illustrations and graphic elements of this website belong to {{legal.company}} unless stated otherwise. Reproduction without written permission is prohibited.</p>
+    <h2>Liability</h2>
+    <p>The information on this website is provided for guidance and may change at any time. Links to third-party websites are provided for convenience; their content is not the publisher's responsibility.</p>
+    <p class="notice">Template text to be reviewed by a lawyer before going live.</p>
+  </div>
+</section>
+<!-- section:privacy -->
+<section class="section">
+  <div class="container prose">
+    <h1>Privacy policy</h1>
+    <h2>Controller</h2>
+    <p>{{legal.company}}, {{legal.address}}. Contact: {{contact.email_link}}.</p>
+    <h2>Data collected</h2>
+    <p>This website sets no cookies and uses no analytics or third-party services. It collects no data by itself. When you write to us by e-mail or call us, we use your details and your message only to answer you.</p>
+    <h2>Retention</h2>
+    <p>{{legal.retention}}</p>
+    <h2>Your rights</h2>
+    <p>Under the Swiss Federal Act on Data Protection (FADP) and, where applicable, the GDPR, you may request access to, correction or deletion of your data by writing to the address above.</p>
+    <p class="notice">Template text to be reviewed by a lawyer before going live.</p>
+  </div>
+</section>
+<!-- section:posts -->
+<section class="section">
+  <div class="container">
+    <div class="section__head"><h1>[TO WRITE: blog title]</h1><p>[TO WRITE: what the blog is about]</p></div>
+    <div class="posts">
+      <article class="card"><h2><a href="{{page:article}}">[TO WRITE: article title]</a></h2><p>[TO WRITE: summary]</p></article>
+    </div>
+  </div>
+</section>
+<!-- section:article -->
+<article class="section">
+  <div class="container prose">
+    <h1>[TO WRITE: article title]</h1>
+    <p>[TO WRITE: standfirst]</p>
+    <h2>[TO WRITE: subheading]</h2>
+    <p>[TO WRITE: text; link to the source when a fact comes from elsewhere]</p>
+  </div>
+</article>
+<!-- section:text -->
+<section class="section">
+  <div class="container prose">
+    <h2>[TO WRITE: subheading]</h2>
+    <p>[TO WRITE: text]</p>
+  </div>
+</section>

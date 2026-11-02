@@ -1,0 +1,231 @@
+{
+  "_comment": "Seuils et listes des controles automatiques de l'atelier de sites (docs/AUTONOMY-ENGINE.md section 8.4). Lu par dashboard/site_checks.py et dashboard/site_factory.py. Le proprietaire peut regler les seuils sans toucher au code. Un profil herite de « default » et ne surcharge que ce qu'il change. Les regles de securite (traceurs, affirmations non verifiees, formulaire de mot de passe ou de carte) tournent TOUJOURS, quelle que soit la liste « must » d'un critere.",
+  "version": 1,
+  "families": [
+    "html",
+    "meta",
+    "links",
+    "img",
+    "a11y",
+    "perf",
+    "privacy",
+    "i18n",
+    "seo",
+    "content"
+  ],
+  "alwaysRun": [
+    "privacy.trackers",
+    "claims.unverified",
+    "abuse.credential_form"
+  ],
+  "default": {
+    "maxPages": 60,
+    "title": {
+      "min": 30,
+      "max": 60,
+      "hardMin": 15,
+      "hardMax": 75
+    },
+    "description": {
+      "min": 70,
+      "max": 160,
+      "hardMin": 40,
+      "hardMax": 200
+    },
+    "perf": {
+      "htmlKb": 100,
+      "cssKb": 100,
+      "jsKb": 50,
+      "pageKb": 1024,
+      "totalMb": 10,
+      "imgKb": 250
+    },
+    "contrast": {
+      "normal": 4.5
+    },
+    "requireParity": true,
+    "requireCanonical": true,
+    "requireOrphanCheck": true,
+    "requireSkipLink": "warn",
+    "requireReducedMotion": "warn",
+    "requireLazy": "warn"
+  },
+  "profiles": {
+    "vitrine": {},
+    "blog": {},
+    "landing": {
+      "requireParity": false,
+      "requireOrphanCheck": false,
+      "maxPages": 12
+    },
+    "minimal": {
+      "requireParity": false,
+      "requireOrphanCheck": false,
+      "requireSkipLink": "off",
+      "requireReducedMotion": "off",
+      "requireLazy": "off",
+      "title": {
+        "min": 10,
+        "max": 70,
+        "hardMin": 3,
+        "hardMax": 90
+      },
+      "description": {
+        "min": 40,
+        "max": 200,
+        "hardMin": 20,
+        "hardMax": 260
+      }
+    }
+  },
+  "trackerHosts": [
+    "google-analytics.com",
+    "googletagmanager.com",
+    "googleadservices.com",
+    "googlesyndication.com",
+    "doubleclick.net",
+    "analytics.google.com",
+    "connect.facebook.net",
+    "facebook.net",
+    "fbcdn.net/tr",
+    "hotjar.com",
+    "static.hotjar.com",
+    "clarity.ms",
+    "px.ads.linkedin.com",
+    "snap.licdn.com",
+    "analytics.tiktok.com",
+    "static.ads-twitter.com",
+    "ads-twitter.com",
+    "bat.bing.com",
+    "plausible.io",
+    "matomo.cloud",
+    "cdn.segment.com",
+    "mixpanel.com",
+    "fullstory.com",
+    "heapanalytics.com",
+    "hs-scripts.com",
+    "hs-analytics.net",
+    "intercom.io",
+    "widget.intercom.io",
+    "crisp.chat",
+    "tawk.to",
+    "drift.com",
+    "pinterest.com/ct",
+    "ct.pinterest.com",
+    "criteo.com",
+    "taboola.com",
+    "outbrain.com",
+    "sentry-cdn.com"
+  ],
+  "trackerPatterns": [
+    "\\bgtag\\s*\\(",
+    "\\bfbq\\s*\\(",
+    "\\bga\\s*\\(\\s*['\"]create",
+    "_gaq\\.push",
+    "dataLayer\\s*=",
+    "\\bhj\\s*\\(",
+    "\\bclarity\\s*\\("
+  ],
+  "neutralHosts": [
+    "www.w3.org",
+    "w3.org",
+    "schema.org",
+    "www.sitemaps.org",
+    "sitemaps.org",
+    "purl.org",
+    "www.google.com/maps"
+  ],
+  "storagePatterns": [
+    "document\\s*\\.\\s*cookie",
+    "\\blocalStorage\\b",
+    "\\bsessionStorage\\b",
+    "\\bindexedDB\\b"
+  ],
+  "networkPatterns": [
+    "\\bfetch\\s*\\(",
+    "XMLHttpRequest",
+    "navigator\\s*\\.\\s*sendBeacon",
+    "\\bWebSocket\\s*\\(",
+    "\\bEventSource\\s*\\("
+  ],
+  "dynamicCodePatterns": [
+    "\\beval\\s*\\(",
+    "new\\s+Function\\s*\\(",
+    "document\\s*\\.\\s*write\\s*\\("
+  ],
+  "credentialFieldNames": [
+    "password",
+    "passwd",
+    "mot[-_ ]?de[-_ ]?passe",
+    "motdepasse",
+    "pwd",
+    "card",
+    "carte",
+    "cvv",
+    "cvc",
+    "ccnum",
+    "cc-number",
+    "iban",
+    "cardnumber"
+  ],
+  "claimPatterns": [
+    {
+      "id": "client_count",
+      "kind": "client_counts",
+      "re": "(?:\\+\\s*\\d[\\d\\s.,'’]*|\\b\\d[\\d\\s.,'’]*\\s*\\+|\\b(?:plus\\s+de|over|more\\s+than|d[ée]j[àa]|already)\\s+\\d[\\d\\s.,'’]*)\\s*(?:clients?|patients?|utilisateurs?|entreprises?|membres|abonn[ée]s?|customers?|users?|avis|reviews?)\\b|\\b\\d[\\d\\s.,'’]*\\s*(?:clients?|patients?|utilisateurs?|entreprises?|membres|abonn[ée]s?|customers?|users?|avis|reviews?)\\s+(?:satisfait|content|heureux|accompagn|conseill|aid[ée]|servi|happy|satisfied|helped|nous\\s+font)",
+      "label": "nombre de clients, patients ou avis"
+    },
+    {
+      "id": "rating",
+      "kind": "ratings",
+      "re": "\\b\\d(?:[.,]\\d)?\\s*/\\s*5\\b|\\b\\d(?:[.,]\\d)?\\s*(?:étoiles?|stars?)\\b|[★⭐]{2,}|\\bnot[ée]\\s+\\d(?:[.,]\\d)?\\b",
+      "label": "note ou étoiles"
+    },
+    {
+      "id": "aggregate_rating",
+      "kind": "ratings",
+      "re": "aggregateRating|reviewRating|\"@type\"\\s*:\\s*\"Review\"",
+      "label": "balisage d'avis (AggregateRating, Review)"
+    },
+    {
+      "id": "certified",
+      "kind": "certifications",
+      "re": "\\bcertifi(?:é|ée|és|ées|cation|cations)\\b|\\bcertified\\b|\\bISO\\s?\\d{4,5}\\b|\\blabellis(?:é|ée|és|ées)\\b|\\bagr(?:éé|éée|éés|éées)\\b|\\baccr[ée]dit(?:é|ée|és|ées|ed)\\b|\\bprim(?:é|ée|és|ées)\\b|\\baward[- ]winning\\b",
+      "label": "certification, label ou distinction"
+    },
+    {
+      "id": "testimonial_words",
+      "kind": "testimonials",
+      "re": "\\bils\\s+nous\\s+font\\s+confiance\\b|\\bavis\\s+(?:clients?|v[ée]rifi[ée]s?|google)\\b|\\btrusted\\s+by\\b|\\bwhat\\s+our\\s+(?:clients|customers)\\s+say\\b|\\bce\\s+que\\s+disent\\s+nos\\s+(?:clients|patients)\\b",
+      "label": "formule de preuve sociale"
+    }
+  ],
+  "softClaimPatterns": [
+    {
+      "id": "years",
+      "kind": "years",
+      "re": "\\b\\d{1,2}\\s*(?:ans|années)\\s+d['’]exp[ée]rience\\b|\\b\\d{1,2}\\+?\\s*years\\s+of\\s+experience\\b|\\bdepuis\\s+(?:19|20)\\d{2}\\b|\\bsince\\s+(?:19|20)\\d{2}\\b",
+      "label": "ancienneté"
+    }
+  ],
+  "testimonialClassHints": [
+    "testimonial",
+    "temoignage",
+    "témoignage",
+    "review",
+    "avis-client",
+    "customer-quote",
+    "client-quote"
+  ],
+  "placeholderRe": "\\[À COMPLÉTER\\s*:[^\\]]{0,200}\\]",
+  "placeholderDomain": "votre-domaine.example",
+  "hosts": {
+    "infomaniak": "Infomaniak",
+    "hostpoint": "Hostpoint",
+    "ovh": "OVH",
+    "netlify": "Netlify",
+    "cloudflare-pages": "Cloudflare Pages",
+    "github-pages": "GitHub Pages",
+    "autre": "un autre hébergeur"
+  }
+}

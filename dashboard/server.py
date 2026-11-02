@@ -4714,6 +4714,12 @@ import projects_wiring
 
 # Moteur de projets (dashboard/projects*.py, docs/AUTONOMY-ENGINE.md) : DORMANT tant que BK_PROJECTS n'est pas 1 (routes en 503, superviseur arrete).
 PROJECTS, PROJECTS_API = projects_wiring.build(projects_wiring.ModuleView(globals()))
+# Apercu prive des sites de projet (dashboard/site_preview.py, cree par site_routes.register) : contexte de securite separe (CSP sandbox).
+try:
+    import site_routes as _site_routes    # deja charge par projects_wiring.build
+    SITE_PREVIEW = _site_routes.PREVIEW
+except Exception:  # noqa: BLE001 - un module optionnel ne casse jamais le serveur
+    SITE_PREVIEW = None
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -4895,6 +4901,8 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         parsed = urlparse(self.path)
         path = unquote(parsed.path)
+        if SITE_PREVIEW is not None and SITE_PREVIEW.handle_get(self, path):  # /preview/<jeton>/... : avant la porte, aucun cookie lu (dormant si BK_PROJECTS=0)
+            return
 
         if route_requires_gate(path) and not self._gate_authenticated():
             self._send_gate_required()
@@ -6480,11 +6488,11 @@ if __name__ == "__main__":
         raise SystemExit("BK_REQUIRE_GATE=1 mais aucune porte d'acces definie (BK_GATE_HASH ou dashboard/.gate/password.hash) : demarrage refuse.")
     _load_sessions()
     reap_async_jobs(boot=True)
-    PROJECTS.reap(boot=True)   # projets : etapes sans processus -> reprise, articles EXECUTING -> a verifier (sans effet si BK_PROJECTS=0)
     try:
         USAGE.reap(boot=True)        # les reservations d'usage des missions tuees par le redemarrage sont liberees (les etapes de projet suivent leur delai)
     except Exception as exc:  # noqa: BLE001 - un grand livre abime ne bloque pas le demarrage
         USAGE._fail_open("reap", "-", exc)
+    PROJECTS.reap(boot=True)   # projets : etapes sans processus -> reprise, articles EXECUTING -> a verifier (sans effet si BK_PROJECTS=0)
     purge_old_task_files()
     server = ThreadingHTTPServer((os.environ.get("BK_LISTEN_HOST", "127.0.0.1"), port), Handler)
     print(f"BK-AI-WORKERS dashboard sur http://{os.environ.get('BK_LISTEN_HOST', '127.0.0.1')}:{port}")
