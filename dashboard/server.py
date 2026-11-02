@@ -65,7 +65,16 @@ def _write_json_atomic(path, data, **dump_kwargs):
             json.dump(data, f, **dump_kwargs)
             f.flush()
             os.fsync(f.fileno())
-        os.replace(tmp, path)
+        for attempt in range(60):
+            try:
+                os.replace(tmp, path)
+                break
+            except PermissionError:
+                # Windows : un lecteur (interrogation /progress, autre thread) tient le fichier ouvert pile pendant le remplacement ; sous Linux (production) cela
+                # n'arrive pas. Sans ces essais, la fin d'étape d'un projet échouait et l'étape restait « RUNNING » (banc de preuve, 2026-11-02).
+                if attempt == 59:
+                    raise
+                time.sleep(0.005 * (attempt + 1))
     finally:
         if os.path.exists(tmp):
             try:
