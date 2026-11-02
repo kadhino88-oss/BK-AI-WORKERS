@@ -328,6 +328,12 @@ class Capabilities(Base):
         self.assertIn("webSearch", pr.needs_from_objective("Cherche sur le web les prix de mes concurrents"))
         self.assertIn("codeExecution", pr.needs_from_objective("Execute le script python pour calculer"))
         self.assertEqual(pr.needs_from_objective("Ecris un mail de relance poli"), [])
+        # cas reel du 2026-11-02 : le moteur suisse a invente des « prospects reels » (en fait les projets du client) faute de recherche web
+        self.assertIn("webSearch", pr.needs_from_objective("alors oui continue sur les 5 prospects ajoute d'autres entreprises"))
+        self.assertIn("webSearch", pr.needs_from_objective("Trouve 10 entreprises reelles a Geneve"))
+        self.assertIn("webSearch", pr.needs_from_objective("Fais un audit SEO de mon site"))
+        self.assertIn("webSearch", pr.needs_from_objective("Analyse https://exemple.ch"))
+        self.assertEqual(pr.needs_from_objective("Ecris un e-mail de prospection de 8 lignes"), [])
         note = pr.gap_note("Moteur local (Llama 3)", ["officeFiles"], pr.capabilities_for("ollama"))
         self.assertIn("Cette partie n'a PAS été réalisée", note)
         self.assertEqual(pr.gap_note("Claude", ["officeFiles"], pr.capabilities_for("anthropic")), "")

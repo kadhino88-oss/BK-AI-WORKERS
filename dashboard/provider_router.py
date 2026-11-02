@@ -132,7 +132,9 @@ def engine_supports(engine_id, capability, byok_kind=None):
 
 _NEEDS_PATTERNS = (
     ("officeFiles", re.compile(r"\b(excel|xlsx|tableur|spreadsheet|powerpoint|pptx|docx|word\b|\.pdf|en pdf|fichier pdf|pdf\b)", re.I)),
-    ("webSearch", re.compile(r"(cherche\w*\s+(sur\s+)?(le\s+)?(web|internet|google)|recherche\w*\s+(web|en ligne|sur internet|google)|search (the )?(web|online|google)|google\b|derni[eè]res? (nouvelles|actualit)|latest news|actualit[ée]s? (du jour|r[ée]centes?)|veille concurrentielle)", re.I)),
+    ("webSearch", re.compile(r"(cherche\w*\s+(sur\s+)?(le\s+)?(web|internet|google)|recherche\w*\s+(web|en ligne|sur internet|google)|search (the )?(web|online|google)|google\b|derni[eè]res? (nouvelles|actualit)|latest news|actualit[ée]s? (du jour|r[ée]centes?)|veille concurrentielle"
+                         r"|\bprospects?\b|entreprises?\s+r[ée]elles?|\bconcurrents?\b|\bcompetitors?\b|\bleads?\s+(r[ée]els?|qualifi[ée]s?)"
+                         r"|(audit|analyse)\w*\s+(seo|de\s+(mon|ton|votre|ce|le)\s+site)|https?://)", re.I)),
     ("codeExecution", re.compile(r"(ex[ée]cute\w*\s+(du\s+|le\s+|un\s+)?(code|script)|run (the |some )?(code|script)|script python|python script)", re.I)),
 )
 
