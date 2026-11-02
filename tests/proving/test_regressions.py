@@ -59,6 +59,21 @@ class SmallProjectBudgetTests(unittest.TestCase):
         self.assertGreaterEqual(st["budget"]["creditsCap"], 15 + 14)
 
 
+class QuotaViewTests(unittest.TestCase):
+    """La progression met la vue d'usage en cache 5 s. Au moment où le projet passe en WAITING_QUOTA, le client doit voir la fenêtre PLEINE, pas la vue d'avant la dernière étape."""
+
+    def test_progress_shows_the_full_window_at_the_moment_of_the_pause(self):
+        from engine_harness import FakeUsage, CLIENT
+        usage = FakeUsage(session=14, week=500, month=900)
+        e = Env(usage=usage, chf=0.15)
+        self.addCleanup(e.close)
+        pid = e.create(credits_cap=60)
+        e.drive(pid, lambda s: (e.svc.usage_cached(CLIENT), s["status"] == "WAITING_QUOTA")[1], timeout=60)
+        shown = e.svc.progress(CLIENT, pid)["usage"]["allowedNow"]
+        self.assertEqual(shown, usage.remaining(CLIENT).allowedNow)
+        self.assertLess(shown, 6)
+
+
 class AtomicWriteTests(unittest.TestCase):
     """Windows : un lecteur qui tient state.json au moment du remplacement faisait échouer l'écriture (WinError 5) : la fin d'étape était perdue et l'étape
     restait RUNNING. server._write_json_atomic (écrivain de projects_store) doit réessayer, comme project_paths.atomic_write_bytes."""

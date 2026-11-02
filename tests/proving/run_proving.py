@@ -109,6 +109,10 @@ def main():
         failed = [c for c in CHECKS if not c["ok"]]
         print("\n%d contrôles, %d échec(s). Preuves : %s" % (len(CHECKS), len(failed), out_path))
         if keep:
+            creds = args[args.index("--creds") + 1] if "--creds" in args else None
+            if creds:                                          # identifiants de TEST tirés au sort pour ce lancement (serveur local jetable), hors du dépôt
+                with open(creds, "w", encoding="utf-8") as f:
+                    json.dump({"port": port, "password": H.E.PASSWORD, "accounts": {k: {"email": "%s@mail-test.example" % k, "clientId": v[1]} for k, v in lab.clients.items()}}, f)
             print("Serveur laissé démarré : http://127.0.0.1:%d  (Ctrl+C pour arrêter)" % port)
             try:
                 while True:

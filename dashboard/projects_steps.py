@@ -101,6 +101,7 @@ class StepMixin:
         binding = pu.g(view, "binding") or "month"
         reason = {"session": "SESSION", "week": "WEEK", "month": "MONTH"}.get(binding, "MONTH")
         st = t.state
+        self._usage_cache.pop(st["clientId"], None)       # la vue d'usage mise en cache (5 s) date d'avant la dernière étape : le client doit voir la fenêtre pleine
         if st["status"] != "WAITING_QUOTA":
             t.transition("WAITING_QUOTA", reason, waitingFor="QUOTA", resumeAtUtc=resume)
             label = {"SESSION": "de session", "WEEK": "de la semaine", "MONTH": "du mois"}[reason]
