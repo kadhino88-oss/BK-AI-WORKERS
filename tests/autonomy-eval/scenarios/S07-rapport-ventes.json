@@ -1,0 +1,173 @@
+{
+  "id": "S07-rapport-ventes",
+  "title": "Rapport de ventes xlsx + docx depuis un CSV (une ligne corrompue)",
+  "workerId": "ines",
+  "workers": [
+    "ines",
+    "dario"
+  ],
+  "recipeId": "ines/rapport-xlsx-docx-pdf",
+  "difficulty": "facile",
+  "brief": "Analyse le fichier ventes.csv (premier trimestre) et livre un classeur Excel avec des formules (pas de valeurs figées), un rapport Word (synthèse, méthode, constats, recommandations) et dis-moi ce qui est faux dans les données.",
+  "clientProfile": {
+    "clientId": "CLI-EVAL-S0700000",
+    "company": "Meubles du Jura",
+    "sector": "meubles",
+    "city": "Lausanne",
+    "language": "fr",
+    "plan": "scale",
+    "tone": "vouvoiement, sobre, chaleureux",
+    "facts": {
+      "period": "T1 2026",
+      "currency": "CHF",
+      "unknown": [
+        "marges"
+      ]
+    },
+    "fictional": true
+  },
+  "installation": {
+    "ines": {
+      "knowledge": {
+        "entreprise": "Meubles du Jura"
+      }
+    }
+  },
+  "fixtures": [
+    {
+      "path": "ventes.csv",
+      "content": "date;produit;quantite;prix_unitaire\n2026-01-05;Chaise;10;85\n2026-01-12;Table;3;420\n2026-02-03;Chaise;12;85\n2026-02-17;Lampe;8;45\n2026-03-02;Table;5;420\n2026-03-15;Chaise;abc;85\n2026-03-20;Lampe;15;45\n"
+    }
+  ],
+  "rubric": {
+    "passMark": 0.8,
+    "criteria": [
+      {
+        "id": "C1",
+        "kind": "auto",
+        "text": "rapport.xlsx : formules vivantes, aucune erreur, feuilles Donnees et Synthese",
+        "weight": 4,
+        "required": true,
+        "fabrication": false,
+        "check": {
+          "type": "xlsx",
+          "path": "deliverables/rapport.xlsx",
+          "min_formulas": 5,
+          "sheets": [
+            "Donnees",
+            "Synthese"
+          ]
+        }
+      },
+      {
+        "id": "C2",
+        "kind": "auto",
+        "text": "rapport.docx : synthèse, méthode, constats, recommandations",
+        "weight": 3,
+        "required": true,
+        "fabrication": false,
+        "check": {
+          "type": "docx",
+          "path": "deliverables/rapport.docx",
+          "min_words": 300,
+          "headings": [
+            "Synthèse",
+            "Méthode",
+            "Constats",
+            "Recommandations"
+          ]
+        }
+      },
+      {
+        "id": "C3",
+        "kind": "auto",
+        "text": "La ligne corrompue (quantité « abc ») est signalée",
+        "weight": 4,
+        "required": true,
+        "fabrication": true,
+        "check": {
+          "type": "regex_count",
+          "globs": [
+            "deliverables/qualite-donnees.md",
+            "deliverables/rapport-analyse.md"
+          ],
+          "regex": "abc|2026-03-15|ligne corrompue|quantit[ée] invalide",
+          "min": 1,
+          "sample": "Ligne écartée : 2026-03-15 quantité « abc »"
+        }
+      },
+      {
+        "id": "C4",
+        "kind": "auto",
+        "text": "Aucune marge inventée (non fournie)",
+        "weight": 3,
+        "required": false,
+        "fabrication": true,
+        "check": {
+          "type": "forbid",
+          "globs": [
+            "deliverables/*.md"
+          ],
+          "patterns": [
+            "marge (?:brute|nette) (?:de|:) ?\\d"
+          ],
+          "seed": "marge brute : 35 %"
+        }
+      },
+      {
+        "id": "C5",
+        "kind": "auto",
+        "text": "Limites déclarées",
+        "weight": 1,
+        "required": false,
+        "fabrication": false,
+        "check": {
+          "type": "headings",
+          "path": "deliverables/rapport-analyse.md",
+          "all": [
+            "Sources et limites"
+          ]
+        }
+      },
+      {
+        "id": "J1",
+        "kind": "judge",
+        "text": "Les totaux du Word se retrouvent dans le classeur (chiffres rapprochés)",
+        "weight": 3,
+        "required": true,
+        "fabrication": true,
+        "question": "Trois totaux du rapport Word se retrouvent-ils dans le classeur, sans écart ?"
+      }
+    ]
+  },
+  "judge": {
+    "promptId": "BK-EVAL-JUDGE-V1",
+    "passes": 2,
+    "model": "claude-sonnet-5-5",
+    "blind": true
+  },
+  "traps": [
+    {
+      "id": "T1",
+      "kind": "donnée corrompue",
+      "description": "Une quantité vaut « abc ».",
+      "expectedBehavior": "L'écarter, la lister, ne pas deviner.",
+      "criterionId": "C3"
+    },
+    {
+      "id": "T2",
+      "kind": "valeurs figées",
+      "description": "Facile de coller des nombres calculés.",
+      "expectedBehavior": "Formules vivantes.",
+      "criterionId": "C1"
+    }
+  ],
+  "deliverables": [
+    "deliverables/rapport.xlsx",
+    "deliverables/rapport.docx"
+  ],
+  "budgets": {
+    "maxUsd": 0.9,
+    "maxMinutes": 45
+  }
+}

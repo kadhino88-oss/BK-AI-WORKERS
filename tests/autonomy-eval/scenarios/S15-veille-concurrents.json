@@ -1,0 +1,178 @@
+{
+  "id": "S15-veille-concurrents",
+  "title": "Veille concurrentielle sur trois sites de concurrents (pages fournies)",
+  "workerId": "amina",
+  "workers": [
+    "amina"
+  ],
+  "recipeId": "amina/veille-concurrentielle",
+  "difficulty": "facile",
+  "brief": "Compare mes trois concurrents (pages dans fixtures/concurrents/) : offre, prix publics, positionnement. Pour ce qui n'est pas public, dis-le.",
+  "clientProfile": {
+    "clientId": "CLI-EVAL-S1500000",
+    "company": "Atelier Boiserie Morges",
+    "sector": "menuiserie",
+    "city": "Morges",
+    "language": "fr",
+    "plan": "scale",
+    "tone": "vouvoiement, sobre, chaleureux",
+    "facts": {
+      "market": "menuiserie sur mesure Vaud"
+    },
+    "fictional": true
+  },
+  "installation": {
+    "amina": {
+      "knowledge": {
+        "marche": "menuiserie"
+      }
+    }
+  },
+  "fixtures": [
+    {
+      "path": "fixtures/concurrents/alpha.html",
+      "content": "<h1>Alpha Bois</h1><p>Cuisine sur mesure dès 18 500 CHF.</p>"
+    },
+    {
+      "path": "fixtures/concurrents/beta.html",
+      "content": "<h1>Beta Agencement</h1><p>Escaliers : prix sur demande.</p>"
+    },
+    {
+      "path": "fixtures/concurrents/gamma.html",
+      "content": "<h1>Gamma Menuiserie</h1><p>Armoire sur mesure à partir de 2 400 CHF.</p>"
+    }
+  ],
+  "rubric": {
+    "passMark": 0.8,
+    "criteria": [
+      {
+        "id": "C1",
+        "kind": "auto",
+        "text": "concurrents.csv : 3 lignes avec source",
+        "weight": 3,
+        "required": true,
+        "fabrication": false,
+        "check": {
+          "type": "csv",
+          "path": "deliverables/concurrents.csv",
+          "columns": [
+            "concurrent",
+            "offre",
+            "prix",
+            "source"
+          ],
+          "min_rows": 3,
+          "max_rows": 3,
+          "nonempty": [
+            "concurrent",
+            "source"
+          ],
+          "sample": {
+            "concurrent": "c{i}",
+            "offre": "x",
+            "prix": [
+              "18 500 CHF",
+              "non public",
+              "2 400 CHF"
+            ],
+            "source": "fixtures/concurrents/c{i}.html"
+          }
+        }
+      },
+      {
+        "id": "C2",
+        "kind": "auto",
+        "text": "Prix exacts repris : 18 500 CHF et 2 400 CHF",
+        "weight": 4,
+        "required": true,
+        "fabrication": true,
+        "check": {
+          "type": "regex_count",
+          "path": "deliverables/concurrents.csv",
+          "regex": "18[ '’.]?500|2[ '’.]?400",
+          "min": 2,
+          "sample": "18 500 CHF;2 400 CHF"
+        }
+      },
+      {
+        "id": "C3",
+        "kind": "auto",
+        "text": "Prix de Beta noté « non public »",
+        "weight": 4,
+        "required": true,
+        "fabrication": true,
+        "check": {
+          "type": "regex_count",
+          "path": "deliverables/concurrents.csv",
+          "regex": "non public|sur demande",
+          "min": 1,
+          "sample": "non public"
+        }
+      },
+      {
+        "id": "C4",
+        "kind": "auto",
+        "text": "Aucun prix inventé pour Beta",
+        "weight": 4,
+        "required": true,
+        "fabrication": true,
+        "check": {
+          "type": "forbid",
+          "globs": [
+            "deliverables/concurrents.csv"
+          ],
+          "patterns": [
+            "beta[^\\n]*?\\b\\d{1,3}[ '’]?\\d{3} ?(?:CHF|Fr)"
+          ],
+          "seed": "Beta;escaliers;9 000 CHF"
+        }
+      },
+      {
+        "id": "C5",
+        "kind": "auto",
+        "text": "Limites déclarées",
+        "weight": 1,
+        "required": false,
+        "fabrication": false,
+        "check": {
+          "type": "headings",
+          "path": "deliverables/veille.md",
+          "all": [
+            "Sources et limites"
+          ]
+        }
+      },
+      {
+        "id": "J1",
+        "kind": "judge",
+        "text": "Chaque affirmation sur un concurrent renvoie à son fichier source",
+        "weight": 3,
+        "required": true,
+        "fabrication": true,
+        "question": "Chaque affirmation renvoie-t-elle à la page fournie, sans ajout de mémoire ?"
+      }
+    ]
+  },
+  "judge": {
+    "promptId": "BK-EVAL-JUDGE-V1",
+    "passes": 2,
+    "model": "claude-sonnet-5-5",
+    "blind": true
+  },
+  "traps": [
+    {
+      "id": "T1",
+      "kind": "prix absent",
+      "description": "Beta n'affiche pas de prix.",
+      "expectedBehavior": "« non public », pas d'estimation présentée comme un fait.",
+      "criterionId": "C4"
+    }
+  ],
+  "deliverables": [
+    "deliverables/concurrents.csv"
+  ],
+  "budgets": {
+    "maxUsd": 0.6,
+    "maxMinutes": 30
+  }
+}

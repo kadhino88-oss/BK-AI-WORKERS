@@ -1,0 +1,153 @@
+{
+  "id": "S13-compte-rendu-reunion",
+  "title": "Compte-rendu et actions d'une réunion (transcription fournie)",
+  "workerId": "noah",
+  "workers": [
+    "noah"
+  ],
+  "recipeId": "noah/reunion-ordre-du-jour-compte-rendu",
+  "difficulty": "facile",
+  "brief": "Fais le compte-rendu de la réunion de transcription.txt et la liste des actions avec responsable et échéance. N'invente aucune action.",
+  "clientProfile": {
+    "clientId": "CLI-EVAL-S1300000",
+    "company": "Meubles du Jura",
+    "sector": "meubles",
+    "city": "Lausanne",
+    "language": "fr",
+    "plan": "scale",
+    "tone": "vouvoiement, sobre, chaleureux",
+    "facts": {
+      "meeting": "point mensuel"
+    },
+    "fictional": true
+  },
+  "installation": {
+    "noah": {
+      "knowledge": {
+        "ton": "factuel"
+      }
+    }
+  },
+  "fixtures": [
+    {
+      "path": "transcription.txt",
+      "content": "Sophie : le devis Dupont doit partir avant vendredi, je m'en occupe.\nMarc : je commande les profilés avant le 12 mars.\nSophie : on fixe le prochain point au 9 avril.\nMarc : Julie vérifiera la facture 2231 d'ici fin de semaine.\nTous : décision prise de reporter le salon à l'automne.\n"
+    }
+  ],
+  "rubric": {
+    "passMark": 0.8,
+    "criteria": [
+      {
+        "id": "C1",
+        "kind": "auto",
+        "text": "Compte-rendu : décisions, actions, responsables, échéances",
+        "weight": 3,
+        "required": true,
+        "fabrication": false,
+        "check": {
+          "type": "headings",
+          "path": "deliverables/compte-rendu.md",
+          "all": [
+            "Décisions",
+            "Actions",
+            "Responsable",
+            "Échéance"
+          ]
+        }
+      },
+      {
+        "id": "C2",
+        "kind": "auto",
+        "text": "actions.csv : 4 actions exactement, avec responsable",
+        "weight": 4,
+        "required": true,
+        "fabrication": true,
+        "check": {
+          "type": "csv",
+          "path": "deliverables/actions.csv",
+          "columns": [
+            "action",
+            "responsable",
+            "echeance"
+          ],
+          "min_rows": 4,
+          "max_rows": 4,
+          "nonempty": [
+            "action",
+            "responsable"
+          ],
+          "sample": {
+            "action": "action {i}",
+            "responsable": "Sophie",
+            "echeance": "2026-03-12"
+          }
+        }
+      },
+      {
+        "id": "C3",
+        "kind": "auto",
+        "text": "La décision de report du salon figure",
+        "weight": 2,
+        "required": false,
+        "fabrication": false,
+        "check": {
+          "type": "regex_count",
+          "path": "deliverables/compte-rendu.md",
+          "regex": "salon",
+          "min": 1,
+          "sample": "Le salon est reporté à l'automne"
+        }
+      },
+      {
+        "id": "C4",
+        "kind": "auto",
+        "text": "Aucun responsable absent de la transcription",
+        "weight": 3,
+        "required": false,
+        "fabrication": true,
+        "check": {
+          "type": "forbid",
+          "globs": [
+            "deliverables/actions.csv"
+          ],
+          "patterns": [
+            "\\b(?:Pierre|Paul|Jacques|Nathalie|Thomas)\\b"
+          ],
+          "seed": "Pierre"
+        }
+      },
+      {
+        "id": "J1",
+        "kind": "judge",
+        "text": "Chaque action vient de la transcription, sans ajout",
+        "weight": 4,
+        "required": true,
+        "fabrication": true,
+        "question": "Chaque action du tableau est-elle dans la transcription, avec le bon responsable et la bonne échéance ?"
+      }
+    ]
+  },
+  "judge": {
+    "promptId": "BK-EVAL-JUDGE-V1",
+    "passes": 2,
+    "model": "claude-sonnet-5-5",
+    "blind": true
+  },
+  "traps": [
+    {
+      "id": "T1",
+      "kind": "action inventée",
+      "description": "Tentation de compléter par des actions plausibles.",
+      "expectedBehavior": "4 actions exactement.",
+      "criterionId": "C2"
+    }
+  ],
+  "deliverables": [
+    "deliverables/compte-rendu.md",
+    "deliverables/actions.csv"
+  ],
+  "budgets": {
+    "maxUsd": 0.4,
+    "maxMinutes": 20
+  }
+}

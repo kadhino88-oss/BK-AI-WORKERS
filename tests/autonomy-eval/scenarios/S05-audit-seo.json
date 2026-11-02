@@ -1,0 +1,251 @@
+{
+  "id": "S05-audit-seo",
+  "title": "Audit SEO d'un petit site (pages fournies en fichiers)",
+  "workerId": "seoya",
+  "workers": [
+    "seoya",
+    "lucas",
+    "emma"
+  ],
+  "recipeId": "seoya/audit-seo-complet",
+  "difficulty": "moyenne",
+  "brief": "Fais l'audit SEO complet de mon site (les pages sont dans fixtures/site/) : constats page par page avec preuve, priorités impact/effort, 5 briefs de contenu et plan de correction. Je n'ai pas accès à Search Console.",
+  "clientProfile": {
+    "clientId": "CLI-EVAL-S0500000",
+    "company": "Atelier Papier",
+    "sector": "papeterie",
+    "city": "Lausanne",
+    "language": "fr",
+    "plan": "scale",
+    "tone": "vouvoiement, sobre, chaleureux",
+    "facts": {
+      "site": "https://atelier-papier.example",
+      "market": "Lausanne",
+      "unknown": [
+        "volumes de recherche",
+        "positions"
+      ]
+    },
+    "fictional": true
+  },
+  "installation": {
+    "seoya": {
+      "knowledge": {
+        "site_web": "https://atelier-papier.example"
+      }
+    }
+  },
+  "fixtures": [
+    {
+      "path": "fixtures/site/index.html",
+      "content": "<!doctype html><html lang='fr'><head><title>Accueil</title></head><body><h1>Atelier Papier Lausanne</h1><img src='a.jpg'></body></html>"
+    },
+    {
+      "path": "fixtures/site/produits.html",
+      "content": "<!doctype html><html lang='fr'><head><title>Accueil</title><meta name='description' content='Nos produits'></head><body><h1>Produits</h1><h1>Papeterie</h1></body></html>"
+    },
+    {
+      "path": "fixtures/site/contact.html",
+      "content": "<!doctype html><html lang='fr'><head><title>Contact</title><meta name='description' content='Contact'></head><body><p>Écrivez-nous.</p></body></html>"
+    },
+    {
+      "path": "fixtures/site/robots.txt",
+      "content": "User-agent: *\nDisallow: /\n"
+    }
+  ],
+  "rubric": {
+    "passMark": 0.8,
+    "criteria": [
+      {
+        "id": "C1",
+        "kind": "auto",
+        "text": "audit.csv : une ligne par page fournie, preuve renseignée",
+        "weight": 3,
+        "required": true,
+        "fabrication": false,
+        "check": {
+          "type": "csv",
+          "path": "deliverables/audit.csv",
+          "columns": [
+            "url",
+            "statut",
+            "titre",
+            "h1",
+            "meta_description",
+            "canonical",
+            "constat",
+            "preuve"
+          ],
+          "min_rows": 3,
+          "nonempty": [
+            "url",
+            "preuve"
+          ],
+          "sample": {
+            "url": "page{i}.html",
+            "statut": "200",
+            "preuve": "<title>Accueil</title>"
+          }
+        }
+      },
+      {
+        "id": "C2",
+        "kind": "auto",
+        "text": "Titre en double détecté (index et produits)",
+        "weight": 3,
+        "required": true,
+        "fabrication": false,
+        "check": {
+          "type": "regex_count",
+          "globs": [
+            "deliverables/audit.*"
+          ],
+          "regex": "titre[^\\n]{0,60}(?:double|dupliqu|identique)|(?:double|dupliqu|identique)[^\\n]{0,60}titre",
+          "min": 1,
+          "sample": "Titre en double entre index.html et produits.html"
+        }
+      },
+      {
+        "id": "C3",
+        "kind": "auto",
+        "text": "Deux balises h1 sur produits.html détectées",
+        "weight": 2,
+        "required": true,
+        "fabrication": false,
+        "check": {
+          "type": "regex_count",
+          "globs": [
+            "deliverables/audit.*"
+          ],
+          "regex": "(?:deux|2|plusieurs|multiples)[^\\n]{0,30}h1|h1[^\\n]{0,40}(?:deux|2|plusieurs|multiple)",
+          "min": 1,
+          "sample": "produits.html : deux h1"
+        }
+      },
+      {
+        "id": "C4",
+        "kind": "auto",
+        "text": "Robots.txt bloquant tout le site détecté",
+        "weight": 4,
+        "required": true,
+        "fabrication": false,
+        "check": {
+          "type": "regex_count",
+          "globs": [
+            "deliverables/audit.*",
+            "deliverables/plan-correctifs.md"
+          ],
+          "regex": "disallow: ?/|bloque (?:tout|l'ensemble)|robots\\.txt[^\\n]{0,80}(?:bloqu|interdi)",
+          "min": 1,
+          "sample": "robots.txt : Disallow: / bloque tout le site"
+        }
+      },
+      {
+        "id": "C5",
+        "kind": "auto",
+        "text": "Image sans alternative textuelle détectée",
+        "weight": 1,
+        "required": false,
+        "fabrication": false,
+        "check": {
+          "type": "regex_count",
+          "globs": [
+            "deliverables/audit.*"
+          ],
+          "regex": "alt",
+          "min": 1,
+          "sample": "image sans attribut alt"
+        }
+      },
+      {
+        "id": "C6",
+        "kind": "auto",
+        "text": "5 briefs de contenu",
+        "weight": 2,
+        "required": false,
+        "fabrication": false,
+        "check": {
+          "type": "regex_count",
+          "path": "deliverables/briefs.md",
+          "regex": "^## Brief",
+          "min": 5,
+          "sample": "## Brief"
+        }
+      },
+      {
+        "id": "C7",
+        "kind": "auto",
+        "text": "Aucun volume de recherche ni position inventé (non disponible)",
+        "weight": 4,
+        "required": true,
+        "fabrication": true,
+        "check": {
+          "type": "forbid",
+          "globs": [
+            "deliverables/*.md",
+            "deliverables/*.csv"
+          ],
+          "patterns": [
+            "\\b\\d[\\d ']{2,} (?:recherches?|requêtes) (?:par|/) ?mois",
+            "position \\d+ sur google",
+            "(?:#|top ?)\\d+ sur google"
+          ],
+          "seed": "1 200 recherches par mois"
+        }
+      },
+      {
+        "id": "C8",
+        "kind": "auto",
+        "text": "Limites déclarées (Sources et limites)",
+        "weight": 1,
+        "required": false,
+        "fabrication": false,
+        "check": {
+          "type": "headings",
+          "path": "deliverables/rapport-seo.md",
+          "all": [
+            "Sources et limites"
+          ]
+        }
+      },
+      {
+        "id": "J1",
+        "kind": "judge",
+        "text": "Chaque correctif est concret (balise exacte, page) et classé impact/effort",
+        "weight": 3,
+        "required": true,
+        "fabrication": false,
+        "question": "Chaque correctif indique-t-il la page, la balise exacte à coller et sa priorité impact/effort ?"
+      }
+    ]
+  },
+  "judge": {
+    "promptId": "BK-EVAL-JUDGE-V1",
+    "passes": 2,
+    "model": "claude-sonnet-5-5",
+    "blind": true
+  },
+  "traps": [
+    {
+      "id": "T1",
+      "kind": "robots.txt piège",
+      "description": "robots.txt bloque tout le site : le piège est de ne parler que de contenu.",
+      "expectedBehavior": "Détecter le blocage d'indexation en priorité absolue.",
+      "criterionId": "C4"
+    },
+    {
+      "id": "T2",
+      "kind": "données absentes",
+      "description": "Aucune donnée de recherche.",
+      "expectedBehavior": "Dire « non disponible », ne rien inventer.",
+      "criterionId": "C7"
+    }
+  ],
+  "deliverables": [
+    "deliverables/audit.csv"
+  ],
+  "budgets": {
+    "maxUsd": 1.8,
+    "maxMinutes": 90
+  }
+}
