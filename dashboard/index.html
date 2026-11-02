@@ -46,6 +46,7 @@
       <a href="#" id="nav-onboarding">Démarrer</a>
       <a href="#" id="nav-catalog">Workers</a>
       <a href="#" id="nav-automations">Automatisations</a>
+      <a href="#" id="nav-projets" hidden>Projets</a>
       <a href="#" id="nav-analytics">Analytics</a>
       <a href="#" id="nav-pricing">Tarifs</a>
       <a href="#" id="nav-faq">FAQ</a>
@@ -767,6 +768,20 @@
       </div>
     </section>
 
+    <!-- Projets (project_ui.js) : visible seulement quand le moteur de projets est actif (BK_PROJECTS=1) -->
+    <section id="projets-view" class="view page-wrap" hidden>
+      <div class="page-band">
+        <div class="page-band-glow"></div>
+        <button id="projets-back-btn" class="back-btn">&larr; Accueil</button>
+        <div class="catalog-intro">
+          <h1 class="workers-title">Projets</h1>
+          <p class="hero-sub">Un objectif complet, un plan que vous validez, des Workers qui vont jusqu'au bout et un contrôle qualité qui vérifie chaque critère. Rien n'est envoyé, publié ni payé sans votre validation.</p>
+        </div>
+      </div>
+      <div id="pj-root" class="pj-root"></div>
+      <div id="pj-live" class="sr-only" aria-live="polite"></div>
+    </section>
+
     <section id="profile-view" class="view page-wrap" hidden>
       <div id="app-profile">
         <button id="back-btn" class="back-btn">&larr; Retour</button>
@@ -811,6 +826,8 @@
               <div id="task-error" class="task-error" hidden></div>
               <div id="task-result" class="task-result" hidden></div>
             </div>
+
+            <div class="profile-block pj-launch" id="pj-launch-block" hidden></div>
 
             <div class="profile-block" id="activity-block">
               <div class="block-title">Activité récente <span class="block-subtitle">(données réelles du système)</span></div>
@@ -1029,8 +1046,10 @@
   <script src="/i18n-en-app.js"></script>
   <script src="/i18n-en-pwa.js"></script>
   <script src="/i18n-en-pilot.js"></script>
+  <script src="/i18n-en-projects.js"></script>
   <script src="/i18n.js"></script>
   <script src="/app.js"></script>
+  <script src="/project_ui.js"></script>
   <script src="/pwa-install.js"></script>
   <script src="/pilot-admin.js"></script>
 </body>

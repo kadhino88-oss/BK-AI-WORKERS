@@ -1,0 +1,216 @@
+{
+ "approvals": [
+  {
+   "id": "APR-d49c3e96",
+   "batchId": "BAT-S2-slack-POST_MESSAGE",
+   "stepId": "S2",
+   "worker": "emma",
+   "kind": "connector_action",
+   "connectorId": "slack",
+   "operation": "POST_MESSAGE",
+   "display": {
+    "title": "Message 0",
+    "what": "Envoie un message a l'equipe",
+    "why": "",
+    "recipients": null,
+    "spendChf": null
+   },
+   "status": "EXECUTED",
+   "risk": "medium",
+   "reversible": false,
+   "params": {
+    "channel": "#general",
+    "text": "Bonjour 0"
+   },
+   "editableFields": [
+    "channel",
+    "text"
+   ],
+   "editedFields": [],
+   "recipients": null,
+   "spendChf": null,
+   "createdUtc": "2026-11-02T10:52:56Z",
+   "expiresUtc": "2026-11-09T10:52:56Z",
+   "validUntilUtc": null,
+   "decision": "approve",
+   "decidedUtc": "2026-11-02T10:57:51Z",
+   "autoApproved": false,
+   "supersedes": null,
+   "execution": {
+    "startedUtc": "2026-11-02T10:57:51Z",
+    "finishedUtc": "2026-11-02T10:57:51Z",
+    "connectorStatus": "SUCCESS",
+    "detail": "fake"
+   }
+  },
+  {
+   "id": "APR-26141589",
+   "batchId": "BAT-S2-slack-POST_MESSAGE",
+   "stepId": "S2",
+   "worker": "emma",
+   "kind": "connector_action",
+   "connectorId": "slack",
+   "operation": "POST_MESSAGE",
+   "display": {
+    "title": "Message 1",
+    "what": "Envoie un message a l'equipe",
+    "why": "",
+    "recipients": null,
+    "spendChf": null
+   },
+   "status": "EXECUTED",
+   "risk": "medium",
+   "reversible": false,
+   "params": {
+    "channel": "#general",
+    "text": "Bonjour 1"
+   },
+   "editableFields": [
+    "channel",
+    "text"
+   ],
+   "editedFields": [],
+   "recipients": null,
+   "spendChf": null,
+   "createdUtc": "2026-11-02T10:52:56Z",
+   "expiresUtc": "2026-11-09T10:52:56Z",
+   "validUntilUtc": null,
+   "decision": "approve",
+   "decidedUtc": "2026-11-02T10:57:51Z",
+   "autoApproved": false,
+   "supersedes": null,
+   "execution": {
+    "startedUtc": "2026-11-02T10:57:52Z",
+    "finishedUtc": "2026-11-02T10:57:52Z",
+    "connectorStatus": "SUCCESS",
+    "detail": "fake"
+   }
+  },
+  {
+   "id": "APR-b68ac35b",
+   "batchId": "BAT-S2-slack-POST_MESSAGE",
+   "stepId": "S2",
+   "worker": "emma",
+   "kind": "connector_action",
+   "connectorId": "slack",
+   "operation": "POST_MESSAGE",
+   "display": {
+    "title": "Message 2",
+    "what": "Envoie un message a l'equipe",
+    "why": "",
+    "recipients": null,
+    "spendChf": null
+   },
+   "status": "EXECUTED",
+   "risk": "medium",
+   "reversible": false,
+   "params": {
+    "channel": "#general",
+    "text": "Bonjour 2"
+   },
+   "editableFields": [
+    "channel",
+    "text"
+   ],
+   "editedFields": [],
+   "recipients": null,
+   "spendChf": null,
+   "createdUtc": "2026-11-02T10:52:56Z",
+   "expiresUtc": "2026-11-09T10:52:56Z",
+   "validUntilUtc": null,
+   "decision": "approve",
+   "decidedUtc": "2026-11-02T10:57:51Z",
+   "autoApproved": false,
+   "supersedes": null,
+   "execution": {
+    "startedUtc": "2026-11-02T10:57:53Z",
+    "finishedUtc": "2026-11-02T10:57:53Z",
+    "connectorStatus": "SUCCESS",
+    "detail": "fake"
+   }
+  },
+  {
+   "id": "APR-c64a7841",
+   "batchId": null,
+   "stepId": "S2",
+   "worker": "emma",
+   "kind": "manual_action",
+   "connectorId": null,
+   "operation": null,
+   "display": {
+    "title": "Ajouter le DNS",
+    "what": "Chez votre hebergeur, ajoutez l'enregistrement A",
+    "why": "",
+    "recipients": null,
+    "spendChf": null
+   },
+   "status": "EXECUTED",
+   "risk": "medium",
+   "reversible": true,
+   "params": {},
+   "editableFields": [],
+   "editedFields": [],
+   "recipients": null,
+   "spendChf": null,
+   "createdUtc": "2026-11-02T10:52:56Z",
+   "expiresUtc": "2026-11-09T10:52:56Z",
+   "validUntilUtc": null,
+   "decision": "approve",
+   "decidedUtc": "2026-11-02T10:59:11Z",
+   "autoApproved": false,
+   "supersedes": null,
+   "execution": {
+    "startedUtc": "2026-11-02T10:59:11Z",
+    "finishedUtc": "2026-11-02T10:59:11Z",
+    "connectorStatus": "MANUAL",
+    "detail": "Confirmée par le client."
+   }
+  },
+  {
+   "id": "APR-b7927127",
+   "batchId": "BAT-S2-slack-POST_MESSAGE",
+   "stepId": "S2",
+   "worker": "emma",
+   "kind": "connector_action",
+   "connectorId": "slack",
+   "operation": "POST_MESSAGE",
+   "display": {
+    "title": "Envoi a 30 personnes",
+    "what": "Envoie un message",
+    "why": "",
+    "recipients": 30,
+    "spendChf": null
+   },
+   "status": "EXECUTED",
+   "risk": "high",
+   "reversible": false,
+   "params": {
+    "channel": "#vip",
+    "text": "Annonce"
+   },
+   "editableFields": [
+    "channel",
+    "text"
+   ],
+   "editedFields": [],
+   "recipients": 30,
+   "spendChf": null,
+   "createdUtc": "2026-11-02T10:52:56Z",
+   "expiresUtc": "2026-11-09T10:52:56Z",
+   "validUntilUtc": null,
+   "decision": "approve",
+   "decidedUtc": "2026-11-02T10:59:01Z",
+   "autoApproved": false,
+   "supersedes": null,
+   "execution": {
+    "startedUtc": "2026-11-02T10:59:01Z",
+    "finishedUtc": "2026-11-02T10:59:01Z",
+    "connectorStatus": "SUCCESS",
+    "detail": "fake"
+   }
+  }
+ ],
+ "counts": {
+  "EXECUTED": 5
+ }
+}

@@ -1,0 +1,764 @@
+{
+ "projectId": "PRJ-24F313830D751F44EE4FD74BCC1CAF3D",
+ "title": "Creer le site vitrine de mon cabinet de physiotherapie a Lausanne",
+ "goal": "Creer le site vitrine de mon cabinet de physiotherapie a Lausanne",
+ "status": "DONE",
+ "waitingFor": null,
+ "statusReason": "COMPLETE",
+ "leadWorker": "chloe",
+ "workers": [
+  {
+   "id": "lucas",
+   "name": "Lucas",
+   "portraitUrl": "/portraits/lucas.jpg",
+   "role": "Webmaster & Expert SEO",
+   "stepsDone": 2,
+   "stepsTotal": 2,
+   "status": "DONE",
+   "creditsUsed": 2,
+   "lastSummary": "S3 fait.",
+   "deliverables": [
+    {
+     "path": "site/index.html",
+     "title": "site/index.html",
+     "kind": "document"
+    },
+    {
+     "path": "site/links.html",
+     "title": "site/links.html",
+     "kind": "document"
+    }
+   ],
+   "approvalsPending": 0
+  },
+  {
+   "id": "emma",
+   "name": "Emma",
+   "portraitUrl": "/portraits/emma.jpg",
+   "role": "Responsable Contenu & Social Media",
+   "stepsDone": 1,
+   "stepsTotal": 1,
+   "status": "DONE",
+   "creditsUsed": 0,
+   "lastSummary": "S2 fait.",
+   "deliverables": [
+    {
+     "path": "site/about.html",
+     "title": "site/about.html",
+     "kind": "document"
+    }
+   ],
+   "approvalsPending": 0
+  },
+  {
+   "id": "chloe",
+   "name": "Chloé",
+   "portraitUrl": "/portraits/chloe.jpg",
+   "role": "Interface principale & Orchestration",
+   "stepsDone": 2,
+   "stepsTotal": 2,
+   "status": "DONE",
+   "creditsUsed": 1,
+   "lastSummary": "Voici vos livrables : le site est pret.",
+   "deliverables": [],
+   "approvalsPending": 0
+  }
+ ],
+ "percent": 100,
+ "currentStep": null,
+ "createdUtc": "2026-11-02T10:52:46Z",
+ "updatedUtc": "2026-11-02T10:52:53Z",
+ "creditsCharged": 4,
+ "creditsCap": 20,
+ "approvalsPending": 0,
+ "inputsPending": 0,
+ "resumeAtUtc": null,
+ "queuePosition": null,
+ "plan": {
+  "goal": "Creer le site vitrine",
+  "language": "fr",
+  "version": 1,
+  "assumptions": [
+   {
+    "id": "A1",
+    "text": "3 pages"
+   }
+  ],
+  "criteria": [
+   {
+    "id": "C1",
+    "text": "Les pages existent",
+    "kind": "auto",
+    "verdict": "PASS",
+    "note": "Verifie.",
+    "accepted": false
+   },
+   {
+    "id": "C2",
+    "text": "Le ton est professionnel",
+    "kind": "rubric",
+    "verdict": "PASS",
+    "note": "Verifie.",
+    "accepted": false
+   },
+   {
+    "id": "C-coherence",
+    "text": "Les contenus destinés au même public et produits par des Workers différents ne se contredisent pas (mêmes faits, mêmes promesses, ton et marque cohérents).",
+    "kind": "rubric",
+    "verdict": "PASS",
+    "note": "Verifie.",
+    "accepted": false
+   }
+  ],
+  "steps": [
+   {
+    "id": "S1",
+    "title": "Accueil",
+    "worker": "lucas",
+    "goal": "Ecrire l'accueil",
+    "dependsOn": [],
+    "criteriaIds": [
+     "C1"
+    ],
+    "effort": "normal",
+    "status": "DONE",
+    "attempts": 1,
+    "blockedReason": null,
+    "summary": "S1 fait.",
+    "handoffNote": "Fichiers : site/index.html",
+    "credits": 1,
+    "estimateCredits": 4.0,
+    "deliverables": [
+     {
+      "path": "site/index.html",
+      "title": "site/index.html",
+      "kind": "document"
+     }
+    ],
+    "kind": "execute",
+    "system": false,
+    "startedUtc": "2026-11-02T10:52:47Z",
+    "finishedUtc": "2026-11-02T10:52:48Z"
+   },
+   {
+    "id": "S2",
+    "title": "A propos",
+    "worker": "emma",
+    "goal": "Ecrire a propos",
+    "dependsOn": [],
+    "criteriaIds": [
+     "C2"
+    ],
+    "effort": "normal",
+    "status": "DONE",
+    "attempts": 1,
+    "blockedReason": null,
+    "summary": "S2 fait.",
+    "handoffNote": "Fichiers : site/about.html",
+    "credits": 0,
+    "estimateCredits": 4.0,
+    "deliverables": [
+     {
+      "path": "site/about.html",
+      "title": "site/about.html",
+      "kind": "document"
+     }
+    ],
+    "kind": "execute",
+    "system": false,
+    "startedUtc": "2026-11-02T10:52:48Z",
+    "finishedUtc": "2026-11-02T10:52:49Z"
+   },
+   {
+    "id": "S3",
+    "title": "Liens",
+    "worker": "lucas",
+    "goal": "Relier les pages",
+    "dependsOn": [
+     "S1",
+     "S2"
+    ],
+    "criteriaIds": [
+     "C1"
+    ],
+    "effort": "normal",
+    "status": "DONE",
+    "attempts": 1,
+    "blockedReason": null,
+    "summary": "S3 fait.",
+    "handoffNote": "Fichiers : site/links.html",
+    "credits": 1,
+    "estimateCredits": 4.0,
+    "deliverables": [
+     {
+      "path": "site/links.html",
+      "title": "site/links.html",
+      "kind": "document"
+     }
+    ],
+    "kind": "execute",
+    "system": false,
+    "startedUtc": "2026-11-02T10:52:49Z",
+    "finishedUtc": "2026-11-02T10:52:50Z"
+   },
+   {
+    "id": "PLAN1",
+    "title": "Plan du projet",
+    "worker": "chloe",
+    "goal": null,
+    "dependsOn": [],
+    "criteriaIds": [],
+    "effort": "normal",
+    "status": "DONE",
+    "attempts": 1,
+    "blockedReason": null,
+    "summary": "Plan établi",
+    "handoffNote": null,
+    "credits": 1,
+    "estimateCredits": null,
+    "deliverables": [],
+    "kind": "plan",
+    "system": true,
+    "startedUtc": "2026-11-02T10:52:46Z",
+    "finishedUtc": "2026-11-02T10:52:47Z"
+   },
+   {
+    "id": "VER1",
+    "title": "Vérification indépendante",
+    "worker": "qa",
+    "goal": null,
+    "dependsOn": [],
+    "criteriaIds": [],
+    "effort": "normal",
+    "status": "DONE",
+    "attempts": 1,
+    "blockedReason": null,
+    "summary": "Vérification : PASS",
+    "handoffNote": null,
+    "credits": 0,
+    "estimateCredits": null,
+    "deliverables": [],
+    "kind": "verify",
+    "system": true,
+    "startedUtc": "2026-11-02T10:52:50Z",
+    "finishedUtc": "2026-11-02T10:52:51Z"
+   },
+   {
+    "id": "VERC1",
+    "title": "Relecture de cohérence entre Workers",
+    "worker": "qa",
+    "goal": null,
+    "dependsOn": [],
+    "criteriaIds": [],
+    "effort": "normal",
+    "status": "DONE",
+    "attempts": 1,
+    "blockedReason": null,
+    "summary": "Vérification : PASS",
+    "handoffNote": null,
+    "credits": 1,
+    "estimateCredits": null,
+    "deliverables": [],
+    "kind": "verify",
+    "system": true,
+    "startedUtc": "2026-11-02T10:52:51Z",
+    "finishedUtc": "2026-11-02T10:52:52Z"
+   },
+   {
+    "id": "CONS1",
+    "title": "Rapport final et message de livraison",
+    "worker": "chloe",
+    "goal": null,
+    "dependsOn": [],
+    "criteriaIds": [],
+    "effort": "normal",
+    "status": "DONE",
+    "attempts": 1,
+    "blockedReason": null,
+    "summary": "Voici vos livrables : le site est pret.",
+    "handoffNote": null,
+    "credits": 0,
+    "estimateCredits": null,
+    "deliverables": [],
+    "kind": "consolidate",
+    "system": true,
+    "startedUtc": "2026-11-02T10:52:52Z",
+    "finishedUtc": "2026-11-02T10:52:53Z"
+   }
+  ],
+  "estimate": {
+   "creditsMin": 8.0,
+   "creditsMax": 16.0,
+   "hoursMin": 0.5,
+   "hoursMax": 1.0
+  },
+  "needsFromClient": [],
+  "risks": [],
+  "unassignable": [],
+  "delegation": null,
+  "fallback": false,
+  "milestones": [],
+  "approved": true
+ },
+ "budget": {
+  "creditsCap": 20,
+  "creditsCharged": 4,
+  "chfCeiling": 0.75,
+  "estimate": {
+   "creditsMin": 8.0,
+   "creditsMax": 16.0,
+   "hoursMin": 0.5,
+   "hoursMax": 1.0
+  },
+  "capSetByClient": false,
+  "level": "standard",
+  "costToFinishCredits": 0
+ },
+ "usage": {
+  "binding": "session",
+  "allowedNow": 54,
+  "exempt": false,
+  "session": {
+   "limit": 83,
+   "used": 10,
+   "reserved": 19,
+   "remaining": 54,
+   "opened": true,
+   "startUtc": "2026-11-02T10:52:46Z",
+   "resetsAtUtc": "2026-11-02T14:52:46Z"
+  },
+  "week": {
+   "limit": 207,
+   "used": 10,
+   "reserved": 19,
+   "remaining": 178,
+   "opened": true,
+   "startUtc": "2026-11-02T10:52:46Z",
+   "resetsAtUtc": "2026-11-09T10:52:46Z"
+  },
+  "month": {
+   "limit": 900,
+   "used": 10,
+   "reserved": 19,
+   "remaining": 871,
+   "opened": true,
+   "startUtc": "2026-11-02T10:52:46Z",
+   "resetsAtUtc": "2026-12-02T10:52:46Z"
+  },
+  "nextRenewalUtc": "2026-11-02T14:52:46Z"
+ },
+ "deliverables": [
+  {
+   "path": "site/index.html",
+   "title": "site/index.html",
+   "kind": "document",
+   "bytes": 59,
+   "stepId": "S1",
+   "worker": "lucas",
+   "createdUtc": "2026-11-02T10:52:48Z",
+   "previewable": false,
+   "description": ""
+  },
+  {
+   "path": "site/about.html",
+   "title": "site/about.html",
+   "kind": "document",
+   "bytes": 58,
+   "stepId": "S2",
+   "worker": "emma",
+   "createdUtc": "2026-11-02T10:52:49Z",
+   "previewable": false,
+   "description": ""
+  },
+  {
+   "path": "site/links.html",
+   "title": "site/links.html",
+   "kind": "document",
+   "bytes": 59,
+   "stepId": "S3",
+   "worker": "lucas",
+   "createdUtc": "2026-11-02T10:52:50Z",
+   "previewable": false,
+   "description": ""
+  }
+ ],
+ "approvals": {
+  "counts": {}
+ },
+ "questions": [],
+ "verification": {
+  "round": 1,
+  "overall": "PASS",
+  "lastUtc": "2026-11-02T10:52:52Z",
+  "criteria": [
+   {
+    "id": "C1",
+    "verdict": "PASS",
+    "note": "Verifie."
+   },
+   {
+    "id": "C2",
+    "verdict": "PASS",
+    "note": "Verifie."
+   },
+   {
+    "id": "C-coherence",
+    "verdict": "PASS",
+    "note": "Verifie."
+   }
+  ]
+ },
+ "events": [
+  {
+   "seq": 1,
+   "ts": "2026-11-02T10:52:46Z",
+   "type": "project_created",
+   "worker": "chloe",
+   "text": "Projet créé : Creer le site vitrine de mon cabinet de physiotherapie a Lausanne",
+   "data": {
+    "level": "standard",
+    "queued": false,
+    "inputs": []
+   }
+  },
+  {
+   "seq": 2,
+   "ts": "2026-11-02T10:52:46Z",
+   "type": "step_started",
+   "stepId": "PLAN1",
+   "worker": "chloe",
+   "text": "Chloé prépare le plan",
+   "data": {
+    "kind": "plan",
+    "attempt": 1
+   }
+  },
+  {
+   "seq": 3,
+   "ts": "2026-11-02T10:52:47Z",
+   "type": "step_cost",
+   "stepId": "PLAN1",
+   "text": "1 crédit(s) pour l'étape « Plan du projet ».",
+   "data": {
+    "credits": 1,
+    "total": 1
+   }
+  },
+  {
+   "seq": 4,
+   "ts": "2026-11-02T10:52:47Z",
+   "type": "plan_ready",
+   "stepId": "PLAN1",
+   "text": "Plan prêt : 3 étape(s), 3 critère(s) d'acceptation.",
+   "data": {
+    "steps": 3,
+    "criteria": 3,
+    "estimate": {
+     "creditsMin": 8.0,
+     "creditsMax": 16.0,
+     "hoursMin": 0.5,
+     "hoursMax": 1.0
+    }
+   }
+  },
+  {
+   "seq": 5,
+   "ts": "2026-11-02T10:52:47Z",
+   "type": "plan_approved",
+   "text": "Le plan démarre automatiquement.",
+   "data": {
+    "auto": true
+   }
+  },
+  {
+   "seq": 6,
+   "ts": "2026-11-02T10:52:47Z",
+   "type": "status_changed",
+   "text": "Statut : PLANNING -> RUNNING (PLAN_AUTO_APPROVED)",
+   "data": {
+    "from": "PLANNING",
+    "to": "RUNNING",
+    "reason": "PLAN_AUTO_APPROVED",
+    "waitingFor": null
+   }
+  },
+  {
+   "seq": 7,
+   "ts": "2026-11-02T10:52:47Z",
+   "type": "step_started",
+   "stepId": "S1",
+   "worker": "lucas",
+   "text": "Lucas travaille : Accueil",
+   "data": {
+    "kind": "execute",
+    "attempt": 1
+   }
+  },
+  {
+   "seq": 8,
+   "ts": "2026-11-02T10:52:48Z",
+   "type": "step_cost",
+   "stepId": "S1",
+   "text": "1 crédit(s) pour l'étape « Accueil ».",
+   "data": {
+    "credits": 1,
+    "total": 2
+   }
+  },
+  {
+   "seq": 9,
+   "ts": "2026-11-02T10:52:48Z",
+   "type": "deliverable_added",
+   "stepId": "S1",
+   "worker": "lucas",
+   "text": "Livrable ajouté : site/index.html",
+   "data": {
+    "path": "site/index.html"
+   }
+  },
+  {
+   "seq": 10,
+   "ts": "2026-11-02T10:52:48Z",
+   "type": "step_finished",
+   "stepId": "S1",
+   "worker": "lucas",
+   "text": "Étape terminée : Accueil",
+   "data": {
+    "summary": "S1 fait."
+   }
+  },
+  {
+   "seq": 11,
+   "ts": "2026-11-02T10:52:48Z",
+   "type": "step_started",
+   "stepId": "S2",
+   "worker": "emma",
+   "text": "Emma travaille : A propos",
+   "data": {
+    "kind": "execute",
+    "attempt": 1
+   }
+  },
+  {
+   "seq": 12,
+   "ts": "2026-11-02T10:52:49Z",
+   "type": "deliverable_added",
+   "stepId": "S2",
+   "worker": "emma",
+   "text": "Livrable ajouté : site/about.html",
+   "data": {
+    "path": "site/about.html"
+   }
+  },
+  {
+   "seq": 13,
+   "ts": "2026-11-02T10:52:49Z",
+   "type": "step_finished",
+   "stepId": "S2",
+   "worker": "emma",
+   "text": "Étape terminée : A propos",
+   "data": {
+    "summary": "S2 fait."
+   }
+  },
+  {
+   "seq": 14,
+   "ts": "2026-11-02T10:52:49Z",
+   "type": "step_started",
+   "stepId": "S3",
+   "worker": "lucas",
+   "text": "Lucas travaille : Liens",
+   "data": {
+    "kind": "execute",
+    "attempt": 1
+   }
+  },
+  {
+   "seq": 15,
+   "ts": "2026-11-02T10:52:50Z",
+   "type": "step_cost",
+   "stepId": "S3",
+   "text": "1 crédit(s) pour l'étape « Liens ».",
+   "data": {
+    "credits": 1,
+    "total": 3
+   }
+  },
+  {
+   "seq": 16,
+   "ts": "2026-11-02T10:52:50Z",
+   "type": "deliverable_added",
+   "stepId": "S3",
+   "worker": "lucas",
+   "text": "Livrable ajouté : site/links.html",
+   "data": {
+    "path": "site/links.html"
+   }
+  },
+  {
+   "seq": 17,
+   "ts": "2026-11-02T10:52:50Z",
+   "type": "step_finished",
+   "stepId": "S3",
+   "worker": "lucas",
+   "text": "Étape terminée : Liens",
+   "data": {
+    "summary": "S3 fait."
+   }
+  },
+  {
+   "seq": 18,
+   "ts": "2026-11-02T10:52:50Z",
+   "type": "status_changed",
+   "text": "Statut : RUNNING -> VERIFYING (VERIFY)",
+   "data": {
+    "from": "RUNNING",
+    "to": "VERIFYING",
+    "reason": "VERIFY",
+    "waitingFor": null
+   }
+  },
+  {
+   "seq": 19,
+   "ts": "2026-11-02T10:52:50Z",
+   "type": "verification_started",
+   "text": "Vérification indépendante (tour 1) : 3 critère(s).",
+   "data": {
+    "round": 1
+   }
+  },
+  {
+   "seq": 20,
+   "ts": "2026-11-02T10:52:50Z",
+   "type": "step_started",
+   "stepId": "VER1",
+   "worker": "qa",
+   "text": "Le contrôleur qualité vérifie le travail",
+   "data": {
+    "kind": "verify",
+    "attempt": 1
+   }
+  },
+  {
+   "seq": 21,
+   "ts": "2026-11-02T10:52:51Z",
+   "type": "step_started",
+   "stepId": "VERC1",
+   "worker": "qa",
+   "text": "Le contrôleur qualité vérifie le travail",
+   "data": {
+    "kind": "verify",
+    "attempt": 1
+   }
+  },
+  {
+   "seq": 22,
+   "ts": "2026-11-02T10:52:52Z",
+   "type": "step_cost",
+   "stepId": "VERC1",
+   "text": "1 crédit(s) pour l'étape « Relecture de cohérence entre Workers ».",
+   "data": {
+    "credits": 1,
+    "total": 4
+   }
+  },
+  {
+   "seq": 23,
+   "ts": "2026-11-02T10:52:52Z",
+   "type": "verification_result",
+   "text": "Vérification (tour 1) : PASS.",
+   "data": {
+    "round": 1,
+    "overall": "PASS",
+    "failed": []
+   }
+  },
+  {
+   "seq": 24,
+   "ts": "2026-11-02T10:52:52Z",
+   "type": "status_changed",
+   "text": "Statut : VERIFYING -> RUNNING (CONSOLIDATION)",
+   "data": {
+    "from": "VERIFYING",
+    "to": "RUNNING",
+    "reason": "CONSOLIDATION",
+    "waitingFor": null
+   }
+  },
+  {
+   "seq": 25,
+   "ts": "2026-11-02T10:52:52Z",
+   "type": "step_started",
+   "stepId": "CONS1",
+   "worker": "chloe",
+   "text": "Chloé prépare le rapport final",
+   "data": {
+    "kind": "consolidate",
+    "attempt": 1
+   }
+  },
+  {
+   "seq": 26,
+   "ts": "2026-11-02T10:52:53Z",
+   "type": "status_changed",
+   "text": "Statut : RUNNING -> DONE (COMPLETE)",
+   "data": {
+    "from": "RUNNING",
+    "to": "DONE",
+    "reason": "COMPLETE",
+    "waitingFor": null
+   }
+  },
+  {
+   "seq": 27,
+   "ts": "2026-11-02T10:52:53Z",
+   "type": "done",
+   "text": "Le projet est terminé et vérifié. Le rapport final est disponible."
+  }
+ ],
+ "site": null,
+ "capabilities": {
+  "canPause": false,
+  "canResume": false,
+  "canCancel": false,
+  "canApprove": true,
+  "canApprovePlan": false,
+  "canAcceptGaps": false,
+  "canRaiseBudget": false,
+  "canDelete": true,
+  "canMessage": false
+ },
+ "notices": [],
+ "acceptedGaps": [],
+ "doneProblems": [],
+ "scope": {
+  "chloe": true,
+  "allowedWorkers": [
+   "alex",
+   "emma",
+   "lea",
+   "lucas",
+   "maya",
+   "noah",
+   "sam",
+   "seoya",
+   "nora",
+   "sophie",
+   "dario",
+   "ines",
+   "yanis",
+   "clara",
+   "amina",
+   "thomas",
+   "rayan"
+  ],
+  "deniedWorkers": []
+ },
+ "level": "standard",
+ "autoStart": true,
+ "recipeId": null,
+ "language": "fr",
+ "hasFinalReport": true,
+ "planNotice": null,
+ "workspacePurged": false
+}

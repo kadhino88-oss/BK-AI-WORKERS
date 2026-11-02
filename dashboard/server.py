@@ -4915,6 +4915,8 @@ class Handler(BaseHTTPRequestHandler):
             self._send_file(os.path.join(DASHBOARD_DIR, "particles.js"), "application/javascript; charset=utf-8")
         elif path == "/app.js":
             self._send_file(os.path.join(DASHBOARD_DIR, "app.js"), "application/javascript; charset=utf-8")
+        elif path in ("/project_ui.js", "/i18n-en-projects.js"):     # interface des projets (dormante tant que BK_PROJECTS=0)
+            self._send_file(os.path.join(DASHBOARD_DIR, path.lstrip("/")), "application/javascript; charset=utf-8")
         elif path == "/favicon.svg" or path == "/favicon.ico":
             self._send_file(os.path.join(DASHBOARD_DIR, "favicon.svg"), "image/svg+xml")
         elif pwa_static.handles(path) or path.startswith("/icons/"):

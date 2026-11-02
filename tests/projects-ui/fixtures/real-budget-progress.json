@@ -1,0 +1,70 @@
+{
+ "seq": 4,
+ "status": "PLANNING",
+ "waitingFor": null,
+ "statusReason": "SLOT_FREE",
+ "percent": 0,
+ "currentStep": {
+  "id": "PLAN1",
+  "title": "Plan du projet",
+  "worker": "chloe",
+  "startedUtc": null,
+  "kind": "plan"
+ },
+ "stepsRunning": 0,
+ "queuePosition": null,
+ "resumeAtUtc": null,
+ "approvalsPending": 0,
+ "inputsPending": 0,
+ "creditsCharged": 0,
+ "creditsCap": 12,
+ "usage": {
+  "binding": "session",
+  "allowedNow": 54,
+  "nextRenewalUtc": "2026-11-02T14:52:46Z"
+ },
+ "etaMinutes": 0,
+ "events": [
+  {
+   "seq": 1,
+   "ts": "2026-11-02T10:54:28Z",
+   "type": "project_created",
+   "text": "Projet créé : Auditer le referencement de mon site et proposer les corrections",
+   "worker": "chloe",
+   "data": {
+    "level": "standard",
+    "queued": true,
+    "inputs": []
+   }
+  },
+  {
+   "seq": 2,
+   "ts": "2026-11-02T10:54:28Z",
+   "type": "status_changed",
+   "text": "Votre projet est en file d'attente : la planification commence dès qu'une place se libère.",
+   "data": {
+    "reason": "QUEUED"
+   }
+  },
+  {
+   "seq": 3,
+   "ts": "2026-11-02T11:00:24Z",
+   "type": "status_changed",
+   "text": "Statut : QUEUED -> PLANNING (SLOT_FREE)",
+   "data": {
+    "from": "QUEUED",
+    "to": "PLANNING",
+    "reason": "SLOT_FREE",
+    "waitingFor": null
+   }
+  },
+  {
+   "seq": 4,
+   "ts": "2026-11-02T11:00:24Z",
+   "type": "status_changed",
+   "text": "Votre projet quitte la file d'attente : la planification commence."
+  }
+ ],
+ "hasMore": false,
+ "reset": false
+}

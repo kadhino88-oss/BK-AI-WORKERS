@@ -1,0 +1,165 @@
+{
+ "seq": 12,
+ "status": "RUNNING",
+ "waitingFor": null,
+ "statusReason": "CLIENT_RESUMED",
+ "percent": 0,
+ "currentStep": {
+  "id": "S1",
+  "title": "Accueil",
+  "worker": "lucas",
+  "startedUtc": null,
+  "kind": "execute"
+ },
+ "stepsRunning": 0,
+ "queuePosition": null,
+ "resumeAtUtc": null,
+ "approvalsPending": 0,
+ "inputsPending": 0,
+ "creditsCharged": 1,
+ "creditsCap": 20,
+ "usage": {
+  "binding": "session",
+  "allowedNow": 54,
+  "nextRenewalUtc": "2026-11-02T14:52:46Z"
+ },
+ "etaMinutes": 5,
+ "events": [
+  {
+   "seq": 1,
+   "ts": "2026-11-02T10:52:53Z",
+   "type": "project_created",
+   "text": "Projet créé : Preparer une liste de 30 prospects qualifies dans le secteur de la comptabilite",
+   "worker": "chloe",
+   "data": {
+    "level": "standard",
+    "queued": false,
+    "inputs": []
+   }
+  },
+  {
+   "seq": 2,
+   "ts": "2026-11-02T10:52:53Z",
+   "type": "step_started",
+   "text": "Chloé prépare le plan",
+   "stepId": "PLAN1",
+   "worker": "chloe",
+   "data": {
+    "kind": "plan",
+    "attempt": 1
+   }
+  },
+  {
+   "seq": 3,
+   "ts": "2026-11-02T10:52:54Z",
+   "type": "step_cost",
+   "text": "1 crédit(s) pour l'étape « Plan du projet ».",
+   "stepId": "PLAN1",
+   "data": {
+    "credits": 1,
+    "total": 1
+   }
+  },
+  {
+   "seq": 4,
+   "ts": "2026-11-02T10:52:54Z",
+   "type": "plan_ready",
+   "text": "Plan prêt : 3 étape(s), 3 critère(s) d'acceptation.",
+   "stepId": "PLAN1",
+   "data": {
+    "steps": 3,
+    "criteria": 3,
+    "estimate": {
+     "creditsMin": 8.0,
+     "creditsMax": 16.0,
+     "hoursMin": 0.5,
+     "hoursMax": 1.0
+    }
+   }
+  },
+  {
+   "seq": 5,
+   "ts": "2026-11-02T10:52:54Z",
+   "type": "status_changed",
+   "text": "Statut : PLANNING -> WAITING_INPUT (PLAN_VALIDATION)",
+   "data": {
+    "from": "PLANNING",
+    "to": "WAITING_INPUT",
+    "reason": "PLAN_VALIDATION",
+    "waitingFor": "PLAN_VALIDATION"
+   }
+  },
+  {
+   "seq": 6,
+   "ts": "2026-11-02T11:00:12Z",
+   "type": "plan_approved",
+   "text": "Plan validé : le travail commence."
+  },
+  {
+   "seq": 7,
+   "ts": "2026-11-02T11:00:12Z",
+   "type": "status_changed",
+   "text": "Statut : WAITING_INPUT -> RUNNING (PLAN_APPROVED)",
+   "data": {
+    "from": "WAITING_INPUT",
+    "to": "RUNNING",
+    "reason": "PLAN_APPROVED",
+    "waitingFor": null
+   }
+  },
+  {
+   "seq": 8,
+   "ts": "2026-11-02T11:00:24Z",
+   "type": "status_changed",
+   "text": "Statut : RUNNING -> PAUSED (CLIENT_PAUSED)",
+   "data": {
+    "from": "RUNNING",
+    "to": "PAUSED",
+    "reason": "CLIENT_PAUSED",
+    "waitingFor": null
+   }
+  },
+  {
+   "seq": 9,
+   "ts": "2026-11-02T11:00:24Z",
+   "type": "status_changed",
+   "text": "Projet mis en pause à votre demande. Une étape déjà lancée se termine ; rien d'autre ne démarre.",
+   "data": {
+    "reason": "CLIENT_PAUSED"
+   }
+  },
+  {
+   "seq": 10,
+   "ts": "2026-11-02T11:00:26Z",
+   "type": "status_changed",
+   "text": "Statut : PAUSED -> RUNNING (CLIENT_RESUMED)",
+   "data": {
+    "from": "PAUSED",
+    "to": "RUNNING",
+    "reason": "CLIENT_RESUMED",
+    "waitingFor": null
+   }
+  },
+  {
+   "seq": 11,
+   "ts": "2026-11-02T11:00:26Z",
+   "type": "status_changed",
+   "text": "Le projet reprend.",
+   "data": {
+    "reason": "CLIENT_RESUMED"
+   }
+  },
+  {
+   "seq": 12,
+   "ts": "2026-11-02T11:00:30Z",
+   "type": "message_received",
+   "text": "Votre précision est prise en compte à la prochaine étape.",
+   "data": {
+    "messageId": "MSG-92cf2932",
+    "type": "note"
+   }
+  }
+ ],
+ "hasMore": false,
+ "reset": false
+}

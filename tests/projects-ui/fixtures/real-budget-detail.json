@@ -1,0 +1,212 @@
+{
+ "projectId": "PRJ-7C0CA74C1F7586FED6787FB4E5B3375D",
+ "title": "Auditer le referencement de mon site et proposer les corrections",
+ "goal": "Auditer le referencement de mon site et proposer les corrections",
+ "status": "PLANNING",
+ "waitingFor": null,
+ "statusReason": "SLOT_FREE",
+ "leadWorker": "chloe",
+ "workers": [
+  {
+   "id": "chloe",
+   "name": "Chloé",
+   "portraitUrl": "/portraits/chloe.jpg",
+   "role": "Interface principale & Orchestration",
+   "stepsDone": 0,
+   "stepsTotal": 1,
+   "status": "WAITING",
+   "creditsUsed": 0,
+   "lastSummary": null,
+   "deliverables": [],
+   "approvalsPending": 0
+  }
+ ],
+ "percent": 0,
+ "currentStep": {
+  "id": "PLAN1",
+  "title": "Plan du projet",
+  "worker": "chloe",
+  "startedUtc": null,
+  "kind": "plan"
+ },
+ "createdUtc": "2026-11-02T10:54:28Z",
+ "updatedUtc": "2026-11-02T11:00:24Z",
+ "creditsCharged": 0,
+ "creditsCap": 12,
+ "approvalsPending": 0,
+ "inputsPending": 0,
+ "resumeAtUtc": null,
+ "queuePosition": null,
+ "plan": {
+  "goal": "Auditer le referencement de mon site et proposer les corrections",
+  "language": "fr",
+  "version": 0,
+  "assumptions": [],
+  "criteria": [],
+  "steps": [
+   {
+    "id": "PLAN1",
+    "title": "Plan du projet",
+    "worker": "chloe",
+    "goal": null,
+    "dependsOn": [],
+    "criteriaIds": [],
+    "effort": "normal",
+    "status": "READY",
+    "attempts": 0,
+    "blockedReason": null,
+    "summary": null,
+    "handoffNote": null,
+    "credits": 0,
+    "estimateCredits": null,
+    "deliverables": [],
+    "kind": "plan",
+    "system": true,
+    "startedUtc": null,
+    "finishedUtc": null
+   }
+  ],
+  "estimate": {},
+  "needsFromClient": [],
+  "risks": [],
+  "unassignable": [],
+  "delegation": null,
+  "fallback": false,
+  "milestones": [],
+  "approved": false
+ },
+ "budget": {
+  "creditsCap": 12,
+  "creditsCharged": 0,
+  "chfCeiling": 0.45,
+  "estimate": {},
+  "capSetByClient": true,
+  "level": "standard",
+  "costToFinishCredits": 0
+ },
+ "usage": {
+  "binding": "session",
+  "allowedNow": 54,
+  "exempt": false,
+  "session": {
+   "limit": 83,
+   "used": 10,
+   "reserved": 19,
+   "remaining": 54,
+   "opened": true,
+   "startUtc": "2026-11-02T10:52:46Z",
+   "resetsAtUtc": "2026-11-02T14:52:46Z"
+  },
+  "week": {
+   "limit": 207,
+   "used": 10,
+   "reserved": 19,
+   "remaining": 178,
+   "opened": true,
+   "startUtc": "2026-11-02T10:52:46Z",
+   "resetsAtUtc": "2026-11-09T10:52:46Z"
+  },
+  "month": {
+   "limit": 900,
+   "used": 10,
+   "reserved": 19,
+   "remaining": 871,
+   "opened": true,
+   "startUtc": "2026-11-02T10:52:46Z",
+   "resetsAtUtc": "2026-12-02T10:52:46Z"
+  },
+  "nextRenewalUtc": "2026-11-02T14:52:46Z"
+ },
+ "deliverables": [],
+ "approvals": {
+  "counts": {}
+ },
+ "questions": [],
+ "verification": null,
+ "events": [
+  {
+   "seq": 1,
+   "ts": "2026-11-02T10:54:28Z",
+   "type": "project_created",
+   "worker": "chloe",
+   "text": "Projet créé : Auditer le referencement de mon site et proposer les corrections",
+   "data": {
+    "level": "standard",
+    "queued": true,
+    "inputs": []
+   }
+  },
+  {
+   "seq": 2,
+   "ts": "2026-11-02T10:54:28Z",
+   "type": "status_changed",
+   "text": "Votre projet est en file d'attente : la planification commence dès qu'une place se libère.",
+   "data": {
+    "reason": "QUEUED"
+   }
+  },
+  {
+   "seq": 3,
+   "ts": "2026-11-02T11:00:24Z",
+   "type": "status_changed",
+   "text": "Statut : QUEUED -> PLANNING (SLOT_FREE)",
+   "data": {
+    "from": "QUEUED",
+    "to": "PLANNING",
+    "reason": "SLOT_FREE",
+    "waitingFor": null
+   }
+  },
+  {
+   "seq": 4,
+   "ts": "2026-11-02T11:00:24Z",
+   "type": "status_changed",
+   "text": "Votre projet quitte la file d'attente : la planification commence."
+  }
+ ],
+ "site": null,
+ "capabilities": {
+  "canPause": true,
+  "canResume": false,
+  "canCancel": true,
+  "canApprove": true,
+  "canApprovePlan": false,
+  "canAcceptGaps": false,
+  "canRaiseBudget": true,
+  "canDelete": false,
+  "canMessage": true
+ },
+ "notices": [],
+ "acceptedGaps": [],
+ "doneProblems": [],
+ "scope": {
+  "chloe": true,
+  "allowedWorkers": [
+   "alex",
+   "emma",
+   "lea",
+   "lucas",
+   "maya",
+   "noah",
+   "sam",
+   "seoya",
+   "nora",
+   "sophie",
+   "dario",
+   "ines",
+   "yanis",
+   "clara",
+   "amina",
+   "thomas",
+   "rayan"
+  ],
+  "deniedWorkers": []
+ },
+ "level": "standard",
+ "autoStart": true,
+ "recipeId": null,
+ "language": "fr",
+ "hasFinalReport": false,
+ "planNotice": null,
+ "workspacePurged": false
+}
