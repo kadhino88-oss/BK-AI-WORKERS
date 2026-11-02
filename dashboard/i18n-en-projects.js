@@ -142,6 +142,11 @@ Object.assign(window.BK_EN, {
   "Valider": "Approve", "Rejeter": "Reject", "Enregistrer": "Save", "Vous": "You", "Modification": "Change", "modification": "change", "Question": "Question", "question": "question",
   "Renouvellement": "Renewal", "Estimation du plan : {a} à {b} crédits": "Plan estimate: {a} to {b} credits",
 
+  "Sélectionner pour le lot": "Select for the batch", "expire": "expires", "par défaut": "default",
+  "Écrivez à l'équipe…": "Write to the team…",
+  "Ex. : un site vitrine de 5 pages pour mon cabinet de physiothérapie à Lausanne, en français et en anglais, avec une page de prise de rendez-vous.":
+    "E.g. a 5-page showcase website for my physiotherapy practice in Lausanne, in French and English, with an appointment-booking page.",
+
   /* Messages */
   "Chargement des messages…": "Loading messages…", "Votre message": "Your message", "Type de message": "Message type", "Précision": "Clarification", "précision": "clarification",
   "Une information pour les prochaines étapes, sans changer le plan.": "Information for the next steps, without changing the plan.",

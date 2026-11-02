@@ -15,15 +15,37 @@ const norm = (s) => String(s).replace(/\s+/g, " ").trim();
 
 // Chaines francaises = chaines entre guillemets doubles ET texte statique des gabarits, hors code (selecteurs, expressions, identifiants).
 const found = new Set();
+const called = new Set();   // arguments de T()/TF()/announce() : TOUS exigent une traduction, meme un mot seul
+// 1. Arguments des appels T( / TF( / announce( : parcours des parentheses en respectant les chaines (les guillemets des attributs HTML decaleraient une simple expression reguliere).
+function scanCalls(code) {
+  const re = /(?<![\w$.])(?:T|TF|announce)\(/g;
+  let m;
+  while ((m = re.exec(code))) {
+    let i = m.index + m[0].length, depth = 1;
+    while (i < code.length && depth > 0) {
+      const c = code[i];
+      if (c === '"' || c === "'" || c === "`") {
+        let j = i + 1, buf = "";
+        while (j < code.length && code[j] !== c) { if (code[j] === "\\") { buf += code[j + 1]; j += 2; continue; } buf += code[j]; j++; }
+        if (c === '"') { found.add(buf); called.add(buf); }
+        i = j + 1; continue;
+      }
+      if (c === "(") depth++; else if (c === ")") depth--;
+      i++;
+    }
+  }
+}
+scanCalls(src);
 for (const m of src.matchAll(/"((?:[^"\\\n]|\\.)*)"/g)) found.add(m[1]);
 for (const m of src.matchAll(/`((?:[^`\\]|\\.)*)`/g)) m[1].replace(/\$\{(?:[^{}]|\{[^{}]*\})*\}/g, "\u0000").split(/<[^>]*>|\u0000/).forEach((x) => found.add(x));
 const looksFrench = (s) => /[A-Za-zÀ-ÿ]{3}/.test(s) && (/[À-ÿ]/.test(s) || /\s/.test(s) || /^[A-Z][a-z]+$/.test(s))
   && !/\$\{|[{}]=|^[a-z0-9_.#\[\]=\-\/:,>"'*() ]+$|^(pj-|data-|btn|\/api|width:|button, |textarea, )|\.pj-|\[href\]/.test(s);
 const IGNORE = new Set([
+  "auto", "approve", "client", "session", "week", "high",   // operandes de comparaison dans les expressions passees a T() (code, pas du texte)
   "Home", "End", "Escape", "Tab", "Position", // noms de touches du clavier (code), « Position » : voir fragments
   "J'autorise",   // valeur de confirmation tapee, deja dans le dictionnaire (traduite a l'affichage)
 ]);
-const need = [...found].map((s) => norm(s.replace(/\\"/g, '"').replace(/\\'/g, "'"))).filter((s) => s && looksFrench(s) && !IGNORE.has(s) && !/^[,;:)(.+ ]|[(]$|^return|\.join\(|s\.status ===/.test(s));
+const need = [...called, ...found].map((s) => norm(s.replace(/\\"/g, '"').replace(/\\'/g, "'"))).filter((s) => s && (called.has(s) || looksFrench(s)) && !IGNORE.has(s) && !/^[A-Z_]+$/.test(s) && !/^[,;:)(.+ ]|[(]$|^return|\.join\(|s\.status ===/.test(s));
 
 let bad = 0;
 const covered = (s) => Object.prototype.hasOwnProperty.call(dict, s) || frag.some((f) => s.indexOf(f[0].trim()) !== -1);
