@@ -1,0 +1,291 @@
+[
+ {
+  "phase": "gate",
+  "model": "qwen2.5:1.5b",
+  "createStatus": 400,
+  "createResponse": {
+   "error": "ENGINE_NO_PROJECTS",
+   "detail": "Le moteur d'IA actuellement prevu pour votre compte ne sait pas mener un projet de plusieurs heures. Une mission ponctuelle reste possible ; le projet sera disponible des que le moteur Claude sera de nouveau actif."
+  }
+ },
+ {
+  "phase": "free",
+  "model": "qwen2.5:1.5b",
+  "createStatus": 201,
+  "createResponse": {
+   "projectId": "PRJ-8158ADF707E9A04C1DDC7DD34BAB36DC",
+   "status": "PLANNING",
+   "queuePosition": null
+  },
+  "seconds": 420.4,
+  "status": "PLANNING",
+  "statusReason": "CREATED",
+  "creditsCharged": 0,
+  "steps": [
+   {
+    "id": "PLAN1",
+    "kind": "plan",
+    "worker": "lucas",
+    "status": "RUNNING"
+   }
+  ],
+  "criteria": {},
+  "traces": [
+   {
+    "step": "PLAN1",
+    "attempt": "1",
+    "iterations": 8,
+    "toolCalls": [
+     [],
+     [],
+     [],
+     [],
+     [],
+     [],
+     [
+      "step_complete"
+     ],
+     "step_complete",
+     []
+    ],
+    "toolErrors": [
+     [
+      "step_complete",
+      "STEP_REPORT_INVALID"
+     ]
+    ]
+   },
+   {
+    "step": "PLAN1",
+    "attempt": "2",
+    "iterations": 8,
+    "toolCalls": [
+     [
+      "project_plan"
+     ],
+     "project_plan",
+     [],
+     [
+      "project_plan"
+     ],
+     "project_plan",
+     [],
+     [],
+     [],
+     [],
+     []
+    ],
+    "toolErrors": [
+     [
+      "project_plan",
+      "INVALID_INPUT"
+     ],
+     [
+      "project_plan",
+      "INVALID_INPUT"
+     ]
+    ]
+   },
+   {
+    "step": "PLAN1",
+    "attempt": "3",
+    "iterations": 0,
+    "toolCalls": [],
+    "toolErrors": []
+   }
+  ],
+  "events": [
+   [
+    "project_created",
+    "Projet créé : Écris une courte page d'accueil de 3 phrases pour la boulangerie Pain Doré à Fri…"
+   ],
+   [
+    "step_started",
+    "Lucas prépare le plan"
+   ],
+   [
+    "step_retry",
+    "Nouvelle tentative pour « Plan du projet » (1/3)."
+   ],
+   [
+    "step_started",
+    "Lucas prépare le plan"
+   ],
+   [
+    "step_retry",
+    "Nouvelle tentative pour « Plan du projet » (2/3)."
+   ],
+   [
+    "step_started",
+    "Lucas prépare le plan"
+   ]
+  ],
+  "fileWritten": null
+ },
+ {
+  "phase": "scripted",
+  "model": "qwen2.5:1.5b",
+  "createStatus": 201,
+  "createResponse": {
+   "projectId": "PRJ-ED5849F3B697D1411931E7A071B9A97A",
+   "status": "PLANNING",
+   "queuePosition": null
+  },
+  "seconds": 420.9,
+  "status": "RUNNING",
+  "statusReason": "PLAN_APPROVED",
+  "creditsCharged": 0,
+  "steps": [
+   {
+    "id": "S1",
+    "kind": "execute",
+    "worker": "lucas",
+    "status": "RUNNING"
+   },
+   {
+    "id": "PLAN1",
+    "kind": "plan",
+    "worker": "lucas",
+    "status": "DONE"
+   },
+   {
+    "id": "REPLAN1",
+    "kind": "replan",
+    "worker": "lucas",
+    "status": "DONE"
+   }
+  ],
+  "criteria": {
+   "C1": null,
+   "C2": null
+  },
+  "traces": [
+   {
+    "step": "PLAN1",
+    "attempt": "1",
+    "iterations": 0,
+    "toolCalls": [],
+    "toolErrors": []
+   },
+   {
+    "step": "REPLAN1",
+    "attempt": "1",
+    "iterations": 0,
+    "toolCalls": [],
+    "toolErrors": []
+   },
+   {
+    "step": "S1",
+    "attempt": "1",
+    "iterations": 8,
+    "toolCalls": [
+     [],
+     [],
+     [],
+     [],
+     [],
+     [],
+     [],
+     [],
+     [],
+     [],
+     [],
+     [],
+     []
+    ],
+    "toolErrors": []
+   },
+   {
+    "step": "S1",
+    "attempt": "2",
+    "iterations": 8,
+    "toolCalls": [
+     [],
+     [],
+     [],
+     [],
+     [],
+     [],
+     [],
+     []
+    ],
+    "toolErrors": []
+   },
+   {
+    "step": "S1",
+    "attempt": "3",
+    "iterations": 8,
+    "toolCalls": [
+     [],
+     [],
+     [],
+     [],
+     [],
+     [],
+     [],
+     []
+    ],
+    "toolErrors": []
+   }
+  ],
+  "events": [
+   [
+    "status_changed",
+    "Statut : PLANNING -> WAITING_INPUT (PLAN_VALIDATION)"
+   ],
+   [
+    "plan_approved",
+    "Plan validé : le travail commence."
+   ],
+   [
+    "status_changed",
+    "Statut : WAITING_INPUT -> RUNNING (PLAN_APPROVED)"
+   ],
+   [
+    "step_started",
+    "Lucas travaille : Écrire la page d'accueil"
+   ],
+   [
+    "step_retry",
+    "Nouvelle tentative pour « Écrire la page d'accueil » (1/3)."
+   ],
+   [
+    "step_started",
+    "Lucas travaille : Écrire la page d'accueil"
+   ],
+   [
+    "step_retry",
+    "Nouvelle tentative pour « Écrire la page d'accueil » (2/3)."
+   ],
+   [
+    "step_started",
+    "Lucas travaille : Écrire la page d'accueil"
+   ],
+   [
+    "step_failed",
+    "L'étape « Écrire la page d'accueil » a échoué après 3 tentatives."
+   ],
+   [
+    "replan",
+    "Le plan est en cours de révision."
+   ],
+   [
+    "step_started",
+    "Lucas révise le plan"
+   ],
+   [
+    "plan_ready",
+    "Plan révisé : 1 étape(s), 2 critère(s) d'acceptation."
+   ],
+   [
+    "plan_approved",
+    "Le plan démarre automatiquement."
+   ],
+   [
+    "step_started",
+    "Lucas travaille : Écrire la page d'accueil"
+   ]
+  ],
+  "fileWritten": null
+ }
+]
