@@ -338,7 +338,8 @@ class ApprovalTests(unittest.TestCase):
         data = json.load(open(path, encoding="utf-8"))
         data["items"][0]["expiresUtc"] = iso(time.time() - 5)                                      # 7 jours écoulés
         json.dump(data, open(path, "w", encoding="utf-8"))
-        st = e.drive(pid, lambda s: s["steps"]["S3"].get("blockedReason") == "APPROVAL_EXPIRED", timeout=30)
+        # la maintenance des approbations passe toutes les 30 s (projects_steps.py) : un delai de 30 s etait une course perdue une fois sur deux
+        st = e.drive(pid, lambda s: s["steps"]["S3"].get("blockedReason") == "APPROVAL_EXPIRED", timeout=90)
         self.assertEqual(self.items(e, pid)[0]["status"], "EXPIRED")
         e.drive(pid, lambda s: s["status"] == "WAITING_INPUT", timeout=30)
         self.assertEqual(e.state(pid)["waitingFor"], "APPROVAL_EXPIRED")
