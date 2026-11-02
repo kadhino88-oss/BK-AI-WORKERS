@@ -366,6 +366,18 @@ function Test-BKChloeRoutePlan {
 function Get-BKChloeApiKey {
     try {
         if (-not (Get-Command Test-BKSecret -ErrorAction SilentlyContinue)) { . (Join-Path (Get-BKChloeRootPath) "core/ai/BK-Secret.ps1") }
+        # Plan de moteurs (dashboard/provider_router.py) : ces appels (routeur, planificateur, coherence) vont DIRECTEMENT a Claude avec la cle de la plateforme. Ils ne
+        # partent donc que si Claude est le moteur prevu, sain et sous le plafond de depense ; sinon Chloe retombe sur le routage par mots-cles. Sans plan : comme avant.
+        if (-not [string]::IsNullOrWhiteSpace($env:BK_ENGINE_PLAN)) {
+            $Rt = Get-BKChloeRootPath
+            . (Join-Path $Rt "core/ai/adapters/Engine-Common.ps1")
+            $EnginePlan = [string]$env:BK_ENGINE_PLAN | ConvertFrom-Json -ErrorAction Stop
+            $FirstEngine = @($EnginePlan.chain)[0]
+            if ($null -eq $FirstEngine -or [string]$FirstEngine.id -ne "anthropic") { return $null }
+            if (-not (Test-BKEngineHealthy -Provider "anthropic")) { return $null }
+            $RoutingBudget = Get-BKClaudeBudget
+            if ($RoutingBudget.Configured -and $RoutingBudget.Reached) { return $null }
+        }
         if (-not (Test-BKSecret -Name "anthropic")) { return $null }
         $K = Get-BKSecretValue -Name "anthropic"
         if ([string]::IsNullOrWhiteSpace($K)) { return $null }
@@ -425,6 +437,9 @@ function Invoke-BKChloeLlm {
     if ($null -eq $Response) { return @{ Ok = $false; Error = $LastError; Input = $null; Text = ""; Usage = $null; Model = $Model } }
     $UsageFields = $null
     if ($Cost) { try { Add-BKCallCost -Cost $Cost -Response $Response; $UsageFields = Get-BKCostUsageFields -Cost $Cost } catch { } }
+    if ($Cost -and -not [string]::IsNullOrWhiteSpace($env:BK_ENGINE_PLAN)) {      # la depense compte dans le registre du plafond du proprietaire
+        try { if ($UsageFields -and $Cost.Priced -and [double]$UsageFields.estimated_cost_usd -gt 0) { Add-BKEngineSpend -Chf ([double]$UsageFields.estimated_cost_chf) -Usd ([double]$UsageFields.estimated_cost_usd) } } catch { }
+    }
     $ToolInput = $null
     $Text = ""
     foreach ($Block in @($Response.content)) {
