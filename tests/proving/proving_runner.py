@@ -55,6 +55,12 @@ def behavior(inp):
     goal = st.get("goal") or ""
     if fl is None:
         beh = fake_runner.default_behavior_orig(inp)
+        if kind in ("plan", "replan"):                                    # plan de test avec un budget réaliste (le plafond du projet vient de l'estimation du plan)
+            pl = fake_runner.default_plan(inp)
+            for sp in pl["steps"]:
+                sp["estimateCredits"] = 8
+            pl["estimate"] = {"creditsMin": 30, "creditsMax": 90, "hoursMin": 0.2, "hoursMax": 0.6}
+            beh = {"actions": [{"tool": "project_plan", "input": {"action": "set", "plan": pl}}], "complete": {"status": "DONE", "summary": "Plan prêt."}}
         if goal.upper().startswith("TEST-QUESTION") and kind in ("execute", "fix") and sid == "S1" and inp["attempt"] <= 1:
             beh = {"actions": [{"tool": "request_input", "input": {"question": "Quelle est la raison sociale exacte à imprimer sur la facture (avec la forme juridique) ?", "blocking": True,
                                                                   "why": "Elle figure sur le document et je ne peux pas la deviner."}}],

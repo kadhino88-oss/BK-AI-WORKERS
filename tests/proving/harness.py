@@ -23,7 +23,7 @@ ROOT = os.environ["BK_ROOT"]
 sys.path.insert(0, os.path.join(ROOT, "dashboard"))
 import projects_wiring
 _orig = projects_wiring.build
-RUNNER = os.path.join(ROOT, "tests", "proving", "proving_runner.py")
+RUNNER = os.environ.get("PROVE_RUNNER") or os.path.join(ROOT, "tests", "proving", "proving_runner.py")
 CALLS = os.path.join(ROOT, "_prove", "connector-calls.jsonl")
 
 def fake_connector(conn, op, params, client_id):
@@ -56,7 +56,7 @@ class Lab:
     def prepare(self):
         shutil.copytree(REPO, self.app, ignore=E.ignore)
         for rel in ("tests/projects/fake_runner.py", "tests/proving/common.py", "tests/proving/proving_runner.py", "tests/proving/fl_site.py", "tests/proving/fl_seo.py",
-                    "tests/proving/fl_prospects.py", "tests/proving/fl_ads.py", "tests/proving/fl_chloe.py"):
+                    "tests/proving/fl_prospects.py", "tests/proving/fl_ads.py", "tests/proving/fl_chloe.py", "tests/proving/ollama_runner.py"):
             dst = os.path.join(self.app, *rel.split("/"))
             os.makedirs(os.path.dirname(dst), exist_ok=True)
             shutil.copy2(os.path.join(REPO, *rel.split("/")), dst)

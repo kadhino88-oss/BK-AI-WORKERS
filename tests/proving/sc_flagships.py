@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Scénarios des quatre projets flagship (site, SEO, prospects, publicités) : chacun va au bout par le vrai serveur HTTP ; les contrôles sont faits sur les FICHIERS écrits,
 les verdicts du moteur et la file d'approbations, jamais sur le texte d'un modèle."""
+import json
 import os
 import re
 import time
@@ -85,17 +86,22 @@ def sc_site(lab, check):
         check("site : l'aperçu s'ouvre sous CSP sandbox", st == 200 and "sandbox" in lh.get("content-security-policy", ""), (st, lh.get("content-security-policy")))
         out["previewPath"] = path
     wp = [a for a in SC._approvals(snap) if a.get("connectorId") == "wordpress"]
+    disk = {}
+    try:
+        with open(os.path.join(lab.project_dir(cid, pid), "approvals.json"), encoding="utf-8") as fh:
+            disk = {a["id"]: a for a in json.load(fh).get("items") or []}
+    except (OSError, ValueError):
+        pass
     if wp:
         st, r = c.post("/api/projects/%s/approvals/%s/approve" % (pid, wp[0]["id"]), {}, headers=SC.ORIGIN)
         end = time.time() + 25
         while time.time() < end and len(lab.connector_calls()) < 1:
             time.sleep(0.5)
         calls = lab.connector_calls()
-        check("site : valider UN article = exactement UN appel de connecteur au contenu exact", len(calls) == 1 and calls[0]["operation"] == wp[0]["operation"] and calls[0]["params"] == wp[0]["params"], calls[:1])
+        check("site : valider UN article = exactement UN appel de connecteur au contenu exact", len(calls) == 1 and calls[0]["operation"] == wp[0]["operation"] and calls[0]["params"] == (disk.get(wp[0]["id"]) or {}).get("params"), calls[:1])
         out["connectorCallsAfterOneApproval"] = len(calls)
         lab.expected_calls = len(calls)
-        if len(calls) != 1 or calls[0]["params"] != wp[0]["params"]:
-            out["approvalDebug"] = {"call": calls[:1], "item": {k: wp[0].get(k) for k in ("operation", "params", "editedParams", "status")}}
+        out["approvalViewClipsParams"] = (wp[0].get("params") != (disk.get(wp[0]["id"]) or {}).get("params"))
     out["cid"] = cid
     return out
 

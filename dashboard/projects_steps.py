@@ -986,7 +986,9 @@ class StepMixin:
             return
         est = plan_norm.get("estimate") or {}
         lim = self.limits["budget"]
-        cap = int(math.ceil(float(est.get("creditsMax") or 0) * float(lim["capMargin"]))) if est.get("creditsMax") else int(lim["defaultCap"].get(st.get("level") or "standard", 150))
+        # Le plafond suit l'estimation du plan (somme des étapes de TRAVAIL) : on y ajoute la part fixe du moteur (planification, vérification, relecture de cohérence,
+        # rapport final), sinon un petit projet atteint BUDGET_REACHED à la vérification alors que tout le travail est fait (banc de preuve, 2026-11-02).
+        cap = (int(math.ceil(float(est.get("creditsMax") or 0) * float(lim["capMargin"]))) + int(lim.get("engineOverheadCredits") or 0)) if est.get("creditsMax") else int(lim["defaultCap"].get(st.get("level") or "standard", 150))
         cap = max(cap, int(lim["minStartCredits"]))
         abs_max = cfg.plan_value(self.limits["absoluteMaxChf"], self.plan_id_of(st["clientId"]), 8)
         if abs_max:

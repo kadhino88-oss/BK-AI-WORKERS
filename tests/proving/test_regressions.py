@@ -41,6 +41,24 @@ class RecipeBlockTests(unittest.TestCase):
         self.assertEqual(svc._recipe_block(state, {"steps": [{"id": "S1"}]}, "execute", {"id": "S1"}), "")
 
 
+class SmallProjectBudgetTests(unittest.TestCase):
+    """Le plafond suit l'estimation du plan (travail seul). Sans part fixe pour la planification, la vérification et le rapport final, un petit projet
+    atteignait BUDGET_REACHED APRÈS avoir fini son travail."""
+
+    def test_one_step_project_reaches_done_within_its_default_cap(self):
+        plan = {"goal": "Petit livrable", "language": "fr", "assumptions": [{"id": "A1", "text": "x"}],
+                "criteria": [{"id": "C1", "text": "Le fichier existe", "kind": "auto", "check": {"type": "file_exists", "path": "notes/S1.md", "minBytes": 5}}],
+                "steps": [{"id": "S1", "title": "Ecrire", "worker": "lucas", "goal": "Ecrire la note", "criteriaIds": ["C1"], "expectedOutputs": ["notes/S1.md"], "estimateCredits": 4}],
+                "estimate": {"creditsMin": 4, "creditsMax": 12, "hoursMin": 0.1, "hoursMax": 0.2}}
+        scenario = {"plan": {"actions": [{"tool": "project_plan", "input": {"action": "set", "plan": plan}}], "complete": {"status": "DONE", "summary": "Plan prêt."}}}
+        e = Env(scenario=scenario, chf=0.15)                      # 4 crédits par étape (planification, travail, vérification, rapport)
+        self.addCleanup(e.close)
+        pid = e.create(goal="Ecrire une petite note pour le client", worker="lucas")
+        st = e.drive(pid, lambda s: s["status"] in ("DONE", "BUDGET_REACHED", "FAILED"), timeout=90)
+        self.assertEqual(st["status"], "DONE", (st["status"], st.get("statusReason"), st["budget"]))
+        self.assertGreaterEqual(st["budget"]["creditsCap"], 15 + 14)
+
+
 class AtomicWriteTests(unittest.TestCase):
     """Windows : un lecteur qui tient state.json au moment du remplacement faisait échouer l'écriture (WinError 5) : la fin d'étape était perdue et l'étape
     restait RUNNING. server._write_json_atomic (écrivain de projects_store) doit réessayer, comme project_paths.atomic_write_bytes."""

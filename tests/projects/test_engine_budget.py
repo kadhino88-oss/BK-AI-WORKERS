@@ -304,8 +304,8 @@ class BudgetTests(unittest.TestCase):
         e2 = self.env(usage=usage2)
         pid2 = e2.create(auto_start=False)
         st2 = e2.drive(pid2, lambda s: s["status"] == "WAITING_INPUT")
-        self.assertEqual(st2["budget"]["creditsCap"], 20)                              # ceil(creditsMax 16 x 1,25)
-        self.assertAlmostEqual(st2["budget"]["chfCeiling"], 20 * 0.0375, places=4)
+        self.assertEqual(st2["budget"]["creditsCap"], 34)                              # ceil(creditsMax 16 x 1,25) + 14 de part fixe du moteur (planification, verification, rapport)
+        self.assertAlmostEqual(st2["budget"]["chfCeiling"], 34 * 0.0375, places=4)
 
     def test_absolute_cap_per_plan(self):
         e = self.env(plan="solo")

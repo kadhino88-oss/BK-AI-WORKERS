@@ -35,7 +35,7 @@
   "budget": {
     "creditCostChf": 0.0375,
     "minStartCredits": 6,
-    "capMargin": 1.25,
+    "capMargin": 1.25, "engineOverheadCredits": 14,
     "defaultCap": {"standard": 150, "approfondi": 300},
     "verifyShareOfCap": 0.15
   },

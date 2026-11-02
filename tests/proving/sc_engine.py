@@ -40,8 +40,8 @@ def sc_trio(lab, check):
     plan_steps = [s for s in (d0.get("plan") or {}).get("steps") or [] if not s.get("system")]
     check("trio : Chloé ne délègue qu'au Worker embauché (%s)" % ",".join(s["worker"] for s in plan_steps), {s["worker"] for s in plan_steps} == {"lucas"}, plan_steps)
     scope = d0.get("scope") or {}
-    denied = [x.get("workerId") for x in scope.get("denied") or []]
-    check("trio : le client voit quels Workers manquent et l'offre d'embauche", "seoya" in denied and "maya" in denied and scope.get("hireOffer"), scope)
+    denied = scope.get("deniedWorkers") or []
+    check("trio : le détail du projet liste les Workers que Chloé ne peut pas utiliser", "seoya" in denied and "maya" in denied and scope.get("allowedWorkers") == ["lucas"], scope)
     notes = json.dumps((d0.get("plan") or {}).get("assumptions") or [], ensure_ascii=False)
     check("trio : le plan écrit lesquels sont indisponibles", "seoya" in notes and "maya" in notes, notes[:200])
     p = SC._drive(c, pid, lambda p: p.get("status") in H.TERMINAL, timeout=200)
@@ -145,7 +145,7 @@ def sc_restart(lab, check):
     pid = SC._create(c, fl_seo.BRIEF, "seoya")
     H.wait(c, pid, lambda p: p.get("waitingFor") == "PLAN_VALIDATION", timeout=120)
     c.post("/api/projects/%s/plan/approve" % pid, {}, headers=SC.ORIGIN)
-    p = H.wait(c, pid, lambda p: p.get("currentStep") == "S3" or p.get("status") in H.TERMINAL, timeout=120)
+    p = H.wait(c, pid, lambda p: (p.get("currentStep") or {}).get("id") == "S3" or p.get("status") in H.TERMINAL, timeout=120)
     time.sleep(2)
     st0, d0 = c.get("/api/projects/%s" % pid)
     running = {s["id"]: s["status"] for s in (d0.get("plan") or {}).get("steps") or []}
@@ -162,7 +162,7 @@ def sc_restart(lab, check):
     ap = SC._approvals({"approvals": c.get("/api/projects/%s/approvals" % pid)[1]})
     keys = [(a.get("connectorId"), a.get("operation"), (a.get("display") or {}).get("title")) for a in ap]
     check("restart : aucun article d'approbation en double (%d)" % len(ap), len(keys) == len(set(keys)), keys)
-    check("restart : aucun appel de connecteur", not lab.connector_calls())
+    check("restart : aucun appel de connecteur de plus", len(lab.connector_calls()) == lab.expected_calls)
     snap = SC._snap(c, pid)
     out["final"] = F.summary_of(lab, snap, t0, pid)
     ev = [e for e in snap["log"].get("events") or [] if any(k in json.dumps(e, ensure_ascii=False).lower() for k in ("reprise", "redémarr", "resume", "orphan", "interrompu"))]

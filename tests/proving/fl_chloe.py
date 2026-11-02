@@ -41,7 +41,7 @@ def plan(inp):
     if dropped:
         assumptions.append({"id": "A2", "text": "Workers non disponibles dans ce forfait : %s. Embauchez-les pour leur confier ces parties." % ", ".join(dropped)})
     return {"goal": BRIEF[:300], "language": "fr", "assumptions": assumptions, "criteria": crit, "steps": steps,
-            "estimate": {"creditsMin": 8 * len(steps), "creditsMax": 14 * len(steps), "hoursMin": 0.3, "hoursMax": 1}}
+            "estimate": {"creditsMin": 8 * len(steps), "creditsMax": 12 * len(steps) + 10, "hoursMin": 0.3, "hoursMax": 1}}
 
 
 def execute(inp, sid, attempt, fix):
