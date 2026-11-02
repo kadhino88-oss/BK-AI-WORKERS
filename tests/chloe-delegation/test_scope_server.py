@@ -26,6 +26,7 @@ os.environ["BK_ROOT"] = TMP
 spec = importlib.util.spec_from_file_location("bk_server_chloe", os.path.join(REPO, "dashboard", "server.py"))
 server = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(server)
+REAL_USAGE = getattr(server, "USAGE", None)        # le service reel (inerte tant que BK_USAGE_WINDOWS n'est pas 1) : restaure apres chaque test
 
 A = "CLI-CUST-AAAAAAAA"
 
@@ -54,13 +55,19 @@ class FakeUsage:
     def remaining(self, client_id):
         return self._view
 
+    def __getattr__(self, name):
+        # le reste de l'interface (billing_used, mission_begin / mission_end, charge, purge...) : celui du vrai service, inerte (mode « off »)
+        if REAL_USAGE is None or name.startswith("__"):
+            raise AttributeError(name)
+        return getattr(REAL_USAGE, name)
+
 
 class Fixture(unittest.TestCase):
     def setUp(self):
         shutil.rmtree(server.BILLING_DATA_DIR, ignore_errors=True)
         shutil.rmtree(os.path.join(TMP, "runtime"), ignore_errors=True)
         server.INSTALLS = server.inst.InstallationStore(TMP)
-        self.addCleanup(lambda: server.__dict__.pop("USAGE", None))
+        self.addCleanup(lambda: server.__dict__.__setitem__("USAGE", REAL_USAGE) if REAL_USAGE is not None else server.__dict__.pop("USAGE", None))
 
 
 class ScopeByPlan(Fixture):
@@ -275,7 +282,9 @@ class RealUsageService(Fixture):
                     "renewsAtUtc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(now + 27 * 86400)), "exempt": False, "override": None}
         write_billing(A, "equipe")
         mode = {"v": "off"}
-        svc = usage_mod.UsageService(TMP, plan_view=plan_view, mode=lambda: mode["v"])
+        import usage_wiring
+        svc = usage_wiring.WiredUsage(server.__dict__)         # le service tel que server.py le branche (forfait lu dans la facturation du compte de test)
+        svc._mode = lambda: mode["v"]
         server.USAGE = svc
         self.assertEqual(server.chloe_worker_cap(A, "equilibre"), 150, "service inerte : le solde du mois")
         mode["v"] = "shadow"
