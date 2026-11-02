@@ -264,7 +264,9 @@ class StepMixin:
         return out
 
     def _recipe_block(self, state, plan, kind, spec):
-        rid = state.get("recipeId")
+        # La recette choisie par le planificateur vit dans le plan (plan.recipeId) : seule celle imposée à la création est dans l'état. Sans ce repli, les étapes
+        # d'exécution et de vérification perdaient le guide de la recette dès que le client n'en avait pas désigné une (banc de preuve, 2026-11-02).
+        rid = state.get("recipeId") or (plan or {}).get("recipeId")
         try:
             import recipes
         except ImportError:
