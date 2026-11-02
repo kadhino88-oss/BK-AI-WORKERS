@@ -60,7 +60,7 @@ class ProjectService(StepMixin, ActionMixin, ViewMixin, HousekeepingMixin):
     def __init__(self, root, ps_cmd, *, resolve_scope, usage, notify=None, run_connector=None, log_activity=None, write_json=None, lock=None,
                  plan_view=None, account_email=None, worker_summary=None, now=time.time, enabled=True, runner_cmd=None, installation_paused=None,
                  autoapprove=None, public_url="", owner_alert=None, mem_available=None, python=None, allowlist=None, tick_sec=5.0,
-                 connectors_active=None, sleep=time.sleep, upgrade=None, files_cleanup_cmd=None):
+                 connectors_active=None, sleep=time.sleep, upgrade=None, files_cleanup_cmd=None, engine_gate=None):
         self.root = root
         self.ps_cmd = list(ps_cmd or [])
         self.resolve_scope = resolve_scope
@@ -70,6 +70,7 @@ class ProjectService(StepMixin, ActionMixin, ViewMixin, HousekeepingMixin):
         self.log_activity = log_activity or (lambda *a, **k: None)
         self.lock = lock
         self.plan_view_fn = plan_view
+        self._engine_gate_fn = engine_gate    # fn(client_id, level) -> None, ou un message (str) quand le moteur d'IA prevu ne sait pas mener un projet long
         self._upgrade_fn = upgrade            # fn(client_id) -> carte de montée en gamme (ou None) : appelée seulement dans les réponses de refus
         self.account_email = account_email or (lambda client_id: None)
         self.worker_summary = worker_summary or (lambda wid: {"id": wid, "name": str(wid).capitalize(), "role": "", "portraitUrl": f"/portraits/{wid}.jpg"})

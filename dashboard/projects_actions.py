@@ -167,6 +167,9 @@ class ActionMixin:
             raise ps.ProjectError("INVALID_INPUT", "Niveau : « standard » ou « approfondi ».", field="level")
         plan_id = self._check_allowed(client_id)
         self.check_client_disk(client_id, plan_id)
+        refusal = self._engine_gate_fn(client_id, level) if self._engine_gate_fn else None
+        if refusal:   # moteur choisi par le proprietaire (docs/PROVIDERS.md) sans les capacites d'un projet long : on le dit, on ne lance pas sur Claude en cachette
+            raise ps.ProjectError("ENGINE_NO_PROJECTS", refusal)
         scope = self.scope_of(client_id, fresh=True)
         if not self.worker_in_scope(scope, worker_id):
             hire = None

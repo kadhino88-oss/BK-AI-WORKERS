@@ -156,6 +156,21 @@ def build(srv, env=None, **overrides):
         return {"id": wid, "name": str(ident.get("name") or str(wid).capitalize()), "role": str(ident.get("role") or ""),
                 "portraitUrl": portrait(wid) if portrait else f"/portraits/{wid}.jpg"}
 
+    def engine_gate(client_id, level):
+        """Un projet tourne sur le lanceur Claude (outils serveur, fichiers, longue boucle). Si le proprietaire a choisi un autre moteur pour ce compte (dashboard/provider_router.py,
+        capacite longProjects absente) ou si le plafond de depense Claude est atteint, on refuse honnetement au lieu de depenser la cle de la plateforme. Sans choix : aucun effet."""
+        probe = get("engine_capabilities")
+        if not probe:
+            return None
+        try:
+            caps = probe(client_id, None)
+        except Exception:  # noqa: BLE001 - un souci de reglages ne bloque jamais un projet : chemin habituel
+            return None
+        if isinstance(caps, dict) and not caps.get("longProjects", True):
+            return ("Le moteur d'IA actuellement prevu pour votre compte ne sait pas mener un projet de plusieurs heures. "
+                    "Une mission ponctuelle reste possible ; le projet sera disponible des que le moteur Claude sera de nouveau actif.")
+        return None
+
     enabled = overrides.pop("enabled", None)
     if enabled is None:
         enabled = _truthy(env.get("BK_PROJECTS"))
@@ -166,7 +181,7 @@ def build(srv, env=None, **overrides):
         resolve_scope=resolve_scope, usage=usage, notify=notify, run_connector=get("run_connector_dispatch_bridge"), log_activity=get("log_activity"),
         write_json=get("_write_json_atomic"), lock=get("_STATE_LOCK"), plan_view=plan_view, account_email=account_email, worker_summary=worker_summary,
         enabled=enabled, installation_paused=get("installation_paused"), public_url=get("PUBLIC_BASE_URL", ""), owner_alert=owner_alert,
-        allowlist=allowlist, upgrade=upgrade)
+        allowlist=allowlist, upgrade=upgrade, engine_gate=engine_gate)
     deps.update(overrides)
     service = projects.ProjectService(root, ps_cmd, **deps)
     nudge = getattr(service, "nudge", None)

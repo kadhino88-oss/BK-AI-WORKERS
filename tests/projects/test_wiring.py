@@ -156,6 +156,20 @@ class WiringTests(unittest.TestCase):
         _srv, svc2, _api = self.build({CUST: {"planId": "equipe"}}, env={"BK_PROJECTS": "1", "BK_PROJECTS_ALLOW": CUST})
         self.assertTrue(svc2.create_project(CUST, "Creer un site vitrine", "chloe")["projectId"])
 
+    def test_a_project_is_refused_when_the_planned_engine_cannot_run_long_projects(self):
+        srv, svc, _api = self.build({CUST: {"planId": "equipe"}})
+        self.assertTrue(svc.create_project(CUST, "Creer un site vitrine", "chloe")["projectId"])          # sans moteur choisi : comme avant
+        srv.engine_capabilities = lambda c, lvl=None: {"engine": "ollama", "longProjects": False}
+        with self.assertRaises(Exception) as cm:
+            svc.create_project(CUST, "Creer un autre site vitrine", "chloe")
+        self.assertEqual(cm.exception.code, "ENGINE_NO_PROJECTS")
+        srv.engine_capabilities = lambda c, lvl=None: {"engine": "anthropic", "longProjects": True}
+        self.assertTrue(svc.create_project(CUST, "Creer un troisieme site vitrine", "chloe")["projectId"])
+        def boom(c, lvl=None):
+            raise RuntimeError("reglages illisibles")
+        srv.engine_capabilities = boom                                                                   # un souci de reglages ne bloque jamais un projet
+        self.assertTrue(svc.create_project(CUST, "Creer un quatrieme site vitrine", "chloe")["projectId"])
+
     def test_the_runner_limits_come_from_the_environment(self):
         saved = {k: os.environ.get(k) for k in ("BK_PROJECT_STEPS_GLOBAL", "BK_PROJECT_STEPS_PER_CLIENT")}
         self.addCleanup(lambda: [os.environ.pop(k, None) if v is None else os.environ.__setitem__(k, v) for k, v in saved.items()])
