@@ -101,11 +101,12 @@ def main():
         if worker_id == "chloe":
             cap = server.chloe_worker_cap(client_id, level)
             if cap is not None and server.USAGE.enforced:
-                # ... et a ce qui reste dans la session et la semaine : le premier Worker est deja debite, chacun des autres coute le niveau
+                # ... et a ce qui reste dans la session et la semaine : le premier Worker est deja debite (plus haut), chacun des autres coute le niveau.
+                # Le plafond de Chloe (CHLOE_SCOPE) est calcule sur le meme solde, APRES ce debit : il ne compte donc pas le premier Worker, d'ou le « 1 + ».
                 view = server.USAGE.remaining(client_id)
                 if not view.exempt:
                     cost = server.level_credits(level) if level else 1
-                    cap = max(1, min(cap, 1 + int(view.allowedNow) // max(1, cost)))
+                    cap = max(1, 1 + int(view.allowedNow) // max(1, cost))
             if cap is not None:
                 verdict["maxWorkers"] = cap
         print(json.dumps(verdict))
