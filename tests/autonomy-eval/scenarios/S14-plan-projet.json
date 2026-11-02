@@ -1,0 +1,169 @@
+{
+  "id": "S14-plan-projet",
+  "title": "Plan de projet daté d'une refonte de site (échéance contraignante)",
+  "workerId": "yanis",
+  "workers": [
+    "yanis"
+  ],
+  "recipeId": "yanis/cadrage-plan-projet",
+  "difficulty": "facile",
+  "brief": "Cadre mon projet de refonte de site : lancement impératif le 2026-06-30. Équipe : moi, 1 développeur, 1 rédactrice. Livre la charte, le planning avec dépendances et le registre des risques.",
+  "clientProfile": {
+    "clientId": "CLI-EVAL-S1400000",
+    "company": "Client fictif",
+    "sector": "services",
+    "city": "Lausanne",
+    "language": "fr",
+    "plan": "scale",
+    "tone": "vouvoiement, sobre, chaleureux",
+    "facts": {
+      "deadline": "2026-06-30",
+      "team": [
+        "client",
+        "développeur",
+        "rédactrice"
+      ]
+    },
+    "fictional": true
+  },
+  "installation": {
+    "yanis": {
+      "knowledge": {
+        "projet": "refonte site"
+      }
+    }
+  },
+  "fixtures": [],
+  "rubric": {
+    "passMark": 0.8,
+    "criteria": [
+      {
+        "id": "C1",
+        "kind": "auto",
+        "text": "Charte de projet",
+        "weight": 2,
+        "required": true,
+        "fabrication": false,
+        "check": {
+          "type": "headings",
+          "path": "deliverables/charte-projet.md",
+          "all": [
+            "Objectifs",
+            "Périmètre",
+            "Livrables"
+          ]
+        }
+      },
+      {
+        "id": "C2",
+        "kind": "auto",
+        "text": "Planning : au moins 8 tâches, aucune date après le 2026-06-30",
+        "weight": 4,
+        "required": true,
+        "fabrication": true,
+        "check": {
+          "type": "csv",
+          "path": "deliverables/planning.csv",
+          "columns": [
+            "tache",
+            "responsable",
+            "debut",
+            "fin",
+            "depend_de"
+          ],
+          "min_rows": 8,
+          "nonempty": [
+            "tache",
+            "responsable",
+            "fin"
+          ],
+          "date_max": {
+            "fin": "2026-06-30"
+          },
+          "sample": {
+            "tache": "tache {i}",
+            "responsable": "client",
+            "debut": "2026-04-01",
+            "fin": "2026-05-15",
+            "depend_de": ""
+          }
+        }
+      },
+      {
+        "id": "C3",
+        "kind": "auto",
+        "text": "Registre des risques",
+        "weight": 2,
+        "required": false,
+        "fabrication": false,
+        "check": {
+          "type": "headings",
+          "path": "deliverables/raid.md",
+          "all": [
+            "Risque",
+            "Hypothèse",
+            "Dépendance"
+          ]
+        }
+      },
+      {
+        "id": "C4",
+        "kind": "auto",
+        "text": "Aucune ressource hors équipe déclarée (pas d'agence, pas de designer)",
+        "weight": 2,
+        "required": false,
+        "fabrication": false,
+        "check": {
+          "type": "forbid",
+          "globs": [
+            "deliverables/planning.csv"
+          ],
+          "patterns": [
+            "\\b(?:agence|designer|graphiste|prestataire externe)\\b"
+          ],
+          "seed": "agence"
+        }
+      },
+      {
+        "id": "J1",
+        "kind": "judge",
+        "text": "Les dépendances sont réalistes et le chemin critique est identifié",
+        "weight": 4,
+        "required": true,
+        "fabrication": false,
+        "question": "Les dépendances sont-elles cohérentes et le chemin critique est-il identifié, avec une marge avant le 30 juin ?"
+      },
+      {
+        "id": "J2",
+        "kind": "judge",
+        "text": "Le plan dit honnêtement si le délai est tenable",
+        "weight": 3,
+        "required": true,
+        "fabrication": true,
+        "question": "Le plan dit-il clairement si l'échéance est tenable et à quelles conditions ?"
+      }
+    ]
+  },
+  "judge": {
+    "promptId": "BK-EVAL-JUDGE-V1",
+    "passes": 2,
+    "model": "claude-sonnet-5-5",
+    "blind": true
+  },
+  "traps": [
+    {
+      "id": "T1",
+      "kind": "échéance contraignante",
+      "description": "Une date butoir.",
+      "expectedBehavior": "Aucune tâche après la date.",
+      "criterionId": "C2"
+    }
+  ],
+  "deliverables": [
+    "deliverables/planning.csv"
+  ],
+  "budgets": {
+    "maxUsd": 0.6,
+    "maxMinutes": 30
+  }
+}

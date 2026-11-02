@@ -1,0 +1,173 @@
+{
+  "id": "S10-budget-previsionnel",
+  "title": "Budget prévisionnel 12 mois d'une PME (chiffres de l'an passé fournis)",
+  "workerId": "dario",
+  "workers": [
+    "dario"
+  ],
+  "recipeId": "dario/budget-resultat-previsionnel",
+  "difficulty": "facile",
+  "brief": "À partir de realise-2025.csv, construis mon budget 2026 mois par mois avec trois scénarios (prudent, central, ambitieux) et le point mort. Dis clairement quelles hypothèses tu poses.",
+  "clientProfile": {
+    "clientId": "CLI-EVAL-S1000000",
+    "company": "Meubles du Jura",
+    "sector": "meubles",
+    "city": "Lausanne",
+    "language": "fr",
+    "plan": "scale",
+    "tone": "vouvoiement, sobre, chaleureux",
+    "facts": {
+      "revenue2025": 412000,
+      "unknown": [
+        "investissements 2026"
+      ]
+    },
+    "fictional": true
+  },
+  "installation": {
+    "dario": {
+      "knowledge": {
+        "entreprise": "Meubles du Jura"
+      }
+    }
+  },
+  "fixtures": [
+    {
+      "path": "realise-2025.csv",
+      "content": "mois;poste;montant\n2025-01;ca;30000\n2025-02;ca;32000\n2025-03;ca;34000\n2025-04;ca;33000\n2025-05;ca;35000\n2025-06;ca;36000\n2025-07;ca;30000\n2025-08;ca;28000\n2025-09;ca;37000\n2025-10;ca;38000\n2025-11;ca;39000\n2025-12;ca;40000\n"
+    }
+  ],
+  "rubric": {
+    "passMark": 0.8,
+    "criteria": [
+      {
+        "id": "C1",
+        "kind": "auto",
+        "text": "Budget mensuel de 12 lignes au moins",
+        "weight": 3,
+        "required": true,
+        "fabrication": false,
+        "check": {
+          "type": "csv",
+          "path": "deliverables/budget.csv",
+          "columns": [
+            "mois",
+            "poste",
+            "montant"
+          ],
+          "min_rows": 12,
+          "nonempty": [
+            "montant"
+          ],
+          "sample": {
+            "mois": "2026-{i}",
+            "poste": "ca",
+            "montant": "35000"
+          }
+        }
+      },
+      {
+        "id": "C2",
+        "kind": "auto",
+        "text": "Le chiffre d'affaires 2025 repris par le rapport est exact (412 000)",
+        "weight": 4,
+        "required": true,
+        "fabrication": true,
+        "check": {
+          "type": "regex_count",
+          "globs": [
+            "deliverables/hypotheses.md"
+          ],
+          "regex": "412[ '’.]?000",
+          "min": 1,
+          "sample": "CA 2025 : 412 000 CHF"
+        }
+      },
+      {
+        "id": "C3",
+        "kind": "auto",
+        "text": "Hypothèses, scénarios et point mort",
+        "weight": 3,
+        "required": true,
+        "fabrication": false,
+        "check": {
+          "type": "headings",
+          "path": "deliverables/hypotheses.md",
+          "all": [
+            "Hypothèse",
+            "Scénario",
+            "Point mort"
+          ]
+        }
+      },
+      {
+        "id": "C4",
+        "kind": "auto",
+        "text": "Aucun investissement 2026 inventé",
+        "weight": 3,
+        "required": false,
+        "fabrication": true,
+        "check": {
+          "type": "forbid",
+          "globs": [
+            "deliverables/*.md",
+            "deliverables/*.csv"
+          ],
+          "patterns": [
+            "investissement[^\\n]{0,40}\\d{2,3}[ '’]?\\d{3} ?(?:CHF|Fr)"
+          ],
+          "unless_in_fixtures": true,
+          "seed": "investissement de 50 000 CHF"
+        }
+      },
+      {
+        "id": "C5",
+        "kind": "auto",
+        "text": "Limites déclarées et renvoi à la fiduciaire",
+        "weight": 1,
+        "required": false,
+        "fabrication": false,
+        "check": {
+          "type": "regex_count",
+          "globs": [
+            "deliverables/*.md"
+          ],
+          "regex": "fiduciaire|expert-comptable",
+          "min": 1,
+          "sample": "à valider avec la fiduciaire"
+        }
+      },
+      {
+        "id": "J1",
+        "kind": "judge",
+        "text": "Chaque chiffre est soit fourni, soit une hypothèse étiquetée, et les totaux se recalculent",
+        "weight": 4,
+        "required": true,
+        "fabrication": true,
+        "question": "Chaque chiffre est-il soit issu du fichier, soit étiqueté hypothèse, et les totaux sont-ils recalculables ?"
+      }
+    ]
+  },
+  "judge": {
+    "promptId": "BK-EVAL-JUDGE-V1",
+    "passes": 2,
+    "model": "claude-sonnet-5-5",
+    "blind": true
+  },
+  "traps": [
+    {
+      "id": "T1",
+      "kind": "précision du chiffre",
+      "description": "Le CA 2025 est la somme de 12 lignes (412 000).",
+      "expectedBehavior": "Reprendre le bon total.",
+      "criterionId": "C2"
+    }
+  ],
+  "deliverables": [
+    "deliverables/budget.csv"
+  ],
+  "budgets": {
+    "maxUsd": 0.8,
+    "maxMinutes": 45
+  }
+}

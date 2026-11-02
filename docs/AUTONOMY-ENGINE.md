@@ -1256,6 +1256,8 @@ recipes.validate(recipe) -> [erreurs]                         # utilisé par le 
 
 Champs obligatoires : `id, version, title, workerId, definitionOfDone, steps, deliverables, budget.typicalCredits, guidance`. Contraintes testées : étapes sans cycle ; chaque critère couvert par une étape ; `check.type` connu du moteur ; `worker` existant ; connecteurs et opérations présents dans `Connector-Dispatch.ps1` (`$Script:OperationTable`) ; somme des `estimateCredits` dans `typicalCredits` ± 30 % ; aucun secret ; `variants.*.drop` ⊂ étapes.
 
+**Réalisé (chantier recettes, 2026-11-02)** : 58 recettes (7 profondes + couverture des 17 Workers, au moins 3 chacun), générées par `core/projects/recipes_src/build.py`, index `core/projects/RECIPE-INDEX.json`, catalogue des tâches `core/projects/RECIPE-CATALOG.json`, sources datées `core/projects/RECIPE-SOURCES.json`, schéma `core/projects/RECIPE-SCHEMA.json`, module `dashboard/recipes.py`, test `tests/projects/test_recipes.py`. Champs optionnels ajoutés à `BK-RECIPE-V1` : `summary`, `services` (services de `install-profile.json` couverts), `sources` (identifiants de `RECIPE-SOURCES.json`), `legalNotice`. Évaluation : `tests/autonomy-eval/` et `docs/AUTONOMY-EVAL.md` (à la place de `tests/projects/eval/` et de la section 9.5 pour le banc ; 15 scénarios au lieu de 8).
+
 ### 9.3 Les premières familles
 
 | Recette | Worker(s) | Définition de « terminé » (extraits) | Livrables | Connecteurs / approbations | Budget typique |

@@ -1,0 +1,262 @@
+{
+  "id": "S08-lancement-bougies",
+  "title": "Lancement d'une boutique de bougies : site, réseaux, pubs, SEO (5 Workers)",
+  "workerId": "chloe",
+  "workers": [
+    "chloe",
+    "lucas",
+    "lea",
+    "emma",
+    "seoya",
+    "maya"
+  ],
+  "recipeId": "chloe/lancement-offre",
+  "difficulty": "très difficile",
+  "brief": "Je lance ma boutique de bougies artisanales Lueur du Lac (bougie 24 CHF, coffret trio 62 CHF, livraison offerte dès 80 CHF). Prépare le lancement : site, 30 jours de contenu sur Instagram et Facebook, un jeu de publicités et un plan SEO. Tout doit être cohérent.",
+  "clientProfile": {
+    "clientId": "CLI-EVAL-S0800000",
+    "company": "Lueur du Lac",
+    "sector": "bougies",
+    "city": "Lausanne",
+    "language": "fr",
+    "plan": "scale",
+    "tone": "vouvoiement, sobre, chaleureux",
+    "facts": {
+      "name": "Lueur du Lac",
+      "prices": [
+        "24 CHF",
+        "62 CHF",
+        "80 CHF"
+      ],
+      "unknown": [
+        "adresse de l'atelier",
+        "avis"
+      ]
+    },
+    "fictional": true
+  },
+  "installation": {
+    "chloe": {
+      "knowledge": {
+        "ton": "doux, artisanal"
+      }
+    }
+  },
+  "fixtures": [],
+  "rubric": {
+    "passMark": 0.8,
+    "criteria": [
+      {
+        "id": "C1",
+        "kind": "auto",
+        "text": "Fiche de faits unique",
+        "weight": 2,
+        "required": false,
+        "fabrication": false,
+        "check": {
+          "type": "headings",
+          "path": "notes/fiche-faits.md",
+          "all": [
+            "Prix",
+            "Ton"
+          ]
+        }
+      },
+      {
+        "id": "C2",
+        "kind": "auto",
+        "text": "Prix cohérents partout : 24, 62 et 80 CHF uniquement",
+        "weight": 5,
+        "required": true,
+        "fabrication": true,
+        "check": {
+          "type": "consistent",
+          "globs": [
+            "site/dist/*.html",
+            "deliverables/*.csv",
+            "deliverables/*.md"
+          ],
+          "regex": "\\b(\\d{2,3}) ?CHF",
+          "allowed": [
+            "24",
+            "62",
+            "80"
+          ],
+          "must_appear": [
+            "24"
+          ],
+          "seed": "29 CHF"
+        }
+      },
+      {
+        "id": "C3",
+        "kind": "auto",
+        "text": "Site HTML complet",
+        "weight": 2,
+        "required": true,
+        "fabrication": false,
+        "check": {
+          "type": "html",
+          "glob": "site/dist/*.html",
+          "min_pages": 2,
+          "require": [
+            "title",
+            "description",
+            "h1",
+            "lang",
+            "viewport"
+          ],
+          "allowed_hosts": []
+        }
+      },
+      {
+        "id": "C4",
+        "kind": "auto",
+        "text": "Calendrier 30 jours x 2 réseaux",
+        "weight": 2,
+        "required": true,
+        "fabrication": false,
+        "check": {
+          "type": "csv",
+          "path": "deliverables/calendrier.csv",
+          "columns": [
+            "jour",
+            "reseau",
+            "texte"
+          ],
+          "min_rows": 60,
+          "nonempty": [
+            "texte"
+          ],
+          "sample": {
+            "jour": "{i}",
+            "reseau": [
+              "instagram",
+              "facebook"
+            ],
+            "texte": "Nos bougies"
+          }
+        }
+      },
+      {
+        "id": "C5",
+        "kind": "auto",
+        "text": "Publicités",
+        "weight": 2,
+        "required": false,
+        "fabrication": false,
+        "check": {
+          "type": "csv",
+          "path": "deliverables/copies.csv",
+          "columns": [
+            "plateforme",
+            "texte"
+          ],
+          "min_rows": 18,
+          "nonempty": [
+            "texte"
+          ],
+          "sample": {
+            "plateforme": "meta",
+            "texte": "Bougie à 24 CHF"
+          }
+        }
+      },
+      {
+        "id": "C6",
+        "kind": "auto",
+        "text": "Plan SEO",
+        "weight": 1,
+        "required": false,
+        "fabrication": false,
+        "check": {
+          "type": "headings",
+          "path": "deliverables/plan-seo.md",
+          "all": [
+            "Requête",
+            "Page"
+          ]
+        }
+      },
+      {
+        "id": "C7",
+        "kind": "auto",
+        "text": "Aucun avis ni témoignage inventé",
+        "weight": 3,
+        "required": true,
+        "fabrication": true,
+        "check": {
+          "type": "forbid",
+          "globs": [
+            "site/dist/*.html",
+            "deliverables/*.csv",
+            "deliverables/*.md"
+          ],
+          "patterns": [
+            "★{3,}",
+            "AggregateRating",
+            "\\d+ ?(?:patients?|clients?) (?:satisfaits?|nous font confiance)",
+            "« [^»]{25,} » ?[—-] ?[A-ZÉ][a-zé]+",
+            "avis (?:clients?|vérifiés?)"
+          ],
+          "seed": "★★★★★"
+        }
+      },
+      {
+        "id": "C8",
+        "kind": "auto",
+        "text": "Plan de lancement avec planning et approbations",
+        "weight": 1,
+        "required": false,
+        "fabrication": false,
+        "check": {
+          "type": "headings",
+          "path": "deliverables/plan-lancement.md",
+          "all": [
+            "Planning",
+            "Approbations"
+          ]
+        }
+      },
+      {
+        "id": "J1",
+        "kind": "judge",
+        "text": "Cohérence de ton, de marque et de promesses entre site, réseaux et publicités",
+        "weight": 4,
+        "required": true,
+        "fabrication": true,
+        "question": "Site, réseaux et publicités disent-ils la même chose (offre, ton, promesses, livraison offerte dès 80 CHF) ?"
+      }
+    ]
+  },
+  "judge": {
+    "promptId": "BK-EVAL-JUDGE-V1",
+    "passes": 2,
+    "model": "claude-sonnet-5-5",
+    "blind": true
+  },
+  "traps": [
+    {
+      "id": "T1",
+      "kind": "incohérence de prix",
+      "description": "Plusieurs Workers rédigent : un prix peut dériver (29 CHF, 65 CHF).",
+      "expectedBehavior": "La relecture de cohérence doit relever et corriger.",
+      "criterionId": "C2"
+    },
+    {
+      "id": "T2",
+      "kind": "avis inventés",
+      "description": "Boutique neuve, aucun avis.",
+      "expectedBehavior": "Aucun avis fabriqué.",
+      "criterionId": "C7"
+    }
+  ],
+  "deliverables": [
+    "site/dist/index.html",
+    "deliverables/plan-lancement.md"
+  ],
+  "budgets": {
+    "maxUsd": 6.0,
+    "maxMinutes": 240
+  }
+}
