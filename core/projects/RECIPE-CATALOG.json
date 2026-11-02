@@ -1,0 +1,769 @@
+{
+  "schema": "BK-RECIPE-CATALOG-V1",
+  "note": "Tâches de chaque Worker (services de install-profile.json) et recette qui les mène au bout ; reason = pourquoi une tâche n'a pas (encore) de recette.",
+  "workers": {
+    "alex": [
+      {
+        "serviceId": "prospection-sortante",
+        "task": "Prospection : liste de prospects réels et séquence prête à partir",
+        "recipes": [
+          "alex/gestion-prospects"
+        ]
+      },
+      {
+        "serviceId": "qualification-lead-entrant",
+        "task": "Qualification d'un lead entrant et réponse prête",
+        "recipes": [
+          "alex/qualification-leads-entrants"
+        ]
+      },
+      {
+        "serviceId": "relances-reactivation",
+        "task": "Relances et réactivation du pipeline dormant",
+        "recipes": [
+          "alex/relance-pipeline-dormant"
+        ]
+      },
+      {
+        "serviceId": "prevision-pipeline",
+        "task": "Prévision de pipeline et objectif de revenu",
+        "recipes": [],
+        "reason": "Exige un export CRM réel et une base d'historique ; sans ces données la prévision serait inventée. À ajouter quand un jeu de données d'essai existe."
+      },
+      {
+        "serviceId": "preparation-rendez-vous",
+        "task": "Préparation de rendez-vous de découverte et réponses aux objections",
+        "recipes": [
+          "alex/preparation-rendez-vous-decouverte"
+        ]
+      },
+      {
+        "serviceId": "suivi-crm-opportunites",
+        "task": "Suivi des opportunités dans votre CRM",
+        "recipes": [
+          "alex/gestion-prospects"
+        ]
+      }
+    ],
+    "amina": [
+      {
+        "serviceId": "note-synthese-sourcee",
+        "task": "Note de synthèse sourcée sur un sujet",
+        "recipes": [
+          "amina/note-synthese-sourcee"
+        ]
+      },
+      {
+        "serviceId": "veille-concurrentielle",
+        "task": "Veille concurrentielle : qui sont vos concurrents et que font-ils",
+        "recipes": [
+          "amina/veille-concurrentielle"
+        ]
+      },
+      {
+        "serviceId": "benchmark-prix",
+        "task": "Benchmark de prix daté et sourcé (fichier Excel)",
+        "recipes": [
+          "amina/veille-concurrentielle"
+        ]
+      },
+      {
+        "serviceId": "revue-de-marche",
+        "task": "Revue de marché et tendances",
+        "recipes": [
+          "amina/note-synthese-sourcee"
+        ]
+      },
+      {
+        "serviceId": "verification-de-fait",
+        "task": "Vérification d'une affirmation ou d'un chiffre",
+        "recipes": [
+          "amina/verification-fait-persona"
+        ]
+      },
+      {
+        "serviceId": "fiche-persona",
+        "task": "Fiche persona documentée de vos clients",
+        "recipes": [
+          "amina/verification-fait-persona"
+        ]
+      }
+    ],
+    "clara": [
+      {
+        "serviceId": "redaction-contrat",
+        "task": "Rédaction d'un contrat complet (prestation, mandat, bail, cession)",
+        "recipes": [
+          "clara/redaction-contrat-prestation"
+        ]
+      },
+      {
+        "serviceId": "nda-confidentialite",
+        "task": "NDA et accords de confidentialité (unilatéral ou bilatéral)",
+        "recipes": [
+          "clara/audit-contrat-recu"
+        ]
+      },
+      {
+        "serviceId": "cgv-cgu-mentions-legales",
+        "task": "CGV, CGU, politique de confidentialité et mentions légales",
+        "recipes": [
+          "clara/cgv-cgu-confidentialite"
+        ]
+      },
+      {
+        "serviceId": "audit-contrat-recu",
+        "task": "Relecture et audit d'un contrat reçu",
+        "recipes": [
+          "clara/audit-contrat-recu"
+        ]
+      },
+      {
+        "serviceId": "conformite-donnees",
+        "task": "Mise en conformité nLPD et RGPD",
+        "recipes": [
+          "clara/cgv-cgu-confidentialite"
+        ]
+      },
+      {
+        "serviceId": "clauses-sensibles",
+        "task": "Clauses sensibles : non-concurrence, confidentialité, propriété intellectuelle",
+        "recipes": [
+          "clara/redaction-contrat-prestation"
+        ]
+      }
+    ],
+    "dario": [
+      {
+        "serviceId": "budget-compte-de-resultat",
+        "task": "Budget et compte de résultat prévisionnel",
+        "recipes": [
+          "dario/budget-resultat-previsionnel"
+        ]
+      },
+      {
+        "serviceId": "plan-de-tresorerie",
+        "task": "Plan de trésorerie sur 12 mois",
+        "recipes": [
+          "dario/plan-tresorerie-12-mois"
+        ]
+      },
+      {
+        "serviceId": "prix-de-vente-marge",
+        "task": "Prix de vente, marge et point mort",
+        "recipes": [
+          "dario/budget-resultat-previsionnel"
+        ]
+      },
+      {
+        "serviceId": "ecarts-budget-reel-kpi",
+        "task": "Écarts budget / réel et tableau de bord KPI",
+        "recipes": [
+          "dario/ecarts-budget-reel-kpi"
+        ]
+      },
+      {
+        "serviceId": "paie-cout-employeur",
+        "task": "Calcul de paie et coût employeur",
+        "recipes": [],
+        "reason": "Exige les barèmes de cotisations sociales en vigueur (canton, caisse) que le moteur ne peut pas relire de façon fiable ; sans eux le calcul serait inventé. À ajouter avec un barème fourni par le client."
+      },
+      {
+        "serviceId": "preparation-tva-comptabilite",
+        "task": "Préparation TVA et tri des dépenses pour la fiduciaire",
+        "recipes": [
+          "dario/ecarts-budget-reel-kpi"
+        ]
+      }
+    ],
+    "emma": [
+      {
+        "serviceId": "strategie-calendrier-editorial",
+        "task": "Voix de marque, piliers de contenu et calendrier éditorial",
+        "recipes": [
+          "emma/calendrier-social-30j"
+        ]
+      },
+      {
+        "serviceId": "posts-a-la-demande",
+        "task": "Posts rédigés à la demande, adaptés à chaque réseau",
+        "recipes": [
+          "emma/calendrier-social-30j"
+        ]
+      },
+      {
+        "serviceId": "scripts-videos-courtes",
+        "task": "Scripts de vidéos courtes (Reels, TikTok, Shorts)",
+        "recipes": [
+          "emma/scripts-videos-courtes"
+        ]
+      },
+      {
+        "serviceId": "recyclage-de-contenu",
+        "task": "Un contenu long transformé en micro-contenus",
+        "recipes": [
+          "emma/recyclage-contenu-long"
+        ]
+      },
+      {
+        "serviceId": "community-management",
+        "task": "Réponses aux commentaires et messages dans votre voix",
+        "recipes": [
+          "emma/reponses-commentaires"
+        ]
+      },
+      {
+        "serviceId": "publication-reseaux-sociaux",
+        "task": "Publication d'un post sur vos comptes connectés",
+        "recipes": [
+          "emma/calendrier-social-30j"
+        ]
+      }
+    ],
+    "ines": [
+      {
+        "serviceId": "analyse-de-donnees",
+        "task": "Analyse complète d'un jeu de données",
+        "recipes": [
+          "ines/rapport-xlsx-docx-pdf"
+        ]
+      },
+      {
+        "serviceId": "audit-qualite-donnees",
+        "task": "Audit qualité et nettoyage de vos données",
+        "recipes": [
+          "ines/audit-qualite-donnees",
+          "ines/rapport-xlsx-docx-pdf"
+        ]
+      },
+      {
+        "serviceId": "kpi-conversion-cohortes",
+        "task": "KPI rigoureux : conversion, CAC, LTV, rétention et cohortes",
+        "recipes": [
+          "ines/kpi-conversion-cohortes"
+        ]
+      },
+      {
+        "serviceId": "test-ab-significativite",
+        "task": "Analyse d'un test A/B avec test de significativité",
+        "recipes": [
+          "ines/analyse-test-ab"
+        ]
+      },
+      {
+        "serviceId": "tableau-de-bord-decisionnel",
+        "task": "Tableau de bord orienté décisions",
+        "recipes": [
+          "ines/kpi-conversion-cohortes",
+          "ines/rapport-xlsx-docx-pdf"
+        ]
+      },
+      {
+        "serviceId": "analyse-trafic-tracking",
+        "task": "Analyse de trafic et plan de tracking GA4",
+        "recipes": [],
+        "reason": "Exige des données de trafic réelles (Search Console / Meta en lecture) fournies par le client ; couverte à la demande en mode mission."
+      }
+    ],
+    "lea": [
+      {
+        "serviceId": "charte-graphique",
+        "task": "Identité visuelle et charte graphique complète",
+        "recipes": [
+          "lea/charte-graphique"
+        ]
+      },
+      {
+        "serviceId": "visuel-ponctuel",
+        "task": "Bannière, visuel de réseau social, favicon ou maquette",
+        "recipes": [
+          "lea/visuels-reseaux-sociaux"
+        ]
+      },
+      {
+        "serviceId": "logo-pictogramme",
+        "task": "Logo ou pictogramme vectoriel",
+        "recipes": [
+          "lea/charte-graphique"
+        ]
+      },
+      {
+        "serviceId": "systeme-de-design-ui",
+        "task": "Système de design et maquette d'interface",
+        "recipes": [
+          "lea/systeme-design-ui"
+        ]
+      },
+      {
+        "serviceId": "brief-creatif-moodboard",
+        "task": "Brief créatif, moodboard et concept de campagne",
+        "recipes": [
+          "lea/visuels-reseaux-sociaux"
+        ]
+      },
+      {
+        "serviceId": "revue-design-accessibilite",
+        "task": "Revue de design et contrôle d'accessibilité (WCAG 2.2)",
+        "recipes": [
+          "lea/systeme-design-ui"
+        ]
+      }
+    ],
+    "lucas": [
+      {
+        "serviceId": "audit-seo-technique",
+        "task": "Audit SEO technique priorisé avec correctifs prêts à coller",
+        "recipes": [
+          "lucas/audit-technique-site"
+        ]
+      },
+      {
+        "serviceId": "core-web-vitals-performance",
+        "task": "Optimisation de la vitesse et des Core Web Vitals",
+        "recipes": [
+          "lucas/audit-technique-site",
+          "lucas/site-vitrine-pro"
+        ]
+      },
+      {
+        "serviceId": "migration-refonte-https",
+        "task": "Plan de migration, refonte ou passage en HTTPS",
+        "recipes": [
+          "lucas/plan-migration-refonte"
+        ]
+      },
+      {
+        "serviceId": "accessibilite-web",
+        "task": "Contrôle d'accessibilité de base (WCAG)",
+        "recipes": [
+          "lucas/audit-accessibilite-wcag",
+          "lucas/site-vitrine-pro"
+        ]
+      },
+      {
+        "serviceId": "surveillance-maintenance-site",
+        "task": "Surveillance de disponibilité et dépannage de site",
+        "recipes": [],
+        "reason": "Tâche récurrente sur un connecteur de supervision : elle relève d'une mission récurrente, pas d'un projet à livrables finis ; couverte par rayan/runbook-surveillance pour le mode d'emploi."
+      },
+      {
+        "serviceId": "brouillons-wordpress-webflow",
+        "task": "Brouillons de pages dans WordPress ou Webflow",
+        "recipes": [
+          "lucas/site-vitrine-pro"
+        ]
+      }
+    ],
+    "maya": [
+      {
+        "serviceId": "plan-de-croissance",
+        "task": "Plan de croissance : audit du funnel et expériences priorisées",
+        "recipes": [
+          "maya/plan-croissance-funnel"
+        ]
+      },
+      {
+        "serviceId": "go-to-market-lancement",
+        "task": "Stratégie de lancement : cible, positionnement et messages",
+        "recipes": [
+          "maya/plan-croissance-funnel",
+          "maya/publicites-meta-google"
+        ]
+      },
+      {
+        "serviceId": "campagne-payante-plan-media",
+        "task": "Campagne payante et plan média chiffré (Google, Meta, LinkedIn)",
+        "recipes": [
+          "maya/publicites-meta-google"
+        ]
+      },
+      {
+        "serviceId": "landing-page-conversion",
+        "task": "Page d'atterrissage et optimisation de la conversion",
+        "recipes": [],
+        "reason": "Couvert par lucas/site-vitrine-pro (profil landing de l'atelier de sites) ; recette dédiée à écrire après l'évaluation de l'atelier."
+      },
+      {
+        "serviceId": "sequences-email-nurturing",
+        "task": "Séquences d'emails de bienvenue, de nurturing et de réactivation",
+        "recipes": [
+          "maya/sequences-email-nurturing"
+        ]
+      },
+      {
+        "serviceId": "bilan-campagnes-visibilite",
+        "task": "Bilan de vos campagnes Meta Ads et de votre visibilité Search Console",
+        "recipes": [
+          "maya/bilan-campagnes-visibilite"
+        ]
+      }
+    ],
+    "noah": [
+      {
+        "serviceId": "reponse-email",
+        "task": "Réponse à un email, complète et prête à envoyer",
+        "recipes": [
+          "noah/triage-boite-reception"
+        ]
+      },
+      {
+        "serviceId": "triage-boite-reception",
+        "task": "Triage de boîte de réception et réponses urgentes préparées",
+        "recipes": [
+          "noah/triage-boite-reception"
+        ]
+      },
+      {
+        "serviceId": "resume-fil-email",
+        "task": "Résumé d'un long fil d'emails",
+        "recipes": [
+          "noah/documents-administratifs"
+        ]
+      },
+      {
+        "serviceId": "agenda-rendez-vous",
+        "task": "Agenda : créneaux concrets, invitation et conflits",
+        "recipes": [
+          "noah/reunion-ordre-du-jour-compte-rendu"
+        ]
+      },
+      {
+        "serviceId": "reunion-ordre-du-jour-compte-rendu",
+        "task": "Ordre du jour et compte-rendu de réunion avec actions assignées",
+        "recipes": [
+          "noah/reunion-ordre-du-jour-compte-rendu"
+        ]
+      },
+      {
+        "serviceId": "documents-administratifs",
+        "task": "Mémos, courriers, procédures et tableaux de suivi",
+        "recipes": [
+          "noah/documents-administratifs"
+        ]
+      },
+      {
+        "serviceId": "briefing-et-planification",
+        "task": "Briefing du jour ou de la semaine à partir de votre agenda",
+        "recipes": [
+          "noah/documents-administratifs"
+        ]
+      }
+    ],
+    "nora": [
+      {
+        "serviceId": "reponse-client",
+        "task": "Réponse complète à un client, dans sa langue et le ton de votre marque",
+        "recipes": [
+          "nora/reponse-client-complete"
+        ]
+      },
+      {
+        "serviceId": "triage-file-tickets",
+        "task": "Triage d'une file de tickets par gravité et ancienneté",
+        "recipes": [
+          "nora/triage-tickets-desescalade"
+        ]
+      },
+      {
+        "serviceId": "desescalade-reclamation",
+        "task": "Réclamation et client mécontent : désescalade et dossier préparé",
+        "recipes": [
+          "nora/triage-tickets-desescalade"
+        ]
+      },
+      {
+        "serviceId": "base-connaissance-faq",
+        "task": "FAQ, articles d'aide et macros de réponse",
+        "recipes": [
+          "nora/faq-base-connaissance"
+        ]
+      },
+      {
+        "serviceId": "suivi-satisfaction",
+        "task": "Suivi après résolution et analyse de la satisfaction",
+        "recipes": [
+          "nora/faq-base-connaissance"
+        ]
+      },
+      {
+        "serviceId": "note-interne-helpdesk",
+        "task": "Réponses déposées en note interne dans Zendesk ou Intercom",
+        "recipes": [
+          "nora/reponse-client-complete"
+        ]
+      }
+    ],
+    "rayan": [
+      {
+        "serviceId": "spec-automatisation",
+        "task": "Spécification d'automatisation « quand X, alors Y » testée à blanc",
+        "recipes": [
+          "rayan/spec-automatisation-testee"
+        ]
+      },
+      {
+        "serviceId": "integration-outils-connectes",
+        "task": "Intégration avec vos outils connectés, lecture d'abord",
+        "recipes": [
+          "rayan/spec-automatisation-testee"
+        ]
+      },
+      {
+        "serviceId": "synchronisation-donnees",
+        "task": "Synchronisation de données entre deux outils",
+        "recipes": [
+          "rayan/code-transformation-teste"
+        ]
+      },
+      {
+        "serviceId": "mission-recurrente",
+        "task": "Mission récurrente prête à créer dans l'application",
+        "recipes": [
+          "rayan/runbook-surveillance"
+        ]
+      },
+      {
+        "serviceId": "code-transformation-teste",
+        "task": "Code de transformation de données, écrit et testé",
+        "recipes": [
+          "rayan/code-transformation-teste"
+        ]
+      },
+      {
+        "serviceId": "runbook-surveillance",
+        "task": "Runbook et surveillance de vos automatisations",
+        "recipes": [
+          "rayan/runbook-surveillance"
+        ]
+      }
+    ],
+    "sam": [
+      {
+        "serviceId": "audit-posture-externe",
+        "task": "Audit de posture externe : suis-je exposé ?",
+        "recipes": [
+          "sam/audit-posture-externe"
+        ]
+      },
+      {
+        "serviceId": "durcissement-serveur-poste",
+        "task": "Plan de durcissement d'un serveur, d'un poste ou d'un compte cloud",
+        "recipes": [
+          "sam/plan-durcissement-sauvegardes"
+        ]
+      },
+      {
+        "serviceId": "reponse-incident",
+        "task": "Réponse à incident : « j'ai été piraté »",
+        "recipes": [
+          "sam/registre-traitements-incident"
+        ]
+      },
+      {
+        "serviceId": "conformite-donnees-registre",
+        "task": "Conformité nLPD / RGPD : registre des traitements et plan d'écarts",
+        "recipes": [
+          "sam/registre-traitements-incident"
+        ]
+      },
+      {
+        "serviceId": "sauvegardes-continuite",
+        "task": "Plan de sauvegarde 3-2-1 et continuité d'activité",
+        "recipes": [
+          "sam/plan-durcissement-sauvegardes"
+        ]
+      },
+      {
+        "serviceId": "surveillance-disponibilite",
+        "task": "Surveillance de disponibilité et lecture des alertes",
+        "recipes": [
+          "sam/audit-posture-externe"
+        ]
+      },
+      {
+        "serviceId": "politiques-acces-sensibilisation",
+        "task": "Politiques d'accès et sensibilisation de vos équipes",
+        "recipes": [
+          "sam/plan-durcissement-sauvegardes"
+        ]
+      }
+    ],
+    "seoya": [
+      {
+        "serviceId": "mission-seo-geo-complete",
+        "task": "Mission SEO et GEO complète à partir de l'adresse de votre site",
+        "recipes": [
+          "seoya/audit-seo-complet"
+        ]
+      },
+      {
+        "serviceId": "article-optimise-complet",
+        "task": "Article ou page optimisée, écrite en entier",
+        "recipes": [
+          "seoya/article-seo-complet",
+          "seoya/audit-seo-complet"
+        ]
+      },
+      {
+        "serviceId": "cluster-thematique",
+        "task": "Cluster thématique : une page pilier et ses pages satellites",
+        "recipes": [
+          "seoya/cluster-thematique"
+        ]
+      },
+      {
+        "serviceId": "audit-on-page",
+        "task": "Audit on-page d'une page existante",
+        "recipes": [
+          "seoya/audit-seo-complet"
+        ]
+      },
+      {
+        "serviceId": "optimisation-geo",
+        "task": "Visibilité dans les réponses des assistants IA (GEO)",
+        "recipes": [
+          "seoya/visibilite-assistants-ia"
+        ]
+      },
+      {
+        "serviceId": "suivi-requetes-search-console",
+        "task": "Suivi de vos vraies requêtes et positions (Search Console)",
+        "recipes": [],
+        "reason": "Exige le connecteur Search Console connecté par le client ; tâche récurrente de lecture, pas un projet à livrables finis."
+      }
+    ],
+    "sophie": [
+      {
+        "serviceId": "fiche-poste-annonce",
+        "task": "Fiche de poste et annonce prête à diffuser",
+        "recipes": [
+          "sophie/fiche-poste-annonce"
+        ]
+      },
+      {
+        "serviceId": "tri-candidatures",
+        "task": "Tri et comparaison des candidatures sur des faits",
+        "recipes": [
+          "sophie/tri-candidatures-entretiens"
+        ]
+      },
+      {
+        "serviceId": "entretien-structure-scorecard",
+        "task": "Entretien structuré, scorecard et vérification de références",
+        "recipes": [
+          "sophie/tri-candidatures-entretiens"
+        ]
+      },
+      {
+        "serviceId": "projet-contrat-travail",
+        "task": "Projet de contrat de travail (relecture Clara avant signature)",
+        "recipes": [
+          "sophie/onboarding-contrat-travail"
+        ]
+      },
+      {
+        "serviceId": "onboarding-offboarding",
+        "task": "Checklists d'accueil (jour J à J+90) et de départ",
+        "recipes": [
+          "sophie/onboarding-contrat-travail"
+        ]
+      },
+      {
+        "serviceId": "conformite-recrutement",
+        "task": "Contrôle de non-discrimination et de protection des données candidats",
+        "recipes": [
+          "sophie/fiche-poste-annonce"
+        ]
+      }
+    ],
+    "thomas": [
+      {
+        "serviceId": "fiche-produit-optimisee",
+        "task": "Fiches produit optimisées pour le référencement et la vente",
+        "recipes": [
+          "thomas/fiches-produit-optimisees"
+        ]
+      },
+      {
+        "serviceId": "pricing-marge-marketplace",
+        "task": "Prix de vente et marge nette par canal, frais inclus",
+        "recipes": [
+          "thomas/prix-marge-marketplace"
+        ]
+      },
+      {
+        "serviceId": "mise-sur-marketplace",
+        "task": "Préparation d'une mise en vente sur une marketplace",
+        "recipes": [
+          "thomas/prix-marge-marketplace"
+        ]
+      },
+      {
+        "serviceId": "conformite-boutique",
+        "task": "Conformité d'une boutique en ligne (suisse, française ou européenne)",
+        "recipes": [
+          "thomas/conformite-boutique-promotions"
+        ]
+      },
+      {
+        "serviceId": "suivi-stock-commandes",
+        "task": "Suivi du stock et des commandes (lecture seule)",
+        "recipes": [
+          "thomas/conformite-boutique-promotions"
+        ]
+      },
+      {
+        "serviceId": "promotions-parcours-achat",
+        "task": "Promotions conformes et amélioration du parcours d'achat",
+        "recipes": [
+          "thomas/conformite-boutique-promotions"
+        ]
+      }
+    ],
+    "yanis": [
+      {
+        "serviceId": "cadrage-plan-projet",
+        "task": "Cadrage et plan de projet complet (charte, WBS, Gantt daté, RACI)",
+        "recipes": [
+          "yanis/cadrage-plan-projet"
+        ]
+      },
+      {
+        "serviceId": "point-avancement-rag",
+        "task": "Point d'avancement honnête : tableau de bord vert, orange, rouge",
+        "recipes": [
+          "yanis/point-avancement-comite"
+        ]
+      },
+      {
+        "serviceId": "coordination-multi-workers",
+        "task": "Découpage d'un projet en briefs pour vos autres Workers",
+        "recipes": [
+          "chloe/lancement-offre",
+          "yanis/coordination-sprints-cloture"
+        ]
+      },
+      {
+        "serviceId": "comite-de-pilotage",
+        "task": "Ordre du jour et compte-rendu de comité de pilotage",
+        "recipes": [
+          "yanis/point-avancement-comite"
+        ]
+      },
+      {
+        "serviceId": "registre-risques-raid",
+        "task": "Registre des risques, hypothèses, problèmes et dépendances",
+        "recipes": [
+          "yanis/cadrage-plan-projet"
+        ]
+      },
+      {
+        "serviceId": "methode-sprints-cloture",
+        "task": "Choix de méthode, planification de sprints et bilan de clôture",
+        "recipes": [
+          "yanis/coordination-sprints-cloture"
+        ]
+      }
+    ]
+  }
+}
