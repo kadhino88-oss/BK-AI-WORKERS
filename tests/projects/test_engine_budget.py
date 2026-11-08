@@ -367,6 +367,22 @@ class BudgetTests(unittest.TestCase):
         e.svc.write_control({"killAll": False, "pausedClients": []})
         self.assertEqual(e.run_to_done(pid)["status"], "DONE")
 
+    def test_the_cap_given_at_creation_obeys_the_same_rules_as_set_budget(self):
+        e = self.env(plan="solo")
+        with self.assertRaises(ps.ProjectError) as cm:
+            e.create(credits_cap=9_000_000, auto_start=False)                                # 8 CHF par projet sur Solo
+        self.assertEqual(cm.exception.code, "INVALID_INPUT")
+        pid = e.create(credits_cap=20, auto_start=False)
+        self.assertEqual(e.state(pid)["budget"]["creditsCap"], 20)
+        with self.assertRaises(ps.ProjectError):
+            e.svc.set_budget(CLIENT, pid, 9_000_000)
+
+    def test_the_cap_given_at_creation_cannot_exceed_what_is_left_of_the_month(self):
+        e = self.env(plan="equipe", usage=FakeUsage(session=1000, week=1000, month=30))
+        with self.assertRaises(ps.ProjectError) as cm:
+            e.create(credits_cap=200, auto_start=False)
+        self.assertEqual(cm.exception.code, "PROJECT_EXCEEDS_QUOTA")
+
     def test_pausing_a_client_pauses_its_projects_and_unpausing_resumes_them(self):
         e = self.env()
         pid = e.create()

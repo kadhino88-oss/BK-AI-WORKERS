@@ -321,12 +321,13 @@ class ApprovalTests(unittest.TestCase):
             new2 = e.svc._ingest_approvals(t)
         self.assertEqual(len(new2), 1)
 
-    def test_public_view_never_shows_secret_like_fields_and_truncates_long_text(self):
+    def test_public_view_never_shows_secret_like_fields_and_never_truncates(self):
         v = pa.public_view({"id": "APR-00000001", "status": "PENDING", "kind": "connector_action", "display": {"title": "t"},
                             "params": {"text": "y" * 5000, "apiKey": "sk-123", "authorization": "Bearer abc", "channel": "#a"}, "risk": "low"})
         self.assertEqual(v["params"]["apiKey"], v["params"]["authorization"])
         self.assertNotIn("sk-123", json.dumps(v))
-        self.assertTrue(v["params"]["text"].endswith("(tronqué)"))
+        self.assertEqual(v["params"]["text"], "y" * 5000)                                       # le client valide ce qu'il voit : pas de troncature
+        self.assertEqual(pa.public_view({"id": "A", "status": "PENDING", "params": {"hashtags": "#a", "author": "Kader"}})["params"], {"hashtags": "#a", "author": "Kader"})
         self.assertEqual(v["editableFields"], ["text", "channel"])
 
     # ------------------------------------------------------------------ expiration, rappels
@@ -360,6 +361,45 @@ class ApprovalTests(unittest.TestCase):
         self.assertEqual(pa.reminders_due(items, now), [])
         self.assertEqual(items[0]["remindersSent"], [1, 3])
         self.assertEqual(pa.expire_due([{"id": "x", "status": "PENDING", "expiresUtc": iso(now - 1)}, {"id": "y", "status": "EXECUTED", "expiresUtc": iso(now - 1)}], now)[0]["id"], "x")
+
+    # ------------------------------------------------------------------ freins d'urgence du proprietaire, affichage complet
+    def test_the_owner_emergency_brakes_stop_queued_actions_too(self):
+        e = self.env([ask()])
+        pid = e.create()
+        self.waiting(e, pid)
+        aid = self.items(e, pid)[0]["id"]
+        for brake in (lambda on: e.svc.admin_kill_all(on), lambda on: e.svc.admin_pause_client(CLIENT, on)):
+            brake(True)
+            with self.assertRaises(ps.ProjectError):
+                e.svc.approve_approval(CLIENT, pid, aid)
+            self.assertEqual(self.items(e, pid)[0]["status"], "PENDING")
+            self.assertEqual(e.connector_calls, [])
+            brake(False)
+        # entre la validation et l'appel : l'executeur relit le frein et remet l'article en attente
+        held = []
+        e.svc.executor.submit = lambda p, a: held.append((p, a))                              # la validation est faite, l'appel pas encore
+        self.assertEqual(e.svc.approve_approval(CLIENT, pid, aid)["status"], "EXECUTING")
+        e.svc.admin_kill_all(True)
+        self.assertIsNone(e.svc._approval_begin(*held[0]))
+        self.assertEqual(self.items(e, pid)[0]["status"], "PENDING")
+        self.assertEqual(e.connector_calls, [])
+        e.svc.admin_kill_all(False)
+        del e.svc.executor.submit
+        self.assertEqual(e.svc.approve_approval(CLIENT, pid, aid)["status"], "EXECUTING")      # revalidee : part une seule fois
+        self.settle(e)
+        self.assertEqual(len(e.connector_calls), 1)
+
+    def test_the_approval_screen_shows_everything_that_will_be_sent(self):
+        long_text = "A" * 2000 + " VISIT http://evil.example/pay"
+        e = self.env([ask(params={"channel": "#general", "text": long_text, "hashtags": "#promo"})])
+        pid = e.create()
+        self.waiting(e, pid)
+        shown = self.items(e, pid)[0]["params"]
+        self.assertEqual(shown["text"], long_text)                                              # ni troncature, ni queue cachee
+        self.assertEqual(shown["hashtags"], "#promo")                                           # « hash » n'est pas un secret : lisible
+        e.svc.approve_approval(CLIENT, pid, self.items(e, pid)[0]["id"])
+        self.settle(e)
+        self.assertEqual(e.connector_calls[0][2]["text"], long_text)
 
     # ------------------------------------------------------------------ redémarrage, annulation, isolation
     def test_a_restart_never_replays_an_action_that_was_already_dispatched(self):

@@ -42,6 +42,7 @@ BATCH_MAX = _DEFAULTS["batchMax"]
 
 _SENSITIVE_PARAM_HINTS = ("token", "secret", "password", "apikey", "api_key", "authorization", "auth", "bearer", "key", "credential",
                           "signature", "hash")
+_SENSITIVE_WORDS = {"token", "secret", "password", "passwd", "authorization", "auth", "bearer", "key", "credential", "signature", "hash", "apikey"}
 _MASKED = "•••masqué•••"
 _PARAM_VALUE_MAX = 2000
 _EMAIL_RE = re.compile(r"[^\s,;<>]+@[^\s,;<>]+")
@@ -209,27 +210,40 @@ def is_safe_draft(root, conn, op):
 
 # ------------------------------------------------------------------ paramètres affichés
 def safe_value(value, depth=0):
-    if isinstance(value, str):
-        return value[:_PARAM_VALUE_MAX] + " …(tronqué)" if len(value) > _PARAM_VALUE_MAX else value
+    # Le client valide ce qu'il VOIT : aucune troncature (le total est de toute façon borné par paramsMaxBytes). Un texte tronqué à l'affichage mais
+    # envoyé en entier permettrait de faire valider un contenu (un lien, une consigne) que le client n'a jamais lu.
     if isinstance(value, dict) and depth == 0:
         return safe_params(value, depth + 1)
     return value
 
 
+def sensitive_key(k):
+    """Vrai si la clé désigne un secret (apiKey, access_token, Authorization, client_secret…). Les mots entiers comptent : « hashtags », « author » ou
+    « keywords » ne sont PAS des secrets et restent lisibles par le client qui valide (ce qui part doit se voir)."""
+    low = str(k).lower()
+    if "apikey" in low or "api_key" in low:
+        return True
+    words = [w for w in re.split(r"[^a-z0-9]+", re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", str(k)).lower()) if w]
+    return any(w.lower().rstrip("s") in _SENSITIVE_WORDS for w in words)
+
+
 def safe_params(params, depth=0):
-    """Copie assainie des paramètres d'une action pour l'AFFICHAGE : masque les clés qui ressemblent à un secret, tronque les textes longs."""
+    """Copie des paramètres d'une action pour l'AFFICHAGE, COMPLÈTE (aucune troncature) : seules les clés qui désignent un secret sont masquées."""
     if not isinstance(params, dict):
         return {}
     out = {}
     for k, v in params.items():
-        out[k] = _MASKED if any(h in str(k).lower() for h in _SENSITIVE_PARAM_HINTS) else safe_value(v, depth)
+        if sensitive_key(k):
+            out[k] = _MASKED
+        else:
+            out[k] = safe_value(v, depth)
     return out
 
 
 def editable_fields(item):
     if item.get("kind") != "connector_action":
         return []
-    return [k for k in (item.get("params") or {}) if not any(h in str(k).lower() for h in _SENSITIVE_PARAM_HINTS)]
+    return [k for k in (item.get("params") or {}) if not sensitive_key(k)]
 
 
 def effective_params(item):

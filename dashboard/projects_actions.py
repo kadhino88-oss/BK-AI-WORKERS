@@ -201,6 +201,8 @@ class ActionMixin:
         view = self.usage.remaining(client_id)
         if not pu.g(view, "exempt") and int(pu.g(view, "allowedNow", 0) or 0) < int(self.limits["budget"]["minStartCredits"]):
             raise self._usage_block_error(client_id, view)
+        if cap is not None:      # le plafond donné à la création passe par les mêmes garde-fous que set_budget (plafond du forfait, solde du mois)
+            self._check_cap(client_id, cap, view=view)
         with self._create_lock:
             per_day = int(cfg.plan_value(self.limits["createPerDay"], plan_id, 0) or 0)
             if per_day and self._created_last_day(client_id) >= per_day:
@@ -343,21 +345,26 @@ class ActionMixin:
                 st["steps"][sid]["status"] = "SKIPPED"
         t.event("replan", f"Étape(s) retirée(s) à votre demande : {', '.join(sorted(set(remove)))}.", removed=sorted(set(remove)))
 
-    def _apply_cap(self, t, cap):
-        st = t.state
-        b = st["budget"]
-        plan_id = self.plan_id_of(st["clientId"])
+    def _check_cap(self, client_id, cap, charged=0, estimate=None, view=None):
+        """Plafond choisi par le client : jamais au-dessus du plafond par projet du forfait (absoluteMaxChf) ni de ce qui reste du mois. Même règle à la
+        création, à la validation du plan et dans set_budget."""
+        plan_id = self.plan_id_of(client_id)
         abs_max = cfg.plan_value(self.limits["absoluteMaxChf"], plan_id, 8)
         if abs_max and cap * self.credit_cost > float(abs_max) + 1e-9:
             raise ps.ProjectError("INVALID_INPUT", f"Plafond trop élevé pour votre forfait ({int(abs_max / self.credit_cost)} crédits au plus par projet).",
                                   field="creditsCap")
-        view = self.usage.remaining(st["clientId"])
+        view = view if view is not None else self.usage.remaining(client_id)
         if not pu.g(view, "exempt"):
             rem = pu.g(pu.g(view, "month"), "remaining")
-            if isinstance(rem, int) and cap > int(b.get("creditsCharged") or 0) + rem:
+            if isinstance(rem, int) and cap > int(charged or 0) + rem:
                 raise ps.ProjectError("PROJECT_EXCEEDS_QUOTA", "Ce plafond dépasse vos crédits restants du mois.", remaining=rem,
-                                      estimate=b.get("estimate"), options=["choisir un plafond plus bas", "passer à un forfait supérieur"],
-                                      upgrade=self.upgrade_hint(st["clientId"]))
+                                      estimate=estimate, options=["choisir un plafond plus bas", "passer à un forfait supérieur"],
+                                      upgrade=self.upgrade_hint(client_id))
+
+    def _apply_cap(self, t, cap):
+        st = t.state
+        b = st["budget"]
+        self._check_cap(st["clientId"], cap, charged=b.get("creditsCharged"), estimate=b.get("estimate"))
         b["creditsCap"] = cap
         b["chfCeiling"] = round(cap * self.credit_cost, 4)
         b["capSetByClient"] = True
@@ -482,9 +489,22 @@ class ActionMixin:
             self._approval_feedback(t, it, "Le client a modifié ces champs avant de valider : " + ", ".join(sorted(edited)) +
                                     ". Tiens-en compte pour les prochaines actions du même type.")
 
+    def owner_stop_reason(self, client_id):
+        """Frein d'urgence du propriétaire (tout arrêter, ou ce compte suspendu) : None si rien ne l'empêche, sinon (code, message). Rien ne part vers un
+        tiers pendant un arrêt, même une action déjà mise en file."""
+        ctrl = self.read_control()
+        if ctrl.get("killAll"):
+            return "PROJECTS_DISABLED", "Les projets sont momentanément suspendus par l'administration : aucune action ne part."
+        if client_id in (ctrl.get("pausedClients") or []):
+            return "INVALID_STATE", "Ce compte est suspendu par l'administration : aucune action ne part."
+        return None
+
     def approve_approval(self, client_id, pid, aid, params=None, confirm=None):
         self.require_enabled()
         self.owned_state(client_id, pid)
+        stop = self.owner_stop_reason(client_id)
+        if stop:
+            raise ps.ProjectError(stop[0], stop[1])
         if params is not None and not isinstance(params, dict):
             raise ps.ProjectError("INVALID_INPUT", "params : objet attendu.", field="params")
         dispatch = False

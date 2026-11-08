@@ -1574,6 +1574,17 @@ class StepMixin:
                 ex = it.get("execution") or {}
                 if ex.get("dispatchedUtc"):
                     return None                       # jamais rejoué
+                if self.owner_stop_reason(t.state["clientId"]):
+                    # arrêt d'urgence du propriétaire entre la validation et l'appel : rien ne part, l'article redevient en attente (le client le revalidera)
+                    it["status"] = "PENDING"
+                    it.pop("execution", None)
+                    it.pop("decision", None)
+                    it.pop("decidedUtc", None)
+                    pa.save_items(self.store, pid, items)
+                    t.event("approval_decided", "Action suspendue : l'administration a arrêté les envois. Revalidez-la quand ils reprennent.",
+                            approvalId=aid, status="PENDING", stepId=it.get("stepId"), worker=it.get("worker"))
+                    self.refresh_approval_counts(t)
+                    return None
                 ex["startedUtc"] = ex["dispatchedUtc"] = self.now_iso()
                 it["execution"] = ex
                 pa.save_items(self.store, pid, items)
