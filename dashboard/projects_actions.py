@@ -746,6 +746,11 @@ class ActionMixin:
                 f.flush()
                 os.fsync(f.fileno())
         self.store.delete_project(client_id, pid)
+        try:
+            import site_preview
+            site_preview.SitePreview(self.root).purge_project(pid)
+        except Exception:  # noqa: BLE001
+            pass
         self._live.pop(pid, None)
         self._last_maint.pop(pid, None)
         return {"ok": True}
