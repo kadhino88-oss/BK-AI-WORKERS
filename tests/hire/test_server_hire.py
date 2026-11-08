@@ -483,6 +483,31 @@ class AccountLifecycle(Fixture):
         self.assertTrue(os.path.isfile(os.path.join(TMP, "runtime", "installations", B, "ALEX.json")))
 
 
+    def test_delete_account_purges_engines_outside_state_lock(self):
+        """Regression interblocage : PROJECTS.purge_client / USAGE.purge prennent le verrou d'un projet, que le superviseur tient en lisant la facturation
+        sous _STATE_LOCK. Ils ne doivent donc JAMAIS tourner sous _STATE_LOCK."""
+        import threading
+        add_account(A)
+        write_billing(A, "solo", ["alex"])
+        seen = []
+
+        def lock_free_from_other_thread():
+            res = []
+            t = threading.Thread(target=lambda: res.append(server._STATE_LOCK.acquire(timeout=2)) or (res[0] and server._STATE_LOCK.release()))
+            t.start()
+            t.join()
+            return res[0]
+
+        real_projects, real_usage = server.PROJECTS.purge_client, server.USAGE.purge
+        server.PROJECTS.purge_client = lambda cid: seen.append(("projects", cid, lock_free_from_other_thread()))
+        server.USAGE.purge = lambda cid: seen.append(("usage", cid, lock_free_from_other_thread()))
+        try:
+            self.assertIsNone(server.delete_account(A, "motdepasse-test"))
+        finally:
+            server.PROJECTS.purge_client, server.USAGE.purge = real_projects, real_usage
+        self.assertEqual(seen, [("projects", A, True), ("usage", A, True)])
+
+
 class OwnerEmail(Fixture):
     def setUp(self):
         super().setUp()
