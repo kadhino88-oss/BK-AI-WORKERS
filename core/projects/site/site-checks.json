@@ -217,7 +217,7 @@
     "customer-quote",
     "client-quote"
   ],
-  "placeholderRe": "\\[À COMPLÉTER\\s*:[^\\]]{0,200}\\]",
+  "placeholderRe": "(?i)\\[\\s*[aà]\\s*compl[eé]ter\\b[^\\]]{0,200}\\]",
   "placeholderDomain": "votre-domaine.example",
   "hosts": {
     "infomaniak": "Infomaniak",

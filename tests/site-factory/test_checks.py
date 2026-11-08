@@ -227,6 +227,26 @@ class CheckerTests(unittest.TestCase):
         self.assertNotIn("privacy.trackers", rules)
         self.assertNotIn("a11y.contrast", rules)
 
+    def test_every_spelling_of_the_placeholder_marker_is_seen(self):
+        # le prompt commun des etapes dit « [A COMPLETER : ... ] » (sans accents) : le controle doit le reconnaitre, sinon le client n'est pas prevenu
+        for marker in ("[A COMPLETER: adresse]", "[À COMPLÉTER]", "[a completer : adresse]", "[À COMPLÉTER : adresse]"):
+            ws = self.copy()
+            fx.edit_dist(ws, "index.html", insert_main(f"<p>Adresse : {marker}</p>"))
+            ok, findings = run(ws)
+            self.assertIn("content.placeholders", {f["rule"] for f in findings}, marker)
+
+    def test_a_long_run_of_word_characters_does_not_stall_the_fake_contact_rule(self):
+        import time
+        ws = self.copy()
+        fx.edit_dist(ws, "index.html", insert_main("<p>" + ("a" * 60 + ".") * 3000 + "@</p><p>" + "COMPLÉTER" * 20000 + "</p>"))
+        t0 = time.time()
+        run(ws)
+        self.assertLess(time.time() - t0, 30)            # etait > 90 s (regex quadratique)
+        ws2 = self.copy()
+        fx.edit_dist(ws2, "index.html", insert_main("<p>" + "x" * 100 + " écrivez à info@example.com</p>"))
+        ok, findings = run(ws2)
+        self.assertIn("content.fake_contact", {f["rule"] for f in findings})
+
     def test_external_links_are_listed_never_fetched(self):
         ws = self.copy()
         fx.edit_dist(ws, "index.html", insert_main('<p><a href="https://plan.example/acces" rel="noopener noreferrer">Plan d\'accès</a></p>'))
