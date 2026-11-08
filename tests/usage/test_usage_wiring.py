@@ -441,6 +441,38 @@ def run():
     check("... la mission s'execute", r.get("Status") == "SUCCESS")
     check("... GET /api/usage repond (le grand livre est reamorce depuis les traces)", USAGE.payload(B)["ok"] is True)
 
+    print("\n== le moteur de projets et le grand livre ne peuvent pas diverger sur l'ecriture de BK_PROJECTS ==")
+    import usage_wiring
+    saved = {k: os.environ.get(k) for k in ("BK_PROJECTS", "BK_USAGE_WINDOWS")}
+    try:
+        os.environ.pop("BK_USAGE_WINDOWS", None)
+        for val, expected in (("1", "shadow"), ("true", "shadow"), ("TRUE", "shadow"), ("yes", "shadow"), (" on ", "shadow"), ("0", "off"), ("", "off"), ("non", "off")):
+            os.environ["BK_PROJECTS"] = val
+            check(f"BK_PROJECTS={val!r} sans BK_USAGE_WINDOWS -> grand livre {expected}", usage_wiring.effective_mode() == expected)
+        os.environ["BK_PROJECTS"] = "true"
+        fresh_client(B, "solo")
+        view = USAGE.remaining(B)
+        check("BK_PROJECTS=true : le client Solo n'est PAS exempte du grand livre", not getattr(view, "exempt", True) and view.allowedNow < 1000)
+    finally:
+        for k, v in saved.items():
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
+
+    print("\n== reveil du superviseur de projets ==")
+    woke = []
+    real = getattr(server, "PROJECTS", None)
+    class _P:
+        def nudge(self):                      # signature reelle de ProjectService.nudge : aucun argument
+            woke.append(1)
+    server.PROJECTS = _P()
+    try:
+        USAGE._nudge(B) if hasattr(USAGE, "_nudge") else usage_wiring.WiredUsage._nudge_impl(USAGE, B)
+        check("_nudge_impl reveille le superviseur (ProjectService.nudge() sans argument)", woke == [1])
+    finally:
+        server.PROJECTS = real
+
 
 if __name__ == "__main__":
     sys.exit(main())
