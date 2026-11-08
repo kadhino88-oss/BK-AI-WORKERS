@@ -111,9 +111,10 @@ class BudgetTests(unittest.TestCase):
 
     def test_week_and_month_windows_bind_too(self):
         for name, reason in (("week", "WEEK"), ("month", "MONTH")):
-            usage = FakeUsage(session=1000, week=14 if name == "week" else 1000, month=14 if name == "month" else 1000)
+            usage = FakeUsage(session=1000, week=1000, month=1000)
             e = self.env(usage=usage, chf=0.15)
-            pid = e.create(credits_cap=60)
+            pid = e.create(credits_cap=60)                                      # accepte : le solde du mois suffit au moment de la creation
+            usage.w[name]["limit"] = 14                                         # puis la fenetre se resserre (plafond du projet > ce qui reste)
             st = e.drive(pid, lambda s: s["status"] == "WAITING_QUOTA", timeout=60)
             self.assertEqual(st["statusReason"], reason)
             self.assertEqual(st["resumeAtUtc"], usage.w[name]["resetsAtUtc"])
