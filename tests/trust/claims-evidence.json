@@ -62,7 +62,7 @@
   ],
   "session-invalidation": [
     {"file": "dashboard/server.py", "function": "reset_password_with_token", "match": ["account_clear_all_sessions"]},
-    {"file": "dashboard/server.py", "function": "delete_account", "match": ["account_clear_all_sessions"]}
+    {"file": "dashboard/server.py", "function": "_delete_account_locked", "match": ["account_clear_all_sessions"]}
   ],
   "no-csrf": [
     {"file": "dashboard/server.py", "absent": ["(?i)csrf"]}
@@ -152,14 +152,14 @@
   ],
   "export-delete": [
     {"file": "dashboard/server.py", "match": ["def export_account_data", "def delete_account", "ACTIVE_SUBSCRIPTION", "shutil\\.rmtree\\(cdir"]},
-    {"file": "dashboard/server.py", "function": "delete_account", "match": ["_remove_client_apikey", "_remove_client_webhook", "PROFILE_DIR", "TASKS_DIR", "automations\\.json", "_verify_password"]},
+    {"file": "dashboard/server.py", "function": "_delete_account_locked", "match": ["_remove_client_apikey", "_remove_client_webhook", "PROFILE_DIR", "TASKS_DIR", "automations\\.json", "_verify_password"]},
     {"file": "dashboard/server.py", "function": "export_account_data", "match": ["\"companyProfile\"", "\"billing\"", "\"missions\"", "\"automations\""]}
   ],
   "phone-retention": [
     {"file": "dashboard/phone_agent.py", "match": ["LOG_RETENTION_DAYS = 90"]}
   ],
   "delete-keeps-billing": [
-    {"file": "dashboard/server.py", "function": "delete_account", "absent": ["_billing_path", "BILLING_DATA", "os\\.remove\\([^)]*billing"]},
+    {"file": "dashboard/server.py", "function": "_delete_account_locked", "absent": ["_billing_path", "BILLING_DATA", "os\\.remove\\([^)]*billing"]},
     {"file": "dashboard/server.py", "match": ["events\\[-1000:\\]"]}
   ],
   "plain-missions": [
