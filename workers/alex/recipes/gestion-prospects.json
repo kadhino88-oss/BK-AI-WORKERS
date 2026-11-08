@@ -12,7 +12,7 @@
   "languages": [
     "fr"
   ],
-  "minPlan": "solo",
+  "minPlan": "equipe",
   "services": [
     "prospection-sortante",
     "suivi-crm-opportunites"

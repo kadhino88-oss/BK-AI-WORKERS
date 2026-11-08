@@ -1,7 +1,7 @@
 {
   "schema": "BK-WORKER-CARDS-V1",
   "generatedBy": "chloe/Build-WorkerCards.ps1",
-  "sourcesSha256": "e67a508a3794d02db8383a088d6ec3eb3e0fbb63cab685f897f7519fe3d771b1",
+  "sourcesSha256": "9e1019859315f311fa5e853f0dcba23986af2500832163bf4abba76a73f24742",
   "cards": [
     {
       "id": "alex",

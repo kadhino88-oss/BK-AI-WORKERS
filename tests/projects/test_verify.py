@@ -403,6 +403,7 @@ class Done(Base):
         self.assertTrue(pv.message_claims_ok("C1 PASS, le reste est à relire", self.ver))
         self.assertFalse(pv.message_claims_ok("C2 : PASS, tout est vérifié", self.ver))                     # un PASS absent de verification.json est refusé
         self.assertFalse(pv.message_claims_ok("Le critère C9 est PASS", self.ver))
+        self.assertTrue(pv.message_claims_ok("Contrôle terminé : PASS pour le Cabinet", self.ver))                 # un mot courant en C n est pas un critère
 
     def test_verification_files_roundtrip(self):
         self.assertEqual(pv.latest_round(self.proj), 0)

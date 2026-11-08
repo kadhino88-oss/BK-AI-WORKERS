@@ -11,7 +11,7 @@
   "languages": [
     "fr"
   ],
-  "minPlan": "solo",
+  "minPlan": "trio",
   "services": [
     "strategie-calendrier-editorial",
     "posts-a-la-demande",
