@@ -176,8 +176,16 @@ def validate_plan(plan, scope=None, *, known_workers=None, known_check_types_ove
         crit = {"id": cid, "text": text, "kind": kind}
         if kind == "auto":
             chk = c.get("check")
+            weak = None
             if isinstance(chk, dict) and chk.get("type") in checks:
+                import project_checks
+                weak = project_checks.weakness(chk)
+            if isinstance(chk, dict) and chk.get("type") in checks and not weak:
                 crit["check"] = copy.deepcopy(chk)
+            elif weak:
+                warnings.append({"code": "CRITERION_AUTO_VACUOUS", "path": path, "detail":
+                                 f"Le contrôle du critère {cid} ne vérifie rien de précis ({weak}) : il est vérifié par grille (« rubric »)."})
+                crit["kind"] = "rubric"
             else:
                 warnings.append({"code": "CRITERION_AUTO_TO_RUBRIC", "path": path, "detail":
                                  f"Le critère {cid} n'a pas de contrôle automatique connu : il est vérifié par grille (« rubric »)."})

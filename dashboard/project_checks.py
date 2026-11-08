@@ -503,6 +503,56 @@ def run_check(ctx, check, out_dir=None):
     return out
 
 
+def weakness(check):
+    """Renvoie une raison (texte français) si le contrôle ne peut discriminer aucun livrable (il passerait toujours), sinon None. Appelé à la
+    validation du plan : un critère « auto » écrit par le modèle sans contrainte réelle est rétrogradé en « rubric » (le moteur ne le présente
+    pas comme vérifié sans modèle). Ne lance aucune expression : elles sont seulement compilées et essayées sur la chaîne vide."""
+    if not isinstance(check, dict):
+        return "contrôle absent"
+    t = check.get("type")
+
+    def vacuous_regex(rx):
+        if not isinstance(rx, str) or not rx.strip() or len(rx) > 300:
+            return True
+        try:
+            return re.compile(rx, re.MULTILINE | re.IGNORECASE).search("") is not None       # elle correspond à tout, y compris au vide
+        except re.error:
+            return True
+
+    def terms(key):
+        return [m for m in (check.get(key) or []) if isinstance(m, str)] if isinstance(check.get(key), list) else []
+
+    if t == "file_contains":
+        items = terms("mustContain") + terms("mustNotContain")
+        if not items:
+            return "aucune condition mustContain / mustNotContain"
+        for m in items:
+            if not m.strip() or (m.startswith("re:") and vacuous_regex(m[3:])):
+                return "une condition est vide ou correspond à n'importe quel texte"
+    elif t == "count_matches":
+        if vacuous_regex(check.get("regex")):
+            return "l'expression est vide ou correspond à n'importe quel texte"
+        if int(_num(check.get("min"), 1)) < 1:
+            return "min inférieur à 1 (toujours satisfait)"
+    elif t == "csv_check":
+        cols = [c for c in (check.get("columns") or []) if isinstance(c, str) and c.strip()] if isinstance(check.get("columns"), list) else []
+        extra = [c for c in (check.get("noEmpty") or []) if isinstance(c, str) and c.strip()] if isinstance(check.get("noEmpty"), list) else []
+        if not cols and not extra and int(_num(check.get("minRows"), 0)) < 1 and not (isinstance(check.get("unique"), str) and check["unique"].strip()):
+            return "ni colonne, ni nombre de lignes, ni unicité demandés"
+    elif t == "docx_check":
+        heads = [h for h in (check.get("headings") or []) if isinstance(h, str) and h.strip()] if isinstance(check.get("headings"), list) else []
+        if not heads and int(_num(check.get("minWords"), 0)) < 1:
+            return "ni titres, ni nombre de mots minimal demandés"
+    elif t == "xlsx_check":
+        sheets = [x for x in (check.get("sheets") or []) if isinstance(x, str) and x.strip()] if isinstance(check.get("sheets"), list) else []
+        if not sheets and int(_num(check.get("minFormulas"), 0)) < 1 and check.get("noErrors", True) is False:
+            return "aucune contrainte (noErrors désactivé, ni feuilles, ni formules)"
+    elif t == "json_schema":
+        if not isinstance(check.get("schema"), dict) or not check["schema"]:
+            return "schéma absent ou vide"
+    return None
+
+
 def _safe_check_echo(check):
     if not isinstance(check, dict):
         return {}
