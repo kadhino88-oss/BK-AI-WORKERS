@@ -94,6 +94,36 @@ class TypedChecks(Base):
         self.assertLess(time.time() - t0, 3)
         self.assertFalse(r["ok"])
 
+    def test_overlapping_alternation_regex_cannot_freeze_the_server(self):
+        # (a|aa)+$ passait l'ancien garde (aucun quantificateur dans le groupe) et prenait 27 s a 36 caracteres, GIL tenu
+        self.put("a.txt", "a" * 40 + "b")
+        for check in ({"type": "file_contains", "path": "a.txt", "mustContain": ["re:^(a|aa)+$"]},
+                      {"type": "file_contains", "path": "a.txt", "mustNotContain": ["re:^(a|aa)+$"]},
+                      {"type": "count_matches", "path": "a.txt", "regex": "^(a|aa)+$", "min": 1}):
+            t0 = time.time()
+            r = self.run_check(check)
+            self.assertLess(time.time() - t0, 4, check)
+            self.assertFalse(r["ok"], check)                      # jamais « ok » par defaut : un mustNotContain illisible n'est pas un succes
+            self.assertIn("check.invalid", self.rules(r))
+        # une alternation que le garde ne voit pas (groupe non capturant imbrique) : le delai du sous-processus la coupe
+        self.put("b.txt", "a" * 60 + "b")
+        t0 = time.time()
+        r = self.run_check({"type": "file_contains", "path": "b.txt", "mustContain": ["re:^(?:x*|(?:a|aa))+$"]})
+        self.assertLess(time.time() - t0, pc.REGEX_TIMEOUT_SEC + 2)
+        self.assertFalse(r["ok"])
+        # un thread voisin n'est pas affame (le sous-processus ne tient pas le GIL du serveur)
+        import threading
+        ticks = []
+        stop = threading.Event()
+        th = threading.Thread(target=lambda: [ticks.append(1) or time.sleep(0.05) for _ in iter(stop.is_set, True)])
+        th.start()
+        self.run_check({"type": "file_contains", "path": "b.txt", "mustContain": ["re:^(?:x*|(?:a|aa))+$"]})
+        stop.set()
+        th.join()
+        self.assertGreater(len(ticks), 10)
+        # une expression ordinaire fonctionne toujours
+        self.assertTrue(self.run_check({"type": "count_matches", "path": "a.txt", "regex": "a{5}", "min": 3})["ok"])
+
     def test_count_matches(self):
         self.put("posts.md", "## Jour 1\n## Jour 2\n## Jour 3\n")
         self.assertTrue(self.run_check({"type": "count_matches", "path": "posts.md", "regex": "^## Jour \\d+", "min": 3})["ok"])
