@@ -2672,8 +2672,17 @@ def purge_old_task_files(now=None):
     return removed
 
 
-def _purge_client_mission_artifacts(client_id, task_ids):
-    """Suppression de compte : fichiers generes, jobs en arriere-plan et actions en attente du client."""
+def _purge_client_engines(client_id):
+    """Projets (lanceurs arretes, dossier runtime/projects/<ClientId> supprime) puis grand livre des fenetres d'usage. NE DOIT PAS tourner sous _STATE_LOCK :
+    arreter une etape prend le verrou du projet, et le superviseur, qui tient ce verrou, lit la facturation (_billing_load) sous _STATE_LOCK. Les deux
+    ordres a la fois = interblocage de tout le serveur. L'ordre projets -> grand livre est voulu : le reglement d'une etape arretee ne doit pas recreer le grand livre."""
+    PROJECTS.purge_client(client_id)
+    USAGE.purge(client_id)
+
+
+def _purge_client_mission_artifacts(client_id, task_ids, engines=True):
+    """Suppression de compte : fichiers generes, jobs en arriere-plan et actions en attente du client. engines=False : le moteur de projets et le grand
+    livre d'usage ne sont PAS touches ici (delete_account les purge apres avoir relache _STATE_LOCK, voir _purge_client_engines)."""
     for tid in task_ids:
         if TASK_ID_PATTERN.match(tid or ""):
             shutil.rmtree(os.path.join(TASK_FILES_DIR, tid), ignore_errors=True)
@@ -2683,8 +2692,8 @@ def _purge_client_mission_artifacts(client_id, task_ids):
                 pass
     shutil.rmtree(os.path.join(ROOT, "runtime", "threads", client_id), ignore_errors=True)   # memoire de conversation v2
     shutil.rmtree(os.path.join(ROOT, "runtime", "client-memory", client_id), ignore_errors=True)   # notes durables
-    PROJECTS.purge_client(client_id)                                                               # projets : lanceurs arretes, dossier runtime/projects/<ClientId> supprime
-    USAGE.purge(client_id)                                                                         # grand livre des fenetres d'usage (session / semaine / mois)
+    if engines:
+        _purge_client_engines(client_id)
     shutil.rmtree(os.path.join(ROOT, "runtime", "chloe-runs", re.sub(r"[^A-Za-z0-9_-]", "_", client_id)), ignore_errors=True)   # missions multi-Workers de Chloe (espace de travail partage)
     INSTALLS.delete_client(client_id)                                                              # installations des Workers (fiches de connaissances)
     try:                                                                                           # demandes d'embauche du client
@@ -2708,8 +2717,16 @@ def _purge_client_mission_artifacts(client_id, task_ids):
         pass
 
 
-@_state_locked
 def delete_account(client_id, password):
+    """Supprime le compte. Les moteurs (projets, grand livre) sont purges APRES la liberation de _STATE_LOCK (voir _purge_client_engines)."""
+    err = _delete_account_locked(client_id, password)
+    if err is None:
+        _purge_client_engines(client_id)
+    return err
+
+
+@_state_locked
+def _delete_account_locked(client_id, password):
     if not CLIENT_ID_RE.match(client_id or ""):
         return "NOT_ALLOWED"
     accounts = _load_accounts()
@@ -2757,7 +2774,7 @@ def delete_account(client_id, password):
                         os.remove(p)
                     except OSError:
                         pass
-    _purge_client_mission_artifacts(client_id, deleted_task_ids)
+    _purge_client_mission_artifacts(client_id, deleted_task_ids, engines=False)
     log_activity("account_deleted", clientId=client_id)
     return None
 
@@ -4204,7 +4221,17 @@ def chloe_triage_rate_ok(client_id):
         rows = _recent(CHLOE_TRIAGE_RATE, client_id, 3600)
         if len(rows) >= 20:
             return False
-        CHLOE_TRIAGE_RATE[client_id] = rows + [time.time()]
+        # Plafond global : l'appel au modele est paye par la plateforme, pas par le credit du client (a ajuster avec BK_TRIAGE_MAX_PER_HOUR).
+        try:
+            cap = max(10, int(os.environ.get("BK_TRIAGE_MAX_PER_HOUR", "300")))
+        except ValueError:
+            cap = 300
+        total = _recent(CHLOE_TRIAGE_RATE, "*", 3600)
+        if len(total) >= cap:
+            return False
+        now = time.time()
+        CHLOE_TRIAGE_RATE[client_id] = rows + [now]
+        CHLOE_TRIAGE_RATE["*"] = total + [now]
     return True
 
 
@@ -6077,6 +6104,10 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_account_required()
                 return
             if self._worker_not_included(client_id, "chloe"):
+                return
+            blocked = subscription_blocks_mission(client_id)      # pas de credit ni d'abonnement : pas d'appel au modele aux frais de la plateforme
+            if blocked:
+                self._send_json(subscription_required_payload(client_id, blocked), 402)
                 return
             if not chloe_triage_rate_ok(client_id):
                 self.send_response(429)

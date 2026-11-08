@@ -1022,7 +1022,7 @@ class UsageService:
                                 except Exception:  # noqa: BLE001
                                     actual = 0
                             self._apply_settle(L, rid, r, actual, now)
-                            if r.get("kind") in ("mission", "automation"):
+                            if r.get("kind") in ("mission", "automation") or (r.get("kind") == "project_step" and not actual):
                                 L["lastReconcileUtc"] = None       # credits peut-etre deja traces avant l'arret : recomptes a la prochaine ecriture
                             freed += 1
                     self._recompute_reserved(L)

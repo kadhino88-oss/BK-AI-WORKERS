@@ -265,6 +265,20 @@ class PreviewTests(unittest.TestCase):
         self.assertEqual(self.get(f"/preview/{self.tok}/")[1].status, 404)
         self.assertEqual(self.get(f"/preview/{tok_b}/")[1].status, 200)
 
+    def test_sweep_removes_old_dead_tokens_and_purge_project_removes_all_of_one_project(self):
+        tok_b = self.pv.create(CLIENT_B, PID_B)["token"]
+        self.pv.revoke(CLIENT_A, PID_A)
+        self.assertEqual(self.pv.sweep(), 0, "un jeton qui vient d'expirer ou d'etre revoque est garde (delai de grace)")
+        old = self.pv.now
+        self.pv.now = lambda: old() + 20 * 86400
+        try:
+            self.assertEqual(self.pv.sweep(), 2, "apres le delai, jetons expires ou revoques supprimes")
+        finally:
+            self.pv.now = old
+        tok_c = self.pv.create(CLIENT_A, PID_A)["token"]
+        self.assertEqual(self.pv.purge_project(PID_A), 1)
+        self.assertEqual(self.get(f"/preview/{tok_c}/")[1].status, 404)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

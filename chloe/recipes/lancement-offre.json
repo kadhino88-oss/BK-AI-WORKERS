@@ -16,7 +16,7 @@
     "fr",
     "en"
   ],
-  "minPlan": "equipe",
+  "minPlan": "scale",
   "services": [
     "coordination-multi-workers"
   ],

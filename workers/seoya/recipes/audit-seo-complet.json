@@ -12,7 +12,7 @@
   "languages": [
     "fr"
   ],
-  "minPlan": "solo",
+  "minPlan": "trio",
   "services": [
     "mission-seo-geo-complete",
     "audit-on-page",

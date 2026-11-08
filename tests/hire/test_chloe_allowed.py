@@ -26,7 +26,8 @@ def as_list(value):
 STUB = r'''
 param([string]$WorkerId, [string]$TaskId, [string]$Objective, [string]$TenantId, [string]$ClientId, [string]$ProjectId, [string]$ExecutionId,
       [string]$UserId, [string]$SessionId, [string]$TokenId, [string]$Token, [string]$Environment, [string]$Mode, [string]$Provider, [string]$Model)
-Add-Content -LiteralPath $env:STUB_LOG -Value $WorkerId
+# Les Workers partent en parallele : une ecriture concurrente peut echouer sur le verrou du fichier, donc on reessaie.
+for ($i = 0; $i -lt 40; $i++) { try { Add-Content -LiteralPath $env:STUB_LOG -Value $WorkerId -ErrorAction Stop; break } catch { Start-Sleep -Milliseconds (25 + (Get-Random -Maximum 50)) } }
 @{ Status = "SUCCESS"; Answer = ("Reponse de " + $WorkerId); WorkerId = $WorkerId } | ConvertTo-Json -Compress
 '''
 

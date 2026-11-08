@@ -43,7 +43,9 @@ class _NS:
 
 def effective_mode():
     mode = usage_mod._mode_from_env()
-    if mode == "off" and os.environ.get("BK_PROJECTS", "0").strip() == "1":
+    # Meme ecriture que le moteur de projets (projects_wiring._truthy, site_preview, server.py) : « 1 », « true », « yes », « on ». Un moteur de projets
+    # actif sans grand livre d'usage laisserait les projets hors des compteurs session / semaine / mois.
+    if mode == "off" and os.environ.get("BK_PROJECTS", "0").strip().lower() in ("1", "true", "yes", "on"):
         return "shadow"
     return mode
 
@@ -87,7 +89,10 @@ class WiredUsage(usage_mod.UsageService):
             return
         nudge = getattr(projects, "nudge", None)
         if callable(nudge):
-            nudge(client_id)
+            try:
+                nudge()          # ProjectService.nudge() reveille le superviseur pour tous les clients (il ne prend pas d'identifiant)
+            except TypeError:
+                nudge(client_id)
 
     def _plan_view_impl(self, client_id):
         """Forfait du client tel que le service d'usage le lit : credits du mois (forfait + credits accordes), cycle de facturation, plafonds

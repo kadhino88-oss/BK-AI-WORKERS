@@ -118,20 +118,61 @@ def check_file_exists(ctx, check, res):
         res.ok()
 
 
-_NESTED_QUANT = re.compile(r"\([^()]*[+*][^()]*\)[+*{]")
+# Garde de premier niveau (rapide, pas une preuve) : quantificateur dans un groupe lui-même quantifié, ou alternation dans un groupe quantifié
+# ((a|aa)+). La vraie protection est le sous-processus à délai de _regex_run : aucune expression ne tourne dans le processus du serveur.
+_NESTED_QUANT = re.compile(r"\((?:[^()]*[+*][^()]*|[^()]*\|[^()]*)\)[+*{]")
+
+REGEX_TIMEOUT_SEC = 3.0
+REGEX_MAX_TEXT = 200_000      # le texte testé par une expression est borné (le reste du fichier n'est pas examiné)
+
+_REGEX_WORKER = (
+    "import json, re, sys\n"
+    "d = json.loads(sys.stdin.buffer.read().decode('utf-8'))\n"
+    "try:\n"
+    "    rx = re.compile(d['pattern'], d['flags'])\n"
+    "    out = {'r': rx.search(d['text']) is not None} if d['op'] == 'search' else {'r': len(rx.findall(d['text']))}\n"
+    "except re.error as e:\n"
+    "    out = {'err': str(e)[:120]}\n"
+    "sys.stdout.write(json.dumps(out))\n"
+)
+
+
+class RegexRefused(Exception):
+    """Expression inutilisable (trop longue, dangereuse, invalide, trop lente). Le message est montrable au Worker."""
+
+
+def _regex_run(op, pattern, text, flags=0, timeout=None):
+    """Exécute re.search (op='search' -> bool) ou re.findall (op='count' -> entier) dans un SOUS-PROCESSUS avec délai dur : un plan écrit par un
+    modèle (ou du contenu injecté) ne peut pas figer le serveur. Lève RegexRefused."""
+    import subprocess
+    import sys
+    if not isinstance(pattern, str) or not pattern or len(pattern) > 300:
+        raise RegexRefused("Expression régulière absente ou trop longue.")
+    if _NESTED_QUANT.search(pattern):
+        raise RegexRefused("Expression régulière refusée (quantificateurs ou alternation imbriqués).")
+    payload = json.dumps({"op": op, "pattern": pattern, "flags": int(flags), "text": text[:REGEX_MAX_TEXT]}).encode("utf-8")
+    env = {k: v for k, v in os.environ.items() if k in ("SYSTEMROOT", "PATH", "LANG", "LC_ALL", "TEMP", "TMP")}
+    try:
+        p = subprocess.run([sys.executable, "-I", "-c", _REGEX_WORKER], input=payload, capture_output=True, env=env,
+                           timeout=timeout or REGEX_TIMEOUT_SEC)
+    except subprocess.TimeoutExpired:
+        raise RegexRefused("Expression régulière interrompue (trop lente).")
+    except OSError:
+        raise RegexRefused("Expression régulière non évaluée (sous-processus indisponible).")
+    try:
+        out = json.loads(p.stdout.decode("utf-8"))
+    except (ValueError, UnicodeDecodeError):
+        raise RegexRefused("Expression régulière non évaluée.")
+    if "err" in out:
+        raise RegexRefused(f"Expression régulière invalide : {out['err']}")
+    return out["r"]
 
 
 def _match(text, pattern):
-    """Texte simple (insensible à la casse) ou « re:<expression> ». Les expressions viennent d'un plan écrit par un modèle et tournent DANS le serveur :
-    longueur bornée, quantificateurs imbriqués refusés (retour catastrophique), texte borné à 2 Mo."""
+    """Texte simple (insensible à la casse) ou « re:<expression> ». Les expressions viennent d'un plan écrit par un modèle : elles tournent dans
+    un sous-processus à délai (_regex_run), jamais dans le serveur. Lève RegexRefused si l'expression est inutilisable."""
     if pattern.startswith("re:"):
-        rx = pattern[3:]
-        if len(rx) > 300 or _NESTED_QUANT.search(rx):
-            return False
-        try:
-            return re.search(rx, text[:2_000_000], re.MULTILINE | re.IGNORECASE) is not None
-        except re.error:
-            return False
+        return _regex_run("search", pattern[3:], text, re.MULTILINE | re.IGNORECASE)
     return pattern.lower() in text.lower()
 
 
@@ -145,16 +186,19 @@ def check_file_contains(ctx, check, res):
     if not must and not must_not:
         res.fail("check.empty", "Aucune condition (mustContain / mustNotContain) dans ce contrôle.", file=rel)
         return
-    for m in must:
-        if _match(text, m):
-            res.ok()
-        else:
-            res.fail("content.missing", f"Texte attendu absent de {rel} : « {m[:80]} »", file=rel)
-    for m in must_not:
-        if _match(text, m):
-            res.fail("content.forbidden", f"Texte interdit présent dans {rel} : « {m[:80]} »", file=rel)
-        else:
-            res.ok()
+    try:
+        for m in must:
+            if _match(text, m):
+                res.ok()
+            else:
+                res.fail("content.missing", f"Texte attendu absent de {rel} : « {m[:80]} »", file=rel)
+        for m in must_not:
+            if _match(text, m):
+                res.fail("content.forbidden", f"Texte interdit présent dans {rel} : « {m[:80]} »", file=rel)
+            else:
+                res.ok()
+    except RegexRefused as e:
+        res.fail("check.invalid", str(e), file=rel)
 
 
 def check_count_matches(ctx, check, res):
@@ -165,15 +209,11 @@ def check_count_matches(ctx, check, res):
     if not isinstance(pattern, str) or not pattern or len(pattern) > 300:
         res.fail("check.invalid", "Expression régulière absente ou trop longue.", file=rel)
         return
-    if re.search(r"\([^()]*[+*][^()]*\)[+*{]", pattern):
-        res.fail("check.invalid", "Expression régulière refusée (quantificateurs imbriqués).", file=rel)
-        return
     try:
-        rx = re.compile(pattern, re.MULTILINE)
-    except re.error as e:
-        res.fail("check.invalid", f"Expression régulière invalide : {e}", file=rel)
+        n = _regex_run("count", pattern, _read_text(full), re.MULTILINE)
+    except RegexRefused as e:
+        res.fail("check.invalid", str(e), file=rel)
         return
-    n = len(rx.findall(_read_text(full)[:2_000_000]))
     minimum = int(_num(check.get("min"), 1))
     if n >= minimum:
         res.ok()
@@ -341,14 +381,11 @@ def validate_schema(value, schema, path="$", out=None, depth=0):
         if "maxLength" in schema and len(value) > schema["maxLength"]:
             out.append(f"{path} : trop long")
         if isinstance(schema.get("pattern"), str):
-            if len(schema["pattern"]) > 300 or _NESTED_QUANT.search(schema["pattern"]):
-                out.append(f"{path} : expression régulière refusée (trop longue ou quantificateurs imbriqués)")
-            else:
-                try:
-                    if not re.search(schema["pattern"], value[:20000]):
-                        out.append(f"{path} : format invalide")
-                except re.error:
-                    pass
+            try:
+                if not _regex_run("search", schema["pattern"], value[:20000]):
+                    out.append(f"{path} : format invalide")
+            except RegexRefused:
+                out.append(f"{path} : expression régulière refusée (trop longue, dangereuse, invalide ou trop lente)")
     if isinstance(value, (int, float)) and not isinstance(value, bool):
         if "minimum" in schema and value < schema["minimum"]:
             out.append(f"{path} : inférieur au minimum {schema['minimum']}")
@@ -464,6 +501,56 @@ def run_check(ctx, check, out_dir=None):
         except OSError:
             pass
     return out
+
+
+def weakness(check):
+    """Renvoie une raison (texte français) si le contrôle ne peut discriminer aucun livrable (il passerait toujours), sinon None. Appelé à la
+    validation du plan : un critère « auto » écrit par le modèle sans contrainte réelle est rétrogradé en « rubric » (le moteur ne le présente
+    pas comme vérifié sans modèle). Ne lance aucune expression : elles sont seulement compilées et essayées sur la chaîne vide."""
+    if not isinstance(check, dict):
+        return "contrôle absent"
+    t = check.get("type")
+
+    def vacuous_regex(rx):
+        if not isinstance(rx, str) or not rx.strip() or len(rx) > 300:
+            return True
+        try:
+            return re.compile(rx, re.MULTILINE | re.IGNORECASE).search("") is not None       # elle correspond à tout, y compris au vide
+        except re.error:
+            return True
+
+    def terms(key):
+        return [m for m in (check.get(key) or []) if isinstance(m, str)] if isinstance(check.get(key), list) else []
+
+    if t == "file_contains":
+        items = terms("mustContain") + terms("mustNotContain")
+        if not items:
+            return "aucune condition mustContain / mustNotContain"
+        for m in items:
+            if not m.strip() or (m.startswith("re:") and vacuous_regex(m[3:])):
+                return "une condition est vide ou correspond à n'importe quel texte"
+    elif t == "count_matches":
+        if vacuous_regex(check.get("regex")):
+            return "l'expression est vide ou correspond à n'importe quel texte"
+        if int(_num(check.get("min"), 1)) < 1:
+            return "min inférieur à 1 (toujours satisfait)"
+    elif t == "csv_check":
+        cols = [c for c in (check.get("columns") or []) if isinstance(c, str) and c.strip()] if isinstance(check.get("columns"), list) else []
+        extra = [c for c in (check.get("noEmpty") or []) if isinstance(c, str) and c.strip()] if isinstance(check.get("noEmpty"), list) else []
+        if not cols and not extra and int(_num(check.get("minRows"), 0)) < 1 and not (isinstance(check.get("unique"), str) and check["unique"].strip()):
+            return "ni colonne, ni nombre de lignes, ni unicité demandés"
+    elif t == "docx_check":
+        heads = [h for h in (check.get("headings") or []) if isinstance(h, str) and h.strip()] if isinstance(check.get("headings"), list) else []
+        if not heads and int(_num(check.get("minWords"), 0)) < 1:
+            return "ni titres, ni nombre de mots minimal demandés"
+    elif t == "xlsx_check":
+        sheets = [x for x in (check.get("sheets") or []) if isinstance(x, str) and x.strip()] if isinstance(check.get("sheets"), list) else []
+        if not sheets and int(_num(check.get("minFormulas"), 0)) < 1 and check.get("noErrors", True) is False:
+            return "aucune contrainte (noErrors désactivé, ni feuilles, ni formules)"
+    elif t == "json_schema":
+        if not isinstance(check.get("schema"), dict) or not check["schema"]:
+            return "schéma absent ou vide"
+    return None
 
 
 def _safe_check_echo(check):

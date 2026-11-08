@@ -212,6 +212,42 @@ class SitePreview:
                         pass
         return n
 
+    def purge_project(self, pid):
+        """Suppression d'un projet : tous ses jetons d'apercu disparaissent."""
+        n = 0
+        with self.lock:
+            for tok, _rec in self._tokens_of(pid):
+                try:
+                    os.remove(self._path(tok))
+                    n += 1
+                except OSError:
+                    pass
+        return n
+
+    def sweep(self, grace_days=1):
+        """Entretien : supprime les jetons revoques ou expires depuis plus de `grace_days` jours (le dossier ne grossit plus sans limite)."""
+        limit = self.now() - grace_days * 86400
+        n = 0
+        try:
+            names = os.listdir(self.dir)
+        except OSError:
+            return 0
+        with self.lock:
+            for name in names:
+                if not (name.endswith(".json") and TOKEN_RE.match(name[:-5])):
+                    continue
+                rec = self._load(name[:-5])
+                if rec is None:
+                    continue
+                exp = _parse_iso(rec.get("expiresUtc")) or 0
+                if exp < limit:
+                    try:
+                        os.remove(self._path(name[:-5]))
+                        n += 1
+                    except OSError:
+                        pass
+        return n
+
     # ------------------------------------------------------------------ service HTTP
     def handle_get(self, handler, path):
         """True si la requête est un aperçu (réponse envoyée), False sinon (la route continue normalement)."""

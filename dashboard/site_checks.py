@@ -1071,9 +1071,26 @@ def _claim_allowed(site, kind, matched):
     return False
 
 
+def _first_fake_mail(rx, blob):
+    """Cherche une adresse factice en n'examinant qu'une fenêtre autour de chaque « @ » (200 au plus) : une longue suite de caractères de mot
+    ne rend pas la recherche quadratique."""
+    pos = -1
+    for _ in range(200):
+        pos = blob.find("@", pos + 1)
+        if pos < 0:
+            return None
+        mm = rx.search(blob[max(0, pos - 65):pos + 90])
+        if mm:
+            return mm
+    return None
+
+
 def rule_content(m, rp, pc, want, cfg):
     site = m.site or {}
-    ph_re = re.compile(cfg.get("placeholderRe") or r"\[À COMPLÉTER\s*:[^\]]{0,200}\]")
+    # Marqueur reconnu avec ou sans accents, avec ou sans deux-points : « [A COMPLETER : x] », « [À COMPLÉTER] » (le prompt commun des étapes dit « [A COMPLETER : ...] »).
+    ph_re = re.compile(cfg.get("placeholderRe") or r"(?i)\[\s*[aà]\s*compl[eé]ter\b[^\]]{0,200}\]")
+    ph_head = re.compile(r"^\[\s*[aà]\s*compl[eé]ter\b", re.I)
+    ph_word = re.compile(r"compl[eé]ter", re.I)
     declared = " ".join(str(x).lower() for x in (site.get("needsFromClient") or []) if isinstance(x, (str, int, float)))
     labels_all = {}
     for p in m.pages:
@@ -1081,11 +1098,12 @@ def rule_content(m, rp, pc, want, cfg):
         for e in p.doc.elements:
             for k in ("alt", "title", "content", "placeholder", "aria-label"):
                 v = e.get(k)
-                if isinstance(v, str) and "COMPLÉTER" in v:
+                if isinstance(v, str) and ph_word.search(v):
                     texts.append(v)
         for t in texts:
             for mm in ph_re.finditer(t):
-                lab = re.sub(r"\s+", " ", mm.group(0)[len("[À COMPLÉTER"):].strip(" :]")).strip()
+                lab = re.sub(r"\s+", " ", ph_head.sub("", mm.group(0), count=1).strip(" :]")).strip()
+                lab = lab or "(sans précision)"
                 labels_all.setdefault(lab, set()).add(p.rel)
     if want("content.placeholders"):
         if labels_all:
@@ -1105,11 +1123,11 @@ def rule_content(m, rp, pc, want, cfg):
             else:
                 rp.ok()
     if want("content.fake_contact"):
-        fake_mail = re.compile(r"[\w.+-]+@(?:example\.(?:com|org|net|ch|fr)|test\.com|domain\.com|domaine\.(?:com|ch|fr)|votre[-_]?(?:site|domaine|entreprise)\.[a-z]+|yourdomain\.[a-z]+|email\.com|mail\.com|monsite\.[a-z]+)\b", re.I)
+        fake_mail = re.compile(r"[\w.+-]{1,64}@(?:example\.(?:com|org|net|ch|fr)|test\.com|domain\.com|domaine\.(?:com|ch|fr)|votre[-_]?(?:site|domaine|entreprise)\.[a-z]+|yourdomain\.[a-z]+|email\.com|mail\.com|monsite\.[a-z]+)\b", re.I)
         fake_tel = re.compile(r"(?:\b0?1[\s.-]?23[\s.-]?45[\s.-]?67[\s.-]?89\b|\b0{4,}\b|\b(?:12345678|123[\s.-]?456[\s.-]?7890)\b|\+\d{2}[\s.-]?0{2}[\s.-]?0{3}|\bxx[\s.-]?xx[\s.-]?xx\b|\+?\d{2}\s?79\s?123\s?45\s?67\b|\+41\s?21\s?123\s?45\s?67)", re.I)
         for p in m.pages:
             blob = p.doc.visible_text() + " " + " ".join((e.get("href") or "") for e in p.doc.by_tag("a"))
-            mm = fake_mail.search(blob) or fake_tel.search(blob)
+            mm = _first_fake_mail(fake_mail, blob) or fake_tel.search(blob)
             if mm:
                 rp.fail("content.fake_contact", f"Coordonnées factices : « {mm.group(0)[:40]} ». Utilisez la valeur donnée par le client ou « [À COMPLÉTER : …] ».", file=p.rel)
             else:

@@ -67,6 +67,42 @@ class PlanValidation(unittest.TestCase):
             projects_plan = sys.modules["projects_plan"]
             projects_plan._EXTRA_CHECK_TYPES.discard("site_check")
 
+    def test_vacuous_auto_checks_are_demoted_to_rubric(self):
+        weak = [
+            {"type": "file_contains", "path": "a.md", "mustContain": ["re:.*"]},
+            {"type": "file_contains", "path": "a.md", "mustContain": ["re:"]},
+            {"type": "file_contains", "path": "a.md", "mustContain": ["  "]},
+            {"type": "file_contains", "path": "a.md"},
+            {"type": "count_matches", "path": "a.md", "regex": "x", "min": 0},
+            {"type": "count_matches", "path": "a.md", "regex": "x*"},
+            {"type": "csv_check", "path": "a.csv"},
+            {"type": "csv_check", "path": "a.csv", "columns": [], "minRows": 0},
+            {"type": "csv_check", "path": "a.csv", "minRows": -5},
+            {"type": "docx_check", "path": "a.docx"},
+            {"type": "json_schema", "path": "a.json", "schema": {}},
+        ]
+        for chk in weak:
+            p = good_plan()
+            p["criteria"][0] = {"id": "C1", "text": "Un livrable existe", "kind": "auto", "check": chk}
+            r = projects.validate_plan(p, SCOPE)
+            c1 = next(c for c in r.plan["criteria"] if c["id"] == "C1")
+            self.assertEqual(c1["kind"], "rubric", chk)
+            self.assertNotIn("check", c1, chk)
+            self.assertTrue(any(w["code"] == "CRITERION_AUTO_VACUOUS" for w in r.warnings), chk)
+        strong = [
+            {"type": "file_exists", "path": "a.md"},
+            {"type": "file_contains", "path": "a.md", "mustContain": ["Tarifs", "re:\\d{3} \\d{2}"]},
+            {"type": "count_matches", "path": "a.md", "regex": "^## ", "min": 3},
+            {"type": "csv_check", "path": "a.csv", "columns": ["nom"]},
+            {"type": "csv_check", "path": "a.csv", "minRows": 5},
+            {"type": "json_schema", "path": "a.json", "schema": {"type": "object"}},
+        ]
+        for chk in strong:
+            p = good_plan()
+            p["criteria"][0] = {"id": "C1", "text": "Un livrable existe", "kind": "auto", "check": chk}
+            c1 = next(c for c in projects.validate_plan(p, SCOPE).plan["criteria"] if c["id"] == "C1")
+            self.assertEqual(c1["kind"], "auto", chk)
+
     def test_cycle_is_rejected(self):
         p = good_plan()
         p["steps"][0]["dependsOn"] = ["S4"]

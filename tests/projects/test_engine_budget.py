@@ -111,9 +111,10 @@ class BudgetTests(unittest.TestCase):
 
     def test_week_and_month_windows_bind_too(self):
         for name, reason in (("week", "WEEK"), ("month", "MONTH")):
-            usage = FakeUsage(session=1000, week=14 if name == "week" else 1000, month=14 if name == "month" else 1000)
+            usage = FakeUsage(session=1000, week=1000, month=1000)
             e = self.env(usage=usage, chf=0.15)
-            pid = e.create(credits_cap=60)
+            pid = e.create(credits_cap=60)                                      # accepte : le solde du mois suffit au moment de la creation
+            usage.w[name]["limit"] = 14                                         # puis la fenetre se resserre (plafond du projet > ce qui reste)
             st = e.drive(pid, lambda s: s["status"] == "WAITING_QUOTA", timeout=60)
             self.assertEqual(st["statusReason"], reason)
             self.assertEqual(st["resumeAtUtc"], usage.w[name]["resetsAtUtc"])
@@ -366,6 +367,22 @@ class BudgetTests(unittest.TestCase):
         e.set_scenario({})
         e.svc.write_control({"killAll": False, "pausedClients": []})
         self.assertEqual(e.run_to_done(pid)["status"], "DONE")
+
+    def test_the_cap_given_at_creation_obeys_the_same_rules_as_set_budget(self):
+        e = self.env(plan="solo")
+        with self.assertRaises(ps.ProjectError) as cm:
+            e.create(credits_cap=9_000_000, auto_start=False)                                # 8 CHF par projet sur Solo
+        self.assertEqual(cm.exception.code, "INVALID_INPUT")
+        pid = e.create(credits_cap=20, auto_start=False)
+        self.assertEqual(e.state(pid)["budget"]["creditsCap"], 20)
+        with self.assertRaises(ps.ProjectError):
+            e.svc.set_budget(CLIENT, pid, 9_000_000)
+
+    def test_the_cap_given_at_creation_cannot_exceed_what_is_left_of_the_month(self):
+        e = self.env(plan="equipe", usage=FakeUsage(session=1000, week=1000, month=30))
+        with self.assertRaises(ps.ProjectError) as cm:
+            e.create(credits_cap=200, auto_start=False)
+        self.assertEqual(cm.exception.code, "PROJECT_EXCEEDS_QUOTA")
 
     def test_pausing_a_client_pauses_its_projects_and_unpausing_resumes_them(self):
         e = self.env()

@@ -404,7 +404,11 @@ class AsyncQueue(Fixture):
         self.gate.set()
         for j in (a, b, c, d):
             self.wait_for(j["jobId"], "DONE")
-        self.assertEqual([x[1] for x in self.started], ["1", "2", "3", "4"], "ordre d'arrivee")
+        order = [x[1] for x in self.started]
+        # 3 et 4 partent ensemble quand 1 et 2 finissent : leur ordre de demarrage est une course entre threads ;
+        # ce qui compte, c'est que la file n'ait jamais devance les deux premiers.
+        self.assertEqual(order[:2], ["1", "2"], "ordre d'arrivee")
+        self.assertEqual(sorted(order[2:]), ["3", "4"], "ordre d'arrivee")
         self.assertEqual(server._ASYNC_QUEUE, [])
         self.assertEqual(server._ASYNC_ACTIVE, {})
 

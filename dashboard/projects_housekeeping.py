@@ -91,6 +91,11 @@ class HousekeepingMixin:
                 continue
             if self.purge_workspace(pid):
                 n += 1
+        try:
+            import site_preview
+            site_preview.SitePreview(self.root).sweep()
+        except Exception as e:  # noqa: BLE001
+            sys.stderr.write(f"projects preview sweep: {type(e).__name__}: {e}\n")
         return n
 
     def purge_workspace(self, pid):
