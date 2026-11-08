@@ -66,7 +66,7 @@ def recipes():
         [D("deliverables/prospects.csv", "Liste de prospects", "table"), D("deliverables/grille.md", "Grille de qualification"), D("deliverables/brouillons.md", "Brouillons d'approche"), D("deliverables/conformite-prospection.md", "Note de conformité")],
         "deliverables/rapport-prospection.md",
         "Chaque ligne du CSV porte sa source_url ouverte et lue par un Worker ; si la recherche web est indisponible, ne rien inventer : bloquer l'étape et demander une liste au client. Uniquement des entreprises et des coordonnées professionnelles publiques ; jamais d'adresse privée ni de profil personnel. Les brouillons sont déposés, jamais envoyes ; chaque envoi reste une decision du client.",
-        support=["amina", "emma"], min_plan="solo",
+        support=["amina", "emma"], min_plan="equipe",
         needs=[Q("Q1", "Votre offre en une phrase, votre cible (secteur, taille, région) et vos 3 meilleurs clients actuels (sans noms si confidentiel) ?", "cible déduite du profil, hypothèses listées", True), Q("Q2", "Ton souhaité et signature (nom, fonction) ?", "ton sobre, signature [À COMPLÉTER]")],
         approvals=[AP("gmail", "DRAFT_MESSAGE", "low", "un brouillon par prospect, déposé dans Gmail"), AP("outlook_mail", "DRAFT_MESSAGE", "low", "idem pour Outlook"), AP("hubspot", "CREATE_TASK", "low", "une tâche de relance par prospect")],
         optional=["gmail", "outlook_mail", "hubspot", "pipedrive"], sources=["gdpr-art21", "uwg-fedlex", "eprivacy-edpb"], legal=LEGAL_PROSPECT,
@@ -121,7 +121,7 @@ def recipes():
         [D("deliverables/audit.csv", "Audit par URL", "table"), D("deliverables/audit.md", "Synthèse de l'audit"), D("deliverables/briefs.md", "Briefs de contenu"), D("deliverables/plan-correctifs.md", "Plan de correction")],
         "deliverables/rapport-seo.md",
         "Sans lecture web disponible, ne pas auditer de memoire : bloquer l'étape et demander le HTML des pages. Positions et volumes : uniquement via Search Console du client, sinon 'non disponible'. Ne jamais conseiller cloaking, pages satellites en masse, contenu généré en masse, liens achetés (règles de spam de Google). Les corrections sur le site du client passent par des brouillons WordPress (a valider).",
-        support=["lucas", "emma"], min_plan="solo", optional=["google_search_console", "wordpress"],
+        support=["lucas", "emma"], min_plan="trio", optional=["google_search_console", "wordpress"],
         approvals=[AP("wordpress", "UPDATE_DRAFT", "medium", "le client veut les correctifs déposés en brouillon sur son WordPress"), AP("wordpress", "CREATE_DRAFT", "low", "pages de contenu issues des briefs, en brouillon")],
         needs=[Q("Q1", "Adresse du site et des 2 ou 3 pages qui comptent le plus ?", "pages deduites du sitemap", True), Q("Q2", "Marché et langue visees, concurrents connus ?", "marché déduit du site")],
         sources=["seo-starter", "title-link", "spam-policies"], credits=[50, 110], hours=[1, 3], scenarios=["S5-audit-seo"]))
@@ -145,7 +145,7 @@ def recipes():
         [D("deliverables/calendrier.csv", "Calendrier de publication", "table"), D("deliverables/strategie-editoriale.md", "Stratégie éditoriale"), D("deliverables/briefs-visuels.md", "Briefs visuels")],
         "deliverables/rapport-calendrier.md",
         "Les limites par réseau changent : les re-verifier dans l'editeur du réseau. Une publication est une action sortante irréversible : jamais automatique ; chaque brouillon de publication est un article d'approbation (lots de 50 au plus). Ne citer aucune statistique, etude ou témoignage qui ne vient pas du client.",
-        support=["lea"], min_plan="solo", optional=["linkedin", "facebook", "x_twitter", "tiktok"],
+        support=["lea"], min_plan="trio", optional=["linkedin", "facebook", "x_twitter", "tiktok"],
         approvals=[AP("linkedin", "CREATE_DRAFT_POST", "medium", "le client demande la mise en file des publications"), AP("facebook", "CREATE_DRAFT_POST", "medium", "idem Facebook"), AP("x_twitter", "CREATE_DRAFT_POST", "medium", "idem X")],
         needs=[Q("Q1", "Les 3 réseaux voulus, l'offre du mois, les dates cles (promos, événements) ?", "LinkedIn, Instagram, Facebook ; dates [À COMPLÉTER]"), Q("Q2", "Exemples de posts qui vous ressemblent ?", "voix déduite du profil")],
         credits=[25, 60], hours=[0.5, 1.5], scenarios=["S6-calendrier-boulangerie"]))
@@ -198,7 +198,7 @@ def recipes():
         [D("deliverables/plan-lancement.md", "Plan de lancement"), D("deliverables/calendrier.csv", "Calendrier de contenu", "table"), D("deliverables/copies.csv", "Textes d'annonces", "table"), D("deliverables/plan-seo.md", "Plan SEO")],
         "deliverables/rapport-lancement.md",
         "Chloe est cheffe de projet : une fiche de faits unique, un propriétaire par étape, une relecture de cohérence avant la fin. Les recettes de site, calendrier, publicités et SEO servent de guide aux étapes. Un Worker non inclus dans le forfait (Trio) : l'annoncer et proposer l'embauche, ne pas le contourner.",
-        support=["lucas", "lea", "emma", "seoya", "maya"], min_plan="equipe", languages=["fr", "en"],
+        support=["lucas", "lea", "emma", "seoya", "maya"], min_plan="scale", languages=["fr", "en"],
         needs=[Q("Q1", "Nom, offre, prix, public vise, ton, budget publicitaire ?", "champs [À COMPLÉTER] listés", True)],
         approvals=[AP("wordpress", "CREATE_DRAFT", "low", "pages du site en brouillon si demande"), AP("linkedin", "CREATE_DRAFT_POST", "medium", "publications si demande")],
         optional=["wordpress", "linkedin"], credits=[250, 450], hours=[4, 8], scenarios=["S8-lancement-bougies"]))

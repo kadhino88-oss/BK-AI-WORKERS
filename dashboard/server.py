@@ -4221,7 +4221,17 @@ def chloe_triage_rate_ok(client_id):
         rows = _recent(CHLOE_TRIAGE_RATE, client_id, 3600)
         if len(rows) >= 20:
             return False
-        CHLOE_TRIAGE_RATE[client_id] = rows + [time.time()]
+        # Plafond global : l'appel au modele est paye par la plateforme, pas par le credit du client (a ajuster avec BK_TRIAGE_MAX_PER_HOUR).
+        try:
+            cap = max(10, int(os.environ.get("BK_TRIAGE_MAX_PER_HOUR", "300")))
+        except ValueError:
+            cap = 300
+        total = _recent(CHLOE_TRIAGE_RATE, "*", 3600)
+        if len(total) >= cap:
+            return False
+        now = time.time()
+        CHLOE_TRIAGE_RATE[client_id] = rows + [now]
+        CHLOE_TRIAGE_RATE["*"] = total + [now]
     return True
 
 
@@ -6094,6 +6104,10 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_account_required()
                 return
             if self._worker_not_included(client_id, "chloe"):
+                return
+            blocked = subscription_blocks_mission(client_id)      # pas de credit ni d'abonnement : pas d'appel au modele aux frais de la plateforme
+            if blocked:
+                self._send_json(subscription_required_payload(client_id, blocked), 402)
                 return
             if not chloe_triage_rate_ok(client_id):
                 self.send_response(429)

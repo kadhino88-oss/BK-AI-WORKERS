@@ -1193,6 +1193,7 @@ class StepMixin:
         gaps = st.get("acceptedGaps") or []
         if delivery_message and not pv.message_claims_ok(delivery_message, ver):
             delivery_message = ""
+            t.event("verification_result", "Le message de livraison du Worker annonçait un critère réussi que la vérification n'a pas validé : il n'est pas repris dans le rapport.")
         problems = pv.definition_of_done(plan, ver, deliverables, approvals, os.path.join(proj_dir, "workspace"), gaps, final_report_exists=True)   # le rapport va être écrit
         report = pv.build_final_report(st, plan, ver, deliverables, approvals, delivery_message, gaps, self.now_iso(),
                                        status_label="DONE" if not problems else "EN ATTENTE (une décision est attendue)")

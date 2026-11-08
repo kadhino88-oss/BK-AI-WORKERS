@@ -368,14 +368,21 @@ def definition_of_done(plan, verification, deliverables, approvals, workspace, a
 
 
 # ------------------------------------------------------------------ rapport final (gabarit fixe en 8 parties)
+_CRITERION_WORD_RE = re.compile(r"^C[0-9]{1,3}\Z")
 _CLAIM_RE = re.compile(r"\b(C[A-Za-z0-9-]{0,18})\b[^\n|]{0,40}\bPASS\b")
 
 
 def message_claims_ok(text, verification):
     """Le message de livraison du Worker ne doit affirmer aucun PASS absent de verification.json."""
-    passed = {c["id"] for c in (verification or {}).get("criteria") or [] if c["verdict"] == "PASS"}
+    crits = (verification or {}).get("criteria") or []
+    passed = {c["id"] for c in crits if c["verdict"] == "PASS"}
+    known = {c["id"] for c in crits}
     for m in _CLAIM_RE.finditer(str(text or "")):
-        if m.group(1) not in passed:
+        cid = m.group(1)
+        if cid in passed:
+            continue
+        # Un mot courant qui commence par C (« Contrôle », « Cabinet ») n'est pas un identifiant de critère : seuls C1, C2, … ou un identifiant connu comptent.
+        if cid in known or _CRITERION_WORD_RE.match(cid):
             return False
     return True
 
