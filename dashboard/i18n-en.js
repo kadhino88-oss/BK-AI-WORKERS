@@ -87,8 +87,8 @@ window.BK_EN = Object.assign(window.BK_EN || {}, {
     "Infomaniak does not provide web search itself: configure a compatible SearXNG endpoint as well. Configure tokens on the server, never in these fields.",
   "Le plafond ci-dessous concerne uniquement Claude. Fixez aussi une limite de dépense dans la console de facturation Infomaniak.":
     "The limit below applies to Claude only. Also set a spending limit in Infomaniak billing.",
-  "Attention : sans Ollama gratuit configuré, les comptes Essai peuvent utiliser la chaîne par défaut et consommer le budget Infomaniak.":
-    "Warning: without free Ollama configured, trial accounts may use the default chain and consume the Infomaniak budget.",
+  "Essai gratuit : moteur Ollama uniquement ; sans moteur Ollama opérationnel, les comptes Essai sont suspendus et ne basculent pas vers Infomaniak.":
+    "Free trial: Ollama only; if it is not available, trial accounts are suspended and will not fall back to Infomaniak.",
   "Avant d'activer l'hôte suisse pour Alex, renseignez son adresse, son modèle et le point de recherche web.":
     "Before enabling the Swiss host for Alex, enter its address, model and web search endpoint.",
   /* workers page */

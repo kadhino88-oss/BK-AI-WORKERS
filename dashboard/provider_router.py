@@ -814,7 +814,9 @@ def resolve_plan(root, client_id, level, objective="", *, trial=False, byok=None
             if not plan["chain"]:
                 plan["degradedReason"] = "free-chain-unavailable"
             return plan
-        # pas de moteur gratuit configure : l'essai garde le comportement d'avant (le proprietaire n'a pas encore choisi)
+        # Essai verrouille : aucun repli vers la chaine payante, meme sans moteur gratuit configure.
+        plan.update(explicit=True, reason="trial", skipped=skipped, degradedReason="free-chain-unavailable")
+        return plan
 
     # 3) chaine du niveau, sinon chaine par defaut
     base = None

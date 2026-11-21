@@ -3715,8 +3715,8 @@ async function loadAdminEngine() {
   lines.push(swiss ? `Hôte suisse : ${escapeHtml(swiss.url)} — modèle ${escapeHtml(swiss.model)} — jeton ${swiss.tokenPresent ? "présent" : "absent"}` : "Hôte suisse : non configuré");
   const searchAuth = search && String(search.url).startsWith("https://") ? (search.tokenPresent ? "jeton présent" : "jeton absent") : "réseau privé, sans jeton";
   lines.push(search ? `Recherche web : ${escapeHtml(search.url)} — ${searchAuth}` : "Recherche web : non configurée");
-  if ((e.defaultChain || []).includes("swiss") && !(e.endpoints && e.endpoints.ollama)) {
-    lines.push("Attention : sans Ollama gratuit configuré, les comptes Essai peuvent utiliser la chaîne par défaut et consommer le budget Infomaniak.");
+  if ((e.defaultChain || []).includes("swiss")) {
+    lines.push("Essai gratuit : moteur Ollama uniquement ; sans moteur Ollama opérationnel, les comptes Essai sont suspendus et ne basculent pas vers Infomaniak.");
   }
   lines.push(ceil.configured
     ? `Dépense Claude : ${ceil.dayChf} CHF aujourd'hui${ceil.dailyChf ? " sur " + ceil.dailyChf : ""}, ${ceil.monthChf} CHF ce mois${ceil.monthlyChf ? " sur " + ceil.monthlyChf : ""}${ceil.reached ? " — plafond Claude atteint : le routeur ignore Claude et suit le reste de la chaîne configurée, ou le moteur gratuit" : ""}`
