@@ -9,7 +9,7 @@ Objectif : obtenir les premiers pilotes payants et valider un seul cas d’usage
 
 - Jusqu’à **5 demandes entrantes** sur **7 jours**.
 - **49 CHF en Suisse ou 49 € en France**, paiement unique, sans renouvellement automatique.
-- La candidature ne déclenche aucun paiement. Le cas d’usage et le fonctionnement de la recherche web sont confirmés avant le démarrage et le règlement.
+- La candidature ne déclenche aucun paiement. Après acceptation, confirmer par email un moyen de règlement unique (facture ou lien de paiement), puis commencer les sept jours après réception du paiement. Aucun abonnement ni renouvellement automatique.
 - Ce pilote ne promet ni rendez-vous ni vente. Il vérifie l’utilité et la qualité du résultat sur les demandes du client.
 - Ne pas proposer le pilote payant tant que recherche web, liens sources, qualification et brouillon n’ont pas été vérifiés avec le moteur qui sera réellement utilisé. La qualité du modèle réel n’est pas encore établie dans `docs/PROVING-REPORT.md`.
 - Le parcours Infomaniak + SearXNG est détaillé dans `docs/PROVIDERS.md`. Avant un pilote réel, confirmer le plafond de dépense Infomaniak et les informations de confidentialité des moteurs auxquels SearXNG transmet les requêtes.

@@ -620,8 +620,8 @@ def render_page(tools):
       <div class="pilot-note">
         <p style="margin:0 0 8px"><strong>{T("49 CHF en Suisse · 49 € en France — paiement unique, sans renouvellement automatique.",
                                                "CHF 49 in Switzerland · €49 in France — one-time payment, no automatic renewal.")}</strong></p>
-        <p style="margin:0 0 8px">{T("La candidature ne déclenche aucun paiement. Nous vérifions d'abord que le cas d'usage et la recherche web sont compatibles, puis nous confirmons par email le démarrage et le mode de règlement.",
-                                     "Applying does not trigger a payment. We first check that your use case and web research needs are supported, then confirm the start and payment method by email.")}</p>
+        <p style="margin:0 0 8px">{T("La candidature ne déclenche aucun paiement. Nous vérifions d'abord que le cas d'usage et la recherche web sont compatibles, puis nous confirmons par email le mode de règlement unique et le démarrage. Les sept jours commencent à réception du paiement.",
+                                     "Applying does not trigger a payment. We first check that your use case and web research needs are supported, then confirm the one-time payment method and start date by email. The seven-day period starts after payment is received.")}</p>
         <p style="margin:0">{T("Le pilote ne promet ni rendez-vous ni vente. Il teste la qualité et l'utilité de la qualification d'Alex sur vos demandes.",
                                "The pilot does not promise a meeting or a sale. It tests the quality and usefulness of Alex's qualification on your enquiries.")}</p>
       </div>
