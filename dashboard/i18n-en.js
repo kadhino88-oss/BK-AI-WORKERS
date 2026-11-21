@@ -19,10 +19,10 @@ window.BK_EN = Object.assign(window.BK_EN || {}, {
     "Small B2B service businesses without a dedicated salesperson, receiving inbound enquiries they want to qualify before investing time.",
   "Pour qui ?": "Who is Alex for?",
   "Qualification d'un lead entrant et réponse prête": "Inbound lead qualification and reply draft",
-  "Vous collez une demande reçue par formulaire, email ou message. Alex recherche des informations publiques sur l’entreprise et indique les pages sources trouvées, compare la demande à vos critères, classe son adéquation (chaud, tiède, froid), signale les éléments manquants et prépare un brouillon de réponse. Si un agenda compatible est connecté, il peut proposer des créneaux réellement disponibles. Aucun message n’est envoyé sans votre validation.":
-    "Paste an enquiry received by form, email or message. Alex researches public company information and lists source pages, compares the enquiry with your criteria, classifies fit as hot, warm or cold, flags missing information and prepares a reply draft. If a compatible calendar is connected, he can suggest genuinely available slots. No message is sent without your approval.",
+  "Vous collez une demande reçue par formulaire, email ou message après avoir retiré le nom, l'email et le téléphone de l'interlocuteur. Alex recherche des informations publiques sur l’entreprise et indique les pages sources trouvées, compare la demande à vos critères, classe son adéquation (chaud, tiède, froid), signale les éléments manquants et prépare un brouillon de réponse. Si un agenda compatible est connecté, il peut proposer des créneaux réellement disponibles. Aucun message n’est envoyé sans votre validation.":
+    "Paste an enquiry received by form, email or message after removing the contact's name, email and phone number. Alex researches public company information and lists source pages, compares the enquiry with your criteria, classifies fit as hot, warm or cold, flags missing information and prepares a reply draft. If a compatible calendar is connected, he can suggest genuinely available slots. No message is sent without your approval.",
   "Jusqu’à cinq demandes sur sept jours : conditions et tarif du pilote.": "Up to five enquiries over seven days: pilot terms and price.",
-  "Essayer Alex gratuitement": "Try Alex for free",
+  "Voir le prix et les conditions": "See price and terms",
   "Découvrir les autres Workers": "Explore the other Workers",
   "Pour les petites entreprises de services B2B du Grand Genève et de Haute-Savoie":
     "For small B2B service businesses in Greater Geneva and Haute-Savoie",
@@ -77,7 +77,20 @@ window.BK_EN = Object.assign(window.BK_EN || {}, {
   "Pilote fondateur Alex": "Alex founding pilot", "Testez Alex sur vos demandes entrantes.": "Test Alex on your incoming enquiries.",
   "Jusqu'à cinq demandes sur sept jours. Un tarif unique, sans renouvellement automatique. La candidature ne déclenche aucun paiement.":
     "Up to five enquiries over seven days. One fixed price, no automatic renewal. Applying does not trigger a payment.",
+  "Jusqu'à cinq demandes sur sept jours · 49 CHF ou 49 € · paiement unique.": "Up to five enquiries over seven days · CHF 49 or €49 · one-off payment.",
   "Parler à Chloé": "Talk to Chloé",
+  "Hôte suisse seul (Infomaniak)": "Swiss host only (Infomaniak)",
+  "Adresse de l'hôte suisse": "Swiss host address",
+  "Modèle Infomaniak": "Infomaniak model",
+  "Adresse du point de recherche web (SearXNG)": "Web search endpoint (SearXNG)",
+  "Infomaniak ne fait pas lui-même de recherche web : configurez aussi un point SearXNG compatible. Les jetons se configurent sur le serveur, jamais dans ces champs.":
+    "Infomaniak does not provide web search itself: configure a compatible SearXNG endpoint as well. Configure tokens on the server, never in these fields.",
+  "Le plafond ci-dessous concerne uniquement Claude. Fixez aussi une limite de dépense dans la console de facturation Infomaniak.":
+    "The limit below applies to Claude only. Also set a spending limit in Infomaniak billing.",
+  "Attention : sans Ollama gratuit configuré, les comptes Essai peuvent utiliser la chaîne par défaut et consommer le budget Infomaniak.":
+    "Warning: without free Ollama configured, trial accounts may use the default chain and consume the Infomaniak budget.",
+  "Avant d'activer l'hôte suisse pour Alex, renseignez son adresse, son modèle et le point de recherche web.":
+    "Before enabling the Swiss host for Alex, enter its address, model and web search endpoint.",
   /* workers page */
   "← Accueil": "← Home", "Des Workers spécialisés pour un métier": "Specialised Workers for every profession",
   "Un expert entraîné pour chaque fonction. Cliquez un Worker pour voir sa fiche et lui confier une mission.":

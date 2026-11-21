@@ -360,7 +360,7 @@ def render_worker_page(worker, profile, others=()):
         top += f"<p><strong>Pour qui ?</strong> {_e(ideal)}</p>"
     if wid == "alex":
         top += ('<div class="cta-row"><a class="btn btn-gold" href="/pilote.html#candidater">Candidater au pilote Alex</a>'
-                '<a class="btn btn-ghost" href="/#nav-onboarding">Essayer Alex gratuitement</a></div>'
+                '<a class="btn btn-ghost" href="/pilote.html">Voir le prix et les conditions</a></div>'
                 '<p class="u wk-note">Jusqu’à cinq demandes sur sept jours : conditions et tarif du pilote.</p>')
     elif essai:
         top += (f'<div class="cta-row"><a class="btn btn-gold" href="/#nav-onboarding">Essayer {_e(name)} gratuitement</a>'

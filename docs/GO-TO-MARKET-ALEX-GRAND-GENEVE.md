@@ -12,6 +12,7 @@ Objectif : obtenir les premiers pilotes payants et valider un seul cas d’usage
 - La candidature ne déclenche aucun paiement. Le cas d’usage et le fonctionnement de la recherche web sont confirmés avant le démarrage et le règlement.
 - Ce pilote ne promet ni rendez-vous ni vente. Il vérifie l’utilité et la qualité du résultat sur les demandes du client.
 - Ne pas proposer le pilote payant tant que recherche web, liens sources, qualification et brouillon n’ont pas été vérifiés avec le moteur qui sera réellement utilisé. La qualité du modèle réel n’est pas encore établie dans `docs/PROVING-REPORT.md`.
+- Le parcours Infomaniak + SearXNG est détaillé dans `docs/PROVIDERS.md`. Avant un pilote réel, confirmer le plafond de dépense Infomaniak et les informations de confidentialité des moteurs auxquels SearXNG transmet les requêtes.
 
 ## Client à contacter
 

@@ -3709,24 +3709,52 @@ async function loadAdminEngine() {
   const SOURCES = { defaut: "valeur par défaut", environnement: "variable BK_AI_PROVIDER du serveur", reglage: "réglage enregistré ici" };
   const lines = [`Moteur choisi : ${(e.defaultChain || []).map((id) => ENGINE_NAMES[id] || id).join(" → ")} (${escapeHtml(SOURCES[e.defaultChainSource] || e.defaultChainSource || "")})`];
   const oll = e.endpoints && e.endpoints.ollama;
+  const swiss = e.endpoints && e.endpoints.swiss;
+  const search = e.search;
   lines.push(oll ? `Moteur local : ${escapeHtml(oll.url)} — modèle ${escapeHtml(oll.model)}` : "Moteur local : non configuré");
+  lines.push(swiss ? `Hôte suisse : ${escapeHtml(swiss.url)} — modèle ${escapeHtml(swiss.model)} — jeton ${swiss.tokenPresent ? "présent" : "absent"}` : "Hôte suisse : non configuré");
+  const searchAuth = search && String(search.url).startsWith("https://") ? (search.tokenPresent ? "jeton présent" : "jeton absent") : "réseau privé, sans jeton";
+  lines.push(search ? `Recherche web : ${escapeHtml(search.url)} — ${searchAuth}` : "Recherche web : non configurée");
+  if ((e.defaultChain || []).includes("swiss") && !(e.endpoints && e.endpoints.ollama)) {
+    lines.push("Attention : sans Ollama gratuit configuré, les comptes Essai peuvent utiliser la chaîne par défaut et consommer le budget Infomaniak.");
+  }
   lines.push(ceil.configured
-    ? `Dépense Claude : ${ceil.dayChf} CHF aujourd'hui${ceil.dailyChf ? " sur " + ceil.dailyChf : ""}, ${ceil.monthChf} CHF ce mois${ceil.monthlyChf ? " sur " + ceil.monthlyChf : ""}${ceil.reached ? " — PLAFOND ATTEINT : les missions passent sur le moteur gratuit" : ""}`
+    ? `Dépense Claude : ${ceil.dayChf} CHF aujourd'hui${ceil.dailyChf ? " sur " + ceil.dailyChf : ""}, ${ceil.monthChf} CHF ce mois${ceil.monthlyChf ? " sur " + ceil.monthlyChf : ""}${ceil.reached ? " — plafond Claude atteint : le routeur ignore Claude et suit le reste de la chaîne configurée, ou le moteur gratuit" : ""}`
     : `Dépense Claude : ${ceil.dayChf || 0} CHF aujourd'hui, ${ceil.monthChf || 0} CHF ce mois — aucun plafond fixé`);
   const sick = Object.keys(e.health || {});
   if (sick.length) lines.push("Moteurs mis de côté : " + sick.map((k) => `${escapeHtml(ENGINE_NAMES[k] || k)} (${escapeHtml(e.health[k].reason)}, encore ${Math.ceil(e.health[k].retryInSec / 60)} min)`).join(", "));
   stateEl.innerHTML = lines.map((l) => `<div>${l}</div>`).join("");
   document.getElementById("admin-engine-chain").value = (e.defaultChain || ["anthropic"]).join(",");
-  if (oll) { document.getElementById("admin-engine-url").value = oll.url; document.getElementById("admin-engine-model").value = oll.model; }
+  document.getElementById("admin-engine-url").value = oll ? oll.url : "";
+  document.getElementById("admin-engine-model").value = oll ? oll.model : "";
+  document.getElementById("admin-engine-swiss-url").value = swiss ? swiss.url : "";
+  document.getElementById("admin-engine-swiss-model").value = swiss ? swiss.model : "";
+  document.getElementById("admin-engine-search-url").value = search ? search.url : "";
   document.getElementById("admin-engine-daily").value = ceil.dailyChf || "";
   document.getElementById("admin-engine-monthly").value = ceil.monthlyChf || "";
   document.getElementById("admin-engine-form").onsubmit = async (ev) => {
     ev.preventDefault();
     const msg = document.getElementById("admin-engine-msg");
     const num = (id) => { const v = document.getElementById(id).value.trim(); return v === "" ? null : Number(v); };
-    const body = { defaultChain: document.getElementById("admin-engine-chain").value.split(","), ceiling: { dailyChf: num("admin-engine-daily"), monthlyChf: num("admin-engine-monthly") } };
+    const body = {
+      defaultChain: document.getElementById("admin-engine-chain").value.split(","),
+      ceiling: { dailyChf: num("admin-engine-daily"), monthlyChf: num("admin-engine-monthly") },
+      endpoints: {},
+    };
     const url = document.getElementById("admin-engine-url").value.trim();
-    if (url) body.endpoints = { ollama: { url, model: document.getElementById("admin-engine-model").value.trim() || "llama3:latest" } };
+    const swissUrl = document.getElementById("admin-engine-swiss-url").value.trim();
+    const swissModel = document.getElementById("admin-engine-swiss-model").value.trim();
+    const searchUrl = document.getElementById("admin-engine-search-url").value.trim();
+    const selectedChain = body.defaultChain;
+    if (selectedChain.includes("swiss") && (!swissUrl || !swissModel || !searchUrl)) {
+      msg.className = "task-error";
+      msg.textContent = "Avant d'activer l'hôte suisse pour Alex, renseignez son adresse, son modèle et le point de recherche web.";
+      msg.hidden = false;
+      return;
+    }
+    body.endpoints.ollama = url ? { url, model: document.getElementById("admin-engine-model").value.trim() || "llama3:latest" } : null;
+    body.endpoints.swiss = swissUrl ? { url: swissUrl, model: swissModel } : null;
+    body.search = searchUrl ? { url: searchUrl } : null;
     try {
       const r = await fetchJson("/api/admin/engine", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       if (r.ok) { msg.className = "task-error ok"; msg.textContent = "Enregistré."; msg.hidden = false; loadAdminEngine(); return; }

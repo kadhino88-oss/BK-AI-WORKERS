@@ -1,0 +1,18 @@
+use_default_settings: true
+
+general:
+  debug: false
+  instance_name: "BK-AI-WORKERS Search"
+
+search:
+  safe_search: 1
+  formats:
+    - html
+    - json
+
+server:
+  # Remplace par SEARXNG_SECRET au demarrage du conteneur.
+  secret_key: "ultrasecretkey"
+  bind_address: "0.0.0.0"
+  limiter: false
+  image_proxy: false

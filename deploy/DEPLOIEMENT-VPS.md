@@ -50,8 +50,10 @@ docker compose logs -f app
    Points à surveiller sous Linux : sensibilité à la casse des chemins et cmdlets Windows.
 
 ## Mises à jour
-`git pull && docker compose up -d --build` : le code est resynchronisé, l'état (missions, profil,
-sécurité, facturation) reste dans le volume `bkdata`.
+Sans le service de recherche optionnel : `git pull && docker compose up -d --build`.
+Si SearXNG a été activé, garder les deux fichiers Compose :
+`git pull && docker compose -f docker-compose.yml -f docker-compose.search.yml up -d --build`.
+Le code est resynchronisé ; l'état (missions, profil, sécurité, facturation) reste dans le volume `bkdata`.
 
 ## Sauvegardes
 ```bash
