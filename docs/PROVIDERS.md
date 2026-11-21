@@ -156,7 +156,7 @@ Infomaniak AI Tools fournit un endpoint compatible OpenAI et facture les modèle
 
 ### 7.1 Configuration Infomaniak
 
-1. Dans Infomaniak Manager, créer/ouvrir AI Services, relever l'identifiant du produit et choisir un modèle disponible qui gère les appels d'outils.
+1. Dans Infomaniak Manager, créer/ouvrir AI Services et relever l'identifiant du produit. Modèle de départ à essayer : `mistralai/Ministral-3-14B-Instruct-2512`. Infomaniak le répertorie comme multilingue, avec appels de fonction et français ; son tarif affiché est de 0,30 CHF / million de tokens en entrée et 0,40 CHF / million en sortie. Ce n'est qu'un candidat : vérifier l'appel d'outils et la qualité d'Alex sur les trois cas avant d'ouvrir le pilote. Si les résultats sont insuffisants, comparer `mistralai/Mistral-Small-4-119B-2603` (lui aussi avec appels de fonction), puis mesurer le coût réel. Voir le [catalogue des modèles](https://www.infomaniak.com/en/hosting/ai-services/open-source-models) et les [tarifs actuels](https://www.infomaniak.com/en/hosting/ai-services/prices).
 2. Utiliser l'URL de base de l'API Chat Completions : `https://api.infomaniak.com/2/ai/<ID_PRODUIT>/openai/v1`. L'adaptateur ajoute `/chat/completions`.
 3. Sur le serveur, enregistrer le jeton sans l'afficher : `python3 deploy/set-engine-secret.py swiss`. Ne jamais le mettre dans `engine-settings.json`, le dépôt ou une capture d'écran.
 4. Dans la vue Admin, carte « Moteur d'IA », saisir l'URL, le modèle et le point de recherche. Le jeton n'est pas saisi dans la page.
