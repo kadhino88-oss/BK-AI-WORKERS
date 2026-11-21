@@ -303,6 +303,15 @@ a:focus-visible,
   color: transparent;
 }
 
+.hero-kicker {
+  color: var(--gold-light);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  margin: 0 0 12px;
+  text-transform: uppercase;
+}
+
 .hero-sub {
   color: var(--dark-panel-muted);
   font-size: 16px;
@@ -3443,9 +3452,10 @@ input, textarea, select { border-radius: 14px; }
 @keyframes tourSpin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .tour-msg, .tour-team, .tour-worker, .tour-step, .tour-card { animation: none; } .tour-step .dot { animation: none; } }
 
-.hero-links { display: flex; justify-content: center; align-items: center; gap: 14px; margin-top: 14px; color: rgba(255,255,255,.4); }
+.hero-links { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 8px 14px; margin-top: 14px; color: rgba(255,255,255,.4); }
 .hero-link { background: none; border: 0; padding: 4px 2px; color: rgba(255,255,255,.82); font: inherit; font-size: 14px; cursor: pointer; text-decoration: underline; text-underline-offset: 4px; text-decoration-color: rgba(226,178,84,.55); transition: color .2s, text-decoration-color .2s; }
 .hero-link:hover { color: #fff; text-decoration-color: var(--gold-light); }
+.hero-link-static { color: rgba(255,255,255,.78); font-size: 13px; }
 
 
 /* ---------- Mot de passe oublie / mes donnees ---------- */

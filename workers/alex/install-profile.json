@@ -2,8 +2,8 @@
   "schema": "BK-INSTALL-PROFILE-V1",
   "workerId": "alex",
   "displayName": "Alex",
-  "tagline": "Trouve vos futurs clients, écrit chaque message et prépare chaque relance : vous gardez la main sur chaque envoi.",
-  "idealFor": "TPE et PME B2B (services, conseil, logiciel, industrie, artisanat professionnel) sans commercial dédié, qui veulent un flux régulier de rendez-vous qualifiés en Suisse, en France ou en Europe.",
+  "tagline": "Qualifie vos demandes B2B, recherche les informations publiques sur l’entreprise et prépare une réponse que vous validez.",
+  "idealFor": "TPE et PME B2B de services sans commercial dédié, qui reçoivent des demandes entrantes et veulent vérifier leur adéquation avant d’y consacrer du temps.",
   "services": [
     {
       "id": "prospection-sortante",
@@ -48,7 +48,7 @@
     {
       "id": "qualification-lead-entrant",
       "label": "Qualification d'un lead entrant et réponse prête",
-      "description": "Vous collez la demande reçue (formulaire, email, message). Alex recherche l'entreprise, note son adéquation (chaud, tiède, froid), préremplit la trame BANT / MEDDIC avec ce qu'il sait, rédige la réponse de qualification et propose deux créneaux de rendez-vous.",
+      "description": "Vous collez une demande reçue par formulaire, email ou message. Alex recherche des informations publiques sur l’entreprise et indique les pages sources trouvées, compare la demande à vos critères, classe son adéquation (chaud, tiède, froid), signale les éléments manquants et prépare un brouillon de réponse. Si un agenda compatible est connecté, il peut proposer des créneaux réellement disponibles. Aucun message n’est envoyé sans votre validation.",
       "skills": ["INBOUND_LEAD_HANDLING", "LEAD_QUALIFICATION", "BANT_QUALIFICATION", "LEAD_RESEARCH", "LEAD_ENRICHMENT", "OPPORTUNITY_SCORING"],
       "requiredConnectors": [],
       "optionalConnectors": ["calendar.controlled", "outlook_calendar.controlled", "gmail.controlled", "outlook_mail.controlled", "hubspot.controlled"],
@@ -73,11 +73,11 @@
         { "category": "envoi-externe", "label": "Répondre au lead à votre place", "examples": ["Répondre directement à un lead par email, WhatsApp ou téléphone"], "risk": "high", "defaultMode": "off", "maxAutoPerDay": null }
       ],
       "testScenario": {
-        "objective": "Voici une demande reçue : « Bonjour, nous sommes une agence immobilière de 12 personnes à Fribourg et cherchons un prestataire pour nos ascenseurs, pouvez-vous nous rappeler ? ». Qualifie ce lead, préremplis la trame BANT et écris la réponse avec deux créneaux. Essai : rien n'est envoyé, publié ni modifié.",
+        "objective": "Voici une demande reçue d’une agence immobilière qui cherche un prestataire pour ses ascenseurs. Compare-la à mes critères, recherche l’entreprise sur le web avec les liens des sources trouvées, liste les inconnues et prépare un brouillon de réponse. Si mon agenda est connecté, ne propose que des créneaux réellement libres. Essai : rien n’est envoyé, publié ni modifié.",
         "expectedChecks": [
-          "Le lead reçoit une note chaud, tiède ou froid avec sa justification",
+          "Le lead reçoit une qualification chaud, tiède ou froid, justifiée par des informations sourcées ou explicitement marquées à confirmer",
           "Les informations manquantes sont listées comme questions à poser, sans rien inventer",
-          "La réponse propose deux créneaux et reste prête à être copiée telle quelle"
+          "La réponse est fournie en brouillon et n’est jamais envoyée ; tout créneau proposé est vérifié dans l’agenda connecté"
         ]
       },
       "recommendedLevel": "equilibre"

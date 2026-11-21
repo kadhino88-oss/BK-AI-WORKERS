@@ -4668,7 +4668,9 @@ function iwEnabledOrHint(content) {
 function iwRenderServices(content) {
   const p = iw.profile;
   const support = p.channelSupport || {};
-  const cards = (p.services || []).map((def, si) => {
+  const serviceDefs = (p.services || []).slice().sort((a, b) =>
+    Number(b.id === "qualification-lead-entrant") - Number(a.id === "qualification-lead-entrant"));
+  const cards = serviceDefs.map((def, si) => {
     const s = iw.state.services[def.id];
     const tools = iwToolsOf(def);
     const lines = [];
@@ -5874,9 +5876,9 @@ document.getElementById("mobile-menu-btn").addEventListener("click", () => {
 navLinksEl.querySelectorAll("a").forEach((a) => {
   a.addEventListener("click", () => navLinksEl.classList.remove("nav-open"));
 });
-document.getElementById("hero-chloe-btn").addEventListener("click", () => {
+document.getElementById("hero-alex-btn").addEventListener("click", () => {
   cameFromView = "home";
-  openChloeProfile();
+  openWorkerProfile("alex");
 });
 [
   "hero-workers-btn",
@@ -5938,6 +5940,9 @@ function renderPromptAgentOptions() {
     opt.textContent = `${w.name} — ${w.category}`;
     select.appendChild(opt);
   });
+
+  // Alex est l'entree commerciale du produit : les autres Workers restent accessibles dans la liste.
+  if (allWorkers.some((w) => w.id === "alex")) select.value = "alex";
 
   const updateAvatar = () => {
     const id = select.value;
@@ -6142,20 +6147,14 @@ function initPromptSuggestions() {
   if (!ta) return;
   const IDEAS = {
     fr: [
-      "Rédige un email de prospection pour un nouveau client…",
-      "Write a product description for my online store…",
-      "Crée un plan de contenu LinkedIn pour ce mois…",
-      "Analyse mes ventes de la semaine et propose des actions…",
-      "Redacta una respuesta amable a un cliente enfadado…",
-      "Prépare le rapport mensuel de mon équipe…",
+      "J'ai reçu cette demande de devis CVC : vérifie si l'entreprise correspond à mes critères…",
+      "Voici mon client idéal : qualifie cette demande entrante et indique ce qui manque…",
+      "Prépare un brouillon de réponse à cette demande, sans l'envoyer…",
     ],
     en: [
-      "Write a prospecting email for a new client…",
-      "Rédige une fiche produit pour ma boutique en ligne…",
-      "Create a LinkedIn content plan for this month…",
-      "Analyse this week's sales and suggest actions…",
-      "Redacta una respuesta amable a un cliente enfadado…",
-      "Prepare my team's monthly report…",
+      "I received this HVAC quote request: check whether the company fits my criteria…",
+      "Here is my ideal customer: qualify this incoming request and tell me what is missing…",
+      "Draft a reply to this request, but do not send it…",
     ],
   };
   let ideas = IDEAS[(window.BK_LANG && window.BK_LANG()) || "fr"];

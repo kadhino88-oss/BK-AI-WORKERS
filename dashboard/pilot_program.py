@@ -44,7 +44,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 CONTACT_EMAIL = "contact@bk-entreprise.com"        # deja publie : mentions legales, pied de page
 PAGE_PATH = "/pilote.html"
 SITEMAP_PATHS = [PAGE_PATH]
-CONSENT_VERSION = "pilot-2026-10-07"               # version du texte de consentement affiche
+CONSENT_VERSION = "pilot-alex-2026-11-21"          # version du texte de consentement affiche
 HONEYPOT_FIELD = "contact_me_by_fax_only"          # nom attractif pour un robot, ignore par l'autocompletion
 STORE_REL = ("core", "accounts", "data", "pilot-applications.json")   # "data/" : survit aux deploiements
 CATALOG_REL = ("core", "runtime", "controlled-connectors", "CONTROLLED-CONNECTOR-CATALOG.json")
@@ -470,35 +470,35 @@ def build_owner_email(rec, tool_names):
         ("Autres outils", rec.get("otherTools") or "—"), ("Langue du formulaire", (rec.get("lang") or "fr").upper()),
         ("Reçue le", when),
     ]
-    subject = "Candidature programme pilote : " + rec["name"] + " (" + rec["company"] + ")"
+    subject = "Candidature pilote Alex : " + rec["name"] + " (" + rec["company"] + ")"
     subject = subject[:150]
     use_case_html = h(rec["useCase"]).replace("\n", "<br>")
     body = ("<div style=\"font-family:Arial,sans-serif;font-size:15px;color:#16171c\">"
-            f"<p><strong>Nouvelle candidature au programme pilote</strong> (réf. {h(rec['id'])}).</p>"
+            f"<p><strong>Nouvelle candidature au pilote Alex</strong> (réf. {h(rec['id'])}).</p>"
             "<table cellpadding=\"6\" style=\"border-collapse:collapse\">"
             + "".join(f"<tr><td style=\"color:#6b6f7b;vertical-align:top\">{h(k)}</td><td><strong>{h(v)}</strong></td></tr>"
                       for k, v in rows)
             + f"<tr><td style=\"color:#6b6f7b;vertical-align:top\">Cas d'usage</td><td>{use_case_html}</td></tr>"
             "</table><p style=\"color:#6b6f7b;font-size:13px\">Pour répondre, écrivez à l'adresse ci-dessus. "
-            "Toutes les candidatures : tableau de bord administrateur, section « Candidatures programme pilote ». "
+            "Toutes les candidatures : tableau de bord administrateur, section « Candidatures pilote Alex ». "
             "Ces informations sont des données saisies par un visiteur : ne cliquez sur aucun lien sans vérifier.</p></div>")
     text = "\n".join(f"{k} : {v}" for k, v in rows) + "\nCas d'usage :\n" + rec["useCase"]
     return subject, body, text
 
 
 # --------------------------------------------------------------------------- contenu de la page
-PAGE_TITLE = "Programme pilote — Candidater | BK-AI-WORKERS"
-PAGE_DESC = ("Candidatez au programme pilote de BK-AI-WORKERS : essayez la plateforme sur vos vrais besoins. "
-             "Nous étudions chaque candidature et revenons vers vous par email.")
+PAGE_TITLE = "Pilote Alex — Qualification de demandes B2B | BK-AI-WORKERS"
+PAGE_DESC = ("Testez Alex sur jusqu'à cinq demandes entrantes B2B en sept jours. Pour les entreprises de maintenance technique du Grand Genève et de Haute-Savoie. "
+             "49 CHF ou 49 €, une seule fois, sans renouvellement automatique.")
 EN_HEAD = {
-    "title": "Pilot programme — Apply | BK-AI-WORKERS",
-    "description": "Apply to the BK-AI-WORKERS pilot programme: try the platform on your real needs. "
-                   "We review every application and get back to you by email.",
+    "title": "Alex pilot — B2B enquiry qualification | BK-AI-WORKERS",
+    "description": "Test Alex on up to five incoming B2B enquiries over seven days. For technical maintenance businesses in Greater Geneva and Haute-Savoie. "
+                   "CHF 49 or €49 once, with no automatic renewal.",
 }
 
 # Libelles repris aussi par index.html et le pied de page des pages statiques (voir i18n-en-pilot.js).
-FOOTER_LINK = T("Programme pilote", "Pilot programme")
-HOME_CTA_LINK = T("Programme pilote : candidater", "Pilot programme: apply")
+FOOTER_LINK = T("Pilote Alex", "Alex pilot")
+HOME_CTA_LINK = T("Candidater au pilote Alex", "Apply for the Alex pilot")
 
 # Messages d'erreur (affiches par pilot-form.js : cles = codes renvoyes par /api/pilot/apply).
 ERROR_MESSAGES = [
@@ -592,41 +592,43 @@ def _errors_html():
 
 
 def render_page(tools):
-    """Page /pilote.html : texte honnete, aucune condition inventee, aucun chiffre, temoignage ou logo."""
+    """Page /pilote.html : offre de test Alex, sans faux avis ni faux clients."""
     req = '<span class="req" aria-hidden="true"> *</span>'
     body = f"""
-      <h1>{T("Programme pilote", "Pilot programme")}</h1>
-      <p class="u">{T("Essayez BK-AI-WORKERS sur vos vrais besoins et dites-nous franchement ce qui manque.",
-                      "Try BK-AI-WORKERS on your real needs and tell us frankly what is missing.")}</p>
+      <h1>{T("Pilote Alex : qualification de demandes B2B", "Alex pilot: B2B enquiry qualification")}</h1>
+      <p class="u">{T("Pour les entreprises de maintenance technique et CVC du Grand Genève et de Haute-Savoie qui reçoivent des demandes de devis.",
+                      "For technical maintenance and HVAC businesses in Greater Geneva and Haute-Savoie that receive quote enquiries.")}</p>
+      <div class="cta-row"><a class="btn btn-gold" href="#candidater">{T("Candidater au pilote Alex", "Apply for the Alex pilot")}</a></div>
 
-      <h2>{T("Pourquoi ce programme", "Why this programme")}</h2>
-      <p>{T("Nous cherchons des entreprises qui acceptent d'essayer BK-AI-WORKERS sur leurs vrais besoins, et de nous dire sans détour ce qui leur est utile et ce qui manque encore.",
-            "We are looking for companies willing to try BK-AI-WORKERS on their real needs and to tell us plainly what is useful and what is still missing.")}</p>
-      <p>{T("Aucun témoignage n'est publié sur le site sans l'accord de la personne.",
-            "No testimonial is published on the site without the person's agreement.")}</p>
+      <h2>{T("Le problème que le pilote examine", "The problem this pilot examines")}</h2>
+      <p>{T("Une demande arrive entre deux interventions. Il faut vérifier l'entreprise, comparer son besoin à vos critères et décider quoi lui répondre. Le pilote permet de voir si Alex rend cette vérification plus claire pour votre activité.",
+            "An enquiry arrives between jobs. You need to check the company, compare its need with your criteria and decide how to reply. The pilot shows whether Alex makes this review clearer for your business.")}</p>
 
-      <h2>{T("Ce que vous pouvez déjà utiliser", "What you can already use")}</h2>
+      <h2>{T("Ce qui est compris", "What is included")}</h2>
       <ul class="pilot-list">
-        <li>{T("Chloé, l'agent qui orchestre, et 17 Workers spécialisés par métier.",
-               "Chloé, the orchestrating agent, and 17 Workers specialised by profession.")}</li>
-        <li>{T("La connexion de vos propres outils, avec votre propre compte. Rien n'est connecté par défaut : vous choisissez quoi brancher, et quand.",
-               "Connecting your own tools, with your own account. Nothing is connected by default: you choose what to plug in, and when.")}</li>
-        <li>{T("Une vérification avant toute action sensible : envoi, publication ou suppression passent par Chloé, et les paiements et transactions reviennent toujours à vous.",
-               "A check before any sensitive action: sending, publishing or deleting goes through Chloé, and payments and transactions always come back to you.")}</li>
-        <li>{T("Un essai gratuit de 3 jours, sans carte bancaire, que vous pouvez ouvrir dès maintenant sans attendre notre réponse.",
-               "A free 3-day trial, no credit card, that you can open right now without waiting for our answer.")}</li>
+        <li>{T("Jusqu'à cinq demandes entrantes de votre entreprise, traitées pendant sept jours.",
+               "Up to five incoming enquiries from your business, reviewed over seven days.")}</li>
+        <li>{T("Pour chaque demande : recherche d'informations publiques sur l'entreprise, éléments trouvés avec leurs liens, adéquation à vos critères et questions encore ouvertes.",
+               "For each enquiry: research into public company information, findings with links, fit against your criteria and questions that remain open.")}</li>
+        <li>{T("Un brouillon de réponse à relire. Alex ne l'envoie pas à votre place.",
+               "A draft reply for you to review. Alex does not send it on your behalf.")}</li>
+        <li>{T("Un échange de cadrage et un retour franc sur ce qui a fonctionné ou non pendant le test.",
+               "A setup conversation and direct feedback on what did and did not work during the trial.")}</li>
       </ul>
-      <div class="cta-row"><a class="btn btn-ghost" href="/#nav-onboarding">{T("Démarrer l'essai gratuit", "Start the free trial")}</a></div>
 
-      <h2>{T("Les conditions", "The terms")}</h2>
+      <h2>{T("Prix et conditions", "Price and terms")}</h2>
       <div class="pilot-note">
-        <p style="margin:0 0 8px">{T("Les conditions du programme ne sont pas encore définies : à ce stade, nous n'annonçons ni remise, ni durée, ni nombre de places, ni délai de réponse.",
-                                     "The terms of the programme have not been defined yet: at this stage we are not announcing any discount, duration, number of places or response time.")}</p>
-        <p style="margin:0 0 8px">{T("Nous étudions chaque candidature et revenons vers vous par email.",
-                                     "We review every application and get back to you by email.")}</p>
-        <p style="margin:0">{T("Envoyer ce formulaire ne crée aucun abonnement, ne déclenche aucun paiement et ne vous engage à rien.",
-                               "Submitting this form creates no subscription, triggers no payment and commits you to nothing.")}</p>
+        <p style="margin:0 0 8px"><strong>{T("49 CHF en Suisse · 49 € en France — paiement unique, sans renouvellement automatique.",
+                                               "CHF 49 in Switzerland · €49 in France — one-time payment, no automatic renewal.")}</strong></p>
+        <p style="margin:0 0 8px">{T("La candidature ne déclenche aucun paiement. Nous vérifions d'abord que le cas d'usage et la recherche web sont compatibles, puis nous confirmons par email le démarrage et le mode de règlement.",
+                                     "Applying does not trigger a payment. We first check that your use case and web research needs are supported, then confirm the start and payment method by email.")}</p>
+        <p style="margin:0">{T("Le pilote ne promet ni rendez-vous ni vente. Il teste la qualité et l'utilité de la qualification d'Alex sur vos demandes.",
+                               "The pilot does not promise a meeting or a sale. It tests the quality and usefulness of Alex's qualification on your enquiries.")}</p>
       </div>
+
+      <h2>{T("Avant de candidater", "Before you apply")}</h2>
+      <p>{T("Nous commençons avec les entreprises de maintenance technique et CVC du Grand Genève et de Haute-Savoie. Dans le formulaire, décrivez votre activité, votre zone et le nombre approximatif de demandes reçues. N'y collez pas d'email client, de nom de prospect ni d'autre donnée personnelle.",
+            "We are starting with technical maintenance and HVAC businesses in Greater Geneva and Haute-Savoie. In the form, describe your activity, service area and approximate number of enquiries. Do not paste customer emails, prospect names or other personal data into it.")}</p>
 
       <h2 id="candidater">{T("Candidater", "Apply")}</h2>
       <noscript><p class="pilot-note">Ce formulaire demande JavaScript. / This form needs JavaScript. —
@@ -651,27 +653,16 @@ def render_page(tools):
         <input type="text" id="pilot-website" name="website" maxlength="{WEBSITE_MAX}" autocomplete="url" inputmode="url"
                placeholder="{h(T("exemple.com", "example.com"))}">
 
-        <fieldset id="pilot-tools">
-          <legend>{T("Les outils que vous utilisez", "The tools you use")}</legend>
-          <p class="f-help">{T("Cochez ceux que vous utilisez déjà : cela nous indique quelles connexions comptent le plus pour vous.",
-                               "Tick the ones you already use: it tells us which connections matter most to you.")}</p>
-          {_tools_html(tools)}
-        </fieldset>
-
-        <label class="f-label" for="pilot-other">{T("Autres outils (facultatif)", "Other tools (optional)")}</label>
-        <input type="text" id="pilot-other" name="otherTools" maxlength="{OTHER_TOOLS_MAX}"
-               placeholder="{h(T("Ex : logiciel de caisse, ERP maison…", "E.g. point-of-sale software, in-house ERP…"))}">
-
-        <label class="f-label" for="pilot-usecase">{T("Votre cas d'usage principal", "Your main use case")}{req}</label>
-        <p class="f-help">{T("Décrivez en quelques phrases ce que vous aimeriez automatiser ou déléguer.",
-                             "Describe in a few sentences what you would like to automate or delegate.")}</p>
+        <label class="f-label" for="pilot-usecase">{T("Vos demandes entrantes et votre activité", "Your incoming enquiries and business")}{req}</label>
+        <p class="f-help">{T("Indiquez votre activité, votre région, le volume approximatif de demandes par mois et ce qui prend le plus de temps. N'incluez aucune donnée personnelle de client.",
+                             "Describe your activity, region, approximate monthly enquiry volume and what takes the most time. Do not include customer personal data.")}</p>
         <textarea id="pilot-usecase" name="useCase" required minlength="{USE_CASE_MIN}" maxlength="{USE_CASE_MAX}" rows="5"
-                  placeholder="{h(T("Ex : répondre plus vite aux demandes de devis, préparer nos publications LinkedIn…",
-                                    "E.g. answer quote requests faster, prepare our LinkedIn posts…"))}"></textarea>
+                  placeholder="{h(T("Ex. : entreprise de maintenance CVC à Annemasse ; environ 8 demandes B2B par mois ; vérifier l'adéquation avant de préparer un devis.",
+                                    "E.g. HVAC maintenance business in Annemasse; around 8 B2B enquiries per month; check fit before preparing a quote."))}"></textarea>
 
         <label class="pilot-consent"><input type="checkbox" id="pilot-consent" name="consent" required>
-          <span>{T("J'accepte que BK-AI-WORKERS (BK-ENTREPRISE) me contacte par email au sujet de ma candidature au programme pilote.",
-                   "I agree that BK-AI-WORKERS (BK-ENTREPRISE) may contact me by email about my pilot programme application.")}{req}</span></label>
+          <span>{T("J'accepte que BK-AI-WORKERS (BK-ENTREPRISE) me contacte par email pour répondre à ma candidature au pilote Alex.",
+                   "I agree that BK-AI-WORKERS (BK-ENTREPRISE) may email me to respond to my Alex pilot application.")}{req}</span></label>
 
         <div class="pilot-hp" aria-hidden="true"><label>{T("Ne pas remplir ce champ", "Do not fill in this field")}
           <input type="text" name="{HONEYPOT_FIELD}" tabindex="-1" autocomplete="off"></label></div>
@@ -681,19 +672,17 @@ def render_page(tools):
         <button type="submit" id="pilot-submit" class="btn btn-gold"><span class="lbl">{T("Envoyer ma candidature", "Send my application")}</span><span class="busy" hidden>{T("Envoi en cours…", "Sending…")}</span></button>
 
         <h3>{T("Vos données", "Your data")}</h3>
-        <p class="f-help">{T("Les informations de ce formulaire servent uniquement à étudier votre candidature et à vous répondre.",
-                             "The information in this form is used only to review your application and to reply to you.")}</p>
+        <p class="f-help">{T("Les informations servent uniquement à étudier votre candidature au pilote Alex et à vous répondre. Elles ne valent ni commande ni consentement à des emails marketing.",
+                             "This information is used only to review your Alex pilot application and reply to you. It is not an order or consent to marketing emails.")}</p>
         <p class="f-help">{T("Pour les faire supprimer, écrivez à", "To have it deleted, write to")} <a href="mailto:{CONTACT_EMAIL}">{CONTACT_EMAIL}</a>.
           <a href="/confidentialite.html">{T("Confidentialité", "Privacy")}</a></p>
       </form>
 
       <div id="pilot-done" class="pilot-done" tabindex="-1" role="status" hidden>
-        <h3>{T("Merci, votre candidature est enregistrée.", "Thank you, your application has been recorded.")}</h3>
-        <p>{T("Nous l'étudions et revenons vers vous par email.", "We are reviewing it and will get back to you by email.")}</p>
+        <h3>{T("Merci, votre candidature au pilote Alex est enregistrée.", "Thank you, your Alex pilot application has been recorded.")}</h3>
+        <p>{T("Nous vérifions si le cas convient au pilote et revenons vers vous par email avec les prochaines étapes. Aucun paiement n'a été déclenché.", "We will check whether your use case fits the pilot and email you with the next steps. No payment has been triggered.")}</p>
         <p>{T("Référence :", "Reference:")} <strong id="pilot-ref"></strong></p>
-        <p>{T("En attendant, vous pouvez ouvrir un compte d'essai gratuit : 3 jours, sans carte bancaire.",
-              "In the meantime, you can open a free trial account: 3 days, no credit card.")}</p>
-        <div class="cta-row"><a class="btn btn-gold" href="/#nav-onboarding">{T("Démarrer l'essai gratuit", "Start the free trial")}</a></div>
+        <p>{T("Votre référence permet de retrouver la demande si vous nous écrivez.", "Your reference helps us find your application if you contact us.")}</p>
       </div>
     """
     page = seo_pages._page(PAGE_TITLE, PAGE_DESC, PAGE_PATH, body)
