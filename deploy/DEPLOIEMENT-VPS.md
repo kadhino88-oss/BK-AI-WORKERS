@@ -33,25 +33,33 @@ sudo bash deploy/setup-swap.sh 2      # 2 Go de swap : filet de sécurité, pers
 ```bash
 cp .env.example .env
 python3 deploy/make-gate-hash.py      # imprime BK_GATE_HASH=... -> à coller dans .env
-nano .env                             # domaine, clé Anthropic, Stripe (live)
+nano .env                             # domaine, hash de porte d'accès et URL du produit Infomaniak
 chmod 600 .env
+python3 deploy/set-engine-secret.py searxng  # génère une clé SearXNG locale sans l'afficher
+python3 deploy/set-engine-secret.py swiss    # saisie masquée du jeton API Infomaniak
 ```
+
+Dans `.env`, renseigner `BK_DOMAIN` et `BK_SWISS_URL=https://api.infomaniak.com/2/ai/<ID_PRODUIT>/openai/v1`. Le modèle `mistralai/Mistral-Small-4-119B-2603`, `BK_AI_PROVIDER=swiss` et `BK_SEARCH_URL=http://searxng:8080` sont déjà proposés par `.env.example`. Fixer aussi une limite de dépense sur le produit Infomaniak AI Services avant tout essai réel ; l'Admin de BK ne plafonne actuellement que Claude.
 
 ## 5. Démarrer
 ```bash
-docker compose up -d --build
-docker compose logs -f app
+docker compose -f docker-compose.yml -f docker-compose.search.yml up -d --build
+docker compose -f docker-compose.yml -f docker-compose.search.yml logs -f app
 ```
 
 ## Vérifications au premier démarrage
 1. `https://ton-domaine/` s'affiche (HTTPS automatique).
-2. Connexion avec le mot de passe d'accès, puis une mission avec un Worker : réponse Claude.
-3. Si une mission échoue, `docker compose logs app` : les erreurs PowerShell y apparaissent.
+2. Dans la vue Admin, choisir « Hôte suisse seul (Infomaniak) », saisir l'URL et le modèle, puis le point SearXNG. Les réglages persistés dans l'Admin ont priorité sur `.env`.
+3. Vérifier SearXNG sans appel d'IA avec `docker compose -f docker-compose.yml -f docker-compose.search.yml exec app python3 /data/app/deploy/check-search.py`.
+4. Vérifier l'API Infomaniak avec `docker compose -f docker-compose.yml -f docker-compose.search.yml exec app python3 /data/app/deploy/check-engine.py --engine swiss --chat`.
+5. Effectuer trois demandes fictives (compatible, ambiguë, hors cible) ; contrôler sources, qualification, brouillon non envoyé et dépense dans Infomaniak avant d'accepter le premier paiement.
+6. Si une mission échoue, `docker compose -f docker-compose.yml -f docker-compose.search.yml logs app` : les erreurs PowerShell y apparaissent.
    Points à surveiller sous Linux : sensibilité à la casse des chemins et cmdlets Windows.
 
 ## Mises à jour
-`git pull && docker compose up -d --build` : le code est resynchronisé, l'état (missions, profil,
-sécurité, facturation) reste dans le volume `bkdata`.
+Pour Alex, conserver SearXNG et utiliser les deux fichiers Compose :
+`git pull && docker compose -f docker-compose.yml -f docker-compose.search.yml up -d --build`.
+Le code est resynchronisé ; l'état (missions, profil, sécurité, facturation) reste dans le volume `bkdata`.
 
 ## Sauvegardes
 ```bash

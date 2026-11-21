@@ -2779,7 +2779,7 @@ def _delete_account_locked(client_id, password):
     return None
 
 
-SITEMAP_PATHS = ['/', '/workers.html', '/tarifs.html', '/faq.html', '/chloe.html', '/demarrer.html', '/automatisations.html', '/analytics.html', '/facturation.html', '/cgv.html', '/mentions-legales.html', '/cookies.html', '/confidentialite.html']
+SITEMAP_PATHS = ['/', '/workers.html', '/workers/alex.html', '/tarifs.html', '/faq.html', '/chloe.html', '/demarrer.html', '/automatisations.html', '/analytics.html', '/facturation.html', '/cgv.html', '/mentions-legales.html', '/cookies.html', '/confidentialite.html']
 # Pages de confiance + mesure de disponibilite (dashboard/trust_pages.py, status_monitor.py).
 SITEMAP_PATHS.extend(p for p in trust_pages.SITEMAP_PATHS if p not in SITEMAP_PATHS)
 TRUST = trust_pages.TrustService(ROOT, PUBLIC_BASE_URL)

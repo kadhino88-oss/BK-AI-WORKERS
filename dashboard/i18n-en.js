@@ -1,24 +1,44 @@
 /* Dictionnaire FR -> EN : interface, accueil, Workers, tarifs, formulaires. */
 window.BK_EN_HEAD = {
-  title: "BK-AI-WORKERS — A team of autonomous AI agents for your business",
-  description: "Chloé and 17 specialised AI Workers (sales, marketing, content, legal, accounting, support…) run your missions 24/7, in your language, with approval before any sensitive action. Free trial."
+  title: "Alex — B2B lead qualification | BK-AI-WORKERS",
+  description: "Alex helps small B2B businesses in Greater Geneva and Haute-Savoie review inbound enquiries, research companies with sources and prepare a reply for approval."
 };
 window.BK_EN = Object.assign(window.BK_EN || {}, {
   /* navigation */
+  "Alex · qualification commerciale": "Alex · sales qualification",
   "Accueil": "Home", "Démarrer": "Get started", "Automatisations": "Automations", "Tarifs": "Pricing",
   "Facturation": "Billing", "Admin": "Admin", "Discuter avec Chloé": "Chat with Chloé",
   "Se connecter": "Sign in", "Menu": "Menu",
   /* hero */
-  "✨ 17 Workers spécialisés": "✨ 17 specialised Workers", "⚡ Autonomes": "⚡ Autonomous", "🕐 24/7": "🕐 24/7",
-  "Votre objectif. Votre": "Your goal. Your", "équipe IA": "AI team", ". Votre résultat.": ". Your result.",
-  "Chloé comprend votre mission, compose l'équipe de Workers adaptée et coordonne leur travail jusqu'au résultat.":
-    "Chloé understands your mission, assembles the right team of Workers and coordinates their work through to the result.",
+  "Alex · qualification B2B": "Alex · B2B qualification", "Recherche avec sources": "Research with sources",
+  "Vous validez l'envoi": "You approve sending",
+  "Alex : qualification des demandes entrantes B2B": "Alex: incoming B2B enquiry qualification",
+  "Qualifie vos demandes B2B, recherche les informations publiques sur l’entreprise et prépare une réponse que vous validez.":
+    "Qualifies your B2B enquiries, researches public company information and prepares a reply for you to approve.",
+  "TPE et PME B2B de services sans commercial dédié, qui reçoivent des demandes entrantes et veulent vérifier leur adéquation avant d’y consacrer du temps.":
+    "Small B2B service businesses without a dedicated salesperson, receiving inbound enquiries they want to qualify before investing time.",
+  "Pour qui ?": "Who is Alex for?",
+  "Qualification d'un lead entrant et réponse prête": "Inbound lead qualification and reply draft",
+  "Vous collez une demande reçue par formulaire, email ou message après avoir retiré le nom, l'email et le téléphone de l'interlocuteur. Alex recherche des informations publiques sur l’entreprise et indique les pages sources trouvées, compare la demande à vos critères, classe son adéquation (chaud, tiède, froid), signale les éléments manquants et prépare un brouillon de réponse. Si un agenda compatible est connecté, il peut proposer des créneaux réellement disponibles. Aucun message n’est envoyé sans votre validation.":
+    "Paste an enquiry received by form, email or message after removing the contact's name, email and phone number. Alex researches public company information and lists source pages, compares the enquiry with your criteria, classifies fit as hot, warm or cold, flags missing information and prepares a reply draft. If a compatible calendar is connected, he can suggest genuinely available slots. No message is sent without your approval.",
+  "Jusqu’à cinq demandes sur sept jours : conditions et tarif du pilote.": "Up to five enquiries over seven days: pilot terms and price.",
+  "Voir le prix et les conditions": "See price and terms",
+  "Découvrir les autres Workers": "Explore the other Workers",
+  "Pour les petites entreprises de services B2B du Grand Genève et de Haute-Savoie":
+    "For small B2B service businesses in Greater Geneva and Haute-Savoie",
+  "Un prospect vous écrit.": "A prospect writes to you.", "Alex enquête": "Alex investigates",
+  "avant que vous répondiez.": "before you reply.",
+  "Alex examine la demande, recherche des informations publiques sur l'entreprise et prépare une réponse à valider. Vous gardez la décision et l'envoi.":
+    "Alex reviews the enquiry, researches public information about the company and prepares a reply for you to approve. You make the decision and send it.",
+  "Candidater au pilote Alex": "Apply for the Alex pilot", "Voir Alex dans l'application": "See Alex in the app",
+  "5 demandes · 7 jours · 49 CHF / 49 € · sans renouvellement": "5 enquiries · 7 days · CHF 49 / €49 · one-off",
+  "Les autres spécialistes": "Other specialists",
   "Chloé — Chloé choisit pour vous": "Chloé — Chloé picks for you",
   "Construire mon équipe": "Build my team", "▶ Voir la démo en 30 s": "▶ Watch the 30-second demo",
   "Découvrir les Workers": "Meet the Workers", "Réserver une démo": "Book a demo",
-  "Toute l'équipe, tour à tour": "The whole team, one by one",
-  "Chloé et ses 17 Workers — passez la souris pour un aperçu, cliquez pour la fiche complète.":
-    "Chloé and her 17 Workers — hover for a preview, click for the full profile.",
+  "Commencez par Alex. Élargissez ensuite.": "Start with Alex. Expand when needed.",
+  "Alex traite la qualification commerciale ; les autres spécialistes restent disponibles pour les missions qui demandent plusieurs métiers.":
+    "Alex handles sales qualification; the other specialists remain available for work that needs several skill sets.",
   "Orchestratrice": "Orchestrator", "Voir les 17 Workers →": "See the 17 Workers →", "Voir les 17 Workers": "See the 17 Workers",
   "Trouver": "Find", "Workers spécialisés": "Specialised Workers", "Domaines métier": "Business areas",
   "Compétences cumulées": "Combined skills",
@@ -27,23 +47,26 @@ window.BK_EN = Object.assign(window.BK_EN || {}, {
     "17 professions, 17 specialists — click an area to meet the one who handles it.",
   "Confier une mission →": "Give a mission →", "Voir la fiche complète": "View full profile",
   "Confier une mission": "Give a mission", "Plus d'infos": "More info", "Disponible": "Available",
-  "Vous décrivez la mission": "You describe the mission",
-  "À Chloé ou directement à un Worker — pas de configuration, pas de script.": "To Chloé or directly to a Worker — no setup, no scripts.",
-  "Le ou les Workers exécutent": "The Worker(s) execute",
-  "Chacun selon son rôle et les outils auxquels il a accès.": "Each according to their role and the tools they can access.",
-  "Chloé vérifie": "Chloé checks", "Avant tout envoi, publication ou suppression — automatiquement.": "Before any sending, publishing or deletion — automatically.",
-  "Vous validez le financier": "You approve anything financial",
-  "Seuls les paiements et transactions vous reviennent directement.": "Only payments and transactions come straight back to you.",
-  "Un chatbot répond. Une équipe livre.": "A chatbot answers. A team delivers.",
-  "La différence entre un assistant qu'on doit relancer et des Workers qui prennent la mission en charge.":
-    "The difference between an assistant you have to keep prompting and Workers who take the mission on.",
-  "Chatbot classique": "Typical chatbot", "Mode de travail": "How it works", "Attend votre prompt": "Waits for your prompt",
-  "Mission confiée, exécutée par le bon Worker": "Mission handed over, carried out by the right Worker",
-  "Organisation": "Organisation", "Une seule fenêtre de chat": "A single chat window", "Chloé compose l'équipe adaptée": "Chloé assembles the right team",
-  "Sécurité": "Safety", "Aucun garde-fou métier": "No business safeguards", "Actions sensibles vérifiées avant exécution": "Sensitive actions checked before execution",
-  "Outils": "Tools", "Copier-coller manuel": "Manual copy-paste", "Connecteurs réels vers vos outils": "Real connectors to your tools",
-  "Récurrence": "Recurrence", "À refaire à chaque fois": "Redo every time", "Automatisations planifiées": "Scheduled automations",
-  "Branchés sur vos outils": "Plugged into your tools", "Les connecteurs pris en charge par la plateforme.": "The connectors supported by the platform.",
+  "Vous collez la demande reçue": "Paste the enquiry you received",
+  "Un email, un formulaire ou un message commercial que vous voulez examiner.": "An email, form submission or sales message you want to review.",
+  "Alex vérifie l'entreprise": "Alex researches the company",
+  "Il recherche des informations publiques et relie les éléments trouvés à leurs sources.": "He looks for public information and links findings to their sources.",
+  "Vous voyez l'adéquation et les inconnues": "See the fit and what is still unknown",
+  "Alex explique son évaluation et signale les informations qu'il n'a pas pu confirmer.": "Alex explains his assessment and flags information he could not confirm.",
+  "Vous relisez la réponse": "Review the reply",
+  "Alex prépare un brouillon ; aucun message n'est envoyé sans votre validation.": "Alex prepares a draft; no message is sent without your approval.",
+  "De la demande reçue à la prochaine bonne question.": "From incoming enquiry to the right next question.",
+  "Alex structure la vérification commerciale pour que vous puissiez décider quoi faire ensuite.": "Alex structures the sales review so you can decide what to do next.",
+  "Vérification manuelle": "Manual review", "Avec Alex": "With Alex",
+  "Recherche": "Research", "Ouvrir plusieurs pages et garder les liens": "Open several pages and keep track of the links",
+  "Éléments trouvés présentés avec leurs sources": "Findings presented with their sources",
+  "Qualification": "Qualification", "Se faire une opinion à partir du mail": "Judge from the email alone",
+  "Comparer la demande à vos critères et expliquer les inconnues": "Compare the enquiry with your criteria and explain what is unknown",
+  "Prochaine étape": "Next step", "Rédiger une réponse de zéro": "Write a reply from scratch",
+  "Recevoir un brouillon de réponse à relire": "Get a draft reply to review",
+  "Alex d'abord ; toute l'équipe reste accessible.": "Alex first; the full team remains available.",
+  "Commencez avec un Worker spécialisé. Ajoutez d'autres métiers seulement quand une tâche le justifie.":
+    "Start with one specialist Worker. Add other skills only when a task calls for them.",
   "Réseaux sociaux": "Social media", "Surveillance": "Monitoring", "Plateforme RH": "HR platform",
   "Ce qui est déjà vrai aujourd'hui": "What is already true today",
   "Pas d'avis fabriqués — juste ce que le système fait réellement, vérifiable.": "No made-up reviews — just what the system really does, verifiable.",
@@ -51,9 +74,23 @@ window.BK_EN = Object.assign(window.BK_EN || {}, {
   "Connecteurs métier disponibles (Slack, CRM, email…)": "Business connectors available (Slack, CRM, email…)",
   "Actions sensibles vérifiées par Chloé avant exécution": "Sensitive actions checked by Chloé before execution",
   "Utilisable partout dans le monde, dans toutes les langues": "Usable worldwide, in every language",
-  "Prêt à démarrer ?": "Ready to start?", "Confiez votre première mission.": "Hand over your first mission.",
-  "Choisissez un Worker ou laissez Chloé s'en occuper — Chloé vous demande confirmation avant toute action sensible.":
-    "Pick a Worker or let Chloé handle it — Chloé asks for your confirmation before any sensitive action.",
+  "Pilote fondateur Alex": "Alex founding pilot", "Testez Alex sur vos demandes entrantes.": "Test Alex on your incoming enquiries.",
+  "Jusqu'à cinq demandes sur sept jours. Un tarif unique, sans renouvellement automatique. La candidature ne déclenche aucun paiement.":
+    "Up to five enquiries over seven days. One fixed price, no automatic renewal. Applying does not trigger a payment.",
+  "Jusqu'à cinq demandes sur sept jours · 49 CHF ou 49 € · paiement unique.": "Up to five enquiries over seven days · CHF 49 or €49 · one-off payment.",
+  "Parler à Chloé": "Talk to Chloé",
+  "Hôte suisse seul (Infomaniak)": "Swiss host only (Infomaniak)",
+  "Adresse de l'hôte suisse": "Swiss host address",
+  "Modèle Infomaniak": "Infomaniak model",
+  "Adresse du point de recherche web (SearXNG)": "Web search endpoint (SearXNG)",
+  "Infomaniak ne fait pas lui-même de recherche web : configurez aussi un point SearXNG compatible. Les jetons se configurent sur le serveur, jamais dans ces champs.":
+    "Infomaniak does not provide web search itself: configure a compatible SearXNG endpoint as well. Configure tokens on the server, never in these fields.",
+  "Le plafond ci-dessous concerne uniquement Claude. Fixez aussi une limite de dépense dans la console de facturation Infomaniak.":
+    "The limit below applies to Claude only. Also set a spending limit in Infomaniak billing.",
+  "Essai gratuit : moteur Ollama uniquement ; sans moteur Ollama opérationnel, les comptes Essai sont suspendus et ne basculent pas vers Infomaniak.":
+    "Free trial: Ollama only; if it is not available, trial accounts are suspended and will not fall back to Infomaniak.",
+  "Avant d'activer l'hôte suisse pour Alex, renseignez son adresse, son modèle et le point de recherche web.":
+    "Before enabling the Swiss host for Alex, enter its address, model and web search endpoint.",
   /* workers page */
   "← Accueil": "← Home", "Des Workers spécialisés pour un métier": "Specialised Workers for every profession",
   "Un expert entraîné pour chaque fonction. Cliquez un Worker pour voir sa fiche et lui confier une mission.":

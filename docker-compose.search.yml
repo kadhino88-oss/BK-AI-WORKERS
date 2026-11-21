@@ -1,0 +1,28 @@
+# Optionnel : moteur de recherche prive reserve a l'application.
+# Demarrer avec : docker compose -f docker-compose.yml -f docker-compose.search.yml up -d --build
+services:
+  app:
+    depends_on:
+      - searxng
+    networks:
+      - default
+      - search
+
+  searxng:
+    # Version datee et epinglee ; la mettre a jour apres revue des changements amont.
+    image: searxng/searxng:2026.11.20-cd6d28091
+    restart: unless-stopped
+    environment:
+      SEARXNG_SECRET: ${SEARXNG_SECRET:?Definir SEARXNG_SECRET dans .env avant de demarrer la recherche}
+      SEARXNG_BASE_URL: http://searxng:8080/
+      SEARXNG_LIMITER: "false"
+    volumes:
+      - ./deploy/searxng/settings.yml:/etc/searxng/settings.yml:ro
+    expose:
+      - "8080"
+    networks:
+      - search
+
+networks:
+  default: {}
+  search: {}

@@ -14,6 +14,7 @@ interactive complete (index.html) pour l'usage reel du produit.
 
 NAV_LINKS = [
     ("/", "Accueil"),
+    ("/workers/alex.html", "Alex"),
     ("/demarrer.html", "Démarrer"),
     ("/workers.html", "Workers"),
     ("/automatisations.html", "Automatisations"),
@@ -320,6 +321,8 @@ def render_worker_page(worker, profile, others=()):
     tagline = profile.get("tagline") or f"{name}, {role}, un agent IA spécialisé de BK-AI-WORKERS."
     ideal = profile.get("idealFor") or ""
     services = [s for s in profile.get("services", []) if isinstance(s, dict) and s.get("label")]
+    if wid == "alex":
+        services.sort(key=lambda service: service.get("id") != "qualification-lead-entrant")
     required, every = _profile_connectors(profile)
     groups = _autonomy_groups(profile)
     solo, essai = _plan("solo"), _plan("essai")
@@ -348,12 +351,18 @@ def render_worker_page(worker, profile, others=()):
         faq.append((f"Quels outils {name} peut-il utiliser ?", need + "Outils connectables : " + ", ".join(every) + "."))
 
     # --- contenu visible ---
-    parts = [f'<h1>{_e(name)} : {_e(role)}, agent IA</h1><p class="u">{_e(tagline)}</p>']
+    heading = ("Alex : qualification des demandes entrantes B2B" if wid == "alex"
+               else f"{name} : {role}, agent IA")
+    parts = [f'<h1>{_e(heading)}</h1><p class="u">{_e(tagline)}</p>']
     top = (f'<div class="wk-top"><img class="wk-portrait" src="{_e(portrait)}" width="200" height="250" '
            f'alt="Portrait de {_e(name)}, {_e(role)}"><div><p class="wk-cat">{_e(category)}</p>')
     if ideal:
         top += f"<p><strong>Pour qui ?</strong> {_e(ideal)}</p>"
-    if essai:
+    if wid == "alex":
+        top += ('<div class="cta-row"><a class="btn btn-gold" href="/pilote.html#candidater">Candidater au pilote Alex</a>'
+                '<a class="btn btn-ghost" href="/pilote.html">Voir le prix et les conditions</a></div>'
+                '<p class="u wk-note">Jusqu’à cinq demandes sur sept jours : conditions et tarif du pilote.</p>')
+    elif essai:
         top += (f'<div class="cta-row"><a class="btn btn-gold" href="/#nav-onboarding">Essayer {_e(name)} gratuitement</a>'
                 f'<a class="btn btn-ghost" href="/tarifs.html">Voir les tarifs</a></div>'
                 f'<p class="u wk-note">Essai de {_e(essai["period"])}, {essai["credits"]} crédits, sans carte bancaire.</p>')
@@ -398,11 +407,18 @@ def render_worker_page(worker, profile, others=()):
     if peers:
         parts.append("<h2>Les autres Workers</h2><div class=\"wk-others\">" + "".join(
             f'<a href="{worker_page_path(o["id"])}">{_e(o["name"])} · {_e(o["category"])}</a>' for o in peers) + "</div>")
-    parts.append('<div class="cta-row"><a class="btn btn-gold" href="/#nav-onboarding">Construire mon équipe</a>'
-                 '<a class="btn btn-ghost" href="/workers.html">Voir les 17 Workers</a></div>')
+    if wid == "alex":
+        parts.append('<div class="cta-row"><a class="btn btn-gold" href="/pilote.html#candidater">Candidater au pilote Alex</a>'
+                     '<a class="btn btn-ghost" href="/workers.html">Découvrir les autres Workers</a></div>')
+    else:
+        parts.append('<div class="cta-row"><a class="btn btn-gold" href="/#nav-onboarding">Construire mon équipe</a>'
+                     '<a class="btn btn-ghost" href="/workers.html">Voir les 17 Workers</a></div>')
 
-    title = f"{name} — agent IA {category} | BK-AI-WORKERS"
-    description = f"{tagline} Essai gratuit, sans carte bancaire."
+    title = ("Alex — qualification de demandes B2B | BK-AI-WORKERS" if wid == "alex"
+             else f"{name} — agent IA {category} | BK-AI-WORKERS")
+    description = ("Alex recherche des informations publiques sur l'entreprise, qualifie les demandes entrantes et prépare une réponse à valider. "
+                   "Pilote pour le Grand Genève et la Haute-Savoie."
+                   if wid == "alex" else f"{tagline} Essai gratuit, sans carte bancaire.")
     json_ld = {"@context": "https://schema.org", "@graph": [
         {"@type": "WebPage", "name": title, "url": url, "description": description,
          "primaryImageOfPage": {"@type": "ImageObject", "url": BASE_URL + portrait}},

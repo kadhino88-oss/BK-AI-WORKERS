@@ -37,7 +37,7 @@ Le mode projet (`docs/AUTONOMY-ENGINE.md`, branche `ws/chantier-design`) doit li
 ## 3. Comment le serveur choisit (par mission)
 
 1. **Clé personnelle** du compte (enregistrée et activée) → c'est **sa** chaîne, sans repli vers nos moteurs (un repli serait une dépense cachée pour vous, ou pour lui). Le plafond de dépense ne s'applique pas à sa clé.
-2. **Essai** (forfait Essai, visiteur de l'essai public) → **chaîne gratuite** seulement (Ollama). Jamais Claude, même si le moteur local est tombé : l'essai ne coûte alors rien et répond « aucun moteur disponible ». Tant que vous n'avez pas configuré Ollama, l'essai garde le comportement d'avant (Claude).
+2. **Essai** (forfait Essai, visiteur de l'essai public) → **chaîne gratuite** seulement (Ollama). Jamais Claude ni Infomaniak, même si aucun moteur gratuit n'est configuré ou si Ollama est tombé : l'essai répond alors « aucun moteur disponible » et ne crée aucune dépense IA.
 3. Sinon, la **chaîne du niveau** (réglage du propriétaire `levelChains`, ou champ facultatif `providers` d'un niveau dans `core/ai/LEVELS.json`, par exemple `"rapide": {"providers": ["ollama", "anthropic"]}`), sinon la **chaîne par défaut** (réglage `defaultChain`, sinon `BK_AI_PROVIDER`, sinon `anthropic`).
 4. On retire de la chaîne tout moteur **mis de côté** (disjoncteur) et Claude si son **plafond** est atteint. Si Claude est coupé par le plafond et qu'il ne reste rien, la **chaîne gratuite** prend le relais, avec mention.
 
@@ -75,15 +75,16 @@ Tout est validé avant d'être écrit (rien n'est enregistré s'il y a une erreu
 ### 4.2 Dans le `.env` du serveur (noms seulement, aucun secret dans ce document)
 
 ```
-BK_AI_PROVIDER=            # chaîne par défaut : anthropic (défaut), ollama,anthropic, anthropic,ollama, ollama, swiss,anthropic ... (alias : local, claude, suisse)
+BK_AI_PROVIDER=swiss       # choix de lancement Alex : Infomaniak seul, sans secours Anthropic
 BK_OLLAMA_URL=             # http://100.x.y.z:11434  (adresse Tailscale de votre PC)
 BK_OLLAMA_MODEL=           # llama3.1:8b
 BK_OLLAMA_TIMEOUT_SEC=     # 300 par défaut
 BK_SECRET_OLLAMA=          # seulement si Ollama est derrière un https qui exige un jeton Bearer
-BK_SEARCH_URL=             # facultatif : point de recherche web compatible SearXNG (GET <adresse>/search?q=...&format=json), même règles d'adresse que les moteurs
+BK_SEARCH_URL=http://searxng:8080  # pour Alex, avec docker-compose.search.yml
+SEARXNG_SECRET=            # obligatoire pour le service SearXNG ; générer sans affichage via deploy/set-engine-secret.py searxng
 BK_SECRET_SEARCH=          # jeton Bearer, obligatoire si l'adresse est en https
 BK_SWISS_URL=              # hébergeur suisse (Infomaniak AI Tools, Mistral, vLLM...) : adresse https
-BK_SWISS_MODEL=
+BK_SWISS_MODEL=mistralai/Mistral-Small-4-119B-2603
 BK_SECRET_SWISS=           # jeton Bearer, obligatoire en https (voir deploy/set-engine-secret.py)
 BK_CLAUDE_DAILY_CHF=       # plafond de dépense Claude, par jour UTC
 BK_CLAUDE_MONTHLY_CHF=     # et par mois
@@ -150,9 +151,40 @@ Conséquences, dites sans détour :
 - **Recommandation** : si vous voulez un modèle local utilisable, **téléchargez `llama3.1:8b` ou `qwen2.5:7b`** (appel d'outils natif, contexte long) ; ce choix et ce téléchargement (environ 5 Go) sont les vôtres, je n'ai rien téléchargé : `ollama pull qwen2.5:7b`. Sans carte graphique, comptez toujours des réponses lentes : pour un vrai usage, un **hébergeur suisse** (même classe de modèles ouverts, hébergé, toujours allumé, en Suisse) est le bon remplaçant — c'est un changement de configuration (§7), pas de code.
 - Le résultat de l'essai réel contre votre Ollama figure en fin de document (§11).
 
-## 7. Passer plus tard à un hébergeur suisse
+## 7. Infomaniak AI + recherche web séparée
 
-Un hébergeur suisse n'est **pas meilleur que Claude** : il fait tourner la même classe de modèles ouverts que votre Ollama, hébergés, toujours allumés, en Suisse. Pour y passer : `BK_SWISS_URL` (adresse https compatible OpenAI, par exemple celle d'Infomaniak AI Tools), `BK_SWISS_MODEL`, `BK_SECRET_SWISS` (jeton), puis dans la vue Admin « Hôte suisse, puis Claude » (ou `defaultChain: ["swiss", "anthropic"]`) et, si vous voulez que l'essai y passe aussi, `freeChain` n'accepte volontairement que le moteur local : décision à prendre si l'hébergeur est payant à l'usage (l'essai ne doit jamais coûter). Aucun code à changer ; `deploy/check-engine.py --engine swiss --chat` vérifie la liaison.
+Infomaniak AI Tools fournit un endpoint compatible OpenAI et facture les modèles à l'usage. Le modèle n'est pas connecté à Internet : la recherche d'Alex passe par un endpoint SearXNG distinct. Dans le dépôt, l'adaptateur fournit à Alex l'outil `web_search` (extraits et liens), puis `web_fetch` pour ouvrir une page publique. Ces outils ne prétendent jamais qu'une recherche a réussi si elle n'a pas eu lieu.
+
+### 7.1 Configuration Infomaniak
+
+1. Dans Infomaniak Manager, créer/ouvrir AI Services et relever l'identifiant du produit. **Modèle choisi pour le lancement : `mistralai/Mistral-Small-4-119B-2603`.** Infomaniak le décrit comme multilingue, compatible avec les appels de fonction et conçu pour les workflows autonomes. Le tarif affiché est de 0,20 CHF / million de tokens en entrée et 0,75 CHF / million en sortie. Ce choix privilégie la fiabilité d'Alex pour enchaîner recherche, comparaison et rédaction ; le nombre de recherches reste borné par le niveau de mission. La qualité, le fonctionnement des outils et le coût par tâche restent à valider sur trois cas avant le pilote. Voir le [catalogue des modèles](https://www.infomaniak.com/en/hosting/ai-services/open-source-models) et les [tarifs actuels](https://www.infomaniak.com/en/hosting/ai-services/prices).
+2. Utiliser l'URL de base de l'API Chat Completions : `https://api.infomaniak.com/2/ai/<ID_PRODUIT>/openai/v1`. L'adaptateur ajoute `/chat/completions`.
+3. Sur le serveur, enregistrer le jeton sans l'afficher : `python3 deploy/set-engine-secret.py swiss`. Ne jamais le mettre dans `engine-settings.json`, le dépôt ou une capture d'écran.
+4. Dans la vue Admin, carte « Moteur d'IA », saisir l'URL, le modèle et le point de recherche. Le jeton n'est pas saisi dans la page.
+5. Pour éviter toute dépense Anthropic imprévue, choisir « Hôte suisse seul (Infomaniak) ». Si Infomaniak est indisponible, la mission échoue sans basculer vers Claude. Le choix « Hôte suisse, puis Claude » autorise au contraire cette dépense de secours.
+6. Régler une limite de dépense dans le Manager Infomaniak, sur le produit AI Services, avant tout essai réel. Infomaniak confirme que le titulaire des droits de facturation peut fixer cette limite par produit ([guide officiel de facturation AI Services](https://www.infomaniak.com/en/support/faq/2845/getting-started-guide-ai-services-sovereign-ai-services)). Les champs de plafond de la vue Admin couvrent uniquement Claude et ne limitent pas Infomaniak.
+7. Les comptes Essai ne basculent jamais sur Infomaniak : sans Ollama gratuit configuré, leurs tâches sont suspendues. Configurez Ollama pour proposer un essai gratuit ; ne financez pas un essai public avec le budget du pilote.
+
+### 7.2 Recherche web avec SearXNG
+
+Une instance SearXNG doit répondre à `GET /search?q=...&format=json`; le format JSON doit être activé dans `search.formats`. La configuration proposée est facultative et privée : `docker-compose.search.yml` ajoute SearXNG sur un réseau Docker partagé uniquement avec l'application, sans publier son port sur Internet. Le fichier `deploy/searxng/settings.yml` active le JSON et le mode sans proxy d'images.
+
+Sur le serveur :
+
+1. Générer `SEARXNG_SECRET` sans l'afficher : `python3 deploy/set-engine-secret.py searxng`. Le script refuse de remplacer une valeur déjà présente. Ne pas réutiliser un mot de passe ou une clé API.
+2. Garder `BK_SEARCH_URL=http://searxng:8080` dans `.env` (valeur prévue dans `.env.example`).
+3. Démarrer l'application avec le service de recherche : `docker compose -f docker-compose.yml -f docker-compose.search.yml up -d --build`.
+4. Garder ces deux fichiers dans chaque commande Compose de mise à jour. Sans le fichier `docker-compose.search.yml`, Compose ne démarre pas SearXNG.
+
+Si une autre instance est utilisée, saisir son URL de base dans la vue Admin. En HTTPS, enregistrer son jeton Bearer avec `python3 deploy/set-engine-secret.py search`; en HTTP, seules les adresses de réseau privé contrôlées par l'éditeur sont permises.
+
+**Données et coût.** SearXNG transmet la requête aux moteurs de recherche qu'il utilise. Ne pas y envoyer d'email client, de nom de particulier ou de donnée confidentielle. Choisir ses moteurs et documenter les destinataires réellement utilisés dans les informations de confidentialité avant de vendre le pilote. Infomaniak AI se facture à l'usage ; limiter le montant au niveau de son produit avant les essais avec de vraies demandes.
+
+### 7.3 Vérification avant le pilote payant
+
+Après configuration, vérifier d'abord SearXNG sans appel d'IA : `docker compose -f docker-compose.yml -f docker-compose.search.yml exec app python3 /data/app/deploy/check-search.py`. Puis envoyer une courte requête réelle à Infomaniak : `docker compose -f docker-compose.yml -f docker-compose.search.yml exec app python3 /data/app/deploy/check-engine.py --engine swiss --chat`. Enfin, effectuer trois cas fictifs dans Alex : demande compatible, demande ambiguë et demande hors cible. Vérifier les liens, l'ouverture des pages, les inconnues, le brouillon non envoyé et le coût indiqué dans Infomaniak. Ne proposer de règlement qu'après ce contrôle.
+
+Le moteur suisse n'est **pas automatiquement meilleur que Claude** : le choix du modèle et des appels d'outils doit être validé sur les cas métier. L'essai gratuit reste verrouillé sur Ollama ; s'il n'est pas opérationnel, la tâche d'essai est suspendue, jamais facturée à Infomaniak.
 
 ## 8. Clé personnelle (BYOK)
 
