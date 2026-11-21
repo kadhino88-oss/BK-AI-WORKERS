@@ -81,7 +81,7 @@ BK_OLLAMA_MODEL=           # llama3.1:8b
 BK_OLLAMA_TIMEOUT_SEC=     # 300 par défaut
 BK_SECRET_OLLAMA=          # seulement si Ollama est derrière un https qui exige un jeton Bearer
 BK_SEARCH_URL=http://searxng:8080  # pour Alex, avec docker-compose.search.yml
-SEARXNG_SECRET=            # obligatoire pour le service SearXNG ; générer avec openssl rand -hex 32
+SEARXNG_SECRET=            # obligatoire pour le service SearXNG ; générer sans affichage via deploy/set-engine-secret.py searxng
 BK_SECRET_SEARCH=          # jeton Bearer, obligatoire si l'adresse est en https
 BK_SWISS_URL=              # hébergeur suisse (Infomaniak AI Tools, Mistral, vLLM...) : adresse https
 BK_SWISS_MODEL=mistralai/Mistral-Small-4-119B-2603
@@ -162,7 +162,7 @@ Infomaniak AI Tools fournit un endpoint compatible OpenAI et facture les modèle
 3. Sur le serveur, enregistrer le jeton sans l'afficher : `python3 deploy/set-engine-secret.py swiss`. Ne jamais le mettre dans `engine-settings.json`, le dépôt ou une capture d'écran.
 4. Dans la vue Admin, carte « Moteur d'IA », saisir l'URL, le modèle et le point de recherche. Le jeton n'est pas saisi dans la page.
 5. Pour éviter toute dépense Anthropic imprévue, choisir « Hôte suisse seul (Infomaniak) ». Si Infomaniak est indisponible, la mission échoue sans basculer vers Claude. Le choix « Hôte suisse, puis Claude » autorise au contraire cette dépense de secours.
-6. Régler une limite de dépense dans la console Infomaniak. Les champs de plafond de la vue Admin couvrent uniquement Claude et ne limitent pas Infomaniak.
+6. Régler une limite de dépense dans le Manager Infomaniak, sur le produit AI Services, avant tout essai réel. Infomaniak confirme que le titulaire des droits de facturation peut fixer cette limite par produit ([guide officiel de facturation AI Services](https://www.infomaniak.com/en/support/faq/2845/getting-started-guide-ai-services-sovereign-ai-services)). Les champs de plafond de la vue Admin couvrent uniquement Claude et ne limitent pas Infomaniak.
 7. Les comptes Essai ne basculent jamais sur Infomaniak : sans Ollama gratuit configuré, leurs tâches sont suspendues. Configurez Ollama pour proposer un essai gratuit ; ne financez pas un essai public avec le budget du pilote.
 
 ### 7.2 Recherche web avec SearXNG
@@ -171,8 +171,8 @@ Une instance SearXNG doit répondre à `GET /search?q=...&format=json`; le forma
 
 Sur le serveur :
 
-1. Ajouter `SEARXNG_SECRET` dans `.env` avec une valeur aléatoire (par exemple `openssl rand -hex 32`). Ne pas réutiliser un mot de passe ou une clé API.
-2. Ajouter `BK_SEARCH_URL=http://searxng:8080` dans `.env`.
+1. Générer `SEARXNG_SECRET` sans l'afficher : `python3 deploy/set-engine-secret.py searxng`. Le script refuse de remplacer une valeur déjà présente. Ne pas réutiliser un mot de passe ou une clé API.
+2. Garder `BK_SEARCH_URL=http://searxng:8080` dans `.env` (valeur prévue dans `.env.example`).
 3. Démarrer l'application avec le service de recherche : `docker compose -f docker-compose.yml -f docker-compose.search.yml up -d --build`.
 4. Garder ces deux fichiers dans chaque commande Compose de mise à jour. Sans le fichier `docker-compose.search.yml`, Compose ne démarre pas SearXNG.
 
