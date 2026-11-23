@@ -16,7 +16,7 @@ Securite (point d'entree PUBLIC : tout texte recu est une DONNEE, jamais une ins
     email et global ; rien n'est jamais interprete (le site web n'est JAMAIS visite : pas de SSRF) ;
   - tout ce qui est affiche est echappe : email au proprietaire (html.escape), vue operateur
     (pilot-admin.js : uniquement textContent) ;
-  - lecture et suppression des candidatures reservees a l'operateur (meme porte que /api/admin/*) :
+  - lecture, suivi de statut et suppression des candidatures reservees a l'operateur (meme porte que /api/admin/*) :
     un non-operateur recoit 403, avant meme de lire le corps de la requete ;
   - stockage : un fichier JSON dans core/accounts/data/ (dossier "data/" exclu de la synchronisation de
     deploy/entrypoint.sh : il survit aux deploiements), ecriture atomique sous le verrou d'etat du
@@ -46,6 +46,7 @@ PAGE_PATH = "/pilote.html"
 SITEMAP_PATHS = [PAGE_PATH]
 CONSENT_VERSION = "pilot-alex-2026-11-21"          # version du texte de consentement affiche
 HONEYPOT_FIELD = "contact_me_by_fax_only"          # nom attractif pour un robot, ignore par l'autocompletion
+PILOT_STATUSES = frozenset(("new", "contacted", "accepted", "paid", "active", "completed", "declined"))
 STORE_REL = ("core", "accounts", "data", "pilot-applications.json")   # "data/" : survit aux deploiements
 CATALOG_REL = ("core", "runtime", "controlled-connectors", "CONTROLLED-CONNECTOR-CATALOG.json")
 PHONE_CONFIG_REL = ("dashboard", "phone-agent", "CLI-DASHBOARD.json")  # source de l'email du proprietaire
@@ -779,8 +780,11 @@ class PilotService:
             rid = "PIL-" + secrets.token_hex(4).upper()
             while rid in used:
                 rid = "PIL-" + secrets.token_hex(4).upper()
-            rec = {"id": rid, "at": now, "atUtc": datetime.datetime.fromtimestamp(now, datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-                   **clean, "emailKey": key, "consent": True, "consentVersion": CONSENT_VERSION, "status": "new"}
+            at_utc = datetime.datetime.fromtimestamp(now, datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+            rec = {"id": rid, "at": now, "atUtc": at_utc,
+                   **clean, "emailKey": key, "consent": True, "consentVersion": CONSENT_VERSION,
+                   "status": "new", "statusUpdatedAtUtc": at_utc,
+                   "statusHistory": [{"status": "new", "atUtc": at_utc}]}
             rows.append(rec)
             try:
                 self.store.save(rows)
@@ -822,14 +826,41 @@ class PilotService:
             rows = self.store.load()
         out = []
         for r in reversed(rows[-MAX_LISTED:]):
+            status = r.get("status")
+            if not isinstance(status, str) or status not in PILOT_STATUSES:
+                status = "new"
             out.append({
                 "id": r.get("id"), "atUtc": r.get("atUtc"), "name": r.get("name"), "email": r.get("email"),
                 "company": r.get("company"), "website": r.get("website") or "",
                 "tools": [{"id": t, "name": names.get(t, t)} for t in (r.get("tools") or []) if isinstance(t, str)],
                 "otherTools": r.get("otherTools") or "", "useCase": r.get("useCase"), "lang": r.get("lang") or "fr",
-                "status": r.get("status") or "new",
+                "status": status,
+                "statusUpdatedAtUtc": r.get("statusUpdatedAtUtc") or r.get("atUtc"),
             })
         return {"applications": out, "count": len(rows)}
+
+    def update_application_status(self, rid, status):
+        """Met a jour le suivi manuel d'une candidature ; le paiement n'est jamais declare automatiquement."""
+        if not isinstance(status, str) or status not in PILOT_STATUSES:
+            return False
+        now = int(self.now())
+        at_utc = datetime.datetime.fromtimestamp(now, datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        with self.lock:
+            rows = self.store.load()
+            rec = next((r for r in rows if r.get("id") == rid), None)
+            if rec is None:
+                return False
+            previous = rec.get("status") if isinstance(rec.get("status"), str) else "new"
+            rec["status"] = status
+            rec["statusUpdatedAtUtc"] = at_utc
+            history = rec.get("statusHistory")
+            if not isinstance(history, list):
+                history = []
+            history.append({"status": status, "atUtc": at_utc})
+            rec["statusHistory"] = history[-20:]
+            self.store.save(rows)
+        self.log(f"candidature mise a jour id={rid} statut={previous}->{status}")
+        return {"status": status, "statusUpdatedAtUtc": at_utc}
 
     def delete_application(self, rid):
         with self.lock:
@@ -953,6 +984,30 @@ class PilotService:
                 _json(h_, {"error": "STORAGE_ERROR"}, 503)
                 return True
             _json(h_, {"ok": True} if ok else {"error": "NOT_FOUND"}, 200 if ok else 404)
+            return True
+        if path == "/api/pilot/applications/status":
+            if not h_._gate_authenticated():               # operateur seulement, avant toute lecture du corps
+                _json(h_, {"error": "FORBIDDEN"}, 403)
+                return True
+            body, err = self._read_json_body(h_, MAX_ADMIN_BODY_BYTES)
+            if err:
+                _json(h_, {"error": err[1]}, err[0])
+                return True
+            rid = body.get("id") if isinstance(body, dict) else None
+            status = body.get("status") if isinstance(body, dict) else None
+            if not isinstance(rid, str) or not _ID_RE.fullmatch(rid):
+                _json(h_, {"error": "ID_INVALID"}, 400)
+                return True
+            if not isinstance(status, str) or status not in PILOT_STATUSES:
+                _json(h_, {"error": "STATUS_INVALID"}, 400)
+                return True
+            try:
+                updated = self.update_application_status(rid, status)
+            except StoreError as e:
+                self.log("mise a jour ECHEC (" + str(e) + ")")
+                _json(h_, {"error": "STORAGE_ERROR"}, 503)
+                return True
+            _json(h_, {"ok": True, **updated} if updated else {"error": "NOT_FOUND"}, 200 if updated else 404)
             return True
         return False
 

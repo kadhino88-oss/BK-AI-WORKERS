@@ -5623,7 +5623,7 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_account_required()
                 return
             self._send_json(whatsapp_status(client_id))
-        elif PILOT.handle_get(self, path):   # programme pilote : /pilote.html, ses scripts, GET /api/pilot/applications (operateur)
+        elif PILOT.handle_get(self, path):   # programme pilote : page, scripts et lecture operateur des candidatures
             pass
         elif path == "/api/testimonials":
             self._send_json({"testimonials": public_testimonials()})
@@ -5882,7 +5882,7 @@ class Handler(BaseHTTPRequestHandler):
                     self._send_json({"error": err}, 400)
                 else:
                     self._send_json({"ok": True, "testimonial": rec})
-        elif PILOT.handle_post(self, path):  # programme pilote : POST /api/pilot/apply (public), .../applications/delete (operateur)
+        elif PILOT.handle_post(self, path):  # candidature publique, suivi et suppression operateur
             pass
         elif path == "/api/demo-request":
             length = int(self.headers.get("Content-Length", 0))

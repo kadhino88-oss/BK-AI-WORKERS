@@ -6,6 +6,15 @@
   var LIST_ID = "admin-pilot-list";
   var EMAIL_OK = /^[A-Za-z0-9][A-Za-z0-9._+-]*@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
   var URL_OK = /^https?:\/\/[A-Za-z0-9.-]+(\/[A-Za-z0-9._~%/+=&?#:,;@!-]*)?$/;
+  var STATUSES = [
+    ["new", "Nouveau"], ["contacted", "Contacté"], ["accepted", "Accepté — paiement à demander"],
+    ["paid", "Payé — pilote à planifier"], ["active", "Pilote en cours"],
+    ["completed", "Terminé"], ["declined", "Non retenu"]
+  ];
+
+  function tr(s) {
+    return typeof window.bkTr === "function" ? window.bkTr(s) : s;
+  }
 
   function el(tag, cls, text) {
     var e = document.createElement(tag);
@@ -19,7 +28,7 @@
     return isNaN(d.getTime()) ? String(iso || "") : d.toLocaleString();
   }
 
-  function renderRow(r, onDelete) {
+  function renderRow(r, onDelete, onStatus) {
     var row = el("div", "admin-activity-row kind-demo");
     row.appendChild(el("span", "admin-activity-when", when(r.atUtc)));
     row.appendChild(el("span", "admin-activity-kind", String(r.lang || "fr").toUpperCase()));
@@ -54,6 +63,27 @@
 
     var actions = el("span", "admin-pilot-actions");
     actions.appendChild(el("span", "admin-pilot-id", "Réf. " + (r.id || "")));
+    if (typeof r.email === "string" && EMAIL_OK.test(r.email)) {
+      var reply = el("a", "connector-link-btn", tr("Répondre par email"));
+      reply.setAttribute("href", "mailto:" + encodeURIComponent(r.email) + "?subject=" + encodeURIComponent("Pilote Alex — prochaine étape"));
+      actions.appendChild(reply);
+    }
+    var label = el("label", "admin-pilot-status-label", tr("Suivi de la candidature"));
+    var select = document.createElement("select");
+    select.className = "admin-pilot-status";
+    select.setAttribute("aria-label", tr("Suivi de la candidature"));
+    var current = STATUSES.some(function (s) { return s[0] === r.status; }) ? r.status : "new";
+    STATUSES.forEach(function (s) {
+      var option = document.createElement("option");
+      option.value = s[0];
+      option.textContent = tr(s[1]);
+      select.appendChild(option);
+    });
+    select.value = current;
+    label.appendChild(select);
+    actions.appendChild(label);
+    actions.appendChild(el("span", "admin-pilot-updated", tr("Mis à jour") + " : " + when(r.statusUpdatedAtUtc || r.atUtc)));
+    select.addEventListener("change", function () { onStatus(r, select.value, select, actions); });
     var del = el("button", "connector-link-btn", "Supprimer");
     del.setAttribute("type", "button");
     del.addEventListener("click", function () { onDelete(r); });
@@ -82,7 +112,33 @@
       box.replaceChildren(el("div", "activity-empty", "Aucune candidature pour le moment."));
       return;
     }
-    box.replaceChildren.apply(box, rows.map(function (r) { return renderRow(r, remove); }));
+    box.replaceChildren.apply(box, rows.map(function (r) { return renderRow(r, remove, updateStatus); }));
+  }
+
+  async function updateStatus(r, status, select, actions) {
+    select.disabled = true;
+    var note = el("span", "admin-pilot-save-state", tr("Enregistrement…"));
+    actions.appendChild(note);
+    try {
+      var res = await fetch("/api/pilot/applications/status", {
+        method: "POST", credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: r.id, status: status })
+      });
+      var data = await res.json().catch(function () { return {}; });
+      if (!res.ok || data.ok !== true) throw new Error("STATUS_UPDATE_FAILED");
+      r.status = data.status;
+      r.statusUpdatedAtUtc = data.statusUpdatedAtUtc;
+      note.textContent = tr("Enregistré");
+      var updated = actions.querySelector(".admin-pilot-updated");
+      if (updated) updated.textContent = tr("Mis à jour") + " : " + when(data.statusUpdatedAtUtc);
+    } catch (e) {
+      select.value = r.status || "new";
+      note.textContent = tr("Mise à jour impossible — réessayez.");
+    } finally {
+      select.disabled = false;
+      window.setTimeout(function () { if (note.parentNode) note.parentNode.removeChild(note); }, 4500);
+    }
   }
 
   async function remove(r) {

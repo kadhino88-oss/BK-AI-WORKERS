@@ -3518,6 +3518,10 @@ input, textarea, select { border-radius: 14px; }
 .admin-activity-row a { color: var(--gold); }
 .admin-pilot-usecase { white-space: pre-wrap; }
 .admin-pilot-actions { grid-column: 1 / -1; display: flex; gap: 14px; align-items: center; color: var(--ink-muted); font-size: 12px; }
+.admin-pilot-status-label { display: inline-flex; align-items: center; gap: 7px; }
+.admin-pilot-status { max-width: 250px; min-height: 34px; padding: 5px 9px; border: 1px solid rgba(201, 168, 106, .45); border-radius: 8px; background: var(--panel, #15191f); color: var(--ink, #f4f1eb); font: inherit; }
+.admin-pilot-save-state { color: var(--gold-light, #e2c27f); }
+@media (max-width: 700px) { .admin-pilot-actions { flex-wrap: wrap; gap: 8px 12px; } .admin-pilot-status-label { width: 100%; justify-content: space-between; } .admin-pilot-status { max-width: 68%; } }
 
 /* Moteur d'IA : ligne pres de la zone de mission, etiquette sous chaque reponse, carte « Mon moteur », reglages du proprietaire */
 .engine-line { margin: 0 0 10px; font-size: 13px; opacity: 0.9; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }

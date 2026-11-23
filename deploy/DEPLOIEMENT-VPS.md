@@ -17,6 +17,13 @@ est `docker-compose.yml` (app + Caddy pour le HTTPS automatique).
 - VPS Ubuntu 24.04 (ou 22.04), 2 à 4 vCPU, **8 Go RAM**, 80 Go de disque (ex. Infomaniak, Hostpoint, Hetzner).
 - Domaine (ex. `bk-ai-workers.com`) : enregistrement A vers l'IP du VPS.
 
+### Portabilité et choix de l’hébergeur
+Le produit n’est pas lié à OVH, Infomaniak ou à un autre fournisseur : l’application, Caddy et SearXNG tournent dans Docker Compose. Le conteneur embarque PowerShell 7.5 ; le serveur hôte a seulement besoin d’un Linux x86_64 avec accès root/sudo, Docker Engine et le plugin Compose, une IPv4 publique et les ports 80/443 ouverts. Le domaine se déplace en modifiant son enregistrement A vers la nouvelle IP ; aucun changement de code n’est requis.
+
+Pour garder l’infrastructure en Suisse, le choix recommandé est Infomaniak Public Cloud, instance à usage général. La page tarifaire affiche actuellement un exemple de 4 vCPU, 8 Go de RAM, 50 Go de stockage et 1 To de bande passante à CHF 16.10/mois hors TVA ; le guide de déploiement recommande 80 Go de disque, donc vérifier le tarif de la capacité finale dans leur calculateur avant de commander. Infomaniak annonce aussi CHF 300 de crédits Public Cloud valables trois mois ; l’offre demande une carte et une préautorisation temporaire de CHF 20. [Tarifs et conditions Infomaniak](https://www.infomaniak.com/fr/hebergement/public-cloud/tarifs).
+
+Avant de supprimer ou remplacer l’ancien VPS, récupérer si possible une sauvegarde hors serveur : le volume Docker `bkdata` contient les comptes, candidatures et l’état de l’application. Le volume Caddy séparé conserve les certificats et peut être recréé. Le déploiement sur une nouvelle machine réutilise les deux fichiers Compose de la section 5.
+
 ## 2. Installer Docker (SSH)
 ```bash
 curl -fsSL https://get.docker.com | sh
