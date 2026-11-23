@@ -62,6 +62,19 @@ class NoContradictionTests(unittest.TestCase):
             self.assertIn(m.group(1), en, f"{page} : phrase sans traduction anglaise")
             self.assertIn("could therefore technically read them", en[m.group(1)])
 
+    def test_privacy_names_conditional_ai_and_web_search_providers_in_both_variants(self):
+        en = ccc.load_translations(os.path.join(REPO, "dashboard", "i18n-en-legal.js"))
+        for page in ("dashboard/index.html", "dashboard/confidentialite.html"):
+            m = re.search(r"<p>(Selon le moteur configuré pour votre mission.*?missions\.)</p>", read(page))
+            self.assertTrue(m, f"{page} : détail des moteurs IA/recherche absent")
+            self.assertIn("Infomaniak AI Services (Suisse)", m.group(1))
+            self.assertIn("SearXNG", m.group(1))
+            self.assertIn("DuckDuckGo", m.group(1))
+            self.assertIn("Brave Search", m.group(1))
+            self.assertIn(m.group(1), en, f"{page} : section sans traduction anglaise")
+        settings = read("deploy/searxng/settings.yml")
+        self.assertRegex(settings, r"keep_only:\s+- duckduckgo\s+- brave")
+
     def test_privacy_page_footer_links_to_security_and_status(self):
         page = read("dashboard/confidentialite.html")
         self.assertIn('<a href="/securite.html">Sécurité et confiance</a>', page)
@@ -79,6 +92,7 @@ HOSTS = {
     # sous-traitants declares (identifiant de preuve de la page Securite)
     "api.anthropic.com": "sp-anthropic",
     "api.openai.com": "sp-openai",
+    "api.infomaniak.com": "sp-swiss-engine",
     "api.mistral.ai": "sp-byok",       # exemple d'adresse du formulaire « ma propre cle d'IA » (dashboard/index.html)
     "api.stripe.com": "stripe-hosted",
     "api.twilio.com": "sp-twilio", "console.twilio.com": "sp-twilio",

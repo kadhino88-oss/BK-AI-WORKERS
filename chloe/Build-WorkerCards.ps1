@@ -25,7 +25,9 @@ if ([string]::IsNullOrWhiteSpace($OutFile)) { $OutFile = Join-Path $Root "core/p
 
 function Get-Utf8Text([string]$Path) {
     if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return $null }
-    return [System.IO.File]::ReadAllText($Path, [System.Text.UTF8Encoding]::new($false)).TrimStart([char]0xFEFF)
+    $Text = [System.IO.File]::ReadAllText($Path, [System.Text.UTF8Encoding]::new($false)).TrimStart([char]0xFEFF)
+    # Keep the generated source hash identical on Windows (CRLF) and Linux (LF).
+    return $Text.Replace("`r`n", "`n").Replace("`r", "`n")
 }
 
 $Routing = (Get-Utf8Text (Join-Path $Root "orchestrator/worker-routing.json")) | ConvertFrom-Json

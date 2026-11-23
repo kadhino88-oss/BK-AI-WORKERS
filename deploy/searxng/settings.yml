@@ -1,4 +1,8 @@
-use_default_settings: true
+use_default_settings:
+  engines:
+    keep_only:
+      - duckduckgo
+      - brave
 
 general:
   debug: false

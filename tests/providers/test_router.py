@@ -55,10 +55,12 @@ class NothingChangesUntilTheOwnerChooses(Base):
         self.assertEqual(plan["reason"], "default")
         self.assertEqual(pr.plan_env(plan), {}, "aucune variable posee : le chemin Claude tourne comme avant")
 
-    def test_trial_without_a_free_engine_keeps_the_old_behaviour(self):
+    def test_trial_without_a_free_engine_stays_blocked_without_paid_fallback(self):
         plan = self.plan("rapide", trial=True)
-        self.assertEqual(self.ids(plan), ["anthropic"])
-        self.assertFalse(plan["explicit"])
+        self.assertEqual(self.ids(plan), [])
+        self.assertTrue(plan["explicit"])
+        self.assertEqual(plan["reason"], "trial")
+        self.assertEqual(plan["degradedReason"], "free-chain-unavailable")
 
     def test_env_provider_explicit_anthropic_is_still_implicit(self):
         plan = self.plan(env={"BK_AI_PROVIDER": "anthropic"})

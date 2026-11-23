@@ -20,7 +20,15 @@ Gérant, fondatrice/fondateur ou responsable commercial d’une entreprise de **
 
 Ne contacter que des entreprises dont l’activité publique correspond à cette cible. Personnaliser chaque approche et utiliser un canal professionnel. Pas d’envoi groupé ni de prospection WhatsApp non sollicitée.
 
+## Traitement d’une candidature pilote
+
+Le premier pilote est un service accompagné : la page recueille une candidature, puis BK-ENTREPRISE vérifie le cas, confirme le tarif applicable et organise le règlement par email. Il n’y a ni prélèvement automatique ni démarrage avant paiement confirmé. Dans Admin, utiliser les statuts **Nouveau → Contacté → Accepté — paiement à demander → Payé — pilote à planifier → Pilote en cours → Terminé** ; **Non retenu** clôture une candidature non compatible. Le statut « Payé » est une saisie manuelle après vérification effective du règlement. « Pilote en cours » marque le vrai début des sept jours. Les résultats et factures sont gérés avec le client, hors du formulaire public.
+
+Ne pas demander de données personnelles de prospects dans la candidature. Avant une démonstration ou le premier traitement, utiliser un exemple fictif ou une demande anonymisée. L’opérateur conserve la décision finale et l’envoi de toute réponse préparée par Alex.
+
 ## Plan de lancement sur 7 jours
+
+Les 10 scripts vidéo, sondages et posts adaptés à cette cible sont prêts dans [Contenus de lancement — Alex](CONTENUS-LANCEMENT-ALEX-GRAND-GENEVE.md).
 
 ### Jour 1 — Préparer l’offre et le suivi
 

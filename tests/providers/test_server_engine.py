@@ -101,12 +101,18 @@ class Fixture(unittest.TestCase):
 
 
 class EngineStatus(Fixture):
-    def test_nothing_chosen_means_claude_and_nothing_written(self):
-        for client in (A, B, server.DASHBOARD_CLIENT_ID, server.TRIAL_CLIENT_ID):
+    def test_unconfigured_trials_are_blocked_while_paid_and_owner_keep_the_old_path(self):
+        for client in (B, server.DASHBOARD_CLIENT_ID):
             v = server.engine_status(client)
             self.assertEqual((v["provider"], v["summary"], v["explicit"]), ("anthropic", "Moteur : Claude", False), client)
+        for client in (A, server.TRIAL_CLIENT_ID):
+            v = server.engine_status(client)
+            self.assertEqual((v["provider"], v["summary"], v["explicit"], v["reason"]),
+                             ("none", "Aucun moteur disponible : réponse de secours", True, "trial"), client)
         self.assertFalse(os.path.isfile(pr.settings_path(TMP)))
-        self.assertEqual(pr.plan_env(server.engine_plan_for(A, "rapide")), {})
+        trial_plan = server.engine_plan_for(A, "rapide")
+        self.assertEqual(json.loads(pr.plan_env(trial_plan)["BK_ENGINE_PLAN"]), trial_plan)
+        self.assertEqual(trial_plan["chain"], [], "aucun moteur payant n'est injecte pour depanner l'essai")
 
     def test_trial_accounts_run_locally_and_paying_ones_on_claude_once_the_owner_configured_ollama(self):
         self.owner_set(OLLAMA)
@@ -219,14 +225,14 @@ class Byok(Fixture):
         self.assertEqual(plan_b["chain"][0]["adapter"], "openai_compat")
         self.assertNotIn(KEY_A, json.dumps(plan_a) + json.dumps(plan_b), "la cle ne figure jamais dans le plan passe au processus de la mission")
         server.remove_byok(A)
-        self.assertEqual(server.engine_status(A)["provider"], "anthropic")
+        self.assertEqual(server.engine_status(A)["provider"], "none", "retirer la cle d'un compte d'essai ne declenche pas une depense sur nos moteurs")
         self.assertEqual(server.engine_status(B)["provider"], "byok", "retirer la cle d'un client ne touche pas l'autre")
 
     def test_disable_keeps_the_key_but_stops_using_it(self):
         server.store_byok(A, {"kind": "anthropic", "key": KEY_A})
         payload, status = server.store_byok(A, {"enabled": False})
         self.assertEqual((status, payload["byok"]["enabled"]), (200, False))
-        self.assertEqual(server.engine_status(A)["provider"], "anthropic")
+        self.assertEqual(server.engine_status(A)["provider"], "none", "desactiver la cle d'un compte d'essai ne declenche pas une depense sur nos moteurs")
         self.assertIn(A, self.vault.stored)
         server.store_byok(A, {"enabled": True})
         self.assertEqual(server.engine_status(A)["provider"], "byok")

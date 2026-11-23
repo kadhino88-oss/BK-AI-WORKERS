@@ -622,8 +622,8 @@ def submit_task(worker_hint_text, worker_id="", plan_only=False, client_id="", l
         else:
             child_env.pop("BK_CHLOE_RUN_ID", None)
         # Moteur d'IA de CETTE mission (2026-10-25) : le routeur decide (niveau, essai, cle du client, reglages du proprietaire, sante des moteurs,
-        # plafond de depense Claude). Tant que le proprietaire n'a rien choisi, le plan est « implicite » : aucune variable n'est posee et la mission
-        # suit exactement le chemin Claude d'avant.
+        # plafond de depense Claude). Hors essai, tant que le proprietaire n'a rien choisi, le plan reste « implicite » : aucune variable n'est posee
+        # et la mission suit exactement le chemin Claude d'avant. Un compte d'essai reste verrouille sur la chaine gratuite, meme sans moteur configure.
         for _name in provider_router.PLAN_ENV_NAMES:
             child_env.pop(_name, None)
         engine_plan = None
@@ -5275,8 +5275,11 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(body)
         elif path == "/sitemap.xml":
-            urls = "".join(f"<url><loc>{PUBLIC_BASE_URL}{p}</loc></url>" for p in SITEMAP_PATHS + [q for q in pilot_program.SITEMAP_PATHS if q not in SITEMAP_PATHS]
-                           + [seo_pages.worker_page_path(w) for w in get_worker_ids()])
+            sitemap_paths = list(dict.fromkeys(
+                SITEMAP_PATHS + pilot_program.SITEMAP_PATHS
+                + [seo_pages.worker_page_path(w) for w in get_worker_ids()]
+            ))
+            urls = "".join(f"<url><loc>{PUBLIC_BASE_URL}{p}</loc></url>" for p in sitemap_paths)
             body = ('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
                     + urls + "</urlset>").encode("utf-8")
             self.send_response(200)
@@ -5623,7 +5626,7 @@ class Handler(BaseHTTPRequestHandler):
                 self._send_account_required()
                 return
             self._send_json(whatsapp_status(client_id))
-        elif PILOT.handle_get(self, path):   # programme pilote : /pilote.html, ses scripts, GET /api/pilot/applications (operateur)
+        elif PILOT.handle_get(self, path):   # programme pilote : page, scripts et lecture operateur des candidatures
             pass
         elif path == "/api/testimonials":
             self._send_json({"testimonials": public_testimonials()})
@@ -5882,7 +5885,7 @@ class Handler(BaseHTTPRequestHandler):
                     self._send_json({"error": err}, 400)
                 else:
                     self._send_json({"ok": True, "testimonial": rec})
-        elif PILOT.handle_post(self, path):  # programme pilote : POST /api/pilot/apply (public), .../applications/delete (operateur)
+        elif PILOT.handle_post(self, path):  # candidature publique, suivi et suppression operateur
             pass
         elif path == "/api/demo-request":
             length = int(self.headers.get("Content-Length", 0))
