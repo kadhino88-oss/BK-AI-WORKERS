@@ -14,15 +14,14 @@ est `docker-compose.yml` (app + Caddy pour le HTTPS automatique).
 > PowerShell >= 7.5 obligatoire.
 
 ## 1. Le serveur (toi)
-- VPS Ubuntu 24.04 (ou 22.04), 2 à 4 vCPU, **8 Go RAM**, 80 Go de disque (ex. Infomaniak, Hostpoint, Hetzner).
-- Domaine (ex. `bk-ai-workers.com`) : enregistrement A vers l'IP du VPS.
+- Réactiver et conserver le VPS OVH existant (environ **5,60 £/mois**, selon le propriétaire du projet), sous Ubuntu 24.04 (ou 22.04), avec Docker Engine et Compose.
+- Ressources de référence pour la charge complète (app + Caddy + SearXNG) : 2 à 4 vCPU, **8 Go RAM** et 80 Go disque. Vérifier les ressources exactes du VPS OVH avant de lancer le pilote ; si elles sont plus faibles, démarrer avec une charge réduite et surveiller la mémoire.
+- Garder le domaine actuel. Si l’IP publique reste la même après réactivation, ne modifier aucun DNS ; si elle change, mettre à jour uniquement l’enregistrement A.
 
 ### Portabilité et choix de l’hébergeur
-Le produit n’est pas lié à OVH, Infomaniak ou à un autre fournisseur : l’application, Caddy et SearXNG tournent dans Docker Compose. Le conteneur embarque PowerShell 7.5 ; le serveur hôte a seulement besoin d’un Linux x86_64 avec accès root/sudo, Docker Engine et le plugin Compose, une IPv4 publique et les ports 80/443 ouverts. Le domaine se déplace en modifiant son enregistrement A vers la nouvelle IP ; aucun changement de code n’est requis.
+L’application, Caddy et SearXNG tournent dans Docker Compose. Le conteneur embarque PowerShell 7.5 ; le VPS OVH peut donc être conservé tant qu’il fournit Linux x86_64, accès sudo, Docker Engine, le plugin Compose, une IPv4 publique et les ports 80/443 ouverts. Aucun changement de code ni de fournisseur n’est requis.
 
-Pour garder l’infrastructure en Suisse, le choix recommandé est Infomaniak Public Cloud, instance à usage général. La page tarifaire affiche actuellement un exemple de 4 vCPU, 8 Go de RAM, 50 Go de stockage et 1 To de bande passante à CHF 16.10/mois hors TVA ; le guide de déploiement recommande 80 Go de disque, donc vérifier le tarif de la capacité finale dans leur calculateur avant de commander. Infomaniak annonce aussi CHF 300 de crédits Public Cloud valables trois mois ; l’offre demande une carte et une préautorisation temporaire de CHF 20. [Tarifs et conditions Infomaniak](https://www.infomaniak.com/fr/hebergement/public-cloud/tarifs).
-
-Avant de supprimer ou remplacer l’ancien VPS, récupérer si possible une sauvegarde hors serveur : le volume Docker `bkdata` contient les comptes, candidatures et l’état de l’application. Le volume Caddy séparé conserve les certificats et peut être recréé. Le déploiement sur une nouvelle machine réutilise les deux fichiers Compose de la section 5.
+À la remise en service, vérifier d’abord que le volume Docker `bkdata` et le dossier du dépôt sont toujours présents. Ce volume contient les comptes, candidatures et l’état de l’application. Faire une sauvegarde avant la mise à jour ; le volume Caddy séparé conserve les certificats et peut être recréé si nécessaire. Le domaine reste rattaché à l’IP OVH actuelle, sauf si OVH lui en attribue une nouvelle.
 
 ## 2. Installer Docker (SSH)
 ```bash
