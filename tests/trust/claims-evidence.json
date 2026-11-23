@@ -235,6 +235,10 @@
     {"file": "dashboard/provider_router.py", "match": ["BK_SWISS_URL", "PROVIDER_IDS = \\(\"anthropic\", \"ollama\", \"swiss\"\\)"]},
     {"file": "core/ai/adapters/OPENAI-COMPAT-ADAPTER.ps1", "match": ["swiss"]}
   ],
+  "sp-web-search": [
+    {"file": "dashboard/provider_router.py", "match": ["def search_url", "BK_SEARCH_URL"]},
+    {"file": "docs/PROVIDERS.md", "match": ["SearXNG transmet la requête aux moteurs de recherche qu'il utilise"]}
+  ],
   "sp-byok": [
     {"file": "dashboard/provider_router.py", "match": ["BYOK_KINDS = \\(\"anthropic\", \"openai_compat\"\\)", "sans repli vers nos moteurs"]},
     {"file": "dashboard/server.py", "match": ["ENGINE_BYOK_PROVIDER = \"ai_engine\""]}

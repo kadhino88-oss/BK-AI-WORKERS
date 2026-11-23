@@ -62,6 +62,15 @@ class NoContradictionTests(unittest.TestCase):
             self.assertIn(m.group(1), en, f"{page} : phrase sans traduction anglaise")
             self.assertIn("could therefore technically read them", en[m.group(1)])
 
+    def test_privacy_names_conditional_ai_and_web_search_providers_in_both_variants(self):
+        en = ccc.load_translations(os.path.join(REPO, "dashboard", "i18n-en-legal.js"))
+        for page in ("dashboard/index.html", "dashboard/confidentialite.html"):
+            m = re.search(r"<p>(Selon le moteur configuré pour votre mission.*?missions\.)</p>", read(page))
+            self.assertTrue(m, f"{page} : détail des moteurs IA/recherche absent")
+            self.assertIn("Infomaniak AI Services (Suisse)", m.group(1))
+            self.assertIn("SearXNG", m.group(1))
+            self.assertIn(m.group(1), en, f"{page} : section sans traduction anglaise")
+
     def test_privacy_page_footer_links_to_security_and_status(self):
         page = read("dashboard/confidentialite.html")
         self.assertIn('<a href="/securite.html">Sécurité et confiance</a>', page)
