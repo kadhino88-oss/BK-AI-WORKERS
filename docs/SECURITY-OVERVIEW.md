@@ -76,6 +76,7 @@ Cette liste suit le code (un service n'y figure que si le code l'appelle). Colon
 |---|---|---|---|---|---|---|
 | OVHcloud | hébergement serveur, données, sauvegardes | toutes | France (ville non précisée) | toujours | mentions légales, `DEPLOIEMENT-VPS.md` | contrat OVHcloud, attestations par produit |
 | Anthropic | modèle d'IA (Claude) | contenu des missions, profil, résultats d'outils lus, transcriptions téléphoniques | États-Unis | chaque mission / appel | `ANTHROPIC-ADAPTER.ps1`, `phone_agent.py` | DPA commercial, mécanisme de transfert |
+| Infomaniak AI Services | modèle d'IA via API | contenu de mission et profil d'entreprise | Suisse, selon la documentation du fournisseur | seulement si le propriétaire configure et choisit Infomaniak | `index.html`, adaptateur OpenAI-compatible | joindre les conditions/DPA Infomaniak applicables au produit |
 | OpenAI | modèle de secours | idem | États-Unis | seulement si aucune clé Anthropic | `Get-DefaultProvider.ps1`, `OPENAI-ADAPTER.ps1` | à documenter **ou** retirer l'adaptateur |
 | Stripe | paiement | e-mail, plan, id client (carte chez Stripe) | UE/États-Unis | souscription | `Stripe-Adapter.ps1` | DPA Stripe |
 | Google | OAuth, Gmail/Agenda/Drive/Search Console (outils du client) ; e-mails transactionnels via Gmail si pas de SMTP ; Google Fonts (IP des visiteurs) | selon l'outil | États-Unis/UE | demande du client / visite | `Google-OAuth-Bridge.ps1`, `Mailer-Bridge.ps1`, `seo_pages.py` | DPA Google Workspace/Cloud |
