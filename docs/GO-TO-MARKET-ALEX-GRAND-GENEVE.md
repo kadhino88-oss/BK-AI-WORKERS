@@ -28,6 +28,8 @@ Ne pas demander de données personnelles de prospects dans la candidature. Avant
 
 ## Plan de lancement sur 7 jours
 
+Les 10 scripts vidéo, sondages et posts adaptés à cette cible sont prêts dans [Contenus de lancement — Alex](CONTENUS-LANCEMENT-ALEX-GRAND-GENEVE.md).
+
 ### Jour 1 — Préparer l’offre et le suivi
 
 - Faire trois essais contrôlés avec des données fictives : une demande qui correspond, une demande ambiguë et une demande hors cible.
