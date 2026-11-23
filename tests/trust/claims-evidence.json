@@ -237,7 +237,8 @@
   ],
   "sp-web-search": [
     {"file": "dashboard/provider_router.py", "match": ["def search_url", "BK_SEARCH_URL"]},
-    {"file": "docs/PROVIDERS.md", "match": ["SearXNG transmet la requête aux moteurs de recherche qu'il utilise"]}
+    {"file": "deploy/searxng/settings.yml", "match": ["keep_only:", "duckduckgo", "brave"]},
+    {"file": "docs/PROVIDERS.md", "match": ["La configuration du dépôt ne conserve que deux moteurs SearXNG : DuckDuckGo et Brave Search"]}
   ],
   "sp-byok": [
     {"file": "dashboard/provider_router.py", "match": ["BYOK_KINDS = \\(\"anthropic\", \"openai_compat\"\\)", "sans repli vers nos moteurs"]},

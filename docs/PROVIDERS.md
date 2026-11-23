@@ -178,7 +178,7 @@ Sur le serveur :
 
 Si une autre instance est utilisée, saisir son URL de base dans la vue Admin. En HTTPS, enregistrer son jeton Bearer avec `python3 deploy/set-engine-secret.py search`; en HTTP, seules les adresses de réseau privé contrôlées par l'éditeur sont permises.
 
-**Données et coût.** SearXNG transmet la requête aux moteurs de recherche qu'il utilise. Ne pas y envoyer d'email client, de nom de particulier ou de donnée confidentielle. Choisir ses moteurs et documenter les destinataires réellement utilisés dans les informations de confidentialité avant de vendre le pilote. Infomaniak AI se facture à l'usage ; limiter le montant au niveau de son produit avant les essais avec de vraies demandes.
+**Données et coût.** La configuration du dépôt ne conserve que deux moteurs SearXNG : DuckDuckGo et Brave Search. Chaque recherche leur transmet les termes de recherche issus de la mission ; ne pas y inclure d'e-mail client, de nom de particulier ou de donnée confidentielle. La page de confidentialité et le DPA nomment ces deux destinataires ; leurs conditions et lieux de traitement restent à confirmer avant le pilote payant. Infomaniak AI se facture à l'usage ; fixer un plafond dans le Manager avant les essais avec de vraies demandes.
 
 ### 7.3 Vérification avant le pilote payant
 

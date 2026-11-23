@@ -81,7 +81,7 @@ La responsabilité est régie par les Conditions générales de vente (art. 11).
 | OVHcloud | Hébergement | Toutes | France | [contrat OVHcloud : à joindre] |
 | Anthropic | Modèle d'IA | Contenu des missions, profil, résultats d'outils lus | États-Unis | [DPA + mécanisme : à vérifier] |
 | Infomaniak AI Services | Modèle d'IA via API, seulement si choisi par le Sous-traitant | Contenu de mission et profil d'entreprise | Suisse, selon la documentation du fournisseur | [conditions/DPA du produit AI Services : à joindre] |
-| SearXNG / moteurs de recherche configurés | Recherche web — seulement si activée | Termes de recherche issus de la mission | Instance SearXNG : emplacement configuré ; moteurs externes : varie selon la configuration | [fixer les moteurs actifs et joindre leurs conditions avant le pilote] |
+| SearXNG, DuckDuckGo et Brave Search | Recherche web — seulement si activée | Termes de recherche issus de la mission | Instance SearXNG : OVHcloud (France) ; moteurs externes : lieux selon les conditions des fournisseurs | [conditions des moteurs et garanties contractuelles à vérifier avant le pilote] |
 | OpenAI | Modèle de secours — **utilisé seulement si aucune clé Anthropic n'est configurée** | idem | États-Unis | [à vérifier, ou retirer] |
 | Stripe | Paiement | E-mail, plan, identifiant client | [à vérifier] | [DPA Stripe] |
 | Twilio | Téléphone — **seulement si un numéro est configuré** | Numéro, propos transcrits | États-Unis | [à vérifier] |

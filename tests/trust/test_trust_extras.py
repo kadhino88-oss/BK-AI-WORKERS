@@ -69,7 +69,11 @@ class NoContradictionTests(unittest.TestCase):
             self.assertTrue(m, f"{page} : détail des moteurs IA/recherche absent")
             self.assertIn("Infomaniak AI Services (Suisse)", m.group(1))
             self.assertIn("SearXNG", m.group(1))
+            self.assertIn("DuckDuckGo", m.group(1))
+            self.assertIn("Brave Search", m.group(1))
             self.assertIn(m.group(1), en, f"{page} : section sans traduction anglaise")
+        settings = read("deploy/searxng/settings.yml")
+        self.assertRegex(settings, r"keep_only:\s+- duckduckgo\s+- brave")
 
     def test_privacy_page_footer_links_to_security_and_status(self):
         page = read("dashboard/confidentialite.html")
