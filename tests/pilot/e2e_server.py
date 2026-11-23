@@ -192,15 +192,17 @@ def main():
         check("CSP stricte + anti-cadre + nosniff", "script-src 'self'" in hd.get("content-security-policy", "")
               and "frame-ancestors 'none'" in hd.get("content-security-policy", "") and hd.get("x-content-type-options") == "nosniff")
         check("formulaire, consentement et champ piege presents", all(s in page for s in ('id="pilot-form"', 'name="consent"', 'name="contact_me_by_fax_only"')))
-        check("38 outils du vrai catalogue proposes en cases a cocher", page.count('name="tools"') == 38, page.count('name="tools"'))
-        check("conditions : aucune condition commerciale annoncee", "ne sont pas encore définies" in page)
-        check("page en francais avec lien vers essai gratuit", "/#nav-onboarding" in page)
+        check("formulaire pilote recentre sur les demandes Alex", "Vos demandes entrantes et votre activité" in page and 'name="tools"' not in page)
+        check("prix pilote exact, paiement unique et aucune facturation au depot", all(s in page for s in (
+            "49 CHF en Suisse", "49 € en France", "paiement unique, sans renouvellement automatique",
+            "La candidature ne déclenche aucun paiement.")))
+        check("page en francais avec candidature au pilote", "Pilote Alex : qualification de demandes B2B" in page and "Candidater au pilote Alex" in page)
         st, _, b = request(port, "GET", "/i18n-en-pilot.js")
-        check("dictionnaire anglais servi", st == 200 and b"Pilot programme" in b)
+        check("dictionnaire anglais servi", st == 200 and b"Alex pilot" in b)
         st, _, b = request(port, "GET", "/pilot-form.js")
         check("pilot-form.js servi avec l'en-tete anglais", st == 200 and b.startswith(b"window.BK_EN_HEAD = "))
         st, _, b = request(port, "GET", "/pilot-admin.js")
-        check("pilot-admin.js servi", st == 200 and b"loadAdminPilot" in b)
+        check("pilot-admin.js servi avec suivi de statut", st == 200 and b"loadAdminPilot" in b and b"applications/status" in b)
         st, _, b = request(port, "GET", "/sitemap.xml")
         check("plan du site contient /pilote.html", st == 200 and f"http://127.0.0.1:{port}/pilote.html".encode() in b)
         st, _, b = request(port, "GET", "/")
@@ -221,6 +223,9 @@ def main():
         check("enregistrement complet (consentement, version, outils)", len(saved) == 1 and saved[0]["email"] == "marie@atelier-dupont.example"
               and saved[0]["consent"] is True and saved[0]["tools"] == ["gmail", "slack"] and saved[0]["website"] == "https://atelier-dupont.example"
               and saved[0]["consentVersion"].startswith("pilot-"), saved[:1])
+        check("nouvelle candidature initialisée en statut Nouveau avec horodatage", saved[0].get("status") == "new"
+              and saved[0].get("statusUpdatedAtUtc") == saved[0].get("atUtc")
+              and saved[0].get("statusHistory") == [{"status": "new", "atUtc": saved[0].get("atUtc")}], saved[:1])
         mails = srv.mails(wait_for=1)
         check("email envoye au proprietaire", len(mails) == 1 and mails[0]["to"] == "owner-test@example.com", mails)
         check("sujet = candidature + nom", mails and "Marie Dupont" in mails[0]["subject"] and "pilote" in mails[0]["subject"])
@@ -309,6 +314,10 @@ def main():
         check("compte client : suppression refusee (403)", st == 403, (st, out))
         st, out, _ = post_json(port, "/api/pilot/applications/delete", {"id": first_id})
         check("sans session : suppression refusee (403)", st == 403, (st, out))
+        st, out, _ = post_json(port, "/api/pilot/applications/status", {"id": first_id, "status": "paid"}, cookie=client_cookie)
+        check("compte client : changement de statut refuse (403)", st == 403, (st, out))
+        st, out, _ = post_json(port, "/api/pilot/applications/status", {"id": first_id, "status": "paid"})
+        check("sans session : changement de statut refuse (403)", st == 403, (st, out))
         check("la candidature est toujours la", any(r["id"] == first_id for r in json.load(open(store, encoding="utf-8"))["applications"]))
         bad = srv.operator_cookie()
         check("connexion operateur (mot de passe de porte factice)", bool(bad))
@@ -321,6 +330,24 @@ def main():
         check("operateur : la charge hostile est rendue telle quelle (donnee JSON, echappee par la vue)", hostile is not None and hostile["company"].startswith("B\"><script>"))
         st, out, _ = post_json(port, "/api/pilot/applications/delete", {"id": "../../etc/passwd"}, cookie=bad)
         check("suppression : identifiant invalide -> 400", st == 400 and out.get("error") == "ID_INVALID", (st, out))
+        st, out, _ = post_json(port, "/api/pilot/applications/status", {"id": first_id, "status": "unknown"}, cookie=bad)
+        check("statut invalide -> 400", st == 400 and out.get("error") == "STATUS_INVALID", (st, out))
+        st, out, _ = post_json(port, "/api/pilot/applications/status", {"id": "PIL-../../", "status": "paid"}, cookie=bad)
+        check("statut : identifiant invalide -> 400", st == 400 and out.get("error") == "ID_INVALID", (st, out))
+        st, out, _ = post_json(port, "/api/pilot/applications/status", {"id": "PIL-00000000", "status": "paid"}, cookie=bad)
+        check("statut : candidature inconnue -> 404", st == 404 and out.get("error") == "NOT_FOUND", (st, out))
+        st, out, _ = post_json(port, "/api/pilot/applications/status", {"id": first_id, "status": "accepted"}, cookie=bad)
+        check("opérateur : statut accepté enregistré sans paiement automatique", st == 200 and out.get("ok") is True
+              and out.get("status") == "accepted" and bool(out.get("statusUpdatedAtUtc")), (st, out))
+        saved = json.load(open(store, encoding="utf-8"))["applications"]
+        changed = next((r for r in saved if r.get("id") == first_id), {})
+        check("statut et historique conservés", changed.get("status") == "accepted"
+              and len(changed.get("statusHistory", [])) == 2
+              and changed.get("statusHistory", [])[-1].get("status") == "accepted", changed)
+        st, listed = get_json(port, "/api/pilot/applications", cookie=bad)
+        listed_first = next((a for a in listed.get("applications", []) if a.get("id") == first_id), {})
+        check("liste opérateur reflète le statut et la date de mise à jour", st == 200 and listed_first.get("status") == "accepted"
+              and listed_first.get("statusUpdatedAtUtc") == out.get("statusUpdatedAtUtc"), listed_first)
         st, out, _ = post_json(port, "/api/pilot/applications/delete", {"id": "PIL-00000000"}, cookie=bad)
         check("suppression : inconnu -> 404", st == 404, (st, out))
         st, out, _ = post_json(port, "/api/pilot/applications/delete", {"id": first_id}, cookie=bad)

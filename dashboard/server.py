@@ -622,8 +622,8 @@ def submit_task(worker_hint_text, worker_id="", plan_only=False, client_id="", l
         else:
             child_env.pop("BK_CHLOE_RUN_ID", None)
         # Moteur d'IA de CETTE mission (2026-10-25) : le routeur decide (niveau, essai, cle du client, reglages du proprietaire, sante des moteurs,
-        # plafond de depense Claude). Tant que le proprietaire n'a rien choisi, le plan est « implicite » : aucune variable n'est posee et la mission
-        # suit exactement le chemin Claude d'avant.
+        # plafond de depense Claude). Hors essai, tant que le proprietaire n'a rien choisi, le plan reste « implicite » : aucune variable n'est posee
+        # et la mission suit exactement le chemin Claude d'avant. Un compte d'essai reste verrouille sur la chaine gratuite, meme sans moteur configure.
         for _name in provider_router.PLAN_ENV_NAMES:
             child_env.pop(_name, None)
         engine_plan = None

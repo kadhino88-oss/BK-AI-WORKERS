@@ -4,7 +4,7 @@ OpenAI-compatible local a la place du moteur local (Ollama), trois comptes clien
 
   - GET /api/engine : le moteur que le compte utilisera, ses capacites, sans adresse ni jeton ; refuse sans compte (401) ;
   - POST /api/admin/engine : proprietaire seulement (un client : 401), validation (adresse publique en http refusee), aucun secret ;
-  - essai (forfait Essai) verrouille sur le moteur local, client payant sur Claude, repli visible, disjoncteur, plafond de depense ;
+  - essai (forfait Essai) verrouille sur la chaine gratuite et bloque sans moteur gratuit, client payant sur Claude, repli visible, disjoncteur, plafond de depense ;
   - cle personnelle (BYOK) : validation par la forme, chiffrement, jamais renvoyee, isolee par client, supprimable, purgee avec le compte ;
   - une VRAIE mission (pipeline PowerShell complet) repond par le faux moteur et porte son etiquette ; sans choix du proprietaire, rien n'a change ;
   - un repli : Claude indisponible (aucune cle dans ce bac a sable -> aucun appel reseau), le moteur de remplacement repond, 0 credit, note visible.
@@ -175,20 +175,25 @@ def main():
         check("carol passe au forfait Equipe (client payant)", st == 200 and out.get("planId") == "equipe", (st, out))
 
         # ------------------------------------------------------------------------------------------------ rien n'a change sans choix du proprietaire
-        print("\n== sans choix du proprietaire : le chemin Claude d'avant ==")
+        print("\n== sans moteur gratuit configure : l'essai est bloque sans depense ==")
         st, out = anon.get("/api/engine")
         check("GET /api/engine sans compte : 401", st == 401 and out.get("error") == "ACCOUNT_REQUIRED", (st, out))
         st, out = alice.get("/api/engine")
-        check("compte en essai, rien configure : Claude", st == 200 and out["provider"] == "anthropic" and out["summary"] == "Moteur : Claude" and out["explicit"] is False, out)
+        check("compte en essai sans moteur gratuit : aucun moteur payant, blocage explicite",
+              st == 200 and out["provider"] == "none" and out["summary"] == "Aucun moteur disponible : réponse de secours"
+              and out["explicit"] is True and out["reason"] == "trial" and out["degraded"] is True, out)
         check("la matrice liste tous les moteurs, sans adresse ni jeton",
               set(out["matrix"]) == {"anthropic", "ollama", "swiss", "byok-anthropic", "byok-openai_compat"}
               and "http://" not in json.dumps(out) and "bearer" not in json.dumps(out).lower() and "token" not in json.dumps(out).lower(), list(out["matrix"]))
-        check("capacites de Claude : recherche web, fichiers Office, code", out["capabilities"]["webSearch"] and out["capabilities"]["officeFiles"] and out["capabilities"]["codeExecution"], out["capabilities"])
+        check("aucune capacite payante promise sans moteur gratuit", out["capabilities"] is None, out["capabilities"])
         st, out = alice.post("/api/workers/noah/task", {"objective": "Dis bonjour en une phrase."})
         res = out.get("Result") or {}
-        check("mission sans plan de moteurs : resultat identique a l'ancien (pas de champ Engine)",
-              st == 200 and out.get("Status") == "EXECUTED" and "Engine" not in res and res.get("Provider") == "NONE", (st, list(res)))
-        check("aucun fichier d'etat de moteur ecrit (pas de disjoncteur, pas de registre de depense)", not os.path.isdir(engine_dir) or not os.listdir(engine_dir), os.listdir(engine_dir) if os.path.isdir(engine_dir) else "")
+        check("mission d'essai sans moteur gratuit : reponse de secours, 0 credit, aucun appel payant",
+              st == 200 and out.get("Status") == "EXECUTED" and out.get("Credits") == 0
+              and res.get("Provider") == "NONE" and res.get("Degraded") is True
+              and (res.get("Engine") or {}).get("provider") == "none", (st, out))
+        check("aucun fichier de disjoncteur ni registre de depense n'est cree sans appel IA",
+              not os.path.isdir(engine_dir) or not os.listdir(engine_dir), os.listdir(engine_dir) if os.path.isdir(engine_dir) else "")
         check("aucun reglage de moteur sur le disque", not os.path.isfile(settings_path))
 
         # ------------------------------------------------------------------------------------------------ reglages du proprietaire
